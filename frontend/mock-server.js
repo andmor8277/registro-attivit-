@@ -209,6 +209,43 @@ app.delete('/categorie/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/categorie/importa-giocatori/:nuovaCatId', (req, res) => {
+  const nuovaCatId = parseInt(req.params.nuovaCatId);
+  const nuovaCat = data.categorie.find(c => c.id === nuovaCatId);
+  if (!nuovaCat) {
+    return res.status(404).json({ detail: 'Categoria non trovata' });
+  }
+  
+  let vecchie;
+  if (nuovaCat.is_portieri) {
+    vecchie = data.categorie.filter(c => c.is_portieri && c.is_archiviata && c.id !== nuovaCatId);
+  } else {
+    vecchie = data.categorie.filter(c => c.anno === nuovaCat.anno && !c.is_portieri && c.is_archiviata && c.id !== nuovaCatId);
+  }
+  
+  if (!vecchie || vecchie.length === 0) {
+    return res.json({ ok: true, giocatori_importati: 0, messaggio: 'Nessuna categoria precedente trovata' });
+  }
+  
+  const vecchiaCat = vecchie[0];
+  const giocatori = data.persone.filter(p => p.categoria_id === vecchiaCat.id);
+  
+  let importati = 0;
+  giocatori.forEach(g => {
+    const nuovoGiocatore = { ...g, id: genId(), categoria_id: nuovaCatId };
+    delete nuovoGiocatore.utente_id;
+    data.persone.push(nuovoGiocatore);
+    importati++;
+  });
+  
+  saveData(data);
+  return res.json({ 
+    ok: true, 
+    giocatori_importati: importati, 
+    messaggio: `Importati ${importati} giocatori dalla categoria '${vecchiaCat.nome}'` 
+  });
+});
+
 app.get('/categorie/stagioni', (req, res) => {
   const attive = [...new Set(data.categorie.filter(c => !c.is_archiviata && c.stagione).map(c => c.stagione))].sort((a, b) => b - a);
   const archiviate = [...new Set(data.categorie.filter(c => c.is_archiviata && c.stagione).map(c => c.stagione))].sort((a, b) => b - a);

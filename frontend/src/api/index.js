@@ -33,6 +33,7 @@ export const archiviaStagione = (stagione) => api.post('/categorie/archivia/' + 
 export const ripristinaStagione = (stagione) => api.post('/categorie/ripristina/' + stagione)
 export const getCategoriaUtenti = (categoriaId) => api.get('/categorie/' + categoriaId + '/utenti')
 export const assegnaCategoriaUtenti = (categoriaId, utenteIds) => api.put('/categorie/' + categoriaId + '/utenti', { utente_ids: utenteIds })
+export const importaGiocatori = (nuovaCategoriaId) => api.post('/categorie/importa-giocatori/' + nuovaCategoriaId)
 export const getPersone = (categoriaId) => api.get('/persone/?categoria_id=' + categoriaId)
 export const getCodici = () => api.get('/codici/')
 export const getRegistroMese = (categoriaId, anno, mese) => api.get('/registro/mese/' + categoriaId + '/' + anno + '/' + mese)
