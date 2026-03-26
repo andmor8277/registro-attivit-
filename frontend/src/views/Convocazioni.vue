@@ -22,16 +22,13 @@
 
         <!-- RESPONSABILI -->
         <div class="sidebar-section misters-section">
-          <div class="sidebar-title">👥 Mister / Dirigente</div>
+          <div class="sidebar-title">👥 Mister</div>
           <div v-for="r in responsabili" :key="r.id" class="mister-item">
-            <span class="mister-cognome">
-              <span v-if="r.ruolo === 'dirigente'" class="badge-dir">DIR</span>
-              {{ r.cognome }}
-            </span>
+            <span class="mister-cognome">{{ r.cognome }}</span>
             <span class="mister-tel">{{ r.cellulare }}</span>
           </div>
           <div v-if="responsabili.length === 0" class="empty-misters">
-            Nessun responsabile assegnato
+            Nessun mister assegnato
           </div>
         </div>
       </div>
@@ -80,7 +77,7 @@
                   <span class="pos-num">{{ pos }}</span>
                   <select v-model="gara.giocatori[pos-1]">
                     <option :value="null">—</option>
-                    <option v-for="p in persone" :key="p.id" :value="p.id">{{ p.cognome }} {{ p.nome }}</option>
+                    <option v-for="p in getGiocatoriSettimanaPrecedente(gara.data)" :key="p.id" :value="p.id">{{ p.cognome }} {{ p.nome }}</option>
                   </select>
                 </div>
               </div>
@@ -103,10 +100,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../store.js'
-import { getPersone } from '../api/index.js'
+import { getPersone, getRegistroMese } from '../api/index.js'
 import axios from 'axios'
 
 const router = useRouter()
@@ -124,6 +121,47 @@ const convocazione = ref(null)
 const persone = ref([])
 const responsabili = ref([])
 const numPartite = ref(1)
+const registro = ref([])
+
+const oggi = new Date()
+const annoCorrente = oggi.getFullYear()
+const meseCorrente = oggi.getMonth() + 1
+
+function getGiocatoriSettimanaPrecedente(dataGara) {
+  if (!dataGara) return persone.value
+  
+  const data = new Date(dataGara)
+  const startPrevWeek = new Date(data)
+  startPrevWeek.setDate(data.getDate() - 7)
+  const endPrevWeek = new Date(data)
+  endPrevWeek.setDate(data.getDate() - 1)
+  
+  const startStr = startPrevWeek.toISOString().split('T')[0]
+  const endStr = endPrevWeek.toISOString().split('T')[0]
+  
+  const presenzeCount = {}
+  const assentiIds = new Set()
+  
+  registro.value
+    .filter(r => r.data >= startStr && r.data <= endStr)
+    .forEach(r => {
+      if (['X', 'P', 'R'].includes(r.codice)) {
+        presenzeCount[r.persona_id] = (presenzeCount[r.persona_id] || 0) + 1
+      }
+      if (['AI', 'AG'].includes(r.codice)) {
+        assentiIds.add(r.persona_id)
+      }
+    })
+  
+  return persone.value.filter(p => presenzeCount[p.id] >= 2 && !assentiIds.has(p.id))
+}
+
+function aggiustaGare() {
+  const n = numPartite.value
+  const gare = convocazione.value.gare
+  while (gare.length < n) gare.push(garaVuota(gare.length + 1))
+  if (gare.length > n) gare.splice(n)
+}
 
 function formatData(d) {
   if (!d) return ''
@@ -138,13 +176,6 @@ function garaVuota(numero) {
     appuntamento: '', inizio_gara: '', allenatore: '',
     giocatori: Array(14).fill(null)
   }
-}
-
-function aggiustaGare() {
-  const n = numPartite.value
-  const gare = convocazione.value.gare
-  while (gare.length < n) gare.push(garaVuota(gare.length + 1))
-  if (gare.length > n) gare.splice(n)
 }
 
 function nuovaConvocazione() {
@@ -229,6 +260,8 @@ async function elimina() {
 onMounted(async () => {
   const res = await getPersone(categoriaId)
   persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
+  const regRes = await getRegistroMese(categoriaId, annoCorrente, meseCorrente)
+  registro.value = regRes.data
   await loadStorico()
   await loadMisters()
 })
