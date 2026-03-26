@@ -130,3 +130,50 @@ def assegna_utenti_categoria(categoria_id: int, data: AssegnaUtenti, db: Session
         db.add(UtenteCategoria(utente_id=uid, categoria_id=categoria_id))
     db.commit()
     return {"ok": True}
+
+@router.post("/importa-giocatori/{nuova_categoria_id}")
+def importa_giocatori(nuova_categoria_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
+    nuova_cat = db.query(models.Categoria).filter(models.Categoria.id == nuova_categoria_id).first()
+    if not nuova_cat:
+        raise HTTPException(status_code=404, detail="Categoria non trovata")
+    
+    if nuova_cat.is_portieri:
+        vecchie = db.query(models.Categoria).filter(
+            models.Categoria.is_portieri == 1,
+            models.Categoria.is_archiviata == 1,
+            models.Categoria.id != nuova_categoria_id
+        ).all()
+    else:
+        vecchie = db.query(models.Categoria).filter(
+            models.Categoria.anno == nuova_cat.anno,
+            models.Categoria.is_portieri == 0,
+            models.Categoria.is_archiviata == 1,
+            models.Categoria.id != nuova_categoria_id
+        ).all()
+    
+    if not vecchie:
+        return {"ok": True, "giocatori_importati": 0, "messaggio": "Nessuna categoria precedente trovata"}
+    
+    vecchia_cat = vecchie[0]
+    giocatori = db.query(models.Persona).filter(
+        models.Persona.categoria_id == vecchia_cat.id
+    ).all()
+    
+    importati = 0
+    for g in giocatori:
+        nuovo_giocatore = models.Persona(
+            nome=g.nome,
+            cognome=g.cognome,
+            categoria_id=nuova_categoria_id,
+            gruppo_id=g.gruppo_id,
+            gruppo_nome=g.gruppo_nome
+        )
+        db.add(nuovo_giocatore)
+        importati += 1
+    
+    db.commit()
+    return {
+        "ok": True, 
+        "giocatori_importati": importati,
+        "messaggio": f"Importati {importati} giocatori dalla categoria '{vecchia_cat.nome}'"
+    }
