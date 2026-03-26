@@ -20,7 +20,7 @@ fi
 
 # Avvia mock server in background
 echo "🔧 Avvio Mock API Server..."
-node "$SCRIPT_DIR/frontend/mock-server.js" &
+node "$SCRIPT_DIR/mock-server.js" &
 MOCK_PID=$!
 sleep 1
 
