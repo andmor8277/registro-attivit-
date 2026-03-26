@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from pydantic import BaseModel
 from typing import Optional, List
 from ..database import SessionLocal
@@ -57,6 +57,20 @@ class UtenteCreate(BaseModel):
     username: str
     password: str
     is_admin: Optional[int] = 0
+    nome: str
+    cognome: str
+    data_nascita: date
+    codice_fiscale: str
+    cellulare: str
+    tesserino: Optional[str] = None
+
+class UtenteUpdate(BaseModel):
+    nome: str
+    cognome: str
+    data_nascita: date
+    codice_fiscale: str
+    cellulare: str
+    tesserino: Optional[str] = None
 
 class AssegnaCategorie(BaseModel):
     categoria_ids: List[int]
@@ -80,15 +94,45 @@ def me(current_user: Utente = Depends(get_current_user), db: Session = Depends(g
         "id": current_user.id,
         "username": current_user.username,
         "is_admin": current_user.is_admin,
-        "categorie_ids": categorie_ids
+        "categorie_ids": categorie_ids,
+        "nome": current_user.nome,
+        "cognome": current_user.cognome,
+        "data_nascita": current_user.data_nascita,
+        "codice_fiscale": current_user.codice_fiscale,
+        "cellulare": current_user.cellulare,
+        "tesserino": current_user.tesserino
     }
 
 @router.post("/utenti")
 def crea_utente(data: UtenteCreate, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
     if db.query(Utente).filter(Utente.username == data.username).first():
         raise HTTPException(status_code=400, detail="Username già esistente")
-    utente = Utente(username=data.username, password_hash=hash_password(data.password), is_admin=data.is_admin)
+    utente = Utente(
+        username=data.username,
+        password_hash=hash_password(data.password),
+        is_admin=data.is_admin,
+        nome=data.nome,
+        cognome=data.cognome,
+        data_nascita=data.data_nascita,
+        codice_fiscale=data.codice_fiscale,
+        cellulare=data.cellulare,
+        tesserino=data.tesserino
+    )
     db.add(utente)
+    db.commit()
+    return {"ok": True}
+
+@router.put("/utenti/{uid}")
+def modifica_utente(uid: int, data: UtenteUpdate, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
+    utente = db.query(Utente).filter(Utente.id == uid).first()
+    if not utente:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    utente.nome = data.nome
+    utente.cognome = data.cognome
+    utente.data_nascita = data.data_nascita
+    utente.codice_fiscale = data.codice_fiscale
+    utente.cellulare = data.cellulare
+    utente.tesserino = data.tesserino
     db.commit()
     return {"ok": True}
 
@@ -102,7 +146,13 @@ def lista_utenti(current_user: Utente = Depends(get_admin), db: Session = Depend
             "id": u.id,
             "username": u.username,
             "is_admin": u.is_admin,
-            "categorie_ids": [r.categoria_id for r in rows]
+            "categorie_ids": [r.categoria_id for r in rows],
+            "nome": u.nome,
+            "cognome": u.cognome,
+            "data_nascita": u.data_nascita,
+            "codice_fiscale": u.codice_fiscale,
+            "cellulare": u.cellulare,
+            "tesserino": u.tesserino
         })
     return result
 
