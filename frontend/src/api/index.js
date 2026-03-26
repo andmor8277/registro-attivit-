@@ -23,6 +23,7 @@ export const changePassword = (id, vecchia, nuova) => api.put(`/auth/utenti/${id
 export const assegnaCategorie = (uid, categoria_ids) => api.put(`/auth/utenti/${uid}/categorie`, { categoria_ids })
 
 export const getCategorie = () => api.get('/categorie/')
+export const getAllCategorie = () => api.get('/categorie/all')
 export const createCategoria = (data) => api.post('/categorie/', data)
 export const updateCategoria = (id, data) => api.put(`/categorie/${id}`, data)
 export const deleteCategoria = (id) => api.delete('/categorie/' + id)
