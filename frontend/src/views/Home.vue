@@ -2,7 +2,7 @@
   <div class="home">
     <header class="page-header">
       <h1>Seleziona Categoria</h1>
-      <p class="page-subtitle">Scegli una categoria per gestire le presenze</p>
+      <p class="page-subtitle">Scegli la categoria da gestire</p>
     </header>
     
     <div class="categorie-grid">
@@ -278,7 +278,7 @@ onMounted(loadCategorie)
 .cat-anno {
   font-size: 2.5rem;
   font-weight: 800;
-  color: var(--color-secondary);
+  color: #dc2626;
   line-height: 1;
   margin-bottom: 0.5rem;
   letter-spacing: -0.03em;
