@@ -37,19 +37,19 @@ function saveData(data) {
 function getDefaultData() {
   return {
     utenti: [
-      { id: 1, username: 'admin', is_admin: true, password: 'admin123', categorie_ids: null, nome: 'Admin', cognome: 'Sistema', data_nascita: '1990-01-01', codice_fiscale: 'ADMTTA90A01A000A', cellulare: '3331234567', tesserino: 'ADMIN001' },
-      { id: 2, username: 'asergi', is_admin: true, password: 'password', categorie_ids: null, nome: 'Alessandro', cognome: 'Sergi', data_nascita: '1985-06-15', codice_fiscale: 'SRGLSN85H15A000A', cellulare: '3332345678', tesserino: 'ASERGI01' },
-      { id: 3, username: 'agrillo', is_admin: false, password: 'password', categorie_ids: [1, 2], nome: 'Antonio', cognome: 'Grillo', data_nascita: '1980-03-22', codice_fiscale: 'GRLNTN80C22A000A', cellulare: '3333456789', tesserino: 'AGRILLO01' }
+      { id: 1, username: 'admin', is_admin: true, password: 'admin123', categorie_ids: null, nome: 'Admin', cognome: 'Sistema', data_nascita: '1990-01-01', codice_fiscale: 'ADMTTA90A01A000A', cellulare: '3331234567', tesserino: 'ADMIN001', ruolo: 'admin' },
+      { id: 2, username: 'asergi', is_admin: true, password: 'password', categorie_ids: null, nome: 'Alessandro', cognome: 'Sergi', data_nascita: '1985-06-15', codice_fiscale: 'SRGLSN85H15A000A', cellulare: '3332345678', tesserino: 'ASERGI01', ruolo: 'admin' },
+      { id: 3, username: 'agrillo', is_admin: false, password: 'password', categorie_ids: [1, 2], nome: 'Antonio', cognome: 'Grillo', data_nascita: '1980-03-22', codice_fiscale: 'GRLNTN80C22A000A', cellulare: '3333456789', tesserino: 'AGRILLO01', ruolo: 'mister' }
     ],
     categorie: [
       { id: 1, nome: 'Esordienti', anno: 2014, stagione: 2025, giorni: '1,2,4', is_portieri: 0, is_archiviata: 0 },
       { id: 2, nome: '2013', anno: 2013, stagione: 2025, giorni: '3,5', is_portieri: 0, is_archiviata: 0 }
     ],
     persone: [
-      { id: 1, nome: 'Marco', cognome: 'Rossi', categoria_id: 1, gruppo_id: 1, gruppo_nome: 'PRIMO GRUPPO' },
-      { id: 2, nome: 'Luca', cognome: 'Bianchi', categoria_id: 1, gruppo_id: 1, gruppo_nome: 'PRIMO GRUPPO' },
-      { id: 3, nome: 'Anna', cognome: 'Verdi', categoria_id: 1, gruppo_id: 2, gruppo_nome: 'SECONDO GRUPPO' },
-      { id: 4, nome: 'Sara', cognome: 'Neri', categoria_id: 1, gruppo_id: 2, gruppo_nome: 'SECONDO GRUPPO' }
+      { id: 1, nome: 'Marco', cognome: 'Rossi', categoria_id: 1, gruppo_id: 1, gruppo_nome: 'PRIMO GRUPPO', data_nascita: '2014-03-15', codice_fiscale: 'RSSMRC14C15A000A', telefono: '3331111111', matricola: 'RT001' },
+      { id: 2, nome: 'Luca', cognome: 'Bianchi', categoria_id: 1, gruppo_id: 1, gruppo_nome: 'PRIMO GRUPPO', data_nascita: '2014-07-22', codice_fiscale: 'BNCLCU14L22A000B', telefono: '3332222222', matricola: 'RT002' },
+      { id: 3, nome: 'Anna', cognome: 'Verdi', categoria_id: 1, gruppo_id: 2, gruppo_nome: 'SECONDO GRUPPO', data_nascita: '2014-01-10', codice_fiscale: 'VRDNNN14A10A000C', telefono: '3333333333', matricola: 'RT003' },
+      { id: 4, nome: 'Sara', cognome: 'Neri', categoria_id: 1, gruppo_id: 2, gruppo_nome: 'SECONDO GRUPPO', data_nascita: '2014-05-28', codice_fiscale: 'NRISRA14E28A000D', telefono: '3334444444', matricola: 'RT004' }
     ],
     registro: [],
     convocazioni: [],
@@ -130,14 +130,15 @@ app.post('/auth/utenti', (req, res) => {
     id: genId(),
     username: req.body.username,
     password: req.body.password,
-    is_admin: req.body.is_admin || 0,
+    is_admin: req.body.ruolo === 'admin' ? 1 : 0,
     categorie_ids: [],
     nome: req.body.nome,
     cognome: req.body.cognome,
     data_nascita: req.body.data_nascita,
     codice_fiscale: req.body.codice_fiscale,
     cellulare: req.body.cellulare,
-    tesserino: req.body.tesserino
+    tesserino: req.body.tesserino,
+    ruolo: req.body.ruolo
   };
   data.utenti.push(newUser);
   saveData(data);
@@ -153,6 +154,8 @@ app.put('/auth/utenti/:id', (req, res) => {
     data.utenti[idx].codice_fiscale = req.body.codice_fiscale;
     data.utenti[idx].cellulare = req.body.cellulare;
     data.utenti[idx].tesserino = req.body.tesserino;
+    data.utenti[idx].ruolo = req.body.ruolo;
+    data.utenti[idx].is_admin = req.body.ruolo === 'admin' ? 1 : 0;
     saveData(data);
     res.json(data.utenti[idx]);
   } else {
@@ -344,6 +347,20 @@ app.put('/categorie/:id/utenti', (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/categorie/:id/responsabili', (req, res) => {
+  const catId = parseInt(req.params.id);
+  const responsabili = data.utenti.filter(u => 
+    u.categorie_ids && u.categorie_ids.includes(catId) &&
+    (u.ruolo === 'mister' || u.ruolo === 'dirigente')
+  ).map(u => ({
+    id: u.id,
+    cognome: u.cognome,
+    cellulare: u.cellulare,
+    ruolo: u.ruolo
+  }));
+  res.json(responsabili);
+});
+
 // ============ PERSONE ============
 app.get('/persone/', (req, res) => {
   const catId = parseInt(req.query.categoria_id);
@@ -359,6 +376,14 @@ app.post('/persone/', (req, res) => {
   data.persone.push(newPersona);
   saveData(data);
   res.json(newPersona);
+});
+
+app.put('/persone/:id', (req, res) => {
+  const idx = data.persone.findIndex(p => p.id === parseInt(req.params.id));
+  if (idx === -1) return res.status(404).json({ detail: 'Not found' });
+  data.persone[idx] = { ...data.persone[idx], ...req.body };
+  saveData(data);
+  res.json(data.persone[idx]);
 });
 
 app.delete('/persone/:id', (req, res) => {

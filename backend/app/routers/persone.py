@@ -10,7 +10,8 @@ router = APIRouter(prefix="/persone", tags=["persone"])
 @router.get("/")
 def get_persone(categoria_id: Optional[int] = None, db: Session = Depends(get_db)):
     query = """
-        SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id, g.nome as gruppo_nome
+        SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id, g.nome as gruppo_nome,
+               p.data_nascita, p.codice_fiscale, p.telefono, p.matricola
         FROM persone p
         LEFT JOIN gruppi g ON p.gruppo_id = g.id
     """
@@ -23,14 +24,17 @@ def get_persone(categoria_id: Optional[int] = None, db: Session = Depends(get_db
 
 @router.post("/")
 def create_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db)):
-    persona = models.Persona(**p.dict())
+    data = p.dict()
+    persona = models.Persona(**data)
     db.add(persona); db.commit(); db.refresh(persona)
     return persona
 
 @router.put("/{persona_id}")
 def update_persona(persona_id: int, p: schemas.PersonaCreate, db: Session = Depends(get_db)):
     persona = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
-    persona.nome = p.nome; persona.cognome = p.cognome; persona.gruppo_id = p.gruppo_id
+    data = p.dict()
+    for key, value in data.items():
+        setattr(persona, key, value)
     db.commit(); db.refresh(persona)
     return persona
 
