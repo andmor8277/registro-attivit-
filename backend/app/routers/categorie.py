@@ -114,3 +114,19 @@ def delete_categoria(categoria_id: int, db: Session = Depends(get_db), current_u
     db.query(models.Categoria).filter(models.Categoria.id == categoria_id).delete()
     db.commit()
     return {"ok": True}
+
+class AssegnaUtenti(BaseModel):
+    utente_ids: List[int]
+
+@router.get("/{categoria_id}/utenti")
+def get_categoria_utenti(categoria_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
+    assegnazioni = db.query(UtenteCategoria).filter(UtenteCategoria.categoria_id == categoria_id).all()
+    return [a.utente_id for a in assegnazioni]
+
+@router.put("/{categoria_id}/utenti")
+def assegna_utenti_categoria(categoria_id: int, data: AssegnaUtenti, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
+    db.query(UtenteCategoria).filter(UtenteCategoria.categoria_id == categoria_id).delete()
+    for uid in data.utente_ids:
+        db.add(UtenteCategoria(utente_id=uid, categoria_id=categoria_id))
+    db.commit()
+    return {"ok": True}

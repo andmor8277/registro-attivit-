@@ -42,22 +42,109 @@
           </svg>
           Esci
         </button>
+        <button @click="showPasswordModal = true" class="btn-nav">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+          Password
+        </button>
       </div>
     </nav>
     <main class="main-content">
       <router-view />
     </main>
+
+    <Teleport to="body">
+      <div v-if="showPasswordModal" class="modal-overlay" @click.self="showPasswordModal = false">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>Cambia Password</h3>
+            <button class="modal-close" @click="showPasswordModal = false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Password Attuale</label>
+              <input v-model="passwordForm.attuale" type="password" placeholder="Inserisci password attuale" />
+            </div>
+            <div class="form-group">
+              <label>Nuova Password</label>
+              <input v-model="passwordForm.nuova" type="password" placeholder="Inserisci nuova password" />
+            </div>
+            <div class="form-group">
+              <label>Conferma Password</label>
+              <input v-model="passwordForm.conferma" type="password" placeholder="Conferma nuova password" />
+            </div>
+            <p v-if="passwordErrore" class="errore-msg">{{ passwordErrore }}</p>
+            <p v-if="passwordSuccess" class="success-msg">{{ passwordSuccess }}</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" @click="showPasswordModal = false">Annulla</button>
+            <button class="btn-primary" @click="cambiaPassword" :disabled="passwordLoading">
+              <span v-if="passwordLoading" class="spinner-small"></span>
+              <template v-else>Salva</template>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useStore } from './store.js'
 import { useRouter } from 'vue-router'
-import { getMe, getStagioni } from './api/index.js'
+import { getMe, getStagioni, changePassword } from './api/index.js'
 
 const { token, utenteAttivo, clearToken, setStagioneCorrente,stagioneCorrente } = useStore()
 const router = useRouter()
+const showPasswordModal = ref(false)
+const passwordForm = ref({ attuale: '', nuova: '', conferma: '' })
+const passwordErrore = ref('')
+const passwordSuccess = ref('')
+const passwordLoading = ref(false)
+
+async function cambiaPassword() {
+  passwordErrore.value = ''
+  passwordSuccess.value = ''
+  
+  if (!passwordForm.value.attuale || !passwordForm.value.nuova || !passwordForm.value.conferma) {
+    passwordErrore.value = 'Compila tutti i campi'
+    return
+  }
+  
+  if (passwordForm.value.nuova !== passwordForm.value.conferma) {
+    passwordErrore.value = 'Le password non coincidono'
+    return
+  }
+  
+  if (passwordForm.value.nuova.length < 4) {
+    passwordErrore.value = 'La password deve essere di almeno 4 caratteri'
+    return
+  }
+  
+  passwordLoading.value = true
+  
+  try {
+    await changePassword(utenteAttivo.value.id, passwordForm.value.attuale, passwordForm.value.nuova)
+    passwordSuccess.value = 'Password cambiata con successo!'
+    passwordForm.value = { attuale: '', nuova: '', conferma: '' }
+    setTimeout(() => {
+      showPasswordModal.value = false
+      passwordSuccess.value = ''
+    }, 2000)
+  } catch (e) {
+    passwordErrore.value = e.response?.data?.detail || 'Errore nel cambio password'
+  } finally {
+    passwordLoading.value = false
+  }
+}
 
 async function logout() {
   clearToken()
@@ -277,5 +364,183 @@ onMounted(async () => {
   .btn-logout {
     padding: 0.5rem 0.75rem;
   }
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-xl);
+  animation: scaleIn 0.3s ease-out;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 1.5rem 0;
+}
+
+.modal-header h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.modal-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  border: none;
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.modal-close:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.modal-close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  color: var(--color-text);
+  background: var(--color-bg);
+  transition: all var(--transition-fast);
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.modal-footer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0 1.5rem 1.5rem;
+}
+
+.btn-primary {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-dark);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-secondary:hover {
+  background: var(--color-border);
+}
+
+.errore-msg {
+  padding: 0.75rem;
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--color-error);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.success-msg {
+  padding: 0.75rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--radius-md);
+  color: #10b981;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.spinner-small {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
