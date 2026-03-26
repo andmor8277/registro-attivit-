@@ -5,6 +5,13 @@
         <img src="/logo.jpg" alt="RedTigers" class="logo-img" />
         <span class="brand-text">RED<span class="brand-red">TIGERS</span></span>
       </div>
+      <div class="topbar-season" :class="{ empty: !stagioneCorrente }">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        <span>{{ stagioneCorrente ? `${stagioneCorrente}/${stagioneCorrente + 1}` : 'Stagione non impostata' }}</span>
+      </div>
       <div class="topbar-actions">
         <span class="user-badge">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -47,9 +54,9 @@
 import { onMounted } from 'vue'
 import { useStore } from './store.js'
 import { useRouter } from 'vue-router'
-import { getMe } from './api/index.js'
+import { getMe, getStagioni } from './api/index.js'
 
-const { token, utenteAttivo, clearToken } = useStore()
+const { token, utenteAttivo, clearToken, setStagioneCorrente,stagioneCorrente } = useStore()
 const router = useRouter()
 
 async function logout() {
@@ -57,11 +64,25 @@ async function logout() {
   router.push('/login')
 }
 
+async function loadStagione() {
+  try {
+    const res = await getStagioni()
+    console.log('Stagioni risposta:', res.data)
+    const stagioniAttive = res.data?.attiva || []
+    if (stagioniAttive.length > 0) {
+      setStagioneCorrente(stagioniAttive[0])
+    }
+  } catch (e) {
+    console.error('Errore nel caricamento stagione:', e)
+  }
+}
+
 onMounted(async () => {
   if (token.value) {
     try {
       const res = await getMe()
       utenteAttivo.value = res.data
+      await loadStagione()
     } catch {
       clearToken()
       router.push('/login')
@@ -112,6 +133,30 @@ onMounted(async () => {
 
 .brand-red {
   color: #dc2626;
+}
+
+.topbar-season {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  background: rgba(220, 38, 38, 0.2);
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  border-radius: 50px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fca5a5;
+}
+
+.topbar-season.empty {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.topbar-season svg {
+  width: 16px;
+  height: 16px;
 }
 
 .topbar-actions {

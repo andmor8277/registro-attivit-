@@ -5,8 +5,11 @@ class Categoria(Base):
     __tablename__ = "categorie"
     id = Column(Integer, primary_key=True)
     nome = Column(String(100), nullable=False)
-    anno = Column(Integer, nullable=False)
+    anno = Column(Integer, nullable=True)  # anno di nascita (es. 2014)
+    stagione = Column(Integer, nullable=True)  # anno inizio stagione (es. 2025 per 2025/2026)
     giorni = Column(String(20), nullable=True)  # es. "1,3,5" = Lun,Mer,Ven
+    is_portieri = Column(Integer, default=0)  # 1 = portieri (cross-year)
+    is_archiviata = Column(Integer, default=0)  # 1 = categoria archiviata
 
 class Gruppo(Base):
     __tablename__ = "gruppi"

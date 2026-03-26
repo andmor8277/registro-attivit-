@@ -6,13 +6,40 @@
           <line x1="19" y1="12" x2="5" y2="12"/>
           <polyline points="12 19 5 12 12 5"/>
         </svg>
-        Categorie
+        {{ categoria?.is_archived ? 'Stagioni Passate' : 'Categorie' }}
       </button>
-      <h1>{{ categoria?.nome }} {{ categoria?.anno }}</h1>
-      <p class="sottotitolo">Cosa vuoi gestire?</p>
+      <h1 v-if="categoria?.is_archived">{{ categoria?.nome }}</h1>
+      <h1 v-else>{{ categoria?.nome }} {{ categoria?.anno }}</h1>
+      <p class="sottotitolo" v-if="!categoria?.is_archived">Cosa vuoi gestire?</p>
+      <p class="sottotitolo archived" v-else>Seleziona una categoria</p>
     </div>
     
-    <div class="scelta-grid">
+    <div v-if="categoria?.is_archived" class="categorie-archived">
+      <div 
+        v-for="cat in categorieStagione" 
+        :key="cat.id" 
+        class="scelta-card"
+        @click="selezionaCategoria(cat)"
+      >
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+        </div>
+        <div class="card-label">{{ cat.nome }}</div>
+        <div class="card-desc" v-if="cat.giorni">{{ cat.giorni.split(',').map(g => nomiBreviGiorni(parseInt(g))).join(', ') }}</div>
+        <div class="card-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+    
+    <div v-else class="scelta-grid">
       <div class="scelta-card" @click="router.push('/registro/' + categoria?.id)">
         <div class="card-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -54,11 +81,48 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '../store.js'
+import { getCategorieByStagione } from '../api/index.js'
 const router = useRouter()
-const { categoriaAttiva } = useStore()
+const { categoriaAttiva, setCategoria } = useStore()
 const categoria = categoriaAttiva
+const categorieStagione = ref([])
+const loading = ref(false)
+
+const tuttiGiorni = [
+  { val: 1, nome: "Lun" },
+  { val: 2, nome: "Mar" },
+  { val: 3, nome: "Mer" },
+  { val: 4, nome: "Gio" },
+  { val: 5, nome: "Ven" },
+  { val: 6, nome: "Sab" },
+  { val: 0, nome: "Dom" }
+]
+
+const nomiBreviGiorni = (val) => tuttiGiorni.find(g => g.val === val)?.nome || ''
+
+async function loadCategorieStagione() {
+  if (categoria?.is_archived && categoria?.stagione) {
+    loading.value = true
+    try {
+      const res = await getCategorieByStagione(categoria.stagione)
+      categorieStagione.value = res.data
+    } catch (e) {
+      console.error('Errore nel caricamento categorie:', e)
+    } finally {
+      loading.value = false
+    }
+  }
+}
+
+function selezionaCategoria(cat) {
+  setCategoria(cat)
+  router.push('/registro/' + cat.id)
+}
+
+onMounted(loadCategorieStagione)
 </script>
 
 <style scoped>
@@ -112,6 +176,20 @@ const categoria = categoriaAttiva
 .sottotitolo {
   color: var(--color-text-muted);
   font-size: 1rem;
+}
+
+.sottotitolo.archived {
+  color: var(--color-text-muted);
+}
+
+.categorie-archived {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.categorie-archived .scelta-card {
+  padding: 1.5rem;
 }
 
 .scelta-grid {
