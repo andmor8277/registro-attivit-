@@ -180,7 +180,11 @@ app.put('/auth/utenti/:id/categorie', (req, res) => {
 
 // ============ CATEGORIE ============
 app.get('/categorie/', (req, res) => {
-  res.json(data.categorie);
+  res.json(data.categorie.filter(c => !c.is_archiviata));
+});
+
+app.get('/categorie/all', (req, res) => {
+  res.json(data.categorie.filter(c => !c.is_archiviata));
 });
 
 app.post('/categorie/', (req, res) => {

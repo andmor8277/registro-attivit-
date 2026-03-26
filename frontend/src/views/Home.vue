@@ -267,7 +267,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { getCategorie, createCategoria, updateCategoria, deleteCategoria, getStagioni, archiviaStagione, getUtenti, getCategoriaUtenti, assegnaCategoriaUtenti, importaGiocatori as importaGiocatoriApi } from "../api/index.js"
+import { getCategorie, getAllCategorie, createCategoria, updateCategoria, deleteCategoria, getStagioni, archiviaStagione, getUtenti, getCategoriaUtenti, assegnaCategoriaUtenti, importaGiocatori as importaGiocatoriApi } from "../api/index.js"
 import { useStore as useCategoria } from "../store.js"
 const { utenteAttivo } = useCategoria()
 
@@ -342,7 +342,9 @@ async function loadCategorie() {
     categorie.value = me.is_admin || me.categorie_ids === null
       ? res.data
       : res.data.filter(c => me.categorie_ids.includes(c.id))
-    allCategories.value = res.data
+    
+    const allRes = await getAllCategorie()
+    allCategories.value = allRes.data
   } catch (e) {
     console.error('Errore loadCategorie:', e)
   }
