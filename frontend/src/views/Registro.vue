@@ -1,0 +1,894 @@
+<template>
+  <div class="registro-container">
+    <header class="page-header">
+      <div class="header-left">
+        <button class="btn-back" @click="router.push('/scelta/' + route.params.id)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+        </button>
+        <button class="btn-home" @click="router.push('/')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </button>
+      </div>
+      <div class="mese-selector">
+        <button class="btn-nav-mese" @click="prevMese">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <span class="mese-label">{{ meseLabel }} {{ anno }}</span>
+        <button class="btn-nav-mese" @click="nextMese">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+      <button class="btn-aggiungi" @click="modalPersona.show = true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Persona
+      </button>
+    </header>
+    
+    <div class="legenda">
+      <span v-for="c in codici" :key="c.codice" :class="['badge', c.tipo]">
+        <span class="badge-code">{{ c.codice }}</span>
+        <span class="badge-desc">{{ c.descrizione }}</span>
+      </span>
+    </div>
+    
+    <div class="table-wrapper">
+      <div v-for="gruppo in gruppi" :key="gruppo" class="gruppo-block">
+        <div class="gruppo-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+            <path d="M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+          {{ gruppo }}
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th class="th-num">#</th>
+              <th class="th-nome">Cognome Nome</th>
+              <th v-for="g in giorniMese" :key="g.num" :class="{ 'th-weekend': g.weekend }">
+                <div class="giorno-num">{{ g.num }}</div>
+                <div class="giorno-nome">{{ g.gg }}</div>
+              </th>
+              <th class="th-tot th-pres">TOT</th>
+              <th class="th-actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(persona, idx) in personePerGruppo(gruppo)" :key="persona.id">
+              <td class="td-num">{{ idx + 1 }}</td>
+              <td class="td-nome">
+                <span class="persona-name">{{ persona.cognome }} {{ persona.nome }}</span>
+              </td>
+              <td v-for="g in giorniMese" :key="g.num"
+                class="cella" 
+                :class="getCodiceClasse(persona.id, g.num)"
+                @click="openEdit(persona, g.num)">
+                {{ getCodice(persona.id, g.num) }}
+              </td>
+              <td class="td-tot td-pres">{{ totalePresenze(persona.id) }}</td>
+              <td class="td-actions">
+                <button class="btn-action" @click.stop="apriModificaPersona(persona)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+                <button class="btn-action btn-danger" @click="eliminaPersona(persona.id)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="riga-totale pres">
+              <td colspan="2">Presenti</td>
+              <td v-for="g in giorniMese" :key="g.num" class="tot-cell">
+                {{ totGiornoGruppo(gruppo, g.num).pres || '' }}
+              </td>
+              <td colspan="2"></td>
+            </tr>
+            <tr class="riga-totale ass">
+              <td colspan="2">Assenti</td>
+              <td v-for="g in giorniMese" :key="g.num" class="tot-cell">
+                {{ totGiornoGruppo(gruppo, g.num).ass || '' }}
+              </td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      
+      <div class="totale-generale">
+        <div class="totale-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20V10"/>
+            <path d="M18 20V4"/>
+            <path d="M6 20v-4"/>
+          </svg>
+          TOTALE GENERALE
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th v-for="g in giorniMese" :key="g.num" :class="{ 'th-weekend': g.weekend }">
+                <div class="giorno-num">{{ g.num }}</div>
+                <div class="giorno-nome">{{ g.gg }}</div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="tot-label">Presenti</td>
+              <td v-for="g in giorniMese" :key="g.num" class="tot-cell tot-pres">
+                {{ totGiornoTutti(g.num).pres || '' }}
+              </td>
+            </tr>
+            <tr>
+              <td class="tot-label">Assenti</td>
+              <td v-for="g in giorniMese" :key="g.num" class="tot-cell tot-ass">
+                {{ totGiornoTutti(g.num).ass || '' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <Teleport to="body">
+      <div v-if="editModal.show" class="modal-overlay" @click.self="editModal.show = false">
+        <div class="modal modal-edit">
+          <div class="modal-header">
+            <h3>{{ editModal.persona.cognome }} {{ editModal.persona.nome }}</h3>
+            <span class="modal-date">{{ editModal.giorno }} {{ meseLabel }} {{ anno }}</span>
+          </div>
+          <div class="codici-grid">
+            <button v-for="c in codici" :key="c.codice"
+              :class="['btn-codice', c.tipo]" @click="salvaPresenza(c.codice)">
+              <span class="codice">{{ c.codice }}</span>
+              <span class="descrizione">{{ c.descrizione }}</span>
+            </button>
+            <button class="btn-codice cancella" @click="salvaPresenza(null)">
+              <span class="codice">-</span>
+              <span class="descrizione">Cancella</span>
+            </button>
+          </div>
+          <button class="btn-close-modal" @click="editModal.show = false">Chiudi</button>
+        </div>
+      </div>
+      
+      <div v-if="modalModifica.show" class="modal-overlay" @click.self="modalModifica.show = false">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>Modifica Persona</h3>
+            <button class="modal-close" @click="modalModifica.show = false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Cognome</label>
+              <input v-model="modalModifica.cognome" />
+            </div>
+            <div class="form-group">
+              <label>Nome</label>
+              <input v-model="modalModifica.nome" />
+            </div>
+            <div class="form-group">
+              <label>Gruppo</label>
+              <select v-model="modalModifica.gruppo_id">
+                <option :value="1">PRIMO GRUPPO</option>
+                <option :value="2">SECONDO GRUPPO</option>
+                <option :value="3">TERZO GRUPPO</option>
+                <option :value="4">PORTIERI</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" @click="modalModifica.show = false">Annulla</button>
+            <button class="btn-primary" @click="aggiornaPersona">Salva</button>
+          </div>
+        </div>
+      </div>
+      
+      <div v-if="modalPersona.show" class="modal-overlay" @click.self="modalPersona.show = false">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>Aggiungi Persona</h3>
+            <button class="modal-close" @click="modalPersona.show = false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Cognome</label>
+              <input v-model="modalPersona.cognome" placeholder="Cognome" />
+            </div>
+            <div class="form-group">
+              <label>Nome</label>
+              <input v-model="modalPersona.nome" placeholder="Nome" />
+            </div>
+            <div class="form-group">
+              <label>Gruppo</label>
+              <select v-model="modalPersona.gruppo_id">
+                <option :value="1">PRIMO GRUPPO</option>
+                <option :value="2">SECONDO GRUPPO</option>
+                <option :value="3">TERZO GRUPPO</option>
+                <option :value="4">PORTIERI</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" @click="modalPersona.show = false">Annulla</button>
+            <button class="btn-primary" @click="salvaPersona">Salva</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
+import { getPersone, getCodici, getRegistroMese, upsertRegistro, createPersona, deletePersona, getCategorie } from "../api/index.js"
+import { useStore as useCategoria } from "../store.js"
+
+const route = useRoute()
+const router = useRouter()
+const categoriaId = computed(() => parseInt(route.params.id))
+const { categoriaAttiva } = useCategoria()
+
+const oggi = new Date()
+const anno = ref(oggi.getFullYear())
+const mese = ref(oggi.getMonth() + 1)
+const persone = ref([])
+const codici = ref([])
+const registro = ref([])
+const giorniAllenamento = ref([])
+const editModal = ref({ show: false, persona: null, giorno: null })
+const modalPersona = ref({ show: false, nome: "", cognome: "", gruppo_id: 1 })
+const modalModifica = ref({ show: false, id: null, nome: "", cognome: "", gruppo_id: 1 })
+
+const mesiNomi = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"]
+const giorniNomi = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"]
+const meseLabel = computed(() => mesiNomi[mese.value - 1])
+
+const giorniMese = computed(() => {
+  const n = new Date(anno.value, mese.value, 0).getDate()
+  const tutti = Array.from({ length: n }, (_, i) => {
+    const d = new Date(anno.value, mese.value - 1, i + 1)
+    const dow = d.getDay()
+    return { num: i + 1, dow, gg: giorniNomi[dow], weekend: dow === 0 || dow === 6 }
+  })
+  if (giorniAllenamento.value.length === 0) return tutti
+  return tutti.filter(g => giorniAllenamento.value.includes(g.dow))
+})
+
+const gruppi = computed(() => [...new Set(persone.value.map(p => p.gruppo_nome || "Senza gruppo"))])
+function personePerGruppo(g) { return persone.value.filter(p => (p.gruppo_nome || "Senza gruppo") === g) }
+function getCodice(personaId, giorno) {
+  const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
+  const entry = registro.value.find(r => r.persona_id === personaId && r.data === d)
+  return entry ? entry.codice : ""
+}
+function getCodiceClasse(personaId, giorno) {
+  const codice = getCodice(personaId, giorno)
+  const c = codici.value.find(x => x.codice === codice)
+  if (!c) return ""
+  return c.tipo + (codice ? " cod-" + codice.toLowerCase() : "")
+}
+function totalePresenze(personaId) {
+  return registro.value.filter(r => r.persona_id === personaId && ["X","P","R"].includes(r.codice)).length
+}
+function totaleAssenze(personaId) {
+  return registro.value.filter(r => r.persona_id === personaId && ["AG","AI"].includes(r.codice)).length
+}
+function openEdit(persona, giorno) { editModal.value = { show: true, persona, giorno } }
+
+async function salvaPresenza(codice) {
+  const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(editModal.value.giorno).padStart(2,"0")
+  await upsertRegistro({ persona_id: editModal.value.persona.id, data: d, codice, categoria_id: categoriaId.value })
+  await loadRegistro()
+  editModal.value.show = false
+}
+
+async function salvaPersona() {
+  if (!modalPersona.value.nome || !modalPersona.value.cognome) return
+  await createPersona({ nome: modalPersona.value.nome, cognome: modalPersona.value.cognome, gruppo_id: modalPersona.value.gruppo_id, categoria_id: categoriaId.value })
+  modalPersona.value = { show: false, nome: "", cognome: "", gruppo_id: 1 }
+  await loadPersone()
+}
+
+function apriModificaPersona(persona) {
+  modalModifica.value = { show: true, id: persona.id, nome: persona.nome, cognome: persona.cognome, gruppo_id: persona.gruppo_id }
+}
+async function aggiornaPersona() {
+  const base = import.meta.env.VITE_API_URL || "http://localhost:8000"
+  await fetch(base + "/persone/" + modalModifica.value.id, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nome: modalModifica.value.nome, cognome: modalModifica.value.cognome, gruppo_id: modalModifica.value.gruppo_id, categoria_id: categoriaId.value })
+  })
+  modalModifica.value.show = false
+  await loadPersone()
+}
+async function eliminaPersona(id) {
+  if (!confirm("Eliminare questa persona?")) return
+  await deletePersona(id)
+  await loadPersone()
+}
+
+function totGiornoGruppo(gruppo, giorno) {
+  const ids = personePerGruppo(gruppo).map(p => p.id)
+  const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
+  const entries = registro.value.filter(r => ids.includes(r.persona_id) && r.data === d)
+  return {
+    pres: entries.filter(r => ["X","P","R"].includes(r.codice)).length || "",
+    ass: entries.filter(r => ["AG","AI"].includes(r.codice)).length || ""
+  }
+}
+function totGiornoTutti(giorno) {
+  const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
+  const entries = registro.value.filter(r => r.data === d)
+  return {
+    pres: entries.filter(r => ["X","P","R"].includes(r.codice)).length || "",
+    ass: entries.filter(r => ["AG","AI"].includes(r.codice)).length || ""
+  }
+}
+function prevMese() { if (mese.value === 1) { mese.value = 12; anno.value-- } else mese.value-- }
+function nextMese() { if (mese.value === 12) { mese.value = 1; anno.value++ } else mese.value++ }
+async function loadRegistro() {
+  const res = await getRegistroMese(categoriaId.value, anno.value, mese.value)
+  registro.value = res.data
+}
+async function loadPersone() {
+  const res = await getPersone(categoriaId.value)
+  persone.value = res.data
+}
+async function loadCategoria() {
+  if (categoriaAttiva.value && categoriaAttiva.value.giorni) {
+    giorniAllenamento.value = categoriaAttiva.value.giorni.split(",").map(Number)
+  } else {
+    const res = await getCategorie()
+    const cat = res.data.find(c => c.id === categoriaId.value)
+    if (cat && cat.giorni) giorniAllenamento.value = cat.giorni.split(",").map(Number)
+    else giorniAllenamento.value = []
+  }
+}
+
+onMounted(async () => {
+  const [c] = await Promise.all([getCodici()])
+  codici.value = c.data
+  await loadCategoria()
+  await loadPersone()
+  await loadRegistro()
+})
+watch([anno, mese], loadRegistro)
+</script>
+
+<style scoped>
+.registro-container {
+  padding: 1.5rem;
+  font-family: var(--font-sans);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.header-left {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-back, .btn-home {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-back:hover, .btn-home:hover {
+  background: var(--color-secondary);
+  border-color: var(--color-secondary);
+  color: white;
+}
+
+.btn-back svg, .btn-home svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mese-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-nav-mese {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-nav-mese:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.btn-nav-mese svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mese-label {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+  min-width: 180px;
+  text-align: center;
+}
+
+.btn-aggiungi {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-aggiungi:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-aggiungi svg {
+  width: 18px;
+  height: 18px;
+}
+
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+}
+
+.badge-code {
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.badge-desc {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.badge.presenza { background: rgba(16, 185, 129, 0.1); color: var(--color-primary-dark); }
+.badge.assenza { background: rgba(244, 63, 94, 0.1); color: var(--color-error); }
+.badge.extra { background: rgba(245, 158, 11, 0.1); color: #b45309; }
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.gruppo-block {
+  margin-bottom: 1.5rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.gruppo-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem;
+  background: var(--color-secondary);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.gruppo-header svg {
+  width: 18px;
+  height: 18px;
+  opacity: 0.8;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+th, td {
+  border: 1px solid var(--color-border-light);
+  text-align: center;
+  padding: 0.5rem 0.25rem;
+  white-space: nowrap;
+}
+
+.th-num, .td-num { width: 40px; }
+.th-nome, .td-nome { text-align: left; min-width: 150px; padding-left: 1rem; }
+.th-tot, .td-tot { min-width: 60px; }
+.th-actions, .td-actions { width: 80px; }
+
+.th-weekend { background: var(--color-bg); color: var(--color-text-muted); }
+
+.giorno-num { font-weight: 600; font-size: 0.875rem; }
+.giorno-nome { font-size: 0.6875rem; color: var(--color-text-muted); }
+
+.persona-name { font-weight: 500; }
+
+.cella {
+  cursor: pointer;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  min-width: 32px;
+  transition: all var(--transition-fast);
+}
+
+.cella:hover { background: rgba(16, 185, 129, 0.1); }
+.cella.presenza { background: rgba(16, 185, 129, 0.15); color: var(--color-primary-dark); }
+.cella.assenza { background: rgba(244, 63, 94, 0.12); color: var(--color-error); }
+.cella.cod-ag { background: rgba(245, 158, 11, 0.15) !important; color: #b45309 !important; }
+.cella.cod-p { background: rgba(245, 158, 11, 0.15) !important; color: #b45309 !important; }
+.cella.cod-r { background: rgba(16, 185, 129, 0.15) !important; color: var(--color-error) !important; font-weight: 700; }
+
+.td-pres { color: var(--color-primary-dark); font-weight: 600; }
+
+.btn-action {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.btn-action:hover { background: var(--color-bg); color: var(--color-text); }
+.btn-action.btn-danger:hover { background: rgba(244, 63, 94, 0.1); color: var(--color-error); }
+.btn-action svg { width: 14px; height: 14px; }
+
+.riga-totale td { 
+  background: var(--color-bg); 
+  font-weight: 600; 
+  font-size: 0.75rem;
+  border-top: 2px solid var(--color-border);
+}
+
+.riga-totale.pres td { color: var(--color-primary-dark); }
+.riga-totale.ass td { color: var(--color-error); }
+
+.tot-cell { font-weight: 600; font-family: var(--font-mono); }
+
+.totale-generale {
+  margin-top: 1.5rem;
+  background: var(--color-surface);
+  border: 2px solid var(--color-secondary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.totale-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem;
+  background: var(--color-secondary);
+  color: white;
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+}
+
+.totale-header svg {
+  width: 18px;
+  height: 18px;
+}
+
+.totale-generale table th {
+  background: var(--color-bg);
+  font-weight: 500;
+  font-size: 0.75rem;
+  padding: 0.375rem;
+}
+
+.tot-label {
+  background: var(--color-bg);
+  font-weight: 600;
+  text-align: left;
+  padding-left: 1rem;
+}
+
+.tot-pres { background: rgba(16, 185, 129, 0.1) !important; color: var(--color-primary-dark); }
+.tot-ass { background: rgba(244, 63, 94, 0.1) !important; color: var(--color-error); }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease-out;
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 480px;
+  box-shadow: var(--shadow-xl);
+  animation: scaleIn 0.3s ease-out;
+}
+
+.modal-edit {
+  max-width: 520px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.5rem 1.5rem 0;
+  gap: 1rem;
+}
+
+.modal-header h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.modal-date {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.modal-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  border: none;
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.modal-close svg { width: 20px; height: 20px; }
+
+.codici-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.5rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.btn-codice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--color-surface);
+}
+
+.btn-codice:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-codice .codice {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  margin-bottom: 0.25rem;
+}
+
+.btn-codice .descrizione {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.btn-codice.presenza { border-color: var(--color-primary); background: rgba(16, 185, 129, 0.05); }
+.btn-codice.presenza:hover { background: rgba(16, 185, 129, 0.15); }
+.btn-codice.assenza { border-color: var(--color-error); background: rgba(244, 63, 94, 0.05); }
+.btn-codice.assenza:hover { background: rgba(244, 63, 94, 0.15); }
+.btn-codice.extra { border-color: var(--color-warning); background: rgba(245, 158, 11, 0.05); }
+.btn-codice.extra:hover { background: rgba(245, 158, 11, 0.15); }
+.btn-codice.cancella { border-color: var(--color-border); }
+.btn-codice.cancella:hover { background: var(--color-bg); }
+
+.btn-close-modal {
+  display: block;
+  width: calc(100% - 3rem);
+  margin: 0 1.5rem 1.5rem;
+  padding: 0.75rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-close-modal:hover {
+  background: var(--color-border);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group:last-child { margin-bottom: 0; }
+
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  color: var(--color-text);
+  background: var(--color-bg);
+  transition: all var(--transition-fast);
+}
+
+.form-group input:focus, .form-group select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem 1.5rem;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.25rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-secondary:hover { background: var(--color-border); }
+
+.btn-primary {
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .registro-container { padding: 1rem; }
+  .page-header { flex-direction: column; align-items: stretch; }
+  .mese-selector { justify-content: center; }
+  .btn-aggiungi { justify-content: center; }
+}
+</style>
