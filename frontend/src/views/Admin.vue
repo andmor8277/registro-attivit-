@@ -56,6 +56,12 @@
               <span class="badge-admin" v-if="u.is_admin">ADMIN</span>
             </div>
           </div>
+          <button class="btn-reset" @click="resetsPassword(u.id)" title="Reset Password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+            Reset
+          </button>
           <button class="btn-delete" @click="eliminaUtente(u.id)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/>
@@ -90,7 +96,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getUtenti, createUtente, deleteUtente, assegnaCategorie, getCategorie } from '../api/index.js'
+import { getUtenti, createUtente, deleteUtente, resetPassword, assegnaCategorie, getCategorie } from '../api/index.js'
 
 const utenti = ref([])
 const tutteCategorie = ref([])
@@ -118,6 +124,13 @@ async function creaUtente() {
 async function eliminaUtente(id) {
   if (!confirm('Eliminare utente?')) return
   await deleteUtente(id)
+  await load()
+}
+
+async function resetsPassword(id) {
+  if (!confirm('Resettare la password a "password"?')) return
+  await resetPassword(id)
+  alert('Password resettata! La nuova password è: password')
   await load()
 }
 
@@ -358,6 +371,32 @@ onMounted(load)
 }
 
 .btn-delete svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-reset {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: var(--radius-md);
+  color: #3b82f6;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-reset:hover {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.btn-reset svg {
   width: 16px;
   height: 16px;
 }

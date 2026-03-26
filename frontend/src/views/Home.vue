@@ -1,5 +1,39 @@
 <template>
   <div class="home">
+    <div class="planning-section">
+      <h2 class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        Planning Annuale Allenamenti
+      </h2>
+      <div class="planning-grid">
+        <div v-for="giorno in planningSettimana" :key="giorno.val" class="planning-day" :class="{ today: isToday(giorno.val), empty: giorno.categorie.length === 0 }">
+          <div class="day-header">
+            <span class="day-name">{{ giorno.nome }}</span>
+            <span class="day-date">{{ formatDayDate(giorno.val) }}</span>
+          </div>
+          <div class="day-categories" v-if="giorno.categorie.length > 0">
+            <div 
+              v-for="cat in giorno.categorie" 
+              :key="cat.id" 
+              class="planning-cat"
+              @click="apriRegistro(cat)"
+            >
+              <span class="cat-name">{{ cat.nome }}</span>
+              <span class="cat-time">{{ cat.is_portieri ? '🧤' : cat.anno }}</span>
+            </div>
+          </div>
+          <div class="day-empty" v-else>
+            Nessun allenamento
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <header class="page-header">
       <div class="header-content">
         <div>
@@ -29,7 +63,7 @@
         </div>
       </div>
     </header>
-    
+     
     <div v-if="mostraStagioniArchiviate && stagioni.archiviate.length > 0" class="archived-section">
       <h2 class="section-title">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -61,7 +95,12 @@
       >
         <div class="card-accent"></div>
           <div class="card-content">
-          <div class="cat-anno">{{ cat.is_portieri ? '★' : cat.anno }}</div>
+          <div class="cat-anno" :class="{ 'portieri': cat.is_portieri }">
+            <svg v-if="cat.is_portieri" class="gloves-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v2c0 2.76 2.24 5 5 5h2c2.76 0 5-2.24 5-5V7h1c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+            </svg>
+            <span v-else>{{ cat.anno }}</span>
+          </div>
           <div class="cat-nome">
             {{ cat.nome }}
           </div>
@@ -151,6 +190,17 @@
                 </label>
               </div>
             </div>
+            <div class="form-group" v-if="utenteAttivo?.is_admin && modal.id">
+              <label>Utenti che possono accedere</label>
+              <div class="utenti-grid" v-if="tuttiUtenti.length > 0">
+                <label v-for="u in tuttiUtenti" :key="u.id" class="utente-check" :class="{ selected: modalUtentiSel.includes(u.id) }">
+                  <input type="checkbox" :value="u.id" v-model="modalUtentiSel" />
+                  <span class="utente-avatar">{{ u.username.charAt(0).toUpperCase() }}</span>
+                  <span class="utente-nome">{{ u.username }}</span>
+                </label>
+              </div>
+              <p v-else class="muted-text">Nessun utente non-admin presente</p>
+            </div>
           </div>
           
           <div class="modal-footer">
@@ -200,21 +250,24 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { getCategorie, createCategoria, updateCategoria, deleteCategoria, getStagioni, archiviaStagione } from "../api/index.js"
+import { getCategorie, createCategoria, updateCategoria, deleteCategoria, getStagioni, archiviaStagione, getUtenti, getCategoriaUtenti, assegnaCategoriaUtenti } from "../api/index.js"
 import { useStore as useCategoria } from "../store.js"
 const { utenteAttivo } = useCategoria()
 
 const router = useRouter()
 const { setCategoria, setStagioneCorrente } = useCategoria()
 const categorie = ref([])
+const allCategories = ref([])
 const loading = ref(false)
 const errore = ref('')
 const stagioni = ref({ attiva: [], archiviate: [] })
 const mostraStagioniArchiviate = ref(false)
 const stagioneModal = ref({ show: false, stagione: new Date().getFullYear(), loading: false, errore: '' })
 const archiviaModal = ref({ show: false, loading: false })
+const tuttiUtenti = ref([])
+const modalUtentiSel = ref([])
 
 const tuttiGiorni = [
   { val: 1, nome: "Lunedì" },
@@ -228,6 +281,29 @@ const tuttiGiorni = [
 
 const nomiBreviGiorni = (val) => tuttiGiorni.find(g => g.val === val)?.nome?.slice(0, 3) || ''
 
+const planningSettimana = computed(() => {
+  return tuttiGiorni.map(g => {
+    const cats = allCategories.value.filter(c => {
+      if (!c.giorni) return false
+      const giorniCat = c.giorni.split(',').map(Number)
+      return giorniCat.includes(g.val)
+    })
+    return { ...g, categorie: cats }
+  })
+})
+
+function isToday(giornoVal) {
+  return new Date().getDay() === giornoVal
+}
+
+function formatDayDate(giornoVal) {
+  const oggi = new Date()
+  const diff = (giornoVal - oggi.getDay() + 7) % 7
+  const data = new Date(oggi)
+  data.setDate(oggi.getDate() + diff)
+  return data.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+}
+
 const modal = ref({ show: false, id: null, nome: "", anno: null, stagione: new Date().getFullYear(), giorniSel: [], is_portieri: false })
 
 function chiudiModal() {
@@ -238,25 +314,46 @@ function chiudiModal() {
 function apriNuova() {
   const currentYear = new Date().getMonth() >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1
   modal.value = { show: true, id: null, nome: "", anno: null, stagione: currentYear, giorniSel: [], is_portieri: false }
+  modalUtentiSel.value = []
   errore.value = ''
 }
 
-function apriModifica(cat) {
+async function loadCategorie() {
+  try {
+    const meRes = await import("../api/index.js").then(m => m.getMe())
+    const me = meRes.data
+    const res = await getCategorie()
+    categorie.value = me.is_admin || me.categorie_ids === null
+      ? res.data
+      : res.data.filter(c => me.categorie_ids.includes(c.id))
+    allCategories.value = res.data
+  } catch (e) {
+    console.error('Errore loadCategorie:', e)
+  }
+  
+  if (me?.is_admin) {
+    const utentiRes = await getUtenti()
+    tuttiUtenti.value = utentiRes.data.filter(u => !u.is_admin)
+  }
+}
+
+async function apriModifica(cat) {
   modal.value = {
     show: true, id: cat.id, nome: cat.nome, anno: cat.anno, stagione: cat.stagione,
     giorniSel: cat.giorni ? cat.giorni.split(",").map(Number) : [],
     is_portieri: cat.is_portieri === 1 || cat.is_portieri === true
   }
+  
+  if (utenteAttivo.value?.is_admin && cat.id) {
+    try {
+      const res = await getCategoriaUtenti(cat.id)
+      modalUtentiSel.value = res.data || []
+    } catch {
+      modalUtentiSel.value = []
+    }
+  }
+  
   errore.value = ''
-}
-
-async function loadCategorie() {
-  const meRes = await import("../api/index.js").then(m => m.getMe())
-  const me = meRes.data
-  const res = await getCategorie()
-  categorie.value = me.is_admin || me.categorie_ids === null
-    ? res.data
-    : res.data.filter(c => me.categorie_ids.includes(c.id))
 }
 
 function apriRegistro(cat) {
@@ -295,9 +392,13 @@ async function salvaCategoria() {
   try {
     if (modal.value.id) {
       await updateCategoria(modal.value.id, payload)
+      if (utenteAttivo.value?.is_admin) {
+        await assegnaCategoriaUtenti(modal.value.id, modalUtentiSel.value)
+      }
     } else {
       await createCategoria(payload)
     }
+    
     modal.value.show = false
     await loadCategorie()
   } catch (e) {
@@ -501,6 +602,143 @@ onMounted(() => {
   animation: slideUp 0.4s ease-out;
 }
 
+.planning-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  animation: slideUp 0.4s ease-out;
+}
+
+.planning-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 1.25rem;
+}
+
+.planning-section .section-title svg {
+  width: 22px;
+  height: 22px;
+  color: var(--color-primary);
+}
+
+.planning-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.75rem;
+}
+
+.planning-day {
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  min-height: 120px;
+  transition: all var(--transition-fast);
+}
+
+.planning-day.today {
+  border-color: var(--color-primary);
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.planning-day.empty {
+  opacity: 0.6;
+}
+
+.day-header {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.day-name {
+  display: block;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.day-date {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.planning-day.today .day-name {
+  color: var(--color-primary);
+}
+
+.day-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.planning-cat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.375rem 0.5rem;
+  background: white;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.planning-cat:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.planning-cat .cat-name {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.planning-cat .cat-time {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.planning-cat:hover .cat-time {
+  color: rgba(255,255,255,0.8);
+}
+
+.day-empty {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  text-align: center;
+  padding-top: 0.5rem;
+}
+
+@media (max-width: 1024px) {
+  .planning-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .planning-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .planning-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .section-title {
   display: flex;
   align-items: center;
@@ -615,6 +853,18 @@ onMounted(() => {
   line-height: 1;
   margin-bottom: 0.5rem;
   letter-spacing: -0.03em;
+}
+
+.cat-anno.portieri {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gloves-icon {
+  width: 48px;
+  height: 48px;
+  color: #f59e0b;
 }
 
 .cat-nome {
@@ -919,6 +1169,68 @@ onMounted(() => {
 
 .giorno-check input {
   display: none;
+}
+
+.utenti-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.utente-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.utente-check:hover {
+  border-color: var(--color-primary);
+}
+
+.utente-check.selected {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: var(--color-primary);
+}
+
+.utente-check input {
+  display: none;
+}
+
+.utente-avatar {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-border);
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.utente-check.selected .utente-avatar {
+  background: var(--color-primary);
+  color: white;
+}
+
+.utente-nome {
+  font-size: 0.875rem;
+}
+
+.muted-text {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-style: italic;
 }
 
 .switch-label {
