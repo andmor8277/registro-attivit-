@@ -201,6 +201,21 @@
               </div>
               <p v-else class="muted-text">Nessun utente non-admin presente</p>
             </div>
+            <div class="form-group import-section" v-if="!modal.id && utenteAttivo?.is_admin">
+              <button class="btn-import" @click="importaGiocatori" :disabled="importLoading">
+                <span v-if="importLoading" class="spinner-small"></span>
+                <template v-else>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                    <circle cx="8.5" cy="7" r="4"/>
+                    <line x1="20" y1="8" x2="20" y2="14"/>
+                    <line x1="23" y1="11" x2="17" y2="11"/>
+                  </svg>
+                  Importa Giocatori dalla Stagione Precedente
+                </template>
+              </button>
+              <p class="import-hint">Importa automaticamente i giocatori dalla categoria corrispondente della stagione precedente</p>
+            </div>
           </div>
           
           <div class="modal-footer">
@@ -252,7 +267,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { getCategorie, createCategoria, updateCategoria, deleteCategoria, getStagioni, archiviaStagione, getUtenti, getCategoriaUtenti, assegnaCategoriaUtenti } from "../api/index.js"
+import { getCategorie, createCategoria, updateCategoria, deleteCategoria, getStagioni, archiviaStagione, getUtenti, getCategoriaUtenti, assegnaCategoriaUtenti, importaGiocatori as importaGiocatoriApi } from "../api/index.js"
 import { useStore as useCategoria } from "../store.js"
 const { utenteAttivo } = useCategoria()
 
@@ -268,6 +283,7 @@ const stagioneModal = ref({ show: false, stagione: new Date().getFullYear(), loa
 const archiviaModal = ref({ show: false, loading: false })
 const tuttiUtenti = ref([])
 const modalUtentiSel = ref([])
+const importLoading = ref(false)
 
 const tuttiGiorni = [
   { val: 1, nome: "Lunedì" },
@@ -405,6 +421,50 @@ async function salvaCategoria() {
     errore.value = e.response?.data?.detail || 'Errore durante il salvataggio'
   } finally {
     loading.value = false
+  }
+}
+
+async function importaGiocatori() {
+  if (!modal.value.nome || !modal.value.stagione) {
+    errore.value = 'Prima compila nome e stagione'
+    return
+  }
+  
+  if (!modal.value.is_portieri && !modal.value.anno) {
+    errore.value = 'Per importare i giocatori, inserisci l\'anno di nascita'
+    return
+  }
+  
+  if (!confirm('Importare i giocatori dalla categoria corrispondente della stagione precedente?')) {
+    return
+  }
+  
+  importLoading.value = true
+  errore.value = ''
+  
+  const payload = {
+    nome: modal.value.nome,
+    anno: modal.value.is_portieri ? null : parseInt(modal.value.anno),
+    stagione: parseInt(modal.value.stagione),
+    giorni: modal.value.giorniSel.sort().join(",") || null,
+    is_portieri: modal.value.is_portieri
+  }
+  
+  try {
+    const res = await createCategoria(payload)
+    const newCatId = res.data.id
+    
+    if (newCatId) {
+      const importRes = await importaGiocatoriApi(newCatId)
+      alert(importRes.data.messaggio || `Importati ${importRes.data.giocatori_importati} giocatori`)
+    }
+    
+    modal.value.show = false
+    await loadCategorie()
+  } catch (e) {
+    errore.value = e.response?.data?.detail || 'Errore durante l\'importazione'
+  } finally {
+    importLoading.value = false
   }
 }
 
@@ -1284,6 +1344,52 @@ onMounted(() => {
   gap: 0.75rem;
   padding: 1rem 1.5rem 1.5rem;
   border-top: 1px solid var(--color-border-light);
+}
+
+.import-section {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.btn-import {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-md);
+  color: #10b981;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-import:hover {
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.btn-import:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-import svg {
+  width: 18px;
+  height: 18px;
+}
+
+.import-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.5rem;
+  text-align: center;
 }
 
 .btn-secondary {
