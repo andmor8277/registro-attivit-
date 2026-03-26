@@ -1,0 +1,215 @@
+<template>
+  <div class="scelta">
+    <div class="scelta-header">
+      <button class="btn-back" @click="router.push('/')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="19" y1="12" x2="5" y2="12"/>
+          <polyline points="12 19 5 12 12 5"/>
+        </svg>
+        Categorie
+      </button>
+      <h1>{{ categoria?.nome }} {{ categoria?.anno }}</h1>
+      <p class="sottotitolo">Cosa vuoi gestire?</p>
+    </div>
+    
+    <div class="scelta-grid">
+      <div class="scelta-card" @click="router.push('/registro/' + categoria?.id)">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+            <rect x="9" y="3" width="6" height="4" rx="1"/>
+            <path d="M9 12h6M9 16h6"/>
+          </svg>
+        </div>
+        <div class="card-label">Presenze</div>
+        <div class="card-desc">Gestisci le presenze degli atleti</div>
+        <div class="card-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </div>
+      </div>
+      
+      <div class="scelta-card" @click="router.push('/convocazioni/' + categoria?.id)">
+        <div class="card-icon accent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 17H2a3 3 0 000 6h20a3 3 0 000-6z"/>
+            <path d="M6 17V7a2 2 0 012-2h10a2 2 0 012 2v10"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div class="card-label">Convocazioni</div>
+        <div class="card-desc">Crea e gestisci convocazioni</div>
+        <div class="card-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { useRouter } from 'vue-router'
+import { useStore } from '../store.js'
+const router = useRouter()
+const { categoriaAttiva } = useStore()
+const categoria = categoriaAttiva
+</script>
+
+<style scoped>
+.scelta {
+  padding: 2rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.scelta-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  animation: slideUp 0.4s ease-out;
+}
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-bottom: 1.5rem;
+}
+
+.btn-back:hover {
+  background: var(--color-secondary);
+  border-color: var(--color-secondary);
+  color: white;
+}
+
+.btn-back svg {
+  width: 16px;
+  height: 16px;
+}
+
+.scelta h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.sottotitolo {
+  color: var(--color-text-muted);
+  font-size: 1rem;
+}
+
+.scelta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.scelta-card {
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  overflow: hidden;
+  animation: slideUp 0.4s ease-out both;
+}
+
+.scelta-card:nth-child(2) {
+  animation-delay: 100ms;
+}
+
+.scelta-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+}
+
+.scelta-card:hover .card-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.card-icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+  margin-bottom: 1rem;
+  transition: all var(--transition-base);
+}
+
+.card-icon.accent {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--color-info);
+}
+
+.scelta-card:hover .card-icon {
+  transform: scale(1.05);
+}
+
+.card-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.card-label {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+}
+
+.card-desc {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.card-arrow {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary);
+  border-radius: 50%;
+  color: white;
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: all var(--transition-base);
+}
+
+.card-arrow svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 640px) {
+  .scelta { padding: 1.25rem; }
+  .scelta-grid { grid-template-columns: 1fr; }
+}
+</style>
