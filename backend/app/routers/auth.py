@@ -63,6 +63,7 @@ class UtenteCreate(BaseModel):
     codice_fiscale: str
     cellulare: str
     tesserino: Optional[str] = None
+    ruolo: Optional[str] = None
 
 class UtenteUpdate(BaseModel):
     nome: str
@@ -71,6 +72,7 @@ class UtenteUpdate(BaseModel):
     codice_fiscale: str
     cellulare: str
     tesserino: Optional[str] = None
+    ruolo: Optional[str] = None
 
 class AssegnaCategorie(BaseModel):
     categoria_ids: List[int]
@@ -100,7 +102,8 @@ def me(current_user: Utente = Depends(get_current_user), db: Session = Depends(g
         "data_nascita": current_user.data_nascita,
         "codice_fiscale": current_user.codice_fiscale,
         "cellulare": current_user.cellulare,
-        "tesserino": current_user.tesserino
+        "tesserino": current_user.tesserino,
+        "ruolo": current_user.ruolo
     }
 
 @router.post("/utenti")
@@ -116,7 +119,8 @@ def crea_utente(data: UtenteCreate, current_user: Utente = Depends(get_admin), d
         data_nascita=data.data_nascita,
         codice_fiscale=data.codice_fiscale,
         cellulare=data.cellulare,
-        tesserino=data.tesserino
+        tesserino=data.tesserino,
+        ruolo=data.ruolo
     )
     db.add(utente)
     db.commit()
@@ -133,6 +137,8 @@ def modifica_utente(uid: int, data: UtenteUpdate, current_user: Utente = Depends
     utente.codice_fiscale = data.codice_fiscale
     utente.cellulare = data.cellulare
     utente.tesserino = data.tesserino
+    utente.ruolo = data.ruolo
+    utente.is_admin = 1 if data.ruolo == 'admin' else 0
     db.commit()
     return {"ok": True}
 
@@ -152,7 +158,8 @@ def lista_utenti(current_user: Utente = Depends(get_admin), db: Session = Depend
             "data_nascita": u.data_nascita,
             "codice_fiscale": u.codice_fiscale,
             "cellulare": u.cellulare,
-            "tesserino": u.tesserino
+            "tesserino": u.tesserino,
+            "ruolo": u.ruolo
         })
     return result
 
