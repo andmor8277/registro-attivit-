@@ -41,6 +41,7 @@ export const getCodici = () => api.get('/codici/')
 export const getRegistroMese = (categoriaId, anno, mese) => api.get('/registro/mese/' + categoriaId + '/' + anno + '/' + mese)
 export const upsertRegistro = (entry) => api.post('/registro/', entry)
 export const createPersona = (data) => api.post('/persone/', data)
+export const updatePersona = (id, data) => api.put('/persone/' + id, data)
 export const deletePersona = (id) => api.delete('/persone/' + id)
 
 export const getConvocazioni = (categoriaId) => api.get('/convocazioni/?categoria_id=' + categoriaId)

@@ -25,6 +25,15 @@
           <input v-model="nuovo.password" type="password" placeholder="Password" />
         </div>
         <div class="input-group">
+          <label>Ruolo *</label>
+          <select v-model="nuovo.ruolo" class="ruolo-select">
+            <option value="">Seleziona ruolo...</option>
+            <option value="admin">Admin</option>
+            <option value="mister">Mister</option>
+            <option value="dirigente">Dirigente</option>
+          </select>
+        </div>
+        <div class="input-group">
           <label>Nome *</label>
           <input v-model="nuovo.nome" placeholder="Nome" />
         </div>
@@ -48,10 +57,6 @@
           <label>Tesserino</label>
           <input v-model="nuovo.tesserino" placeholder="Numero Tesserino" />
         </div>
-        <label class="check-admin" v-if="!editingUtente">
-          <input type="checkbox" v-model="nuovo.is_admin" />
-          <span class="check-label">Admin</span>
-        </label>
       </div>
       <div class="form-actions">
         <button class="btn-primary" @click="editingUtente ? salvaUtente() : creaUtente()">
@@ -84,7 +89,9 @@
             <div class="user-details">
               <span class="user-name">{{ u.username }}</span>
               <span class="user-fullname">{{ u.nome }} {{ u.cognome }}</span>
-              <span class="badge-admin" v-if="u.is_admin">ADMIN</span>
+              <span class="badge-role badge-admin" v-if="u.ruolo === 'admin'">ADMIN</span>
+              <span class="badge-role badge-mister" v-if="u.ruolo === 'mister'">MISTER</span>
+              <span class="badge-role badge-dirigente" v-if="u.ruolo === 'dirigente'">DIRIGENTE</span>
             </div>
           </div>
           <div class="user-data">
@@ -116,13 +123,15 @@
             </button>
           </div>
         </div>
-        <div v-if="!u.is_admin" class="categorie-assegna">
-          <span class="label">Categorie visibili:</span>
+        <div v-if="u.ruolo === 'mister' || u.ruolo === 'dirigente'" class="categorie-assegna">
+          <span class="label">Assegna a categorie (come Mister):</span>
           <div class="categorie-grid">
-            <label v-for="cat in tutteCategorie" :key="cat.id" class="cat-check" :class="{ selected: u.categorie_ids?.includes(cat.id) }">
-              <input type="checkbox" :value="cat.id" v-model="u.categorie_ids" @change="salvaCategorie(u)" />
+            <label v-for="cat in tutteCategorie" :key="cat.id" class="cat-check" :class="{ selected: isMister(u, cat.id) }">
+              <input type="checkbox" :value="cat.id" @change="toggleMister(u, cat.id, $event)" />
               <span class="cat-anno">{{ cat.anno }}</span>
               <span class="cat-nome">{{ cat.nome }}</span>
+              <span v-if="isMister(u, cat.id) && u.ruolo === 'dirigente'" class="badge-mister" style="background: #2563eb;">DIR</span>
+              <span v-else-if="isMister(u, cat.id)" class="badge-mister">MISTER</span>
             </label>
             <span v-if="tutteCategorie.length === 0" class="muted">Nessuna categoria presente</span>
           </div>
@@ -142,13 +151,16 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getUtenti, createUtente, deleteUtente, updateUtente, resetPassword, assegnaCategorie, getCategorie } from '../api/index.js'
+import { getUtenti, createUtente, deleteUtente, updateUtente, resetPassword, assegnaCategorie, getCategorie, getCategoriaUtenti } from '../api/index.js'
 
 const utenti = ref([])
 const tutteCategorie = ref([])
 const errore = ref('')
 const editingUtente = ref(null)
-const nuovo = ref({ username: '', password: '', is_admin: false, nome: '', cognome: '', data_nascita: '', codice_fiscale: '', cellulare: '', tesserino: '' })
+const nuovo = ref({ username: '', password: '', nome: '', cognome: '', data_nascita: '', codice_fiscale: '', cellulare: '', tesserino: '', ruolo: '' })
+
+// Track mister assignments: { utenteId: { categoriaId: true/false } }
+const misterMap = ref({})
 
 function formatData(d) {
   if (!d) return ''
@@ -156,20 +168,54 @@ function formatData(d) {
 }
 
 function resetForm() {
-  nuovo.value = { username: '', password: '', is_admin: false, nome: '', cognome: '', data_nascita: '', codice_fiscale: '', cellulare: '', tesserino: '' }
+  nuovo.value = { username: '', password: '', nome: '', cognome: '', data_nascita: '', codice_fiscale: '', cellulare: '', tesserino: '', ruolo: '' }
   editingUtente.value = null
+}
+
+function isMister(u, catId) {
+  return misterMap.value[u.id]?.[catId] !== undefined
+}
+
+async function toggleMister(u, catId, event) {
+  const checked = event.target.checked
+  if (!misterMap.value[u.id]) {
+    misterMap.value[u.id] = {}
+  }
+  
+  if (checked) {
+    // Add with the user's ruolo (mister or dirigente)
+    misterMap.value[u.id][catId] = u.ruolo || 'mister'
+  } else {
+    delete misterMap.value[u.id][catId]
+  }
+  
+  // Save to backend - get all category IDs for this user
+  const utenteIds = Object.keys(misterMap.value[u.id] || {}).map(id => parseInt(id))
+  
+  await assegnaCategorie(u.id, utenteIds)
 }
 
 async function load() {
   const [u, c] = await Promise.all([getUtenti(), getCategorie()])
   utenti.value = u.data
   tutteCategorie.value = c.data
+  
+  // Load mister assignments for each category
+  for (const cat of c.data) {
+    const res = await getCategoriaUtenti(cat.id)
+    for (const uid of res.data) {
+      if (!misterMap.value[uid]) {
+        misterMap.value[uid] = {}
+      }
+      misterMap.value[uid][cat.id] = true
+    }
+  }
 }
 
 async function creaUtente() {
   errore.value = ''
   const n = nuovo.value
-  if (!n.username || !n.password || !n.nome || !n.cognome || !n.data_nascita || !n.codice_fiscale || !n.cellulare) {
+  if (!n.username || !n.password || !n.nome || !n.cognome || !n.data_nascita || !n.codice_fiscale || !n.cellulare || !n.ruolo) {
     errore.value = 'Compila tutti i campi obbligatori (*)' 
     return
   }
@@ -177,13 +223,14 @@ async function creaUtente() {
     await createUtente({
       username: n.username,
       password: n.password,
-      is_admin: n.is_admin ? 1 : 0,
+      is_admin: n.ruolo === 'admin' ? 1 : 0,
       nome: n.nome,
       cognome: n.cognome,
       data_nascita: n.data_nascita,
       codice_fiscale: n.codice_fiscale.toUpperCase(),
       cellulare: n.cellulare,
-      tesserino: n.tesserino || null
+      tesserino: n.tesserino || null,
+      ruolo: n.ruolo
     })
     resetForm()
     await load()
@@ -197,13 +244,13 @@ function modificaUtente(u) {
   nuovo.value = {
     username: u.username,
     password: '',
-    is_admin: u.is_admin,
     nome: u.nome,
     cognome: u.cognome,
     data_nascita: u.data_nascita,
     codice_fiscale: u.codice_fiscale,
     cellulare: u.cellulare,
-    tesserino: u.tesserino || ''
+    tesserino: u.tesserino || '',
+    ruolo: u.ruolo || ''
   }
 }
 
@@ -214,7 +261,7 @@ function annullaModifica() {
 async function salvaUtente() {
   errore.value = ''
   const n = nuovo.value
-  if (!n.nome || !n.cognome || !n.data_nascita || !n.codice_fiscale || !n.cellulare) {
+  if (!n.nome || !n.cognome || !n.data_nascita || !n.codice_fiscale || !n.cellulare || !n.ruolo) {
     errore.value = 'Compila tutti i campi obbligatori (*)' 
     return
   }
@@ -225,7 +272,8 @@ async function salvaUtente() {
       data_nascita: n.data_nascita,
       codice_fiscale: n.codice_fiscale.toUpperCase(),
       cellulare: n.cellulare,
-      tesserino: n.tesserino || null
+      tesserino: n.tesserino || null,
+      ruolo: n.ruolo
     })
     resetForm()
     await load()
@@ -245,10 +293,6 @@ async function resetsPassword(id) {
   await resetPassword(id)
   alert('Password resettata! La nuova password è: password')
   await load()
-}
-
-async function salvaCategorie(u) {
-  await assegnaCategorie(u.id, u.categorie_ids)
 }
 
 onMounted(load)
@@ -353,30 +397,27 @@ onMounted(load)
   cursor: not-allowed;
 }
 
+.ruolo-select {
+  width: 100%;
+  padding: 0.6rem 0.875rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  color: var(--color-text);
+  background: var(--color-bg);
+  cursor: pointer;
+}
+
+.ruolo-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
 .form-actions {
   margin-top: 1rem;
   display: flex;
   gap: 0.75rem;
-}
-
-.check-admin {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  padding: 0.6rem 0;
-}
-
-.check-admin input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-primary);
-  cursor: pointer;
-}
-
-.check-label {
-  font-weight: 500;
-  color: var(--color-text-secondary);
 }
 
 .btn-primary {
@@ -504,15 +545,28 @@ onMounted(load)
   gap: 0.5rem;
 }
 
-.badge-admin {
-  background: var(--color-secondary);
-  color: white;
+.badge-role {
   font-size: 0.6875rem;
   font-weight: 700;
   padding: 0.25rem 0.5rem;
   border-radius: var(--radius-sm);
   letter-spacing: 0.05em;
   width: fit-content;
+}
+
+.badge-admin {
+  background: #9333ea;
+  color: white;
+}
+
+.badge-mister {
+  background: #dc2626;
+  color: white;
+}
+
+.badge-dirigente {
+  background: #2563eb;
+  color: white;
 }
 
 .btn-edit {
@@ -646,6 +700,16 @@ onMounted(load)
 .cat-nome {
   font-size: 0.8125rem;
   color: var(--color-text-secondary);
+}
+
+.badge-mister {
+  font-size: 0.6rem;
+  font-weight: 700;
+  background: var(--color-primary);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: auto;
 }
 
 .muted {

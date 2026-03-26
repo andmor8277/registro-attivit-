@@ -96,7 +96,7 @@
         <div class="card-accent"></div>
           <div class="card-content">
           <div class="cat-anno" :class="{ 'portieri': cat.is_portieri }">
-            <span v-if="cat.is_portieri">🧤</span>
+            <span v-if="cat.is_portieri">⭐</span>
             <span v-else>{{ cat.anno }}</span>
           </div>
           <div class="cat-nome">

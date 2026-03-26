@@ -45,16 +45,7 @@
     </div>
     
     <div class="table-wrapper">
-      <div v-for="gruppo in gruppi" :key="gruppo" class="gruppo-block">
-        <div class="gruppo-header">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-            <path d="M16 3.13a4 4 0 010 7.75"/>
-          </svg>
-          {{ gruppo }}
-        </div>
+      <template v-if="isDirigente">
         <table>
           <thead>
             <tr>
@@ -65,11 +56,10 @@
                 <div class="giorno-nome">{{ g.gg }}</div>
               </th>
               <th class="th-tot th-pres">TOT</th>
-              <th class="th-actions"></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(persona, idx) in personePerGruppo(gruppo)" :key="persona.id">
+            <tr v-for="(persona, idx) in personeAlfabetiche" :key="persona.id">
               <td class="td-num">{{ idx + 1 }}</td>
               <td class="td-nome">
                 <span class="persona-name">{{ persona.cognome }} {{ persona.nome }}</span>
@@ -81,40 +71,82 @@
                 {{ getCodice(persona.id, g.num) }}
               </td>
               <td class="td-tot td-pres">{{ totalePresenze(persona.id) }}</td>
-              <td class="td-actions">
-                <button class="btn-action" @click.stop="apriModificaPersona(persona)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                  </svg>
-                </button>
-                <button class="btn-action btn-danger" @click="eliminaPersona(persona.id)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                  </svg>
-                </button>
-              </td>
             </tr>
           </tbody>
-          <tfoot>
-            <tr class="riga-totale pres">
-              <td colspan="2">Presenti</td>
-              <td v-for="g in giorniMese" :key="g.num" class="tot-cell">
-                {{ totGiornoGruppo(gruppo, g.num).pres || '' }}
-              </td>
-              <td colspan="2"></td>
-            </tr>
-            <tr class="riga-totale ass">
-              <td colspan="2">Assenti</td>
-              <td v-for="g in giorniMese" :key="g.num" class="tot-cell">
-                {{ totGiornoGruppo(gruppo, g.num).ass || '' }}
-              </td>
-              <td colspan="2"></td>
-            </tr>
+        </table>
+      </template>
+      <template v-else>
+        <div v-for="gruppo in gruppi" :key="gruppo" class="gruppo-block">
+          <div class="gruppo-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+              <path d="M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+            {{ gruppo }}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th class="th-num">#</th>
+                <th class="th-nome">Cognome Nome</th>
+                <th v-for="g in giorniMese" :key="g.num" :class="{ 'th-weekend': g.weekend }">
+                  <div class="giorno-num">{{ g.num }}</div>
+                  <div class="giorno-nome">{{ g.gg }}</div>
+                </th>
+                <th class="th-tot th-pres">TOT</th>
+                <th class="th-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(persona, idx) in personePerGruppo(gruppo)" :key="persona.id">
+                <td class="td-num">{{ idx + 1 }}</td>
+                <td class="td-nome">
+                  <span class="persona-name">{{ persona.cognome }} {{ persona.nome }}</span>
+                </td>
+                <td v-for="g in giorniMese" :key="g.num"
+                  class="cella" 
+                  :class="getCodiceClasse(persona.id, g.num)"
+                  @click="openEdit(persona, g.num)">
+                  {{ getCodice(persona.id, g.num) }}
+                </td>
+                <td class="td-tot td-pres">{{ totalePresenze(persona.id) }}</td>
+                <td class="td-actions">
+                  <button class="btn-action" @click.stop="apriModificaPersona(persona)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button class="btn-action btn-danger" @click="eliminaPersona(persona.id)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="riga-totale pres">
+                <td colspan="2">Presenti</td>
+                <td v-for="g in giorniMese" :key="g.num" class="tot-cell">
+                  {{ totGiornoGruppo(gruppo, g.num).pres || '' }}
+                </td>
+                <td colspan="2"></td>
+              </tr>
+              <tr class="riga-totale ass">
+                <td colspan="2">Assenti</td>
+                <td v-for="g in giorniMese" :key="g.num" class="tot-cell">
+                  {{ totGiornoGruppo(gruppo, g.num).ass || '' }}
+                </td>
+                <td colspan="2"></td>
+              </tr>
           </tfoot>
         </table>
       </div>
+      </template>
       
       <div class="totale-generale">
         <div class="totale-header">
@@ -261,7 +293,8 @@ import { useStore as useCategoria } from "../store.js"
 const route = useRoute()
 const router = useRouter()
 const categoriaId = computed(() => parseInt(route.params.id))
-const { categoriaAttiva } = useCategoria()
+const { categoriaAttiva, utenteAttivo } = useCategoria()
+const isDirigente = computed(() => utenteAttivo.value?.ruolo === 'dirigente')
 
 const oggi = new Date()
 const anno = ref(oggi.getFullYear())
@@ -290,6 +323,7 @@ const giorniMese = computed(() => {
 })
 
 const gruppi = computed(() => [...new Set(persone.value.map(p => p.gruppo_nome || "Senza gruppo"))])
+const personeAlfabetiche = computed(() => [...persone.value].sort((a, b) => a.cognome.localeCompare(b.cognome)))
 function personePerGruppo(g) { return persone.value.filter(p => (p.gruppo_nome || "Senza gruppo") === g) }
 function getCodice(personaId, giorno) {
   const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")

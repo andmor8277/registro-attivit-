@@ -23,6 +23,10 @@ class Persona(Base):
     cognome = Column(String(100), nullable=False)
     gruppo_id = Column(Integer, ForeignKey("gruppi.id"))
     categoria_id = Column(Integer, ForeignKey("categorie.id"))
+    data_nascita = Column(Date, nullable=True)
+    codice_fiscale = Column(String(16), nullable=True)
+    telefono = Column(String(20), nullable=True)
+    matricola = Column(String(50), nullable=True)
 
 class CodicePresenza(Base):
     __tablename__ = "codici"
@@ -50,12 +54,14 @@ class Utente(Base):
     codice_fiscale = Column(String(16), nullable=False)
     cellulare = Column(String(20), nullable=False)
     tesserino = Column(String(50), nullable=True)
+    ruolo = Column(String(20), nullable=True)  # admin, mister, dirigente
 
 class UtenteCategoria(Base):
     __tablename__ = "utente_categorie"
     id = Column(Integer, primary_key=True)
     utente_id = Column(Integer, ForeignKey("utenti.id", ondelete="CASCADE"))
     categoria_id = Column(Integer, ForeignKey("categorie.id", ondelete="CASCADE"))
+    ruolo = Column(String(50), nullable=True)  # es. 'mister'
 
 class Convocazione(Base):
     __tablename__ = "convocazioni"

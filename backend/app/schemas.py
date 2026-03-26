@@ -7,6 +7,10 @@ class PersonaCreate(BaseModel):
     cognome: str
     gruppo_id: Optional[int] = None
     categoria_id: Optional[int] = None
+    data_nascita: Optional[date] = None
+    codice_fiscale: Optional[str] = None
+    telefono: Optional[str] = None
+    matricola: Optional[str] = None
 
 class PersonaOut(BaseModel):
     id: int
@@ -14,6 +18,10 @@ class PersonaOut(BaseModel):
     cognome: str
     gruppo_id: Optional[int]
     categoria_id: Optional[int]
+    data_nascita: Optional[date]
+    codice_fiscale: Optional[str]
+    telefono: Optional[str]
+    matricola: Optional[str]
     class Config: from_attributes = True
 
 class CodiceOut(BaseModel):
