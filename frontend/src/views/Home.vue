@@ -343,13 +343,13 @@ async function loadCategorie() {
     
     const allRes = await getAllCategorie()
     allCategories.value = allRes.data
+    
+    if (me?.is_admin) {
+      const utentiRes = await getUtenti()
+      tuttiUtenti.value = utentiRes.data.filter(u => !u.is_admin)
+    }
   } catch (e) {
     console.error('Errore loadCategorie:', e)
-  }
-  
-  if (me?.is_admin) {
-    const utentiRes = await getUtenti()
-    tuttiUtenti.value = utentiRes.data.filter(u => !u.is_admin)
   }
 }
 

@@ -9,6 +9,14 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Remove /api prefix from requests
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    req.url = req.url.slice(4);
+  }
+  next();
+});
+
 const DATA_FILE = path.join(__dirname, 'mock-data.json');
 console.log('File dati:', DATA_FILE);
 
@@ -156,6 +164,9 @@ app.put('/auth/utenti/:id', (req, res) => {
     data.utenti[idx].tesserino = req.body.tesserino;
     data.utenti[idx].ruolo = req.body.ruolo;
     data.utenti[idx].is_admin = req.body.ruolo === 'admin' ? 1 : 0;
+    if (req.body.categorie_ids !== undefined) {
+      data.utenti[idx].categorie_ids = req.body.categorie_ids;
+    }
     saveData(data);
     res.json(data.utenti[idx]);
   } else {
@@ -205,7 +216,7 @@ app.put('/auth/utenti/:id/categorie', (req, res) => {
   if (user) {
     user.categorie_ids = req.body.categoria_ids;
     saveData(data);
-    res.json(user);
+    res.json({ ok: true });
   } else {
     res.status(404).json({ detail: 'Utente non trovato' });
   }
@@ -351,12 +362,11 @@ app.get('/categorie/:id/responsabili', (req, res) => {
   const catId = parseInt(req.params.id);
   const responsabili = data.utenti.filter(u => 
     u.categorie_ids && u.categorie_ids.includes(catId) &&
-    (u.ruolo === 'mister' || u.ruolo === 'dirigente')
+    u.ruolo === 'mister'
   ).map(u => ({
     id: u.id,
     cognome: u.cognome,
-    cellulare: u.cellulare,
-    ruolo: u.ruolo
+    cellulare: u.cellulare
   }));
   res.json(responsabili);
 });

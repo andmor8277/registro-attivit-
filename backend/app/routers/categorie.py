@@ -154,7 +154,7 @@ def assegna_utenti_categoria(categoria_id: int, data: AssegnaUtenti, db: Session
 def get_categoria_responsabili(categoria_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     assegnazioni = db.query(UtenteCategoria).filter(
         UtenteCategoria.categoria_id == categoria_id,
-        UtenteCategoria.ruolo.in_(['mister', 'dirigente'])
+        UtenteCategoria.ruolo == 'mister'
     ).all()
     result = []
     for a in assegnazioni:
@@ -163,8 +163,7 @@ def get_categoria_responsabili(categoria_id: int, db: Session = Depends(get_db),
             result.append({
                 "id": u.id,
                 "cognome": u.cognome,
-                "cellulare": u.cellulare,
-                "ruolo": a.ruolo
+                "cellulare": u.cellulare
             })
     return result
 
