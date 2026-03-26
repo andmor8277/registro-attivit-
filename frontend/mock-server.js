@@ -37,9 +37,9 @@ function saveData(data) {
 function getDefaultData() {
   return {
     utenti: [
-      { id: 1, username: 'admin', is_admin: true, password: 'admin123', categorie_ids: null },
-      { id: 2, username: 'asergi', is_admin: true, password: 'password', categorie_ids: null },
-      { id: 3, username: 'agrillo', is_admin: false, password: 'password', categorie_ids: [1, 2] }
+      { id: 1, username: 'admin', is_admin: true, password: 'admin123', categorie_ids: null, nome: 'Admin', cognome: 'Sistema', data_nascita: '1990-01-01', codice_fiscale: 'ADMTTA90A01A000A', cellulare: '3331234567', tesserino: 'ADMIN001' },
+      { id: 2, username: 'asergi', is_admin: true, password: 'password', categorie_ids: null, nome: 'Alessandro', cognome: 'Sergi', data_nascita: '1985-06-15', codice_fiscale: 'SRGLSN85H15A000A', cellulare: '3332345678', tesserino: 'ASERGI01' },
+      { id: 3, username: 'agrillo', is_admin: false, password: 'password', categorie_ids: [1, 2], nome: 'Antonio', cognome: 'Grillo', data_nascita: '1980-03-22', codice_fiscale: 'GRLNTN80C22A000A', cellulare: '3333456789', tesserino: 'AGRILLO01' }
     ],
     categorie: [
       { id: 1, nome: 'Esordienti', anno: 2014, stagione: 2025, giorni: '1,2,4', is_portieri: 0, is_archiviata: 0 },
@@ -52,7 +52,8 @@ function getDefaultData() {
       { id: 4, nome: 'Sara', cognome: 'Neri', categoria_id: 1, gruppo_id: 2, gruppo_nome: 'SECONDO GRUPPO' }
     ],
     registro: [],
-    convocazioni: []
+    convocazioni: [],
+    allenatori: []
   };
 }
 
@@ -70,6 +71,7 @@ function getUtenti() { return data.utenti; }
 function getPersone() { return data.persone; }
 function getRegistro() { return data.registro; }
 function getConvocazioni() { return data.convocazioni; }
+function getAllenatori() { return data.allenatori; }
 function getCodici() {
   return [
     { codice: 'X', tipo: 'presenza', descrizione: 'Presente' },
@@ -124,10 +126,38 @@ app.get('/auth/utenti', (req, res) => {
 });
 
 app.post('/auth/utenti', (req, res) => {
-  const newUser = { id: genId(), ...req.body, categorie_ids: [] };
+  const newUser = {
+    id: genId(),
+    username: req.body.username,
+    password: req.body.password,
+    is_admin: req.body.is_admin || 0,
+    categorie_ids: [],
+    nome: req.body.nome,
+    cognome: req.body.cognome,
+    data_nascita: req.body.data_nascita,
+    codice_fiscale: req.body.codice_fiscale,
+    cellulare: req.body.cellulare,
+    tesserino: req.body.tesserino
+  };
   data.utenti.push(newUser);
   saveData(data);
   res.json(newUser);
+});
+
+app.put('/auth/utenti/:id', (req, res) => {
+  const idx = data.utenti.findIndex(u => u.id === parseInt(req.params.id));
+  if (idx >= 0) {
+    data.utenti[idx].nome = req.body.nome;
+    data.utenti[idx].cognome = req.body.cognome;
+    data.utenti[idx].data_nascita = req.body.data_nascita;
+    data.utenti[idx].codice_fiscale = req.body.codice_fiscale;
+    data.utenti[idx].cellulare = req.body.cellulare;
+    data.utenti[idx].tesserino = req.body.tesserino;
+    saveData(data);
+    res.json(data.utenti[idx]);
+  } else {
+    res.status(404).json({ detail: 'Utente non trovato' });
+  }
 });
 
 app.delete('/auth/utenti/:id', (req, res) => {
@@ -404,6 +434,36 @@ app.put('/convocazioni/:id', (req, res) => {
 
 app.delete('/convocazioni/:id', (req, res) => {
   data.convocazioni = data.convocazioni.filter(c => c.id !== parseInt(req.params.id));
+  saveData(data);
+  res.json({ ok: true });
+});
+
+// ============ ALLENATORI ============
+app.get('/allenatori/', (req, res) => {
+  const all = getAllenatori().sort((a, b) => a.cognome.localeCompare(b.cognome));
+  res.json(all);
+});
+
+app.post('/allenatori/', (req, res) => {
+  const newAllenatore = { id: genId(), cognome: req.body.cognome };
+  data.allenatori.push(newAllenatore);
+  saveData(data);
+  res.json(newAllenatore);
+});
+
+app.put('/allenatori/:id', (req, res) => {
+  const idx = data.allenatori.findIndex(a => a.id === parseInt(req.params.id));
+  if (idx >= 0) {
+    data.allenatori[idx].cognome = req.body.cognome;
+    saveData(data);
+    res.json(data.allenatori[idx]);
+  } else {
+    res.status(404).json({ detail: 'Allenatore non trovato' });
+  }
+});
+
+app.delete('/allenatori/:id', (req, res) => {
+  data.allenatori = data.allenatori.filter(a => a.id !== parseInt(req.params.id));
   saveData(data);
   res.json({ ok: true });
 });
