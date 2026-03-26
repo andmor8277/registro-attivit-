@@ -1,107 +1,177 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Token fittizio per login
+const DATA_FILE = path.join(__dirname, 'mock-data.json');
+console.log('File dati:', DATA_FILE);
+
+function loadData() {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const raw = fs.readFileSync(DATA_FILE, 'utf8');
+      return JSON.parse(raw);
+    }
+  } catch (e) {
+    console.error('Errore nel caricamento dati:', e);
+  }
+  return getDefaultData();
+}
+
+function saveData(data) {
+  try {
+    console.log('Salvando dati in:', DATA_FILE);
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+    console.log('Dati salvati!');
+  } catch (e) {
+    console.error('Errore nel salvataggio dati:', e);
+  }
+}
+
+function getDefaultData() {
+  return {
+    utenti: [
+      { id: 1, username: 'admin', is_admin: true, password: 'admin123', categorie_ids: null },
+      { id: 2, username: 'asergi', is_admin: true, password: 'password', categorie_ids: null },
+      { id: 3, username: 'agrillo', is_admin: false, password: 'password', categorie_ids: [1, 2] }
+    ],
+    categorie: [
+      { id: 1, nome: 'Esordienti', anno: 2014, stagione: 2025, giorni: '1,2,4', is_portieri: 0, is_archiviata: 0 },
+      { id: 2, nome: '2013', anno: 2013, stagione: 2025, giorni: '3,5', is_portieri: 0, is_archiviata: 0 }
+    ],
+    persone: [
+      { id: 1, nome: 'Marco', cognome: 'Rossi', categoria_id: 1, gruppo_id: 1, gruppo_nome: 'PRIMO GRUPPO' },
+      { id: 2, nome: 'Luca', cognome: 'Bianchi', categoria_id: 1, gruppo_id: 1, gruppo_nome: 'PRIMO GRUPPO' },
+      { id: 3, nome: 'Anna', cognome: 'Verdi', categoria_id: 1, gruppo_id: 2, gruppo_nome: 'SECONDO GRUPPO' },
+      { id: 4, nome: 'Sara', cognome: 'Neri', categoria_id: 1, gruppo_id: 2, gruppo_nome: 'SECONDO GRUPPO' }
+    ],
+    registro: [],
+    convocazioni: []
+  };
+}
+
+let data = loadData();
 const MOCK_TOKEN = 'mock-token-12345';
 
-// Utente admin mock
-const mockUser = {
-  id: 1,
-  username: 'admin',
-  is_admin: true,
-  categorie_ids: null
-};
-
-// Utenti
-let utenti = [
-  { id: 1, username: 'admin', is_admin: true, password: 'admin123', categorie_ids: null },
-  { id: 2, username: 'allenatore', is_admin: false, password: 'all123', categorie_ids: [1, 2] }
-];
-
-// Categorie
-let categorie = [
-  { id: 1, nome: 'Esordienti', anno: 2014, stagione: 2025, giorni: '2,4', is_portieri: 0, is_archiviata: 0 },
-  { id: 2, nome: 'Pulcini', anno: 2016, stagione: 2025, giorni: '3,5', is_portieri: 0, is_archiviata: 0 },
-  { id: 3, nome: 'Primi Calci', anno: 2018, stagione: 2025, giorni: '1', is_portieri: 0, is_archiviata: 0 },
-  { id: 4, nome: 'Portieri', anno: null, stagione: 2025, giorni: '2,4', is_portieri: 1, is_archiviata: 0 }
-];
-
-// Persone
-let persone = [
-  { id: 1, nome: 'Marco', cognome: 'Rossi', categoria_id: 1, gruppo_id: 1, gruppo_nome: 'PRIMO GRUPPO' },
-  { id: 2, nome: 'Luca', cognome: 'Bianchi', categoria_id: 1, gruppo_id: 1, gruppo_nome: 'PRIMO GRUPPO' },
-  { id: 3, nome: 'Anna', cognome: 'Verdi', categoria_id: 1, gruppo_id: 2, gruppo_nome: 'SECONDO GRUPPO' },
-  { id: 4, nome: 'Sara', cognome: 'Neri', categoria_id: 1, gruppo_id: 2, gruppo_nome: 'SECONDO GRUPPO' }
-];
-
-// Registro presenze
-let registro = [];
-
-// Codici
-const codici = [
-  { codice: 'X', tipo: 'presenza', descrizione: 'Presente' },
-  { codice: 'P', tipo: 'extra', descrizione: 'Presente con ritardo' },
-  { codice: 'R', tipo: 'extra', descrizione: 'Recupero' },
-  { codice: 'A', tipo: 'assenza', descrizione: 'Assente' },
-  { codice: 'AG', tipo: 'assenza', descrizione: 'Assente per gadget' },
-  { codice: 'AI', tipo: 'assenza', descrizione: 'Assente per infortunio' }
-];
-
-// Convocazioni
-let convocazioni = [
-  { id: 1, categoria_id: 1, titolo: 'Allenamento speciale', data: '2026-03-28', ora: '15:00', luogo: 'Campo A' }
-];
-
-// Utility per generare ID
-let nextId = 100;
+let nextId = Math.max(
+  ...data.utenti.map(u => u.id),
+  ...data.categorie.map(c => c.id),
+  ...data.persone.map(p => p.id)
+) + 1;
 const genId = () => nextId++;
+
+function getUtenti() { return data.utenti; }
+function getPersone() { return data.persone; }
+function getRegistro() { return data.registro; }
+function getConvocazioni() { return data.convocazioni; }
+function getCodici() {
+  return [
+    { codice: 'X', tipo: 'presenza', descrizione: 'Presente' },
+    { codice: 'P', tipo: 'extra', descrizione: 'Presente con ritardo' },
+    { codice: 'R', tipo: 'extra', descrizione: 'Recupero' },
+    { codice: 'A', tipo: 'assenza', descrizione: 'Assente' },
+    { codice: 'AG', tipo: 'assenza', descrizione: 'Assente per gadget' },
+    { codice: 'AI', tipo: 'assenza', descrizione: 'Assente per infortunio' }
+  ];
+}
 
 // ============ AUTH ============
 app.post('/auth/token', (req, res) => {
+  console.log('Login request body:', req.body);
   const { username, password } = req.body;
-  const user = utenti.find(u => u.username === username && u.password === password);
+  console.log('Username:', username, 'Password:', password);
+  console.log('Utenti:', getUtenti().map(u => u.username + '/' + u.password));
+  const user = getUtenti().find(u => u.username === username && u.password === password);
   if (user) {
-    res.json({ access_token: MOCK_TOKEN, token_type: 'bearer' });
+    const { password: _, ...safeUser } = user;
+    res.json({ access_token: MOCK_TOKEN + '-' + user.id, token_type: 'bearer', user: safeUser });
   } else {
     res.status(401).json({ detail: 'Credenziali non valide' });
   }
 });
 
+const userTokens = {};
+
 app.get('/auth/me', (req, res) => {
   const auth = req.headers.authorization;
-  if (auth === `Bearer ${MOCK_TOKEN}`) {
-    const { password, ...safeUser } = utenti[0];
-    res.json(safeUser);
+  console.log('Auth header:', auth);
+  if (auth && auth.startsWith('Bearer ')) {
+    const token = auth.replace('Bearer ', '');
+    const parts = token.split('-');
+    const userId = parseInt(parts[parts.length - 1]);
+    console.log('Extracted userId:', userId);
+    const user = getUtenti().find(u => u.id === userId);
+    if (user) {
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
+    } else {
+      console.log('User not found for id:', userId);
+      res.status(401).json({ detail: 'Token non valido' });
+    }
   } else {
     res.status(401).json({ detail: 'Non autenticato' });
   }
 });
 
 app.get('/auth/utenti', (req, res) => {
-  res.json(utenti.map(({ password, ...u }) => u));
+  res.json(getUtenti().map(({ password, ...u }) => u));
 });
 
 app.post('/auth/utenti', (req, res) => {
   const newUser = { id: genId(), ...req.body, categorie_ids: [] };
-  utenti.push(newUser);
+  data.utenti.push(newUser);
+  saveData(data);
   res.json(newUser);
 });
 
 app.delete('/auth/utenti/:id', (req, res) => {
-  utenti = utenti.filter(u => u.id !== parseInt(req.params.id));
+  const id = parseInt(req.params.id);
+  data.utenti = data.utenti.filter(u => u.id !== id);
+  data.persone = data.persone.filter(p => p.utente_id !== id);
+  saveData(data);
   res.json({ ok: true });
 });
 
-app.put('/auth/utenti/:id/categorie', (req, res) => {
-  const user = utenti.find(u => u.id === parseInt(req.params.id));
+app.put('/auth/utenti/:id/reset-password', (req, res) => {
+  const id = parseInt(req.params.id);
+  const user = data.utenti.find(u => u.id === id);
   if (user) {
-    user.categorie_ids = req.body.categorie_ids;
+    user.password = 'password';
+    saveData(data);
+    res.json({ ok: true, message: 'Password resettata a "password"' });
+  } else {
+    res.status(404).json({ detail: 'Utente non trovato' });
+  }
+});
+
+app.put('/auth/utenti/:id/password', (req, res) => {
+  const id = parseInt(req.params.id);
+  const { vecchia, nuova } = req.body;
+  const user = data.utenti.find(u => u.id === id);
+  if (user) {
+    if (user.password !== vecchia) {
+      res.status(400).json({ detail: 'Password attuale non corretta' });
+    } else {
+      user.password = nuova;
+      saveData(data);
+      res.json({ ok: true, message: 'Password cambiata con successo' });
+    }
+  } else {
+    res.status(404).json({ detail: 'Utente non trovato' });
+  }
+});
+
+app.put('/auth/utenti/:id/categorie', (req, res) => {
+  const user = data.utenti.find(u => u.id === parseInt(req.params.id));
+  if (user) {
+    user.categorie_ids = req.body.categoria_ids;
+    saveData(data);
     res.json(user);
   } else {
     res.status(404).json({ detail: 'Utente non trovato' });
@@ -110,44 +180,48 @@ app.put('/auth/utenti/:id/categorie', (req, res) => {
 
 // ============ CATEGORIE ============
 app.get('/categorie/', (req, res) => {
-  res.json(categorie);
+  res.json(data.categorie);
 });
 
 app.post('/categorie/', (req, res) => {
   const newCat = { id: genId(), ...req.body };
-  categorie.push(newCat);
+  data.categorie.push(newCat);
+  saveData(data);
   res.json(newCat);
 });
 
 app.put('/categorie/:id', (req, res) => {
-  const idx = categorie.findIndex(c => c.id === parseInt(req.params.id));
+  const idx = data.categorie.findIndex(c => c.id === parseInt(req.params.id));
   if (idx >= 0) {
-    categorie[idx] = { ...categorie[idx], ...req.body };
-    res.json(categorie[idx]);
+    data.categorie[idx] = { ...data.categorie[idx], ...req.body };
+    saveData(data);
+    res.json(data.categorie[idx]);
   } else {
     res.status(404).json({ detail: 'Categoria non trovata' });
   }
 });
 
 app.delete('/categorie/:id', (req, res) => {
-  categorie = categorie.filter(c => c.id !== parseInt(req.params.id));
-  persone = persone.filter(p => p.categoria_id !== parseInt(req.params.id));
+  const id = parseInt(req.params.id);
+  data.categorie = data.categorie.filter(c => c.id !== id);
+  data.persone = data.persone.filter(p => p.categoria_id !== id);
+  saveData(data);
   res.json({ ok: true });
 });
 
 app.get('/categorie/stagioni', (req, res) => {
-  const attive = [...new Set(categorie.filter(c => !c.is_archiviata && c.stagione).map(c => c.stagione))].sort((a, b) => b - a);
-  const archiviate = [...new Set(categorie.filter(c => c.is_archiviata && c.stagione).map(c => c.stagione))].sort((a, b) => b - a);
+  const attive = [...new Set(data.categorie.filter(c => !c.is_archiviata && c.stagione).map(c => c.stagione))].sort((a, b) => b - a);
+  const archiviate = [...new Set(data.categorie.filter(c => c.is_archiviata && c.stagione).map(c => c.stagione))].sort((a, b) => b - a);
   res.json({ attiva: attive, archiviate: archiviate });
 });
 
 app.get('/categorie/archived', (req, res) => {
-  res.json(categorie.filter(c => c.is_archiviata));
+  res.json(data.categorie.filter(c => c.is_archiviata));
 });
 
 app.get('/categorie/by-stagione/:stagione', (req, res) => {
   const stagione = parseInt(req.params.stagione);
-  const cats = categorie.filter(c => c.stagione === stagione);
+  const cats = data.categorie.filter(c => c.stagione === stagione);
   if (cats.length === 0) {
     res.status(404).json({ detail: 'Nessuna categoria per questa stagione' });
   } else {
@@ -157,71 +231,99 @@ app.get('/categorie/by-stagione/:stagione', (req, res) => {
 
 app.post('/categorie/archivia/:stagione', (req, res) => {
   const stagione = parseInt(req.params.stagione);
-  categorie.forEach(c => {
+  data.categorie.forEach(c => {
     if (c.stagione === stagione) c.is_archiviata = 1;
   });
+  saveData(data);
   res.json({ ok: true, messaggio: `Stagione ${stagione}/${stagione+1} archiviata` });
 });
 
 app.post('/categorie/ripristina/:stagione', (req, res) => {
   const stagione = parseInt(req.params.stagione);
-  categorie.forEach(c => {
+  data.categorie.forEach(c => {
     if (c.stagione === stagione) c.is_archiviata = 0;
   });
+  saveData(data);
   res.json({ ok: true, messaggio: `Stagione ${stagione}/${stagione+1} ripristinata` });
+});
+
+app.get('/categorie/:id/utenti', (req, res) => {
+  const catId = parseInt(req.params.id);
+  const utentiIds = data.utenti.filter(u => u.categorie_ids && u.categorie_ids.includes(catId)).map(u => u.id);
+  res.json(utentiIds);
+});
+
+app.put('/categorie/:id/utenti', (req, res) => {
+  const catId = parseInt(req.params.id);
+  const utenteIds = req.body.utente_ids || [];
+  data.utenti.forEach(u => {
+    if (u.is_admin) return;
+    if (utenteIds.includes(u.id)) {
+      if (!u.categorie_ids) u.categorie_ids = [];
+      if (!u.categorie_ids.includes(catId)) {
+        u.categorie_ids.push(catId);
+      }
+    } else {
+      if (u.categorie_ids) {
+        u.categorie_ids = u.categorie_ids.filter(id => id !== catId);
+      }
+    }
+  });
+  saveData(data);
+  res.json({ ok: true });
 });
 
 // ============ PERSONE ============
 app.get('/persone/', (req, res) => {
   const catId = parseInt(req.query.categoria_id);
   if (catId) {
-    res.json(persone.filter(p => p.categoria_id === catId));
+    res.json(getPersone().filter(p => p.categoria_id === catId));
   } else {
-    res.json(persone);
+    res.json(getPersone());
   }
 });
 
 app.post('/persone/', (req, res) => {
   const newPersona = { id: genId(), ...req.body };
-  persone.push(newPersona);
+  data.persone.push(newPersona);
+  saveData(data);
   res.json(newPersona);
 });
 
 app.delete('/persone/:id', (req, res) => {
-  persone = persone.filter(p => p.id !== parseInt(req.params.id));
+  data.persone = data.persone.filter(p => p.id !== parseInt(req.params.id));
+  saveData(data);
   res.json({ ok: true });
 });
 
 // ============ CODICI ============
 app.get('/codici/', (req, res) => {
-  res.json(codici);
+  res.json(getCodici());
 });
 
 // ============ REGISTRO ============
 app.get('/registro/mese/:categoriaId/:anno/:mese', (req, res) => {
-  const { categoriaId, anno, mese } = req.params;
-  const filtered = registro.filter(r => 
-    r.categoria_id === parseInt(categoriaId)
-  );
-  res.json(filtered);
+  const { categoriaId } = req.params;
+  res.json(getRegistro().filter(r => r.categoria_id === parseInt(categoriaId)));
 });
 
 app.post('/registro/', (req, res) => {
   const entry = req.body;
-  const existingIdx = registro.findIndex(r => 
+  const existingIdx = data.registro.findIndex(r => 
     r.persona_id === entry.persona_id && r.data === entry.data
   );
   
   if (existingIdx >= 0) {
     if (entry.codice) {
-      registro[existingIdx] = entry;
+      data.registro[existingIdx] = entry;
     } else {
-      registro.splice(existingIdx, 1);
+      data.registro.splice(existingIdx, 1);
     }
   } else if (entry.codice) {
-    registro.push(entry);
+    data.registro.push(entry);
   }
   
+  saveData(data);
   res.json(entry);
 });
 
@@ -229,41 +331,45 @@ app.post('/registro/', (req, res) => {
 app.get('/convocazioni/', (req, res) => {
   const catId = parseInt(req.query.categoria_id);
   if (catId) {
-    res.json(convocazioni.filter(c => c.categoria_id === catId));
+    res.json(getConvocazioni().filter(c => c.categoria_id === catId));
   } else {
-    res.json(convocazioni);
+    res.json(getConvocazioni());
   }
 });
 
 app.get('/convocazioni/:id', (req, res) => {
-  const conv = convocazioni.find(c => c.id === parseInt(req.params.id));
+  const conv = getConvocazioni().find(c => c.id === parseInt(req.params.id));
   if (conv) res.json(conv);
   else res.status(404).json({ detail: 'Non trovata' });
 });
 
 app.post('/convocazioni/', (req, res) => {
   const newConv = { id: genId(), ...req.body };
-  convocazioni.push(newConv);
+  data.convocazioni.push(newConv);
+  saveData(data);
   res.json(newConv);
 });
 
 app.put('/convocazioni/:id', (req, res) => {
-  const idx = convocazioni.findIndex(c => c.id === parseInt(req.params.id));
+  const idx = data.convocazioni.findIndex(c => c.id === parseInt(req.params.id));
   if (idx >= 0) {
-    convocazioni[idx] = { ...convocazioni[idx], ...req.body };
-    res.json(convocazioni[idx]);
+    data.convocazioni[idx] = { ...data.convocazioni[idx], ...req.body };
+    saveData(data);
+    res.json(data.convocazioni[idx]);
   } else {
     res.status(404).json({ detail: 'Non trovata' });
   }
 });
 
 app.delete('/convocazioni/:id', (req, res) => {
-  convocazioni = convocazioni.filter(c => c.id !== parseInt(req.params.id));
+  data.convocazioni = data.convocazioni.filter(c => c.id !== parseInt(req.params.id));
+  saveData(data);
   res.json({ ok: true });
 });
 
 const PORT = 8000;
 app.listen(PORT, () => {
   console.log(`\n🚀 Mock API Server running at http://localhost:${PORT}`);
-  console.log(`📝 Login con: admin / admin123\n`);
+  console.log(`📝 Login con: admin / admin123`);
+  console.log(`💾 Dati salvati in: ${DATA_FILE}\n`);
 });
