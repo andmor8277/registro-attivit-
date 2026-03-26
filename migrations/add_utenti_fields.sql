@@ -5,8 +5,10 @@ ALTER TABLE utenti ADD COLUMN IF NOT EXISTS data_nascita DATE NOT NULL DEFAULT '
 ALTER TABLE utenti ADD COLUMN IF NOT EXISTS codice_fiscale VARCHAR(16) NOT NULL DEFAULT '';
 ALTER TABLE utenti ADD COLUMN IF NOT EXISTS cellulare VARCHAR(20) NOT NULL DEFAULT '';
 ALTER TABLE utenti ADD COLUMN IF NOT EXISTS tesserino VARCHAR(50);
+ALTER TABLE utenti ADD COLUMN IF NOT EXISTS ruolo VARCHAR(20);
 
 -- Update existing users with default values
 UPDATE utenti SET nome = 'Admin' WHERE nome = '' AND username = 'admin';
 UPDATE utenti SET cognome = 'Sistema' WHERE cognome = '' AND username = 'admin';
 UPDATE utenti SET nome = 'Utente' WHERE nome = '' AND username != 'admin';
+UPDATE utenti SET ruolo = 'admin' WHERE is_admin = 1 AND (ruolo IS NULL OR ruolo = '');

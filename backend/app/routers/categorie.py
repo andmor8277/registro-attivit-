@@ -123,6 +123,7 @@ def delete_categoria(categoria_id: int, db: Session = Depends(get_db), current_u
 
 class AssegnaUtenti(BaseModel):
     utente_ids: List[int]
+    ruolo: Optional[str] = None
 
 @router.get("/{categoria_id}/utenti")
 def get_categoria_utenti(categoria_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
@@ -131,11 +132,41 @@ def get_categoria_utenti(categoria_id: int, db: Session = Depends(get_db), curre
 
 @router.put("/{categoria_id}/utenti")
 def assegna_utenti_categoria(categoria_id: int, data: AssegnaUtenti, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
-    db.query(UtenteCategoria).filter(UtenteCategoria.categoria_id == categoria_id).delete()
+    # Get the role for each user being assigned
     for uid in data.utente_ids:
-        db.add(UtenteCategoria(utente_id=uid, categoria_id=categoria_id))
+        # Remove existing assignment if any
+        db.query(UtenteCategoria).filter(
+            UtenteCategoria.categoria_id == categoria_id,
+            UtenteCategoria.utente_id == uid
+        ).delete()
+        
+        # Get user's overall role
+        user = db.query(Utente).filter(Utente.id == uid).first()
+        ruolo = user.ruolo if user and user.ruolo in ['mister', 'dirigente'] else None
+        
+        if ruolo:
+            db.add(UtenteCategoria(utente_id=uid, categoria_id=categoria_id, ruolo=ruolo))
+    
     db.commit()
     return {"ok": True}
+
+@router.get("/{categoria_id}/responsabili")
+def get_categoria_responsabili(categoria_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    assegnazioni = db.query(UtenteCategoria).filter(
+        UtenteCategoria.categoria_id == categoria_id,
+        UtenteCategoria.ruolo.in_(['mister', 'dirigente'])
+    ).all()
+    result = []
+    for a in assegnazioni:
+        u = db.query(Utente).filter(Utente.id == a.utente_id).first()
+        if u:
+            result.append({
+                "id": u.id,
+                "cognome": u.cognome,
+                "cellulare": u.cellulare,
+                "ruolo": a.ruolo
+            })
+    return result
 
 @router.post("/importa-giocatori/{nuova_categoria_id}")
 def importa_giocatori(nuova_categoria_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):

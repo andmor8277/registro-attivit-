@@ -8,13 +8,31 @@
     </div>
 
     <div class="conv-body">
-      <!-- SIDEBAR STORICO -->
-      <div class="sidebar">
-        <div class="sidebar-title">📅 Storico</div>
-        <div v-for="c in storico" :key="c.id"
-          :class="['storico-item', { attivo: convocazioneId === c.id }]"
-          @click="caricaConvocazione(c.id)">
-          {{ formatData(c.data_inizio) }}
+      <!-- SIDEBAR SINISTRA -->
+      <div class="left-sidebar">
+        <!-- STORICO -->
+        <div class="sidebar-section">
+          <div class="sidebar-title">📅 Storico</div>
+          <div v-for="c in storico" :key="c.id"
+            :class="['storico-item', { attivo: convocazioneId === c.id }]"
+            @click="caricaConvocazione(c.id)">
+            {{ formatData(c.data_inizio) }}
+          </div>
+        </div>
+
+        <!-- RESPONSABILI -->
+        <div class="sidebar-section misters-section">
+          <div class="sidebar-title">👥 Mister / Dirigente</div>
+          <div v-for="r in responsabili" :key="r.id" class="mister-item">
+            <span class="mister-cognome">
+              <span v-if="r.ruolo === 'dirigente'" class="badge-dir">DIR</span>
+              {{ r.cognome }}
+            </span>
+            <span class="mister-tel">{{ r.cellulare }}</span>
+          </div>
+          <div v-if="responsabili.length === 0" class="empty-misters">
+            Nessun responsabile assegnato
+          </div>
         </div>
       </div>
 
@@ -47,7 +65,15 @@
                 <div class="gf"><span>INDIRIZZO</span><input v-model="gara.indirizzo" /></div>
                 <div class="gf"><span>APPUNTAMENTO</span><input v-model="gara.appuntamento" /></div>
                 <div class="gf"><span>INIZIO GARA</span><input v-model="gara.inizio_gara" /></div>
-                <div class="gf allenatore"><span>MISTER</span><input v-model="gara.allenatore" /></div>
+                <div class="gf allenatore">
+                  <span>MISTER / DIRIGENTE</span>
+                  <select v-model="gara.allenatore">
+                    <option value="">— Seleziona —</option>
+                    <option v-for="r in responsabili" :key="r.id" :value="r.cognome">
+                      {{ r.cognome }} - {{ r.cellulare }}
+                    </option>
+                  </select>
+                </div>
               </div>
               <div class="giocatori-list">
                 <div v-for="pos in 14" :key="pos" class="giocatore-row">
@@ -96,6 +122,7 @@ const storico = ref([])
 const convocazioneId = ref(null)
 const convocazione = ref(null)
 const persone = ref([])
+const responsabili = ref([])
 const numPartite = ref(1)
 
 function formatData(d) {
@@ -155,6 +182,16 @@ async function loadStorico() {
   storico.value = res.data
 }
 
+async function loadMisters() {
+  try {
+    const res = await axios.get(base + '/categorie/' + categoriaId + '/responsabili', { headers: headers() })
+    responsabili.value = res.data
+  } catch (e) {
+    console.error('Errore caricamento responsabili:', e)
+    responsabili.value = []
+  }
+}
+
 async function salva() {
   const payload = {
     categoria_id: categoriaId,
@@ -193,6 +230,7 @@ onMounted(async () => {
   const res = await getPersone(categoriaId)
   persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
   await loadStorico()
+  await loadMisters()
 })
 </script>
 
@@ -203,11 +241,56 @@ onMounted(async () => {
 .btn-back { padding: 4px 12px; border-radius: 4px; border: 1px solid #555; background: #2a2a4a; color: white; cursor: pointer; }
 .btn-nuovo { padding: 4px 14px; border-radius: 4px; border: none; background: #e94560; color: white; cursor: pointer; font-weight: bold; }
 .conv-body { display: flex; flex: 1; overflow: hidden; }
-.sidebar { width: 160px; flex-shrink: 0; background: #f5f5f5; border-right: 1px solid #ddd; overflow-y: auto; padding: 0.5rem; }
-.sidebar-title { font-weight: bold; font-size: 0.8rem; color: #555; margin-bottom: 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid #ddd; }
-.storico-item { padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-bottom: 3px; }
+
+.left-sidebar {
+  width: 180px;
+  flex-shrink: 0;
+  background: #f5f5f5;
+  border-right: 1px solid #ddd;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-section {
+  padding: 0.75rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.sidebar-section:last-child {
+  border-bottom: none;
+  flex: 1;
+}
+
+.sidebar-title {
+  font-weight: bold;
+  font-size: 0.75rem;
+  color: #555;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.storico-item { padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-bottom: 3px; }
 .storico-item:hover { background: #e0e0e0; }
 .storico-item.attivo { background: #CC0000; color: white; }
+
+.misters-section { background: #fff8f8; }
+.mister-item {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mister-cognome { font-weight: 600; font-size: 0.85rem; color: #333; display: flex; align-items: center; gap: 4px; }
+.badge-dir { font-size: 0.6rem; background: #2563eb; color: white; padding: 1px 4px; border-radius: 3px; font-weight: 700; }
+.mister-tel { font-size: 0.75rem; color: #666; }
+.empty-misters { font-size: 0.75rem; color: #aaa; text-align: center; padding: 0.5rem; }
+
 .editor { flex: 1; overflow-y: auto; padding: 1rem; }
 .editor-header { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 2px solid #eee; }
 .field-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
@@ -223,6 +306,7 @@ onMounted(async () => {
 .gf { display: flex; flex-direction: column; margin-bottom: 4px; }
 .gf span { font-size: 0.65rem; color: #888; font-weight: bold; text-transform: uppercase; }
 .gf input { border: 1px solid #eee; border-radius: 3px; padding: 3px 6px; font-size: 0.82rem; }
+.gf select { border: 1px solid #eee; border-radius: 3px; padding: 3px 6px; font-size: 0.82rem; width: 100%; }
 .gf.allenatore { background: #fffde7; padding: 4px; border-radius: 4px; }
 .giocatori-list { padding: 0.5rem; }
 .giocatore-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
