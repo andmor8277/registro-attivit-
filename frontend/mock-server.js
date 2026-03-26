@@ -1,9 +1,11 @@
 const express = require('express');
 const cors = require('cors');
+const bodyParser = require('body-parser');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Token fittizio per login
 const MOCK_TOKEN = 'mock-token-12345';
@@ -24,9 +26,10 @@ let utenti = [
 
 // Categorie
 let categorie = [
-  { id: 1, nome: 'Esordienti', anno: 2014, giorni: '2,4' },
-  { id: 2, nome: 'Pulcini', anno: 2016, giorni: '3,5' },
-  { id: 3, nome: 'Primi Calci', anno: 2018, giorni: '1' }
+  { id: 1, nome: 'Esordienti', anno: 2014, stagione: 2025, giorni: '2,4', is_portieri: 0, is_archiviata: 0 },
+  { id: 2, nome: 'Pulcini', anno: 2016, stagione: 2025, giorni: '3,5', is_portieri: 0, is_archiviata: 0 },
+  { id: 3, nome: 'Primi Calci', anno: 2018, stagione: 2025, giorni: '1', is_portieri: 0, is_archiviata: 0 },
+  { id: 4, nome: 'Portieri', anno: null, stagione: 2025, giorni: '2,4', is_portieri: 1, is_archiviata: 0 }
 ];
 
 // Persone
@@ -130,6 +133,42 @@ app.delete('/categorie/:id', (req, res) => {
   categorie = categorie.filter(c => c.id !== parseInt(req.params.id));
   persone = persone.filter(p => p.categoria_id !== parseInt(req.params.id));
   res.json({ ok: true });
+});
+
+app.get('/categorie/stagioni', (req, res) => {
+  const attive = [...new Set(categorie.filter(c => !c.is_archiviata && c.stagione).map(c => c.stagione))].sort((a, b) => b - a);
+  const archiviate = [...new Set(categorie.filter(c => c.is_archiviata && c.stagione).map(c => c.stagione))].sort((a, b) => b - a);
+  res.json({ attiva: attive, archiviate: archiviate });
+});
+
+app.get('/categorie/archived', (req, res) => {
+  res.json(categorie.filter(c => c.is_archiviata));
+});
+
+app.get('/categorie/by-stagione/:stagione', (req, res) => {
+  const stagione = parseInt(req.params.stagione);
+  const cats = categorie.filter(c => c.stagione === stagione);
+  if (cats.length === 0) {
+    res.status(404).json({ detail: 'Nessuna categoria per questa stagione' });
+  } else {
+    res.json(cats);
+  }
+});
+
+app.post('/categorie/archivia/:stagione', (req, res) => {
+  const stagione = parseInt(req.params.stagione);
+  categorie.forEach(c => {
+    if (c.stagione === stagione) c.is_archiviata = 1;
+  });
+  res.json({ ok: true, messaggio: `Stagione ${stagione}/${stagione+1} archiviata` });
+});
+
+app.post('/categorie/ripristina/:stagione', (req, res) => {
+  const stagione = parseInt(req.params.stagione);
+  categorie.forEach(c => {
+    if (c.stagione === stagione) c.is_archiviata = 0;
+  });
+  res.json({ ok: true, messaggio: `Stagione ${stagione}/${stagione+1} ripristinata` });
 });
 
 // ============ PERSONE ============

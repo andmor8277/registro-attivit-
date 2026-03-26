@@ -1,9 +1,55 @@
 <template>
   <div class="home">
     <header class="page-header">
-      <h1>Seleziona Categoria</h1>
-      <p class="page-subtitle">Scegli la categoria da gestire</p>
+      <div class="header-content">
+        <div>
+          <h1>Seleziona Categoria</h1>
+          <p class="page-subtitle">Scegli la categoria da gestire</p>
+        </div>
+        <div class="header-actions" v-if="stagioni.archiviate.length > 0 || utenteAttivo?.is_admin">
+          <button v-if="stagioni.archiviate.length > 0" class="btn-archived" @click="mostraStagioniArchiviate = !mostraStagioniArchiviate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/>
+            </svg>
+            Stagioni Passate ({{ stagioni.archiviate.length }})
+          </button>
+          <button v-if="utenteAttivo?.is_admin" class="btn-season" @click="apriImpostaStagione">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+            Imposta Stagione
+          </button>
+          <button v-if="utenteAttivo?.is_admin && categorie.length > 0" class="btn-archive" @click="apriArchiviazione">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 8v13H3V8M1 3h22v5H1z"/>
+            </svg>
+            Archivia Stagione
+          </button>
+        </div>
+      </div>
     </header>
+    
+    <div v-if="mostraStagioniArchiviate && stagioni.archiviate.length > 0" class="archived-section">
+      <h2 class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        Stagioni Archiviate
+      </h2>
+      <div class="stagioni-grid">
+        <div 
+          v-for="stagione in stagioni.archiviate" 
+          :key="stagione" 
+          class="stagione-card archived"
+          @click="apriStagioneArchiviata(stagione)"
+        >
+          <div class="stagione-anno">{{ stagione }}/{{ stagione + 1 }}</div>
+          <div class="stagione-label">Archiviata</div>
+        </div>
+      </div>
+    </div>
     
     <div class="categorie-grid">
       <div 
@@ -14,9 +60,11 @@
         @click="apriRegistro(cat)"
       >
         <div class="card-accent"></div>
-        <div class="card-content">
-          <div class="cat-anno">{{ cat.anno }}</div>
-          <div class="cat-nome">{{ cat.nome }}</div>
+          <div class="card-content">
+          <div class="cat-anno">{{ cat.is_portieri ? '★' : cat.anno }}</div>
+          <div class="cat-nome">
+            {{ cat.nome }}
+          </div>
           <div class="cat-giorni" v-if="cat.giorni">
             <span class="giorno-badge" v-for="g in cat.giorni.split(',').slice(0, 3)" :key="g">
               {{ nomiBreviGiorni(parseInt(g)) }}
@@ -80,7 +128,18 @@
               <input v-model="modal.nome" placeholder="Es. Esordienti" />
             </div>
             <div class="form-group">
-              <label>Anno</label>
+              <label>Stagione (anno inizio)</label>
+              <input v-model="modal.stagione" placeholder="Es. 2025" type="number" />
+            </div>
+            <div class="form-group" v-if="!modal.is_portieri">
+              <label>Categoria Portieri</label>
+              <label class="switch-label">
+                <input type="checkbox" v-model="modal.is_portieri" />
+                <span class="switch-text">Portieri (tutti gli anni)</span>
+              </label>
+            </div>
+            <div class="form-group" v-if="!modal.is_portieri">
+              <label>Anno di nascita</label>
               <input v-model="modal.anno" placeholder="Es. 2014" type="number" />
             </div>
             <div class="form-group">
@@ -105,21 +164,57 @@
         </div>
       </div>
     </Teleport>
+
+    <Teleport to="body">
+      <div v-if="stagioneModal.show" class="modal-overlay" @click.self="stagioneModal.show = false">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>Imposta Stagione per Tutte le Categorie</h3>
+            <button class="modal-close" @click="stagioneModal.show = false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-info">Questa operazione assegnerà la stessa stagione a tutte le categorie attive.</p>
+            <div class="form-group">
+              <label>Stagione Calcistica</label>
+              <input v-model="stagioneModal.stagione" placeholder="Es. 2025" type="number" />
+              <p class="form-hint">Anno di inizio della stagione (es. 2025 per 2025/2026)</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" @click="stagioneModal.show = false">Annulla</button>
+            <button class="btn-primary" @click="impostaStagioneTutte" :disabled="stagioneModal.loading">
+              <span v-if="stagioneModal.loading" class="spinner-small"></span>
+              <template v-else>Applica a Tutti</template>
+            </button>
+          </div>
+          <p v-if="stagioneModal.errore" class="errore-msg">{{ stagioneModal.errore }}</p>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { getCategorie, createCategoria, updateCategoria, deleteCategoria } from "../api/index.js"
+import { getCategorie, createCategoria, updateCategoria, deleteCategoria, getStagioni, archiviaStagione } from "../api/index.js"
 import { useStore as useCategoria } from "../store.js"
 const { utenteAttivo } = useCategoria()
 
 const router = useRouter()
-const { setCategoria } = useCategoria()
+const { setCategoria, setStagioneCorrente } = useCategoria()
 const categorie = ref([])
 const loading = ref(false)
 const errore = ref('')
+const stagioni = ref({ attiva: [], archiviate: [] })
+const mostraStagioniArchiviate = ref(false)
+const stagioneModal = ref({ show: false, stagione: new Date().getFullYear(), loading: false, errore: '' })
+const archiviaModal = ref({ show: false, loading: false })
 
 const tuttiGiorni = [
   { val: 1, nome: "Lunedì" },
@@ -133,7 +228,7 @@ const tuttiGiorni = [
 
 const nomiBreviGiorni = (val) => tuttiGiorni.find(g => g.val === val)?.nome?.slice(0, 3) || ''
 
-const modal = ref({ show: false, id: null, nome: "", anno: new Date().getFullYear(), giorniSel: [] })
+const modal = ref({ show: false, id: null, nome: "", anno: null, stagione: new Date().getFullYear(), giorniSel: [], is_portieri: false })
 
 function chiudiModal() {
   modal.value.show = false
@@ -141,14 +236,16 @@ function chiudiModal() {
 }
 
 function apriNuova() {
-  modal.value = { show: true, id: null, nome: "", anno: new Date().getFullYear(), giorniSel: [] }
+  const currentYear = new Date().getMonth() >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1
+  modal.value = { show: true, id: null, nome: "", anno: null, stagione: currentYear, giorniSel: [], is_portieri: false }
   errore.value = ''
 }
 
 function apriModifica(cat) {
   modal.value = {
-    show: true, id: cat.id, nome: cat.nome, anno: cat.anno,
-    giorniSel: cat.giorni ? cat.giorni.split(",").map(Number) : []
+    show: true, id: cat.id, nome: cat.nome, anno: cat.anno, stagione: cat.stagione,
+    giorniSel: cat.giorni ? cat.giorni.split(",").map(Number) : [],
+    is_portieri: cat.is_portieri === 1 || cat.is_portieri === true
   }
   errore.value = ''
 }
@@ -170,8 +267,18 @@ function apriRegistro(cat) {
 async function salvaCategoria() {
   errore.value = ''
   
-  if (!modal.value.nome || !modal.value.anno) {
-    errore.value = 'Compila tutti i campi'
+  if (!modal.value.nome) {
+    errore.value = 'Inserisci il nome della categoria'
+    return
+  }
+  
+  if (!modal.value.stagione) {
+    errore.value = 'Inserisci la stagione'
+    return
+  }
+  
+  if (!modal.value.is_portieri && !modal.value.anno) {
+    errore.value = 'Inserisci l\'anno di nascita per le categorie non-portieri'
     return
   }
   
@@ -179,8 +286,10 @@ async function salvaCategoria() {
   
   const payload = {
     nome: modal.value.nome,
-    anno: parseInt(modal.value.anno),
-    giorni: modal.value.giorniSel.sort().join(",") || null
+    anno: modal.value.is_portieri ? null : parseInt(modal.value.anno),
+    stagione: parseInt(modal.value.stagione),
+    giorni: modal.value.giorniSel.sort().join(",") || null,
+    is_portieri: modal.value.is_portieri
   }
   
   try {
@@ -204,7 +313,96 @@ async function eliminaCategoria(id) {
   await loadCategorie()
 }
 
-onMounted(loadCategorie)
+async function loadStagioni() {
+  try {
+    const res = await getStagioni()
+    stagioni.value = res.data
+    if (res.data.attiva && res.data.attiva.length > 0) {
+      setStagioneCorrente(res.data.attiva[0])
+    }
+  } catch (e) {
+    console.error('Errore nel caricamento stagioni:', e)
+  }
+}
+
+function apriArchiviazione() {
+  const categorieConStagione = categorie.value.filter(c => c.stagione)
+  const stagioneCorrente = categorieConStagione.length > 0 
+    ? Math.max(...categorieConStagione.map(c => c.stagione))
+    : null
+  
+  if (!stagioneCorrente) {
+    alert('Nessuna stagione da archiviare. Le categorie devono avere una stagione assegnata.')
+    return
+  }
+  
+  if (confirm(`Archiviare la stagione ${stagioneCorrente}/${stagioneCorrente + 1}?\n\nQuesta operazione renderà le categorie di questa stagione visibili solo nella sezione "Stagioni Passate".`)) {
+    archiviaModal.value.loading = true
+    archiviaStagione(stagioneCorrente)
+      .then(() => {
+        loadCategorie()
+        loadStagioni()
+      })
+      .catch(e => alert('Errore: ' + (e.response?.data?.detail || 'Errore sconosciuto')))
+      .finally(() => {
+        archiviaModal.value.loading = false
+      })
+  }
+}
+
+function apriStagioneArchiviata(stagione) {
+  setCategoria({ id: null, stagione, is_archived: true, nome: `${stagione}/${stagione + 1}` })
+  router.push("/stagione/" + stagione)
+}
+
+function apriImpostaStagione() {
+  const categorieConStagione = categorie.value.filter(c => c.stagione)
+  const stagioneEsistente = categorieConStagione.length > 0 ? categorieConStagione[0].stagione : null
+  stagioneModal.value = { 
+    show: true, 
+    stagione: stagioneEsistente || new Date().getFullYear(), 
+    loading: false, 
+    errore: '' 
+  }
+}
+
+async function impostaStagioneTutte() {
+  if (!stagioneModal.value.stagione) {
+    stagioneModal.value.errore = 'Inserisci la stagione'
+    return
+  }
+  
+  if (!confirm(`Impostare la stagione ${stagioneModal.value.stagione}/${stagioneModal.value.stagione + 1} per tutte le ${categorie.value.length} categorie?`)) {
+    return
+  }
+  
+  stagioneModal.value.loading = true
+  stagioneModal.value.errore = ''
+  
+  try {
+    for (const cat of categorie.value) {
+      await updateCategoria(cat.id, {
+        nome: cat.nome,
+        anno: cat.anno,
+        stagione: parseInt(stagioneModal.value.stagione),
+        giorni: cat.giorni,
+        is_portieri: cat.is_portieri === 1
+      })
+    }
+    stagioneModal.value.show = false
+    await loadCategorie()
+    await loadStagioni()
+  } catch (e) {
+    stagioneModal.value.errore = e.response?.data?.detail || 'Errore durante il salvataggio'
+  } finally {
+    stagioneModal.value.loading = false
+  }
+}
+
+onMounted(() => {
+  loadCategorie()
+  loadStagioni()
+})
 </script>
 
 <style scoped>
@@ -230,6 +428,141 @@ onMounted(loadCategorie)
 .page-subtitle {
   color: var(--color-text-muted);
   font-size: 1rem;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btn-archived, .btn-archive, .btn-season {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-archived {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.btn-archived:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.btn-season {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #3b82f6;
+}
+
+.btn-season:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.btn-archive {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+}
+
+.btn-archive:hover {
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.btn-archived svg, .btn-archive svg, .btn-season svg {
+  width: 18px;
+  height: 18px;
+}
+
+.archived-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  animation: slideUp 0.4s ease-out;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+}
+
+.section-title svg {
+  width: 20px;
+  height: 20px;
+  color: var(--color-text-muted);
+}
+
+.stagioni-grid {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.stagione-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-width: 140px;
+}
+
+.stagione-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}
+
+.stagione-card.archived {
+  border-color: rgba(107, 114, 128, 0.3);
+}
+
+.stagione-card.archived:hover {
+  border-color: var(--color-text-muted);
+}
+
+.stagione-anno {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.stagione-card.archived .stagione-anno {
+  color: var(--color-text-secondary);
+}
+
+.stagione-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
 }
 
 .categorie-grid {
@@ -311,6 +644,25 @@ onMounted(loadCategorie)
 .giorno-badge.more {
   background: var(--color-primary);
   color: white;
+}
+
+.badge-portieri {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border-radius: var(--radius-sm);
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cat-portieri-info {
+  font-size: 0.875rem;
+  color: #f59e0b;
+  font-weight: 500;
 }
 
 .card-actions {
@@ -518,6 +870,22 @@ onMounted(loadCategorie)
   background: var(--color-surface);
 }
 
+.modal-info {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: var(--radius-md);
+  padding: 0.875rem 1rem;
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  margin-bottom: 1.25rem;
+}
+
+.form-hint {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin-top: 0.5rem;
+}
+
 .giorni-grid {
   display: flex;
   flex-wrap: wrap;
@@ -551,6 +919,51 @@ onMounted(loadCategorie)
 
 .giorno-check input {
   display: none;
+}
+
+.switch-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch-label input[type="checkbox"] {
+  width: 44px;
+  height: 24px;
+  appearance: none;
+  background: var(--color-border);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.switch-label input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+}
+
+.switch-label input[type="checkbox"]:checked {
+  background: #f59e0b;
+}
+
+.switch-label input[type="checkbox"]:checked::before {
+  transform: translateX(20px);
+}
+
+.switch-text {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text);
 }
 
 .modal-footer {
