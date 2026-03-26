@@ -1,35 +1,93 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from .. import models
 from ..database import get_db
 from ..routers.auth import get_current_user, get_admin
 from ..models import Utente, UtenteCategoria
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 router = APIRouter(prefix="/categorie", tags=["categorie"])
 
 class CategoriaCreate(BaseModel):
     nome: str
-    anno: int
+    anno: Optional[int] = None
+    stagione: Optional[int] = None
     giorni: Optional[str] = None
+    is_portieri: bool = False
 
 @router.get("/")
 def get_categorie(db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
-    tutte = db.query(models.Categoria).order_by(models.Categoria.anno.desc()).all()
+    tutte = db.query(models.Categoria).filter(
+        models.Categoria.is_archiviata == 0
+    ).order_by(models.Categoria.anno.desc()).all()
     if current_user.is_admin:
         return tutte
     assegnate = db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == current_user.id).all()
     ids = {r.categoria_id for r in assegnate}
     return [c for c in tutte if c.id in ids]
 
+@router.get("/archived")
+def get_categorie_archived(db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
+    return db.query(models.Categoria).filter(
+        models.Categoria.is_archiviata == 1
+    ).order_by(models.Categoria.anno.desc()).all()
+
+@router.get("/stagioni")
+def get_stagioni(db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    stagioni_attive = db.query(models.Categoria.stagione).filter(
+        models.Categoria.is_archiviata == 0,
+        models.Categoria.stagione.isnot(None)
+    ).distinct().order_by(models.Categoria.stagione.desc()).all()
+    
+    stagioni_archiviate = db.query(models.Categoria.stagione).filter(
+        models.Categoria.is_archiviata == 1,
+        models.Categoria.stagione.isnot(None)
+    ).distinct().order_by(models.Categoria.stagione.desc()).all()
+    
+    return {
+        "attiva": [s.stagione for s in stagioni_attive],
+        "archiviate": [s.stagione for s in stagioni_archiviate]
+    }
+
+@router.post("/archivia/{stagione}")
+def archivia_stagione(stagione: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
+    db.query(models.Categoria).filter(
+        models.Categoria.stagione == stagione
+    ).update({"is_archiviata": 1})
+    db.commit()
+    return {"ok": True, "messaggio": f"Stagione {stagione}/{stagione+1} archiviata"}
+
+@router.post("/ripristina/{stagione}")
+def ripristina_stagione(stagione: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
+    db.query(models.Categoria).filter(
+        models.Categoria.stagione == stagione
+    ).update({"is_archiviata": 0})
+    db.commit()
+    return {"ok": True, "messaggio": f"Stagione {stagione}/{stagione+1} ripristinata"}
+
+@router.get("/by-stagione/{stagione}")
+def get_categorie_by_stagione(stagione: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    categorie = db.query(models.Categoria).filter(
+        models.Categoria.stagione == stagione
+    ).order_by(models.Categoria.nome).all()
+    if not categorie:
+        raise HTTPException(status_code=404, detail="Nessuna categoria per questa stagione")
+    return categorie
+
 @router.post("/")
 def create_categoria(c: CategoriaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
-    cat = models.Categoria(**c.dict())
+    cat = models.Categoria(
+        nome=c.nome,
+        anno=c.anno,
+        stagione=c.stagione,
+        giorni=c.giorni,
+        is_portieri=1 if c.is_portieri else 0
+    )
     db.add(cat)
     db.commit()
     db.refresh(cat)
-    # assegna automaticamente la categoria all'utente che la crea
     if not current_user.is_admin:
         db.add(UtenteCategoria(utente_id=current_user.id, categoria_id=cat.id))
         db.commit()
@@ -40,7 +98,11 @@ def update_categoria(categoria_id: int, c: CategoriaCreate, db: Session = Depend
     cat = db.query(models.Categoria).filter(models.Categoria.id == categoria_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="Categoria non trovata")
-    cat.nome = c.nome; cat.anno = c.anno; cat.giorni = c.giorni
+    cat.nome = c.nome
+    cat.anno = c.anno
+    cat.stagione = c.stagione
+    cat.giorni = c.giorni
+    cat.is_portieri = 1 if c.is_portieri else 0
     db.commit(); db.refresh(cat)
     return cat
 
