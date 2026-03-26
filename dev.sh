@@ -37,4 +37,4 @@ echo ""
 # Cattura Ctrl+C e termina anche il mock server
 trap "kill $MOCK_PID 2>/dev/null; exit" SIGINT SIGTERM
 
-npm run dev
+VITE_USE_MOCK=true npm run dev
