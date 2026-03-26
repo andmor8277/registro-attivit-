@@ -44,6 +44,12 @@ class Utente(Base):
     username = Column(String(100), unique=True, nullable=False)
     password_hash = Column(String(200), nullable=False)
     is_admin = Column(Integer, default=0)
+    nome = Column(String(100), nullable=False)
+    cognome = Column(String(100), nullable=False)
+    data_nascita = Column(Date, nullable=False)
+    codice_fiscale = Column(String(16), nullable=False)
+    cellulare = Column(String(20), nullable=False)
+    tesserino = Column(String(50), nullable=True)
 
 class UtenteCategoria(Base):
     __tablename__ = "utente_categorie"
@@ -77,3 +83,9 @@ class ConvocazioneGiocatore(Base):
     gara_id = Column(Integer, ForeignKey("convocazione_gare.id", ondelete="CASCADE"))
     persona_id = Column(Integer, ForeignKey("persone.id", ondelete="CASCADE"))
     posizione = Column(Integer, nullable=False)
+
+class Allenatore(Base):
+    __tablename__ = "allenatori"
+    id = Column(Integer, primary_key=True)
+    cognome = Column(String(100), nullable=False)
+    telefono = Column(String(30), nullable=True)

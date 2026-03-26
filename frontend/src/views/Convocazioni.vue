@@ -47,7 +47,7 @@
                 <div class="gf"><span>INDIRIZZO</span><input v-model="gara.indirizzo" /></div>
                 <div class="gf"><span>APPUNTAMENTO</span><input v-model="gara.appuntamento" /></div>
                 <div class="gf"><span>INIZIO GARA</span><input v-model="gara.inizio_gara" /></div>
-                <div class="gf allenatore"><span>ALLENATORE</span><input v-model="gara.allenatore" /></div>
+                <div class="gf allenatore"><span>MISTER</span><input v-model="gara.allenatore" /></div>
               </div>
               <div class="giocatori-list">
                 <div v-for="pos in 14" :key="pos" class="giocatore-row">
@@ -88,7 +88,7 @@ const route = useRoute()
 const { categoriaAttiva } = useStore()
 const categoriaId = parseInt(route.params.id)
 
-const base = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const base = '/api'
 const token = () => localStorage.getItem('token')
 const headers = () => ({ Authorization: 'Bearer ' + token() })
 
