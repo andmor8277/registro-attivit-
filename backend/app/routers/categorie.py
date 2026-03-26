@@ -28,6 +28,12 @@ def get_categorie(db: Session = Depends(get_db), current_user: Utente = Depends(
     ids = {r.categoria_id for r in assegnate}
     return [c for c in tutte if c.id in ids]
 
+@router.get("/all")
+def get_all_categorie(db: Session = Depends(get_db)):
+    return db.query(models.Categoria).filter(
+        models.Categoria.is_archiviata == 0
+    ).order_by(models.Categoria.anno.desc()).all()
+
 @router.get("/archived")
 def get_categorie_archived(db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
     return db.query(models.Categoria).filter(
