@@ -1,20 +1,10 @@
 <template>
   <div class="login-wrapper">
-    <div class="login-decoration">
-      <div class="deco-circle deco-1"></div>
-      <div class="deco-circle deco-2"></div>
-      <div class="deco-circle deco-3"></div>
-    </div>
+    <div class="login-bg"></div>
     <div class="login-card">
       <div class="login-header">
-        <div class="logo-wrapper">
-          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-            <rect x="9" y="3" width="6" height="4" rx="1"/>
-            <path d="M9 12h6M9 16h6"/>
-          </svg>
-        </div>
-        <h1>Registro Presenze</h1>
+        <img src="/logo.jpg" alt="RedTigers" class="login-logo" />
+        <h1>Red Tigers <span class="home-text">Home</span></h1>
         <p class="subtitle">Accedi al tuo account</p>
       </div>
       
@@ -130,63 +120,28 @@ async function doLogin() {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--color-secondary) 0%, #0f172a 100%);
+  background: #000000;
   padding: 2rem;
   position: relative;
   overflow: hidden;
 }
 
-.login-decoration {
+.login-bg {
   position: absolute;
   inset: 0;
+  background: radial-gradient(circle at 50% 30%, rgba(220, 38, 38, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, rgba(220, 38, 38, 0.1) 0%, transparent 40%);
   pointer-events: none;
 }
 
-.deco-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
-  opacity: 0.1;
-  animation: float 20s ease-in-out infinite;
-}
-
-.deco-1 {
-  width: 400px;
-  height: 400px;
-  top: -100px;
-  right: -100px;
-  animation-delay: 0s;
-}
-
-.deco-2 {
-  width: 300px;
-  height: 300px;
-  bottom: -50px;
-  left: -50px;
-  animation-delay: -5s;
-}
-
-.deco-3 {
-  width: 200px;
-  height: 200px;
-  top: 50%;
-  left: 20%;
-  animation-delay: -10s;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -30px) scale(1.05); }
-  66% { transform: translate(-20px, 20px) scale(0.95); }
-}
-
 .login-card {
-  background: var(--color-surface);
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(220, 38, 38, 0.3);
   border-radius: var(--radius-xl);
   padding: 2.5rem;
   width: 100%;
   max-width: 420px;
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 0 60px rgba(220, 38, 38, 0.2);
   animation: scaleIn 0.4s ease-out, slideUp 0.4s ease-out;
   position: relative;
   z-index: 1;
@@ -197,34 +152,27 @@ async function doLogin() {
   margin-bottom: 2rem;
 }
 
-.logo-wrapper {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 1.25rem;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-  border-radius: var(--radius-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
-}
-
-.logo-icon {
-  width: 32px;
-  height: 32px;
-  color: white;
+.login-logo {
+  width: 100px;
+  height: auto;
+  margin: 0 auto 1rem;
+  object-fit: contain;
 }
 
 h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-text);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #ffffff;
   margin-bottom: 0.25rem;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.02em;
+}
+
+.home-text {
+  color: #dc2626;
 }
 
 .subtitle {
-  color: var(--color-text-muted);
+  color: #888888;
   font-size: 0.9375rem;
 }
 
@@ -246,34 +194,34 @@ h1 {
   gap: 0.5rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: #cccccc;
 }
 
 .form-group label svg {
   width: 16px;
   height: 16px;
-  color: var(--color-text-muted);
+  color: #888888;
 }
 
 .form-group input {
   padding: 0.875rem 1rem;
-  border: 2px solid var(--color-border);
+  border: 2px solid #333333;
   border-radius: var(--radius-md);
   font-size: 1rem;
-  color: var(--color-text);
-  background: var(--color-bg);
+  color: #ffffff;
+  background: #1a1a1a;
   transition: all var(--transition-fast);
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: var(--color-primary);
-  background: var(--color-surface);
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+  border-color: #dc2626;
+  background: #0d0d0d;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
 }
 
 .form-group input::placeholder {
-  color: var(--color-text-muted);
+  color: #666666;
 }
 
 .input-wrapper {
@@ -292,14 +240,14 @@ h1 {
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: var(--color-text-muted);
+  color: #888888;
   padding: 0.25rem;
   cursor: pointer;
   transition: color var(--transition-fast);
 }
 
 .toggle-password:hover {
-  color: var(--color-text-secondary);
+  color: #cccccc;
 }
 
 .toggle-password svg {
@@ -312,10 +260,10 @@ h1 {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: rgba(244, 63, 94, 0.1);
-  border: 1px solid rgba(244, 63, 94, 0.2);
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid rgba(220, 38, 38, 0.3);
   border-radius: var(--radius-md);
-  color: var(--color-error);
+  color: #f87171;
   font-size: 0.875rem;
   font-weight: 500;
   animation: slideDown 0.2s ease-out;
@@ -333,7 +281,7 @@ h1 {
   justify-content: center;
   gap: 0.5rem;
   padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
   border: none;
   border-radius: var(--radius-md);
   color: white;
@@ -346,7 +294,7 @@ h1 {
 
 .btn-login:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
 }
 
 .btn-login:active:not(:disabled) {
@@ -383,6 +331,10 @@ h1 {
   
   .login-card {
     padding: 1.5rem;
+  }
+
+  .login-logo {
+    width: 80px;
   }
 }
 </style>
