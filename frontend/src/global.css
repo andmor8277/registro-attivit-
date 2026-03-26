@@ -14,15 +14,15 @@
   --color-error: #dc2626;
   --color-info: #3b82f6;
   
-  --color-bg: #fafafa;
-  --color-surface: #ffffff;
-  --color-surface-elevated: #ffffff;
-  --color-border: #e5e5e5;
-  --color-border-light: #f5f5f5;
+  --color-bg: #000000;
+  --color-surface: #141414;
+  --color-surface-elevated: #1a1a1a;
+  --color-border: #2a2a2a;
+  --color-border-light: #1a1a1a;
   
-  --color-text: #111827;
-  --color-text-secondary: #4b5563;
-  --color-text-muted: #9ca3af;
+  --color-text: #ffffff;
+  --color-text-secondary: #aaaaaa;
+  --color-text-muted: #666666;
   
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -73,11 +73,11 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-border-light);
+  background: #111111;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-text-muted);
+  background: #444444;
   border-radius: 4px;
 }
 
