@@ -96,9 +96,7 @@
         <div class="card-accent"></div>
           <div class="card-content">
           <div class="cat-anno" :class="{ 'portieri': cat.is_portieri }">
-            <svg v-if="cat.is_portieri" class="gloves-icon" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 3H5c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v2c0 2.76 2.24 5 5 5h2c2.76 0 5-2.24 5-5V7h1c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
-            </svg>
+            <span v-if="cat.is_portieri">🧤</span>
             <span v-else>{{ cat.anno }}</span>
           </div>
           <div class="cat-nome">
