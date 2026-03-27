@@ -11,7 +11,8 @@ router = APIRouter(prefix="/persone", tags=["persone"])
 def get_persone(categoria_id: Optional[int] = None, db: Session = Depends(get_db)):
     query = """
         SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id, g.nome as gruppo_nome,
-               p.data_nascita, p.codice_fiscale, p.telefono, p.matricola
+               p.data_nascita, p.codice_fiscale, p.telefono, p.matricola,
+               p.numero_maglia, p.scadenza_certificato
         FROM persone p
         LEFT JOIN gruppi g ON p.gruppo_id = g.id
     """
