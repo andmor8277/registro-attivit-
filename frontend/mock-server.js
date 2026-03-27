@@ -83,11 +83,10 @@ function getAllenatori() { return data.allenatori; }
 function getCodici() {
   return [
     { codice: 'X', tipo: 'presenza', descrizione: 'Presente' },
-    { codice: 'P', tipo: 'extra', descrizione: 'Presente con ritardo' },
-    { codice: 'R', tipo: 'extra', descrizione: 'Recupero' },
-    { codice: 'A', tipo: 'assenza', descrizione: 'Assente' },
-    { codice: 'AG', tipo: 'assenza', descrizione: 'Assente per gadget' },
-    { codice: 'AI', tipo: 'assenza', descrizione: 'Assente per infortunio' }
+    { codice: 'AG', tipo: 'assenza', descrizione: 'Assente giustificato' },
+    { codice: 'AI', tipo: 'assenza', descrizione: 'Assente ingiustificato' },
+    { codice: 'P', tipo: 'extra', descrizione: 'Allen. Portieri' },
+    { codice: 'R', tipo: 'extra', descrizione: 'Recupero altra cat.' }
   ];
 }
 
