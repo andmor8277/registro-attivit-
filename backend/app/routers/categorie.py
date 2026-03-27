@@ -16,6 +16,7 @@ class CategoriaCreate(BaseModel):
     stagione: Optional[int] = None
     giorni: Optional[str] = None
     is_portieri: bool = False
+    drive_folder_id: Optional[str] = None
 
 @router.get("/")
 def get_categorie(db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
@@ -89,7 +90,8 @@ def create_categoria(c: CategoriaCreate, db: Session = Depends(get_db), current_
         anno=c.anno,
         stagione=c.stagione,
         giorni=c.giorni,
-        is_portieri=1 if c.is_portieri else 0
+        is_portieri=1 if c.is_portieri else 0,
+        drive_folder_id=c.drive_folder_id
     )
     db.add(cat)
     db.commit()
@@ -109,6 +111,7 @@ def update_categoria(categoria_id: int, c: CategoriaCreate, db: Session = Depend
     cat.stagione = c.stagione
     cat.giorni = c.giorni
     cat.is_portieri = 1 if c.is_portieri else 0
+    cat.drive_folder_id = c.drive_folder_id
     db.commit(); db.refresh(cat)
     return cat
 

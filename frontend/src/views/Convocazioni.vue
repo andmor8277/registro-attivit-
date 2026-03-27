@@ -48,6 +48,7 @@
           <div class="actions">
             <button class="btn-salva" @click="salva">💾 Salva</button>
             <button class="btn-del" @click="elimina">🗑 Elimina</button>
+            <button class="btn-export" @click="esportaPDF">📄 Esporta PDF</button>
           </div>
         </div>
 
@@ -165,6 +166,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../store.js'
 import { getPersone, getRegistroMese } from '../api/index.js'
 import axios from 'axios'
+import { jsPDF } from 'jspdf'
 
 const router = useRouter()
 const route = useRoute()
@@ -388,8 +390,9 @@ async function caricaConvocazione(id) {
     data_fine: d.data_fine || '',
     esclusioni: d.esclusioni || [],
     note: d.note || '',
-    gare: d.gare.map(g => ({
+    gare: d.gare.map((g, idx) => ({
       ...g,
+      numero: g.numero || idx + 1,
       data: g.data || '',
       giocatori: Array.from({ length: 14 }, (_, i) => {
         const gk = g.giocatori.find(x => x.posizione === i + 1)
@@ -440,6 +443,113 @@ async function salva() {
   }
   await loadStorico()
   alert('Salvato!')
+}
+
+async function esportaPDF() {
+  if (!convocazione.value) return
+  
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  
+  doc.setFillColor(139, 0, 0)
+  doc.rect(0, 0, pageWidth, 30, 'F')
+  
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(18)
+  doc.text('RED TIGERS 1957', pageWidth / 2, 12, { align: 'center' })
+  doc.setFontSize(12)
+  doc.text('CONVOCAZIONE GARE', pageWidth / 2, 19, { align: 'center' })
+  doc.setFontSize(14)
+  doc.text(`${categoriaAttiva.value?.nome || ''} ${categoriaAttiva.value?.anno || ''}`, pageWidth / 2, 26, { align: 'center' })
+  
+  doc.setTextColor(0, 0, 0)
+  
+  const numGare = convocazione.value.gare.length
+  const colWidth = (pageWidth - 20) / numGare
+  const startY = 38
+  let maxY = startY + 10
+  
+  for (let gi = 0; gi < numGare; gi++) {
+    const gara = convocazione.value.gare[gi]
+    const colX = 10 + gi * colWidth
+    
+    doc.setFillColor(139, 0, 0)
+    doc.rect(colX, startY, colWidth - 3, 8, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.text(gara.gara || `GARA ${gi + 1}`, colX + (colWidth - 3) / 2, startY + 5.5, { align: 'center' })
+    
+    let y = startY + 12
+    
+    const fields = [
+      { label: 'DATA', value: gara.data ? (() => { const d = gara.data.split('-'); return `${d[2]}/${d[1]}/${d[0]}` })() : '' },
+      { label: 'CAMPO', value: gara.campo || '' },
+      { label: 'INDIRIZZO', value: gara.indirizzo || '' },
+      { label: 'APPUNTAMENTO', value: gara.appuntamento || '' },
+      { label: 'INIZIO GARA', value: gara.inizio_gara || '' },
+      { label: 'MISTER', value: gara.allenatore ? (() => {
+        const mister = responsabili.value.find(r => r.cognome === gara.allenatore)
+        return mister ? `${gara.allenatore} - ${mister.cellulare}` : gara.allenatore
+      })() : '' }
+    ]
+    
+    fields.forEach(f => {
+      if (f.value) {
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(6)
+        doc.setTextColor(120, 120, 120)
+        doc.text(f.label, colX + 2, y)
+        doc.setTextColor(0, 0, 0)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(7)
+        doc.text(f.value, colX + 2, y + 3.5)
+        y += 8
+      }
+    })
+    
+    y += 2
+    doc.setDrawColor(200, 200, 200)
+    doc.line(colX + 2, y, colX + colWidth - 5, y)
+    y += 4
+    
+    const giocatori = gara.giocatori.map((pid, idx) => {
+      if (!pid) return null
+      const p = persone.value.find(pp => pp.id === pid)
+      return p ? { pos: idx + 1, nome: `${p.cognome} ${p.nome}` } : null
+    }).filter(n => n)
+    
+    giocatori.forEach(g => {
+      doc.setTextColor(150, 150, 150)
+      doc.setFontSize(6)
+      doc.text(String(g.pos).padStart(2, ' '), colX + 2, y)
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(7)
+      doc.text(g.nome, colX + 8, y)
+      y += 5
+    })
+    
+    maxY = Math.max(maxY, y)
+  }
+  
+  if (convocazione.value.note) {
+    let noteY = maxY + 10
+    if (noteY > pageHeight - 40) {
+      doc.addPage()
+      noteY = 20
+    }
+    doc.setFillColor(245, 245, 245)
+    doc.rect(10, noteY, pageWidth - 20, 20, 'F')
+    doc.setTextColor(0, 0, 0)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7)
+    const noteLines = doc.splitTextToSize(convocazione.value.note, pageWidth - 24)
+    doc.text(noteLines.slice(0, 4), 13, noteY + 6)
+  }
+  
+  doc.save(`convocazione_${convocazione.value.data_inizio || 'draft'}.pdf`)
 }
 
 async function elimina() {
