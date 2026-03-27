@@ -482,7 +482,11 @@ async function esportaPDF() {
       scale: 1.5,
       useCORS: true,
       logging: false,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      width: gareGridEl.scrollWidth,
+      height: gareGridEl.scrollHeight,
+      windowWidth: gareGridEl.scrollWidth,
+      windowHeight: gareGridEl.scrollHeight
     })
     
     const pdf = new jsPDF('landscape', 'mm', 'a4')
@@ -606,7 +610,7 @@ onMounted(async () => {
 .btn-del { padding: 6px 14px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; }
 .gare-scroll { overflow-x: auto; }
 .gare-grid { display: grid; gap: 1rem; min-width: max-content; }
-.gara-col { background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; min-width: 260px; }
+.gara-col { background: white; border: 1px solid #ddd; border-radius: 8px; min-width: 260px; }
 .gara-header { background: #CC0000; color: white; font-weight: bold; padding: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
 .gara-header span { flex-shrink: 0; }
 .gara-title-input { flex: 1; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 3px 8px; color: white; font-size: 0.85rem; font-weight: 600; text-align: center; }
@@ -618,8 +622,8 @@ onMounted(async () => {
 .gf-input { flex: 1; border: 1px solid #eee; border-radius: 3px; padding: 4px 6px; font-size: 0.8rem; height: 28px; box-sizing: border-box; }
 .gf-row:last-child { margin-bottom: 0; }
 .gf-input select { height: 100%; }
-.giocatori-list { padding: 0.5rem; min-height: 200px; box-sizing: border-box; }
-.giocatore-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.giocatori-list { padding: 0.5rem; box-sizing: border-box; }
+.giocatore-row { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; height: 28px; }
 .esclusi-editor-box { background: #fff3cd; border: 2px solid #ffc107; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .esclusi-label { font-size: 0.85rem; font-weight: bold; color: #856404; }
 .esclusi-period { font-size: 0.8rem; color: #856404; }
