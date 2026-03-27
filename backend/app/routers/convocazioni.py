@@ -34,6 +34,7 @@ class GaraIn(BaseModel):
 class ConvocazioneIn(BaseModel):
     categoria_id: int
     data_inizio: date
+    data_fine: Optional[date] = None
     note: Optional[str] = None
     gare: List[GaraIn] = []
 
@@ -60,11 +61,11 @@ def dettaglio(cid: int, db: Session = Depends(get_db), current_user=Depends(get_
             "campo": g.campo, "indirizzo": g.indirizzo, "appuntamento": g.appuntamento,
             "inizio_gara": g.inizio_gara, "allenatore": g.allenatore, "giocatori": persone
         })
-    return {"id": c.id, "categoria_id": c.categoria_id, "data_inizio": c.data_inizio, "note": c.note, "gare": result_gare}
+    return {"id": c.id, "categoria_id": c.categoria_id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "note": c.note, "gare": result_gare}
 
 @router.post("/")
 def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    c = Convocazione(categoria_id=data.categoria_id, data_inizio=data.data_inizio, note=data.note)
+    c = Convocazione(categoria_id=data.categoria_id, data_inizio=data.data_inizio, data_fine=data.data_fine, note=data.note)
     db.add(c)
     db.flush()
     for g in data.gare:
@@ -84,6 +85,7 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
     if not c:
         raise HTTPException(status_code=404, detail="Non trovata")
     c.data_inizio = data.data_inizio
+    c.data_fine = data.data_fine
     c.note = data.note
     # Elimina e ricrea gare
     gare_old = db.query(ConvocazioneGara).filter(ConvocazioneGara.convocazione_id == cid).all()
