@@ -165,7 +165,8 @@ def get_categoria_responsabili(categoria_id: int, db: Session = Depends(get_db),
             result.append({
                 "id": u.id,
                 "cognome": u.cognome,
-                "cellulare": u.cellulare
+                "cellulare": u.cellulare,
+                "ruolo": u.ruolo
             })
     return result
 
