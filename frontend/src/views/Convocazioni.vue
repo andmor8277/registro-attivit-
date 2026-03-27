@@ -538,7 +538,8 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.conv-page { display: flex; flex-direction: column; height: 100vh; }
+.conv-page { display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: none; }
+.editor { flex: 1; overflow-y: auto; padding: 1rem; width: 100%; max-width: none; }
 .toolbar { display: flex; align-items: center; gap: 0.8rem; padding: 0.5rem 1rem; background: #8B0000; color: white; flex-shrink: 0; }
 .titolo-toolbar { flex: 1; font-weight: bold; font-size: 0.95rem; }
 .btn-back { padding: 4px 12px; border-radius: 4px; border: 1px solid #555; background: #2a2a4a; color: white; cursor: pointer; }
@@ -608,8 +609,8 @@ onMounted(async () => {
 .actions { display: flex; gap: 0.5rem; margin-left: auto; }
 .btn-salva { padding: 6px 18px; background: #CC0000; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
 .btn-del { padding: 6px 14px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; }
-.gare-scroll { overflow-x: auto; }
-.gare-grid { display: grid; gap: 1rem; min-width: max-content; }
+.gare-scroll { overflow-x: auto; width: 100%; }
+.gare-grid { display: grid; gap: 1rem; min-width: max-content; width: 100%; }
 .gara-col { background: white; border: 1px solid #ddd; border-radius: 8px; min-width: 320px; }
 .gara-header { background: #CC0000; color: white; font-weight: bold; padding: 10px 14px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 50px; }
 .gara-header span { flex-shrink: 0; }
