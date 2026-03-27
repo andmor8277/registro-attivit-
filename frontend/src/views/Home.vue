@@ -254,8 +254,9 @@
             <p class="modal-info">Questa operazione assegnerà la stessa stagione a tutte le categorie attive.</p>
             <div class="form-group">
               <label>Stagione Calcistica</label>
-              <input v-model="stagioneModal.stagione" placeholder="Es. 2025" type="number" />
-              <p class="form-hint">Anno di inizio della stagione (es. 2025 per 2025/2026)</p>
+              <select v-model="stagioneModal.stagione">
+                <option v-for="s in stagioniOptions" :key="s" :value="s">{{ s }}/{{ s + 1 }}</option>
+              </select>
             </div>
           </div>
           <div class="modal-footer">
@@ -330,6 +331,15 @@ const stagioniDisponibili = computed(() => {
     if (c.stagione) stagioniSet.add(c.stagione)
   })
   return Array.from(stagioniSet).sort((a, b) => b - a)
+})
+
+const stagioniOptions = computed(() => {
+  const currentYear = new Date().getFullYear()
+  const options = []
+  for (let y = currentYear + 1; y >= 2020; y--) {
+    options.push(y)
+  }
+  return options
 })
 const tuttiUtenti = ref([])
 const modalUtentiSel = ref([])
