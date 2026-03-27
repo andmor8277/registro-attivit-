@@ -1,10 +1,22 @@
 <template>
   <div class="drive-page">
-    <div class="toolbar">
-      <button class="btn-back" @click="router.push('/scelta/' + route.params.id)">← Indietro</button>
-      <button class="btn-back" @click="router.push('/')">🏠 Home</button>
+    <header class="page-header">
+      <div class="header-left">
+        <button class="btn-back" @click="router.push('/scelta/' + route.params.id)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+        </button>
+        <button class="btn-home" @click="router.push('/')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </button>
+      </div>
       <span class="titolo-toolbar">Allenamenti — {{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
-    </div>
+    </header>
 
     <div class="drive-container" v-if="driveFolderId">
       <div class="drive-header-bar">
@@ -49,13 +61,14 @@ const driveFolderId = computed(() => categoriaAttiva.value?.drive_folder_id || '
   flex-direction: column; 
   height: 100vh; 
   background: #111; 
+  --color-primary: #dc2626;
 }
 .toolbar { 
   display: flex; 
   align-items: center; 
   gap: 0.8rem; 
   padding: 0.75rem 1rem; 
-  background: #22c55e; 
+  background: #dc2626; 
   color: white; 
   flex-shrink: 0; 
 }
@@ -167,4 +180,11 @@ const driveFolderId = computed(() => categoriaAttiva.value?.drive_folder_id || '
   font-size: 0.85rem;
   color: #3b82f6 !important;
 }
+
+.page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: #dc2626; }
+.header-left { display: flex; gap: 0.25rem; }
+.btn-back, .btn-home { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer; transition: background 0.2s; }
+.btn-back:hover, .btn-home:hover { background: rgba(255,255,255,0.2); }
+.btn-back svg, .btn-home svg { width: 18px; height: 18px; }
+.titolo-toolbar { flex: 1; font-weight: bold; font-size: 1rem; color: white; }
 </style>

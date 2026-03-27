@@ -1,11 +1,23 @@
 <template>
   <div class="conv-page">
-    <div class="toolbar">
-      <button class="btn-back" @click="router.push('/scelta/' + route.params.id)">← Indietro</button>
-      <button class="btn-back" @click="router.push('/')">🏠 Home</button>
+    <header class="page-header">
+      <div class="header-left">
+        <button class="btn-back" @click="router.push('/scelta/' + route.params.id)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+        </button>
+        <button class="btn-home" @click="router.push('/')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </button>
+      </div>
       <span class="titolo-toolbar">Convocazioni — {{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
       <button class="btn-nuovo" @click="nuovaConvocazione">+ Nuovo Weekend</button>
-    </div>
+    </header>
 
     <div class="conv-body">
       <!-- SIDEBAR SINISTRA -->
@@ -90,13 +102,13 @@
           <div class="gare-grid" :style="{ gridTemplateColumns: 'repeat(' + convocazione.gare.length + ', minmax(220px, 1fr))' }">
             <!-- HEADER -->
             <div class="gare-header-full" :style="{ gridColumn: '1 / -1' }">
-              <img src="/logo.jpg" alt="logo" class="logo-rt" />
+              <img src="/logosponsor.png" alt="logo" class="logo-rt logo-left" />
               <div class="header-rt-text">
                 <div class="header-rt-title">RED TIGERS 1957</div>
                 <div class="header-rt-subtitle">CONVOCAZIONE GARE</div>
                 <div class="header-rt-category">{{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</div>
               </div>
-              <img src="/logo.jpg" alt="logo" class="logo-rt" />
+              <img src="/logo.jpg" alt="logo" class="logo-rt logo-right" />
             </div>
             <div v-for="(gara, gi) in convocazione.gare" :key="gi" class="gara-col">
               <div class="gara-header">
@@ -138,7 +150,7 @@
                   <span class="pos-num">{{ pos }}</span>
                   <select v-model="gara.giocatori[pos-1]">
                     <option :value="null">—</option>
-                    <option v-for="p in getGiocatoriSettimanaPrecedente()" :key="p.id" :value="p.id">{{ p.cognome }} {{ p.nome }}</option>
+                    <option v-for="p in getGiocatoriSettimanaPrecedente()" :key="p.id" :value="p.id">{{ getCognomeDisplay(p) }}</option>
                   </select>
                 </div>
               </div>
@@ -148,8 +160,7 @@
 
         <!-- NOTE -->
         <div class="note-section">
-          <label>NOTE</label>
-          <textarea v-model="convocazione.note" rows="3"></textarea>
+          <textarea v-model="convocazione.note" rows="6"></textarea>
         </div>
       </div>
 
@@ -167,6 +178,7 @@ import { useStore } from '../store.js'
 import { getPersone, getRegistroMese } from '../api/index.js'
 import axios from 'axios'
 import { jsPDF } from 'jspdf'
+import html2canvas from 'html2canvas'
 
 const router = useRouter()
 const route = useRoute()
@@ -326,6 +338,14 @@ function getAssentiEsclusi(dataGara) {
   return persone.value.filter(p => assenzeCount[p.id] >= 2)
 }
 
+function getCognomeDisplay(p) {
+  const sameCognomi = persone.value.filter(x => x.cognome === p.cognome)
+  if (sameCognomi.length > 1) {
+    return `${p.cognome} ${p.nome.charAt(0)}.`
+  }
+  return p.cognome
+}
+
 function aggiustaGare() {
   const n = numPartite.value
   const gare = convocazione.value.gare
@@ -365,7 +385,10 @@ function nuovaConvocazione() {
     data_inizio: oggi,
     data_fine: domenica,
     esclusioni: [],
-    note: 'NOTE | PRESENTARSI ALL\'APPUNTAMENTO IN ORARIO STABILITO ED IN TENUTA DA RAPPRESENTANZA GEMS (NO GIA CAMBIATI). SI GIOCA CON KIT GARA* (MAGLIA CALZONCINI E CALZETTONI) PORTARE FELPA D\'ALLENAMENTO PER RISCALDAMENTO E K-WAY IN BORSA PER L\'EVENIENZA. AVVISARE TEMPESTIVAMENTE L\'ALLENATORE PRESENTE IN GARA IN CASO DI RITARDO O ASSENZA. *PORTARE COMUNQUE MAGLIA DI RICAMBIO, CALZONCINI E CALZETTONI PER MODIFICARE I COLORI IN BASE ALL\'AVVERSARIO.',
+    note: `PRESENTARSI ALL'APPUNTAMENTO IN ORARIO STABILITO ED IN TENUTA DA RAPPRESENTANZA GEMS (NO GIA CAMBIATI).
+SI GIOCA CON KIT GARA* (MAGLIA CALZONCINI E CALZETTONI) PORTARE FELPA D'ALLENAMENTO PER RISCALDAMENTO E K-WAY IN BORSA PER L'EVENIENZA.
+AVVISARE TEMPESTIVAMENTE L'ALLENATORE PRESENTE IN GARA IN CASO DI RITARDO O ASSENZA.
+*PORTARE COMUNQUE MAGLIA DI RICAMBIO, CALZONCINI E CALZETTONI PER MODIFICARE I COLORI IN BASE ALL'AVVERSARIO.`,
     gare: [garaVuota(1)]
   }
 }
@@ -448,108 +471,47 @@ async function salva() {
 async function esportaPDF() {
   if (!convocazione.value) return
   
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
-  const pageWidth = doc.internal.pageSize.getWidth()
-  const pageHeight = doc.internal.pageSize.getHeight()
-  
-  doc.setFillColor(139, 0, 0)
-  doc.rect(0, 0, pageWidth, 30, 'F')
-  
-  doc.setTextColor(255, 255, 255)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
-  doc.text('RED TIGERS 1957', pageWidth / 2, 12, { align: 'center' })
-  doc.setFontSize(12)
-  doc.text('CONVOCAZIONE GARE', pageWidth / 2, 19, { align: 'center' })
-  doc.setFontSize(14)
-  doc.text(`${categoriaAttiva.value?.nome || ''} ${categoriaAttiva.value?.anno || ''}`, pageWidth / 2, 26, { align: 'center' })
-  
-  doc.setTextColor(0, 0, 0)
-  
-  const numGare = convocazione.value.gare.length
-  const colWidth = (pageWidth - 20) / numGare
-  const startY = 38
-  let maxY = startY + 10
-  
-  for (let gi = 0; gi < numGare; gi++) {
-    const gara = convocazione.value.gare[gi]
-    const colX = 10 + gi * colWidth
-    
-    doc.setFillColor(139, 0, 0)
-    doc.rect(colX, startY, colWidth - 3, 8, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    doc.text(gara.gara || `GARA ${gi + 1}`, colX + (colWidth - 3) / 2, startY + 5.5, { align: 'center' })
-    
-    let y = startY + 12
-    
-    const fields = [
-      { label: 'DATA', value: gara.data ? (() => { const d = gara.data.split('-'); return `${d[2]}/${d[1]}/${d[0]}` })() : '' },
-      { label: 'CAMPO', value: gara.campo || '' },
-      { label: 'INDIRIZZO', value: gara.indirizzo || '' },
-      { label: 'APPUNTAMENTO', value: gara.appuntamento || '' },
-      { label: 'INIZIO GARA', value: gara.inizio_gara || '' },
-      { label: 'MISTER', value: gara.allenatore ? (() => {
-        const mister = responsabili.value.find(r => r.cognome === gara.allenatore)
-        return mister ? `${gara.allenatore} - ${mister.cellulare}` : gara.allenatore
-      })() : '' }
-    ]
-    
-    fields.forEach(f => {
-      if (f.value) {
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(6)
-        doc.setTextColor(120, 120, 120)
-        doc.text(f.label, colX + 2, y)
-        doc.setTextColor(0, 0, 0)
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(7)
-        doc.text(f.value, colX + 2, y + 3.5)
-        y += 8
-      }
-    })
-    
-    y += 2
-    doc.setDrawColor(200, 200, 200)
-    doc.line(colX + 2, y, colX + colWidth - 5, y)
-    y += 4
-    
-    const giocatori = gara.giocatori.map((pid, idx) => {
-      if (!pid) return null
-      const p = persone.value.find(pp => pp.id === pid)
-      return p ? { pos: idx + 1, nome: `${p.cognome} ${p.nome}` } : null
-    }).filter(n => n)
-    
-    giocatori.forEach(g => {
-      doc.setTextColor(150, 150, 150)
-      doc.setFontSize(6)
-      doc.text(String(g.pos).padStart(2, ' '), colX + 2, y)
-      doc.setTextColor(0, 0, 0)
-      doc.setFontSize(7)
-      doc.text(g.nome, colX + 8, y)
-      y += 5
-    })
-    
-    maxY = Math.max(maxY, y)
+  const gareGridEl = document.querySelector('.gare-grid')
+  if (!gareGridEl) {
+    alert('Elemento non trovato')
+    return
   }
   
-  if (convocazione.value.note) {
-    let noteY = maxY + 10
-    if (noteY > pageHeight - 40) {
-      doc.addPage()
-      noteY = 20
+  try {
+    const canvas = await html2canvas(gareGridEl, {
+      scale: 1.5,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff'
+    })
+    
+    const pdf = new jsPDF('landscape', 'mm', 'a4')
+    const pdfWidth = pdf.internal.pageSize.getWidth()
+    
+    const ratio = (pdfWidth - 20) / canvas.width
+    const finalWidth = pdfWidth - 20
+    
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, finalWidth, canvas.height * ratio)
+    
+    if (convocazione.value.note) {
+      const noteY = 10 + (canvas.height * ratio) + 5
+      pdf.setFillColor(220, 38, 38)
+      const noteText = convocazione.value.note
+      pdf.setTextColor(255, 255, 255)
+      pdf.setFontSize(8)
+      const maxWidth = finalWidth - 20
+      const lines = pdf.splitTextToSize(noteText, maxWidth)
+      const lineHeight = 4.5
+      const noteHeight = lines.length * lineHeight + 12
+      pdf.rect(10, noteY, finalWidth, noteHeight, 'F')
+      pdf.text(lines, 15, noteY + 8)
     }
-    doc.setFillColor(245, 245, 245)
-    doc.rect(10, noteY, pageWidth - 20, 20, 'F')
-    doc.setTextColor(0, 0, 0)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(7)
-    const noteLines = doc.splitTextToSize(convocazione.value.note, pageWidth - 24)
-    doc.text(noteLines.slice(0, 4), 13, noteY + 6)
+    
+    pdf.save(`convocazione_${convocazione.value.data_inizio || 'draft'}.pdf`)
+  } catch (e) {
+    console.error('Errore PDF:', e)
+    alert('Errore nella generazione del PDF')
   }
-  
-  doc.save(`convocazione_${convocazione.value.data_inizio || 'draft'}.pdf`)
 }
 
 async function elimina() {
@@ -579,8 +541,8 @@ onMounted(async () => {
 .btn-nuovo { padding: 4px 14px; border-radius: 4px; border: none; background: #e94560; color: white; cursor: pointer; font-weight: bold; }
 .conv-body { display: flex; flex: 1; overflow: hidden; }
 
-.gare-header-full { background: linear-gradient(135deg, #8B0000 0%, #CC0000 100%); color: white; padding: 12px 20px; display: flex; align-items: center; justify-content: center; gap: 1.5rem; border-radius: 8px 8px 0 0; }
-.logo-rt { width: 50px; height: 50px; object-fit: contain; border-radius: 50%; background: white; padding: 2px; }
+.gare-header-full { background: linear-gradient(135deg, #8B0000 0%, #CC0000 100%); color: white; padding: 10px 10px; display: flex; align-items: center; justify-content: center; gap: 1.5rem; border-radius: 8px 8px 0 0; }
+.logo-rt { width: 70px; height: 70px; object-fit: contain; border-radius: 50%; background: white; padding: 2px; margin: 0; }
 .header-rt-text { text-align: center; }
 .header-rt-title { font-size: 1.5rem; font-weight: 900; letter-spacing: 3px; }
 .header-rt-subtitle { font-size: 1rem; font-weight: 600; letter-spacing: 2px; margin-top: 2px; }
@@ -650,12 +612,13 @@ onMounted(async () => {
 .gara-title-input { flex: 1; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 3px 8px; color: white; font-size: 0.85rem; font-weight: 600; text-align: center; }
 .gara-title-input::placeholder { color: rgba(255,255,255,0.6); }
 .gara-title-input::-webkit-calendar-picker-indicator { filter: invert(1); }
-.gara-fields { padding: 0.5rem; border-bottom: 2px solid #eee; }
+.gara-fields { padding: 0.5rem; border-bottom: 2px solid #eee; min-height: 180px; box-sizing: border-box; }
 .gf-row { display: flex; align-items: center; margin-bottom: 6px; gap: 0.5rem; }
-.gf-label { font-size: 0.7rem; color: #888; font-weight: bold; text-transform: uppercase; min-width: 90px; flex-shrink: 0; }
-.gf-input { flex: 1; border: 1px solid #eee; border-radius: 3px; padding: 4px 6px; font-size: 0.82rem; }
+.gf-label { font-size: 0.65rem; color: #888; font-weight: bold; text-transform: uppercase; min-width: 80px; flex-shrink: 0; }
+.gf-input { flex: 1; border: 1px solid #eee; border-radius: 3px; padding: 4px 6px; font-size: 0.8rem; height: 28px; box-sizing: border-box; }
 .gf-row:last-child { margin-bottom: 0; }
-.giocatori-list { padding: 0.5rem; }
+.gf-input select { height: 100%; }
+.giocatori-list { padding: 0.5rem; min-height: 200px; box-sizing: border-box; }
 .giocatore-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
 .esclusi-editor-box { background: #fff3cd; border: 2px solid #ffc107; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .esclusi-label { font-size: 0.85rem; font-weight: bold; color: #856404; }
@@ -672,9 +635,18 @@ onMounted(async () => {
 .escluso-item { font-size: 0.75rem; color: #856404; padding: 2px 0; font-weight: 600; }
 .escluso-none { font-size: 0.7rem; color: #6c757d; font-style: italic; }
 .pos-num { width: 18px; text-align: right; font-size: 0.8rem; color: #888; flex-shrink: 0; }
-.giocatore-row select { flex: 1; font-size: 0.8rem; padding: 2px 4px; border: 1px solid #eee; border-radius: 3px; }
+.giocatore-row select { flex: 1; font-size: 0.8rem; padding: 5px 8px; border: 1px solid #eee; border-radius: 3px; }
 .note-section { margin-top: 1rem; }
 .note-section label { font-size: 0.8rem; font-weight: bold; color: #555; display: block; margin-bottom: 4px; }
-.note-section textarea { width: 100%; border: 1px solid #CC0000; border-radius: 4px; padding: 6px; font-size: 0.85rem; resize: vertical; background: #CC0000; color: white; font-weight: bold; }
+.note-section textarea { width: 100%; border: 1px solid #CC0000; border-radius: 4px; padding: 10px; font-size: 0.7rem; resize: vertical; background: #CC0000; color: white; font-weight: bold; white-space: pre-wrap; word-wrap: break-word; min-height: 120px; line-height: 1.3; }
 .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 1rem; }
+
+.page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: #CC0000; }
+.header-left { display: flex; align-items: center; gap: 0.25rem; }
+.btn-back, .btn-home { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer; transition: background 0.2s; }
+.btn-back:hover, .btn-home:hover { background: rgba(255,255,255,0.2); }
+.btn-back svg, .btn-home svg { width: 18px; height: 18px; }
+.titolo-toolbar { flex: 1; font-weight: bold; font-size: 1rem; color: white; }
+.btn-nuovo { padding: 6px 14px; border-radius: 6px; border: none; background: rgba(255,255,255,0.2); color: white; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+.btn-nuovo:hover { background: rgba(255,255,255,0.3); }
 </style>

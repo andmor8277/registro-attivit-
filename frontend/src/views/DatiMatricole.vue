@@ -1,11 +1,23 @@
 <template>
   <div class="dati-page">
-    <div class="toolbar">
-      <button class="btn-back" @click="router.push('/scelta/' + route.params.id)">← Indietro</button>
-      <button class="btn-back" @click="router.push('/')">🏠 Home</button>
+    <header class="page-header">
+      <div class="header-left">
+        <button class="btn-back" @click="router.push('/scelta/' + route.params.id)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+        </button>
+        <button class="btn-home" @click="router.push('/')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </button>
+      </div>
       <span class="titolo-toolbar">Dati & Matricole — {{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
-      <button class="btn-nuovo" @click="apriNuovo">+ Nuovo Giocatore</button>
-    </div>
+      <button v-if="!isDirigente" class="btn-nuovo" @click="apriNuovo">+ Nuovo Giocatore</button>
+    </header>
 
     <div class="dati-body">
       <div class="filters">
@@ -304,4 +316,13 @@ onMounted(async () => {
 .btn-annulla { padding: 0.5rem 1rem; border: 1px solid #444; border-radius: 4px; background: #222; color: #ddd; cursor: pointer; }
 .btn-salva { padding: 0.5rem 1rem; border: none; border-radius: 4px; background: #CC0000; color: white; cursor: pointer; font-weight: 600; }
 .btn-salva:hover { background: #a30000; }
+
+.page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: #8B0000; }
+.header-left { display: flex; gap: 0.25rem; }
+.btn-back, .btn-home { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer; transition: background 0.2s; }
+.btn-back:hover, .btn-home:hover { background: rgba(255,255,255,0.2); }
+.btn-back svg, .btn-home svg { width: 18px; height: 18px; }
+.titolo-toolbar { flex: 1; font-weight: bold; font-size: 0.95rem; color: white; }
+.btn-nuovo { padding: 6px 14px; border-radius: 6px; border: none; background: #22c55e; color: white; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+.btn-nuovo:hover { background: #16a34a; }
 </style>
