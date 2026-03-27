@@ -55,7 +55,7 @@ class Utente(Base):
     cognome = Column(String(100), nullable=False)
     data_nascita = Column(Date, nullable=False)
     codice_fiscale = Column(String(16), nullable=False)
-    cellulare = Column(String(20), nullable=False)
+    cellulare = Column(String(50), nullable=False)
     tesserino = Column(String(50), nullable=True)
     ruolo = Column(String(20), nullable=True)  # admin, mister, dirigente
 
