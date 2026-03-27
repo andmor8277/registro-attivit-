@@ -41,7 +41,7 @@ class ConvocazioneIn(BaseModel):
 @router.get("/")
 def lista(categoria_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     convs = db.query(Convocazione).filter(Convocazione.categoria_id == categoria_id).order_by(Convocazione.data_inizio.desc()).all()
-    return [{"id": c.id, "data_inizio": c.data_inizio, "categoria_id": c.categoria_id} for c in convs]
+    return [{"id": c.id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "categoria_id": c.categoria_id} for c in convs]
 
 @router.get("/{cid}")
 def dettaglio(cid: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
