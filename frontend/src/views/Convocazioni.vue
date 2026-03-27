@@ -610,10 +610,10 @@ onMounted(async () => {
 .btn-del { padding: 6px 14px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; }
 .gare-scroll { overflow-x: auto; }
 .gare-grid { display: grid; gap: 1rem; min-width: max-content; }
-.gara-col { background: white; border: 1px solid #ddd; border-radius: 8px; min-width: 300px; }
-.gara-header { background: #CC0000; color: white; font-weight: bold; padding: 8px 12px; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+.gara-col { background: white; border: 1px solid #ddd; border-radius: 8px; min-width: 320px; }
+.gara-header { background: #CC0000; color: white; font-weight: bold; padding: 10px 14px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 50px; }
 .gara-header span { flex-shrink: 0; }
-.gara-title-input { flex: 1; min-width: 0; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 6px 12px; color: white; font-size: 1rem; font-weight: 600; text-align: center; white-space: nowrap; overflow: visible; text-overflow: ellipsis; }
+.gara-title-input { flex: 1; min-width: 0; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 8px 14px; color: white; font-size: 1.1rem; font-weight: 700; text-align: center; line-height: 1.2; }
 .gara-title-input::placeholder { color: rgba(255,255,255,0.6); }
 .gara-title-input::-webkit-calendar-picker-indicator { filter: invert(1); }
 .gara-fields { padding: 0.5rem; border-bottom: 2px solid #eee; min-height: 180px; box-sizing: border-box; }
