@@ -110,9 +110,14 @@
               +{{ cat.giorni.split(',').length - 3 }}
             </span>
           </div>
-          <div class="cat-mister" v-if="getResponsabiliCat(cat.id).length > 0">
-            <span class="mister-badge" v-for="m in getResponsabiliCat(cat.id)" :key="m.id">
+          <div class="cat-mister" v-if="getMistersCat(cat.id).length > 0">
+            <span class="mister-badge" v-for="m in getMistersCat(cat.id)" :key="m.id">
               {{ m.cognome }}
+            </span>
+          </div>
+          <div class="cat-dirigente" v-if="getDirigentiCat(cat.id).length > 0">
+            <span class="dirigente-badge" v-for="d in getDirigentiCat(cat.id)" :key="d.id">
+              {{ d.cognome }}
             </span>
           </div>
           <div class="card-actions" v-if="utenteAttivo?.is_admin || utenteAttivo?.ruolo === 'mister'">
@@ -360,6 +365,14 @@ const nomiBreviGiorni = (val) => tuttiGiorni.find(g => g.val === val)?.nome?.sli
 
 function getResponsabiliCat(catId) {
   return responsabileMap.value[catId] || []
+}
+
+function getMistersCat(catId) {
+  return (responsabileMap.value[catId] || []).filter(r => r.ruolo === 'mister')
+}
+
+function getDirigentiCat(catId) {
+  return (responsabileMap.value[catId] || []).filter(r => r.ruolo === 'dirigente')
 }
 
 const planningSettimana = computed(() => {
@@ -1048,6 +1061,13 @@ onMounted(() => {
   margin-top: 0.75rem;
 }
 
+.cat-dirigente {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
 .mister-badge {
   display: inline-flex;
   align-items: center;
@@ -1058,6 +1078,18 @@ onMounted(() => {
   font-size: 0.7rem;
   font-weight: 600;
   color: #dc2626;
+}
+
+.dirigente-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.4rem;
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #2563eb;
 }
 
 .badge-portieri {
