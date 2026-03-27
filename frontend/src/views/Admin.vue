@@ -289,9 +289,9 @@ async function eliminaUtente(id) {
 }
 
 async function resetsPassword(id) {
-  if (!confirm('Resettare la password a "password"?')) return
+  if (!confirm('Resettare la password a "RedTigers2024!"?')) return
   await resetPassword(id)
-  alert('Password resettata! La nuova password è: password')
+  alert('Password resettata! La nuova password è: RedTigers2024!')
   await load()
 }
 
