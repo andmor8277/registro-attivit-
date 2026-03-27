@@ -269,6 +269,40 @@
         </div>
       </div>
     </Teleport>
+
+    <Teleport to="body">
+      <div v-if="archiviaModal.show" class="modal-overlay" @click.self="archiviaModal.show = false">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>Archivia Stagione</h3>
+            <button class="modal-close" @click="archiviaModal.show = false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-info">Seleziona la stagione da archiviare. Le categorie diventeranno visibili solo nella sezione "Stagioni Passate".</p>
+            <div class="form-group">
+              <label>Stagione</label>
+              <select v-model="archiviaModal.stagione">
+                <option v-for="s in stagioniDisponibili" :key="s" :value="s">
+                  {{ s }}/{{ s + 1 }}
+                </option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" @click="archiviaModal.show = false">Annulla</button>
+            <button class="btn-archive" @click="confermaArchiviazione" :disabled="archiviaModal.loading">
+              <span v-if="archiviaModal.loading" class="spinner-small"></span>
+              <template v-else>Archivia</template>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -288,7 +322,15 @@ const errore = ref('')
 const stagioni = ref({ attiva: [], archiviate: [] })
 const mostraStagioniArchiviate = ref(false)
 const stagioneModal = ref({ show: false, stagione: new Date().getFullYear(), loading: false, errore: '' })
-const archiviaModal = ref({ show: false, loading: false })
+const archiviaModal = ref({ show: false, loading: false, stagione: null })
+
+const stagioniDisponibili = computed(() => {
+  const stagioniSet = new Set()
+  categorie.value.forEach(c => {
+    if (c.stagione) stagioniSet.add(c.stagione)
+  })
+  return Array.from(stagioniSet).sort((a, b) => b - a)
+})
 const tuttiUtenti = ref([])
 const modalUtentiSel = ref([])
 const importLoading = ref(false)
@@ -516,27 +558,31 @@ async function loadStagioni() {
 }
 
 function apriArchiviazione() {
-  const categorieConStagione = categorie.value.filter(c => c.stagione)
-  const stagioneCorrente = categorieConStagione.length > 0 
-    ? Math.max(...categorieConStagione.map(c => c.stagione))
-    : null
-  
-  if (!stagioneCorrente) {
+  if (stagioniDisponibili.value.length === 0) {
     alert('Nessuna stagione da archiviare. Le categorie devono avere una stagione assegnata.')
     return
   }
   
-  if (confirm(`Archiviare la stagione ${stagioneCorrente}/${stagioneCorrente + 1}?\n\nQuesta operazione renderà le categorie di questa stagione visibili solo nella sezione "Stagioni Passate".`)) {
-    archiviaModal.value.loading = true
-    archiviaStagione(stagioneCorrente)
-      .then(() => {
-        loadCategorie()
-        loadStagioni()
-      })
-      .catch(e => alert('Errore: ' + (e.response?.data?.detail || 'Errore sconosciuto')))
-      .finally(() => {
-        archiviaModal.value.loading = false
-      })
+  archiviaModal.value = {
+    show: true,
+    loading: false,
+    stagione: stagioniDisponibili.value[0]
+  }
+}
+
+async function confermaArchiviazione() {
+  if (!archiviaModal.value.stagione) return
+  
+  archiviaModal.value.loading = true
+  try {
+    await archiviaStagione(archiviaModal.value.stagione)
+    archiviaModal.value.show = false
+    await loadCategorie()
+    await loadStagioni()
+  } catch (e) {
+    alert('Errore: ' + (e.response?.data?.detail || 'Errore sconosciuto'))
+  } finally {
+    archiviaModal.value.loading = false
   }
 }
 
