@@ -96,6 +96,23 @@
           </svg>
         </div>
       </div>
+
+      <div v-if="!isDirigente" class="scelta-card" @click="router.push('/allenamenti/' + categoria?.id)">
+        <div class="card-icon" style="background: rgba(34, 197, 94, 0.1); color: #22c55e;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <div class="card-label">Allenamenti</div>
+        <div class="card-desc">Gestisci gli allenamenti della settimana</div>
+        <div class="card-arrow" style="background: #22c55e;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </div>
+      </div>
     </div>
   </div>
 </template>

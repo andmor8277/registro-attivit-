@@ -61,7 +61,8 @@ function getDefaultData() {
     ],
     registro: [],
     convocazioni: [],
-    allenatori: []
+    allenatori: [],
+    allenamenti: []
   };
 }
 
@@ -498,6 +499,46 @@ app.put('/allenatori/:id', (req, res) => {
 
 app.delete('/allenatori/:id', (req, res) => {
   data.allenatori = data.allenatori.filter(a => a.id !== parseInt(req.params.id));
+  saveData(data);
+  res.json({ ok: true });
+});
+
+// ============ ALLENAMENTI ============
+app.get('/allenamenti/', (req, res) => {
+  const { categoria_id, week } = req.query;
+  if (!data.allenamenti) data.allenamenti = [];
+  const result = data.allenamenti.filter(a => 
+    a.categoria_id === parseInt(categoria_id) && a.week === week
+  );
+  res.json(result);
+});
+
+app.post('/allenamenti/', (req, res) => {
+  const { categoria_id, week, presenze } = req.body;
+  if (!data.allenamenti) data.allenamenti = [];
+  
+  presenze.forEach(p => {
+    const existingIdx = data.allenamenti.findIndex(a => 
+      a.categoria_id === parseInt(categoria_id) && 
+      a.week === week && 
+      a.persona_id === p.persona_id && 
+      a.giorno === p.giorno
+    );
+    
+    if (existingIdx >= 0) {
+      data.allenamenti[existingIdx] = { ...data.allenamenti[existingIdx], codice: p.codice };
+    } else {
+      data.allenamenti.push({
+        id: genId(),
+        categoria_id: parseInt(categoria_id),
+        week,
+        persona_id: p.persona_id,
+        giorno: p.giorno,
+        codice: p.codice
+      });
+    }
+  });
+  
   saveData(data);
   res.json({ ok: true });
 });

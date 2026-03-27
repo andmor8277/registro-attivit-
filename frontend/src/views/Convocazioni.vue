@@ -16,7 +16,7 @@
           <div v-for="c in storico" :key="c.id"
             :class="['storico-item', { attivo: convocazioneId === c.id }]"
             @click="caricaConvocazione(c.id)">
-            {{ formatData(c.data_inizio) }}
+            WE {{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' - ' + formatDataShort(c.data_fine) : '' }}
           </div>
         </div>
 
@@ -337,6 +337,12 @@ function formatData(d) {
   return `${g}/${m}/${y}`
 }
 
+function formatDataShort(d) {
+  if (!d) return ''
+  const [y, m, g] = d.split('-')
+  return `${g}/${m}/${y.slice(2)}`
+}
+
 function garaVuota(numero) {
   return {
     numero,
@@ -499,7 +505,7 @@ onMounted(async () => {
   border-bottom: 1px solid #ddd;
 }
 
-.storico-item { padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-bottom: 3px; }
+.storico-item { padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-bottom: 3px; background: #f5f5f5; color: #333; }
 .storico-item:hover { background: #e0e0e0; }
 .storico-item.attivo { background: #CC0000; color: white; }
 

@@ -25,23 +25,29 @@
               <th>#</th>
               <th>Cognome</th>
               <th>Nome</th>
+              <th>Nr.</th>
               <th>Data Nascita</th>
               <th>Codice Fiscale</th>
               <th>Telefono</th>
               <th>Matricola</th>
+              <th>Scad. Cert.</th>
               <th v-if="!isDirigente">Gruppo</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(p, idx) in filteredPersone" :key="p.id">
+            <tr v-for="(p, idx) in filteredPersone" :key="p.id" :class="{ 'row-scad': !p.scadenza_certificato || isScaduta(p.scadenza_certificato) }">
               <td class="cell-num">{{ idx + 1 }}</td>
               <td>{{ p.cognome }}</td>
               <td>{{ p.nome }}</td>
+              <td class="cell-numero">{{ p.numero_maglia || '-' }}</td>
               <td>{{ formatData(p.data_nascita) }}</td>
               <td class="cell-cf">{{ p.codice_fiscale || '-' }}</td>
               <td>{{ p.telefono || '-' }}</td>
               <td class="cell-matricola">{{ p.matricola || '-' }}</td>
+              <td class="cell-scadenza" :class="{ 'scad-rossa': isScaduta(p.scadenza_certificato) }">
+                {{ formatData(p.scadenza_certificato) }}
+              </td>
               <td v-if="!isDirigente" class="cell-gruppo">
                 <span class="badge" :class="'badge-g' + p.gruppo_id">
                   {{ p.gruppo_id === 1 ? '1°' : p.gruppo_id === 2 ? '2°' : p.gruppo_id === 3 ? '3°' : p.gruppo_id === 4 ? 'P' : '-' }}
@@ -52,7 +58,7 @@
               </td>
             </tr>
             <tr v-if="filteredPersone.length === 0">
-              <td :colspan="isDirigente ? 8 : 9" class="no-data">Nessun giocatore trovato</td>
+              <td :colspan="isDirigente ? 9 : 10" class="no-data">Nessun giocatore trovato</td>
             </tr>
           </tbody>
         </table>
@@ -72,6 +78,10 @@
             <input v-model="modal.nome" />
           </div>
           <div class="form-field">
+            <label>Nr. Maglia</label>
+            <input v-model="modal.numero_maglia" type="number" min="1" max="99" />
+          </div>
+          <div class="form-field">
             <label>Data Nascita</label>
             <input v-model="modal.data_nascita" type="date" />
           </div>
@@ -86,6 +96,10 @@
           <div class="form-field">
             <label>Matricola</label>
             <input v-model="modal.matricola" />
+          </div>
+          <div class="form-field">
+            <label>Scad. Certificato</label>
+            <input v-model="modal.scadenza_certificato" type="date" />
           </div>
           <div v-if="!isDirigente" class="form-field">
             <label>Gruppo</label>
@@ -123,7 +137,7 @@ const gruppoFilter = ref('')
 
 const isDirigente = computed(() => utenteAttivo.value?.ruolo === 'dirigente')
 
-const modal = ref({ show: false, id: null, cognome: '', nome: '', data_nascita: '', codice_fiscale: '', telefono: '', matricola: '', gruppo_id: 1 })
+const modal = ref({ show: false, id: null, cognome: '', nome: '', numero_maglia: '', data_nascita: '', codice_fiscale: '', telefono: '', matricola: '', scadenza_certificato: '', gruppo_id: 1 })
 
 const filteredPersone = computed(() => {
   let result = persone.value.filter(p => {
@@ -144,16 +158,25 @@ function formatData(d) {
   return d.split('-').reverse().join('/')
 }
 
+function isScaduta(d) {
+  if (!d) return false
+  const scad = new Date(d)
+  const oggi = new Date()
+  return scad < oggi
+}
+
 function apriModifica(p) {
   modal.value = {
     show: true,
     id: p.id,
     cognome: p.cognome,
     nome: p.nome,
+    numero_maglia: p.numero_maglia || '',
     data_nascita: p.data_nascita || '',
     codice_fiscale: p.codice_fiscale || '',
     telefono: p.telefono || '',
     matricola: p.matricola || '',
+    scadenza_certificato: p.scadenza_certificato || '',
     gruppo_id: p.gruppo_id || 1
   }
 }
@@ -162,10 +185,12 @@ async function salva() {
   await updatePersona(modal.value.id, {
     cognome: modal.value.cognome,
     nome: modal.value.nome,
+    numero_maglia: modal.value.numero_maglia || null,
     data_nascita: modal.value.data_nascita || null,
     codice_fiscale: modal.value.codice_fiscale || null,
     telefono: modal.value.telefono || null,
     matricola: modal.value.matricola || null,
+    scadenza_certificato: modal.value.scadenza_certificato || null,
     gruppo_id: modal.value.gruppo_id,
     categoria_id: categoriaId
   })
@@ -197,9 +222,14 @@ onMounted(async () => {
 .tabella-giocatori th { background: #CC0000; color: white; padding: 0.75rem 0.5rem; text-align: left; font-weight: 600; white-space: nowrap; }
 .tabella-giocatori td { padding: 0.6rem 0.5rem; border-bottom: 1px solid #2a2a2a; color: #ddd; }
 .tabella-giocatori tr:hover { background: #252525; }
+.tabella-giocatori tr.row-scad { background: rgba(234, 88, 12, 0.15); }
+.tabella-giocatori tr.row-scad:hover { background: rgba(234, 88, 12, 0.25); }
 .cell-num { width: 40px; color: #666; text-align: center; }
+.cell-numero { color: #ffd700; font-weight: bold; font-size: 1.1rem; text-align: center; }
 .cell-cf { font-size: 0.8rem; letter-spacing: 0.5px; }
 .cell-matricola { color: #ff6b6b; font-weight: bold; }
+.cell-scadenza { color: #22c55e; }
+.cell-scadenza.scad-rossa { color: #ef4444; font-weight: bold; }
 .cell-gruppo { text-align: center; }
 .badge { display: inline-block; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; font-size: 0.75rem; font-weight: bold; color: white; }
 .badge-g1 { background: #2563eb; }
