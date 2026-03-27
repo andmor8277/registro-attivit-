@@ -28,6 +28,8 @@ class Persona(Base):
     codice_fiscale = Column(String(16), nullable=True)
     telefono = Column(String(20), nullable=True)
     matricola = Column(String(50), nullable=True)
+    numero_maglia = Column(Integer, nullable=True)
+    scadenza_certificato = Column(Date, nullable=True)
 
 class CodicePresenza(Base):
     __tablename__ = "codici"
