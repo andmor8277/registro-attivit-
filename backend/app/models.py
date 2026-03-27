@@ -71,6 +71,7 @@ class Convocazione(Base):
     id = Column(Integer, primary_key=True)
     categoria_id = Column(Integer, ForeignKey("categorie.id", ondelete="CASCADE"))
     data_inizio = Column(Date, nullable=False)
+    data_fine = Column(Date, nullable=True)
     note = Column(String(1000), nullable=True)
 
 class ConvocazioneGara(Base):
