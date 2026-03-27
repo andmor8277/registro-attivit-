@@ -84,10 +84,10 @@
         <div class="user-header">
           <div class="user-info">
             <div class="user-avatar">
-              {{ u.nome ? u.nome.charAt(0).toUpperCase() : u.username.charAt(0).toUpperCase() }}
+              {{ (u.cognome || u.nome || u.username).charAt(0).toUpperCase() }}
             </div>
             <div class="user-details">
-              <span class="user-name">{{ u.username }}</span>
+              <span class="user-name">{{ u.cognome || u.username }}</span>
               <span class="user-fullname">{{ u.nome }} {{ u.cognome }}</span>
               <span class="badge-role badge-admin" v-if="u.ruolo === 'admin'">ADMIN</span>
               <span class="badge-role badge-mister" v-if="u.ruolo === 'mister'">MISTER</span>
