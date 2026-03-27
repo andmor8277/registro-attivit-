@@ -10,6 +10,7 @@ class Categoria(Base):
     giorni = Column(String(20), nullable=True)  # es. "1,3,5" = Lun,Mer,Ven
     is_portieri = Column(Integer, default=0)  # 1 = portieri (cross-year)
     is_archiviata = Column(Integer, default=0)  # 1 = categoria archiviata
+    drive_folder_id = Column(String(100), nullable=True)  # Google Drive folder ID
 
 class Gruppo(Base):
     __tablename__ = "gruppi"

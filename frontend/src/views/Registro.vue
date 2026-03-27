@@ -28,13 +28,6 @@
           </svg>
         </button>
       </div>
-      <button class="btn-aggiungi" @click="modalPersona.show = true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        Persona
-      </button>
     </header>
     
     <div class="legenda">
@@ -96,7 +89,6 @@
                   <div class="giorno-nome">{{ g.gg }}</div>
                 </th>
                 <th class="th-tot th-pres">TOT</th>
-                <th class="th-actions"></th>
               </tr>
             </thead>
             <tbody>
@@ -112,20 +104,6 @@
                   {{ getCodice(persona.id, g.num) }}
                 </td>
                 <td class="td-tot td-pres">{{ totalePresenze(persona.id) }}</td>
-                <td class="td-actions">
-                  <button class="btn-action" @click.stop="apriModificaPersona(persona)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                  </button>
-                  <button class="btn-action btn-danger" @click="eliminaPersona(persona.id)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                    </svg>
-                  </button>
-                </td>
               </tr>
             </tbody>
             <tfoot>
@@ -206,80 +184,6 @@
           <button class="btn-close-modal" @click="editModal.show = false">Chiudi</button>
         </div>
       </div>
-      
-      <div v-if="modalModifica.show" class="modal-overlay" @click.self="modalModifica.show = false">
-        <div class="modal">
-          <div class="modal-header">
-            <h3>Modifica Persona</h3>
-            <button class="modal-close" @click="modalModifica.show = false">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label>Cognome</label>
-              <input v-model="modalModifica.cognome" />
-            </div>
-            <div class="form-group">
-              <label>Nome</label>
-              <input v-model="modalModifica.nome" />
-            </div>
-            <div class="form-group">
-              <label>Gruppo</label>
-              <select v-model="modalModifica.gruppo_id">
-                <option :value="1">PRIMO GRUPPO</option>
-                <option :value="2">SECONDO GRUPPO</option>
-                <option :value="3">TERZO GRUPPO</option>
-                <option :value="4">PORTIERI</option>
-              </select>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn-secondary" @click="modalModifica.show = false">Annulla</button>
-            <button class="btn-primary" @click="aggiornaPersona">Salva</button>
-          </div>
-        </div>
-      </div>
-      
-      <div v-if="modalPersona.show" class="modal-overlay" @click.self="modalPersona.show = false">
-        <div class="modal">
-          <div class="modal-header">
-            <h3>Aggiungi Persona</h3>
-            <button class="modal-close" @click="modalPersona.show = false">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label>Cognome</label>
-              <input v-model="modalPersona.cognome" placeholder="Cognome" />
-            </div>
-            <div class="form-group">
-              <label>Nome</label>
-              <input v-model="modalPersona.nome" placeholder="Nome" />
-            </div>
-            <div class="form-group">
-              <label>Gruppo</label>
-              <select v-model="modalPersona.gruppo_id">
-                <option :value="1">PRIMO GRUPPO</option>
-                <option :value="2">SECONDO GRUPPO</option>
-                <option :value="3">TERZO GRUPPO</option>
-                <option :value="4">PORTIERI</option>
-              </select>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn-secondary" @click="modalPersona.show = false">Annulla</button>
-            <button class="btn-primary" @click="salvaPersona">Salva</button>
-          </div>
-        </div>
-      </div>
     </Teleport>
   </div>
 </template>
@@ -287,7 +191,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { getPersone, getCodici, getRegistroMese, upsertRegistro, createPersona, deletePersona, getCategorie } from "../api/index.js"
+import { getPersone, getCodici, getRegistroMese, upsertRegistro, getCategorie } from "../api/index.js"
 import { useStore as useCategoria } from "../store.js"
 
 const route = useRoute()
@@ -304,8 +208,6 @@ const codici = ref([])
 const registro = ref([])
 const giorniAllenamento = ref([])
 const editModal = ref({ show: false, persona: null, giorno: null })
-const modalPersona = ref({ show: false, nome: "", cognome: "", gruppo_id: 1 })
-const modalModifica = ref({ show: false, id: null, nome: "", cognome: "", gruppo_id: 1 })
 
 const mesiNomi = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"]
 const giorniNomi = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"]
@@ -354,32 +256,6 @@ async function salvaPresenza(codice) {
   await upsertRegistro({ persona_id: editModal.value.persona.id, data: d, codice, categoria_id: categoriaId.value })
   await loadRegistro()
   editModal.value.show = false
-}
-
-async function salvaPersona() {
-  if (!modalPersona.value.nome || !modalPersona.value.cognome) return
-  await createPersona({ nome: modalPersona.value.nome, cognome: modalPersona.value.cognome, gruppo_id: modalPersona.value.gruppo_id, categoria_id: categoriaId.value })
-  modalPersona.value = { show: false, nome: "", cognome: "", gruppo_id: 1 }
-  await loadPersone()
-}
-
-function apriModificaPersona(persona) {
-  modalModifica.value = { show: true, id: persona.id, nome: persona.nome, cognome: persona.cognome, gruppo_id: persona.gruppo_id }
-}
-async function aggiornaPersona() {
-  const base = import.meta.env.VITE_API_URL || "http://localhost:8000"
-  await fetch(base + "/persone/" + modalModifica.value.id, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ nome: modalModifica.value.nome, cognome: modalModifica.value.cognome, gruppo_id: modalModifica.value.gruppo_id, categoria_id: categoriaId.value })
-  })
-  modalModifica.value.show = false
-  await loadPersone()
-}
-async function eliminaPersona(id) {
-  if (!confirm("Eliminare questa persona?")) return
-  await deletePersona(id)
-  await loadPersone()
 }
 
 function totGiornoGruppo(gruppo, giorno) {
@@ -514,32 +390,6 @@ watch([anno, mese], loadRegistro)
   text-align: center;
 }
 
-.btn-aggiungi {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  background: var(--color-primary);
-  border: none;
-  border-radius: var(--radius-md);
-  color: white;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-aggiungi:hover {
-  background: #b91c1c;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-}
-
-.btn-aggiungi svg {
-  width: 18px;
-  height: 18px;
-}
-
 .legenda {
   display: flex;
   flex-wrap: wrap;
@@ -623,7 +473,6 @@ th, td {
 .th-num, .td-num { width: 40px; }
 .th-nome, .td-nome { text-align: left; min-width: 150px; padding-left: 1rem; }
 .th-tot, .td-tot { min-width: 60px; }
-.th-actions, .td-actions { width: 80px; }
 
 .th-weekend { background: #f5f5f5; color: #666666; }
 th { background: #f9fafb; font-weight: 600; color: #374151; }
@@ -650,24 +499,6 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
 .cella.cod-r { background: #dcfce7 !important; color: #dc2626 !important; font-weight: 700; }
 
 .td-pres { color: #166534; font-weight: 700; }
-
-.btn-action {
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: #666666;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: all var(--transition-fast);
-}
-
-.btn-action:hover { background: #f5f5f5; color: #111827; }
-.btn-action.btn-danger:hover { background: #fee2e2; color: #dc2626; }
-.btn-action svg { width: 14px; height: 14px; }
 
 .riga-totale td { 
   background: #f9fafb; 
@@ -938,6 +769,5 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   .registro-container { padding: 1rem; }
   .page-header { flex-direction: column; align-items: stretch; }
   .mese-selector { justify-content: center; }
-  .btn-aggiungi { justify-content: center; }
 }
 </style>
