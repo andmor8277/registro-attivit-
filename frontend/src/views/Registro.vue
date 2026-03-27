@@ -38,7 +38,7 @@
     </header>
     
     <div class="legenda">
-      <span v-for="c in codici" :key="c.codice" :class="['badge', c.tipo]">
+      <span v-for="c in codiciOrdinati" :key="c.codice" :class="['badge', c.tipo]">
         <span class="badge-code">{{ c.codice }}</span>
         <span class="badge-desc">{{ c.descrizione }}</span>
       </span>
@@ -310,6 +310,11 @@ const modalModifica = ref({ show: false, id: null, nome: "", cognome: "", gruppo
 const mesiNomi = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"]
 const giorniNomi = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"]
 const meseLabel = computed(() => mesiNomi[mese.value - 1])
+
+const codiciOrdinati = computed(() => {
+  const order = ['X', 'AG', 'AI', 'P', 'R']
+  return [...codici.value].sort((a, b) => order.indexOf(a.codice) - order.indexOf(b.codice))
+})
 
 const giorniMese = computed(() => {
   const n = new Date(anno.value, mese.value, 0).getDate()

@@ -37,11 +37,12 @@
       <div class="editor" v-if="convocazione">
         <div class="editor-header">
           <div class="field-row">
-            <label>Data weekend</label>
             <input type="date" v-model="convocazione.data_inizio" />
           </div>
           <div class="field-row">
-            <label>Numero partite</label>
+            <input type="date" v-model="convocazione.data_fine" />
+          </div>
+          <div class="field-row">
             <input type="number" min="1" max="7" v-model.number="numPartite" @change="aggiustaGare" style="width:60px" />
           </div>
           <div class="actions">
@@ -50,21 +51,80 @@
           </div>
         </div>
 
+        <!-- BOX NON CONVOCABILI -->
+        <div class="esclusi-editor-box" v-if="convocazione">
+          <span class="esclusi-label">⚠️ NON CONVOCABILI</span>
+          <span class="esclusi-period" v-if="convocazione.data_inizio">
+            (Lun-Ven {{ getSettimanaLabel(convocazione.data_inizio) }})
+          </span>
+          <span v-for="p in getAllEsclusi()" :key="p.id" class="escluso-tag">
+            {{ p.cognome }} {{ p.nome }}
+          </span>
+          <span v-if="getAllEsclusi().length === 0" class="esclusi-none">Nessuno</span>
+        </div>
+
+        <!-- BOX ESCLUSIONI MANUALI -->
+        <div class="esclusioni-manuali" v-if="convocazione">
+          <div class="esclusi-manuali-box" v-for="tipo in ['no_sabato_mattina', 'no_sabato_pomeriggio', 'no_domenica']" :key="tipo">
+            <div class="esclusi-manuali-header">
+              <span class="esclusi-manuali-titolo">{{ tipo.replace(/_/g, ' ').toUpperCase() }}</span>
+              <select @change="toggleEsclusione(tipo, $event)" class="esclusi-select">
+                <option value="">+ Aggiungi giocatore</option>
+                <option v-for="p in getGiocatoriDisponibili(tipo)" :key="p.id" :value="p.id">
+                  {{ p.cognome }} {{ p.nome }}
+                </option>
+              </select>
+            </div>
+            <div class="esclusi-manuali-tags">
+              <span v-for="p in getEsclusiPerTipo(tipo)" :key="p.id" class="escluso-tag" @click="toggleEsclusione(tipo, p.id)">
+                {{ p.cognome }} {{ p.nome }} ×
+              </span>
+              <span v-if="getEsclusiPerTipo(tipo).length === 0" class="esclusi-none">Nessuno</span>
+            </div>
+          </div>
+        </div>
+
         <!-- GARE -->
         <div class="gare-scroll">
           <div class="gare-grid" :style="{ gridTemplateColumns: 'repeat(' + convocazione.gare.length + ', minmax(220px, 1fr))' }">
+            <!-- HEADER -->
+            <div class="gare-header-full" :style="{ gridColumn: '1 / -1' }">
+              <img src="/logo.jpg" alt="logo" class="logo-rt" />
+              <div class="header-rt-text">
+                <div class="header-rt-title">RED TIGERS 1957</div>
+                <div class="header-rt-subtitle">CONVOCAZIONE GARE</div>
+                <div class="header-rt-category">{{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</div>
+              </div>
+              <img src="/logo.jpg" alt="logo" class="logo-rt" />
+            </div>
             <div v-for="(gara, gi) in convocazione.gare" :key="gi" class="gara-col">
-              <div class="gara-header">GARA {{ gi + 1 }}</div>
+              <div class="gara-header">
+                <input v-model="gara.gara" placeholder="Squadra A - Squadra B" class="gara-title-input" />
+              </div>
               <div class="gara-fields">
-                <div class="gf"><span>GARA</span><input v-model="gara.gara" /></div>
-                <div class="gf"><span>DATA</span><input type="date" v-model="gara.data" /></div>
-                <div class="gf"><span>CAMPO</span><input v-model="gara.campo" /></div>
-                <div class="gf"><span>INDIRIZZO</span><input v-model="gara.indirizzo" /></div>
-                <div class="gf"><span>APPUNTAMENTO</span><input v-model="gara.appuntamento" /></div>
-                <div class="gf"><span>INIZIO GARA</span><input v-model="gara.inizio_gara" /></div>
-                <div class="gf allenatore">
-                  <span>MISTER / DIRIGENTE</span>
-                  <select v-model="gara.allenatore">
+                <div class="gf-row">
+                  <span class="gf-label">DATA</span>
+                  <input type="date" v-model="gara.data" class="gf-input" />
+                </div>
+                <div class="gf-row">
+                  <span class="gf-label">CAMPO</span>
+                  <input v-model="gara.campo" class="gf-input" />
+                </div>
+                <div class="gf-row">
+                  <span class="gf-label">INDIRIZZO</span>
+                  <input v-model="gara.indirizzo" class="gf-input" />
+                </div>
+                <div class="gf-row">
+                  <span class="gf-label">APPUNTAMENTO</span>
+                  <input v-model="gara.appuntamento" class="gf-input" />
+                </div>
+                <div class="gf-row">
+                  <span class="gf-label">INIZIO GARA</span>
+                  <input v-model="gara.inizio_gara" class="gf-input" />
+                </div>
+                <div class="gf-row">
+                  <span class="gf-label">MISTER</span>
+                  <select v-model="gara.allenatore" class="gf-input">
                     <option value="">— Seleziona —</option>
                     <option v-for="r in responsabili" :key="r.id" :value="r.cognome">
                       {{ r.cognome }} - {{ r.cellulare }}
@@ -77,7 +137,7 @@
                   <span class="pos-num">{{ pos }}</span>
                   <select v-model="gara.giocatori[pos-1]">
                     <option :value="null">—</option>
-                    <option v-for="p in getGiocatoriSettimanaPrecedente(gara.data)" :key="p.id" :value="p.id">{{ p.cognome }} {{ p.nome }}</option>
+                    <option v-for="p in getGiocatoriSettimanaPrecedente()" :key="p.id" :value="p.id">{{ p.cognome }} {{ p.nome }}</option>
                   </select>
                 </div>
               </div>
@@ -127,33 +187,141 @@ const oggi = new Date()
 const annoCorrente = oggi.getFullYear()
 const meseCorrente = oggi.getMonth() + 1
 
-function getGiocatoriSettimanaPrecedente(dataGara) {
-  if (!dataGara) return persone.value
+function getGiocatoriSettimanaPrecedente() {
+  if (!convocazione.value || !convocazione.value.data_inizio) return persone.value
   
-  const data = new Date(dataGara)
-  const startPrevWeek = new Date(data)
-  startPrevWeek.setDate(data.getDate() - 7)
-  const endPrevWeek = new Date(data)
-  endPrevWeek.setDate(data.getDate() - 1)
-  
-  const startStr = startPrevWeek.toISOString().split('T')[0]
-  const endStr = endPrevWeek.toISOString().split('T')[0]
+  const range = getWeekDateRange(convocazione.value.data_inizio)
+  if (!range) return persone.value
   
   const presenzeCount = {}
-  const assentiIds = new Set()
+  const assenzeCount = {}
   
   registro.value
-    .filter(r => r.data >= startStr && r.data <= endStr)
+    .filter(r => r.data >= range.monday && r.data <= range.friday)
     .forEach(r => {
       if (['X', 'P', 'R'].includes(r.codice)) {
         presenzeCount[r.persona_id] = (presenzeCount[r.persona_id] || 0) + 1
       }
       if (['AI', 'AG'].includes(r.codice)) {
-        assentiIds.add(r.persona_id)
+        assenzeCount[r.persona_id] = (assenzeCount[r.persona_id] || 0) + 1
       }
     })
   
-  return persone.value.filter(p => presenzeCount[p.id] >= 2 && !assentiIds.has(p.id))
+  return persone.value.filter(p => presenzeCount[p.id] >= 2 && (assenzeCount[p.id] || 0) < 2)
+}
+
+function getWeekDateRange(dataGara) {
+  if (!dataGara) return null
+  
+  const data = new Date(dataGara)
+  const dayOfWeek = data.getDay()
+  
+  // Find the Saturday of the weekend (or use the given date if it's Sat/Sun)
+  let weekendSat = new Date(data)
+  if (dayOfWeek === 0) {
+    // Sunday - go back 1 day to Saturday
+    weekendSat.setDate(data.getDate() - 1)
+  } else if (dayOfWeek !== 6) {
+    // Not weekend - assume this is the Saturday
+    weekendSat = new Date(data)
+  }
+  
+  // Go back to the Monday of the week before the weekend
+  const daysToPrevMonday = weekendSat.getDay() === 0 ? 2 : weekendSat.getDay() + 1
+  const mondayPrev = new Date(weekendSat)
+  mondayPrev.setDate(weekendSat.getDate() - daysToPrevMonday)
+  
+  // Friday is Monday + 4
+  const fridayPrev = new Date(mondayPrev)
+  fridayPrev.setDate(mondayPrev.getDate() + 4)
+  
+  return {
+    monday: mondayPrev.toISOString().split('T')[0],
+    friday: fridayPrev.toISOString().split('T')[0],
+    mondayLabel: mondayPrev.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }),
+    fridayLabel: fridayPrev.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
+  }
+}
+
+function getSettimanaLabel(dataGara) {
+  const range = getWeekDateRange(dataGara)
+  if (!range) return ''
+  return `${range.mondayLabel} - ${range.fridayLabel}`
+}
+
+function getAllEsclusi() {
+  if (!convocazione.value || !convocazione.value.data_inizio) return []
+  
+  const range = getWeekDateRange(convocazione.value.data_inizio)
+  if (!range) return []
+  
+  const assenzeCount = {}
+  registro.value
+    .filter(r => r.data >= range.monday && r.data <= range.friday && ['AI', 'AG'].includes(r.codice))
+    .forEach(r => {
+      assenzeCount[r.persona_id] = (assenzeCount[r.persona_id] || 0) + 1
+    })
+  
+  return persone.value
+    .filter(p => assenzeCount[p.id] >= 2)
+    .sort((a, b) => a.cognome.localeCompare(b.cognome))
+}
+
+function getEsclusiPerTipo(tipo) {
+  if (!convocazione.value) return []
+  const esclusioni = convocazione.value.esclusioni || []
+  const ids = esclusioni.filter(e => e.tipo === tipo).map(e => e.persona_id)
+  return persone.value.filter(p => ids.includes(p.id)).sort((a, b) => a.cognome.localeCompare(b.cognome))
+}
+
+function getGiocatoriDisponibili(tipo) {
+  const esclusiIds = getEsclusiPerTipo(tipo).map(p => p.id)
+  const nonConvocabiliIds = getAllEsclusi().map(p => p.id)
+  const tuttiEsclusi = [...new Set([...esclusiIds, ...nonConvocabiliIds])]
+  return persone.value.filter(p => !tuttiEsclusi.includes(p.id)).sort((a, b) => a.cognome.localeCompare(b.cognome))
+}
+
+function toggleEsclusione(tipo, eventOrId) {
+  if (!convocazione.value) return
+  if (!convocazione.value.esclusioni) {
+    convocazione.value.esclusioni = []
+  }
+  
+  let personaId
+  if (typeof eventOrId === 'object') {
+    personaId = parseInt(eventOrId.target.value)
+    eventOrId.target.value = ''
+  } else {
+    personaId = parseInt(eventOrId)
+  }
+  
+  if (!personaId) return
+  
+  const existingIdx = convocazione.value.esclusioni.findIndex(
+    e => e.tipo === tipo && e.persona_id === personaId
+  )
+  
+  if (existingIdx >= 0) {
+    convocazione.value.esclusioni.splice(existingIdx, 1)
+  } else {
+    convocazione.value.esclusioni.push({ tipo, persona_id: personaId })
+  }
+}
+
+function getAssentiEsclusi(dataGara) {
+  if (!dataGara) return []
+  
+  const range = getWeekDateRange(dataGara)
+  if (!range) return []
+  
+  const assenzeCount = {}
+  registro.value
+    .filter(r => r.data >= range.monday && r.data <= range.friday && ['AI', 'AG'].includes(r.codice))
+    .forEach(r => {
+      assenzeCount[r.persona_id] = (assenzeCount[r.persona_id] || 0) + 1
+    })
+  
+  return persone.value.filter(p => assenzeCount[p.id] >= 2)
 }
 
 function aggiustaGare() {
@@ -182,8 +350,13 @@ function nuovaConvocazione() {
   convocazioneId.value = null
   numPartite.value = 1
   const oggi = new Date().toISOString().split('T')[0]
+  const domani = new Date()
+  domani.setDate(domani.getDate() + 1)
+  const domenica = domani.toISOString().split('T')[0]
   convocazione.value = {
     data_inizio: oggi,
+    data_fine: domenica,
+    esclusioni: [],
     note: 'NOTE | PRESENTARSI ALL\'APPUNTAMENTO IN ORARIO STABILITO ED IN TENUTA DA RAPPRESENTANZA GEMS (NO GIA CAMBIATI). SI GIOCA CON KIT GARA* (MAGLIA CALZONCINI E CALZETTONI) PORTARE FELPA D\'ALLENAMENTO PER RISCALDAMENTO E K-WAY IN BORSA PER L\'EVENIENZA. AVVISARE TEMPESTIVAMENTE L\'ALLENATORE PRESENTE IN GARA IN CASO DI RITARDO O ASSENZA. *PORTARE COMUNQUE MAGLIA DI RICAMBIO, CALZONCINI E CALZETTONI PER MODIFICARE I COLORI IN BASE ALL\'AVVERSARIO.',
     gare: [garaVuota(1)]
   }
@@ -193,8 +366,21 @@ async function caricaConvocazione(id) {
   convocazioneId.value = id
   const res = await axios.get(base + '/convocazioni/' + id, { headers: headers() })
   const d = res.data
+  
+  // Carica registro per il mese della gara se diversa da quello corrente
+  const garaData = d.gare[0]?.data
+  if (garaData) {
+    const [y, m] = garaData.split('-')
+    if (parseInt(m) !== meseCorrente || parseInt(y) !== annoCorrente) {
+      const regRes = await getRegistroMese(categoriaId, parseInt(y), parseInt(m))
+      registro.value = regRes.data
+    }
+  }
+  
   convocazione.value = {
     data_inizio: d.data_inizio,
+    data_fine: d.data_fine || '',
+    esclusioni: d.esclusioni || [],
     note: d.note || '',
     gare: d.gare.map(g => ({
       ...g,
@@ -227,6 +413,8 @@ async function salva() {
   const payload = {
     categoria_id: categoriaId,
     data_inizio: convocazione.value.data_inizio,
+    data_fine: convocazione.value.data_fine,
+    esclusioni: convocazione.value.esclusioni || [],
     note: convocazione.value.note,
     gare: convocazione.value.gare.map((g, gi) => ({
       numero: gi + 1,
@@ -274,6 +462,13 @@ onMounted(async () => {
 .btn-back { padding: 4px 12px; border-radius: 4px; border: 1px solid #555; background: #2a2a4a; color: white; cursor: pointer; }
 .btn-nuovo { padding: 4px 14px; border-radius: 4px; border: none; background: #e94560; color: white; cursor: pointer; font-weight: bold; }
 .conv-body { display: flex; flex: 1; overflow: hidden; }
+
+.gare-header-full { background: linear-gradient(135deg, #8B0000 0%, #CC0000 100%); color: white; padding: 12px 20px; display: flex; align-items: center; justify-content: center; gap: 1.5rem; border-radius: 8px 8px 0 0; }
+.logo-rt { width: 50px; height: 50px; object-fit: contain; border-radius: 50%; background: white; padding: 2px; }
+.header-rt-text { text-align: center; }
+.header-rt-title { font-size: 1.5rem; font-weight: 900; letter-spacing: 3px; }
+.header-rt-subtitle { font-size: 1rem; font-weight: 600; letter-spacing: 2px; margin-top: 2px; }
+.header-rt-category { font-size: 1.1rem; font-weight: 700; margin-top: 4px; color: #ffd700; }
 
 .left-sidebar {
   width: 180px;
@@ -334,15 +529,32 @@ onMounted(async () => {
 .gare-scroll { overflow-x: auto; }
 .gare-grid { display: grid; gap: 1rem; min-width: max-content; }
 .gara-col { background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; min-width: 220px; }
-.gara-header { background: #CC0000; color: white; text-align: center; font-weight: bold; padding: 6px; font-size: 0.9rem; }
+.gara-header { background: #CC0000; color: white; font-weight: bold; padding: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+.gara-header span { flex-shrink: 0; }
+.gara-title-input { flex: 1; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 3px 8px; color: white; font-size: 0.85rem; font-weight: 600; text-align: center; }
+.gara-title-input::placeholder { color: rgba(255,255,255,0.6); }
+.gara-title-input::-webkit-calendar-picker-indicator { filter: invert(1); }
 .gara-fields { padding: 0.5rem; border-bottom: 2px solid #eee; }
-.gf { display: flex; flex-direction: column; margin-bottom: 4px; }
-.gf span { font-size: 0.65rem; color: #888; font-weight: bold; text-transform: uppercase; }
-.gf input { border: 1px solid #eee; border-radius: 3px; padding: 3px 6px; font-size: 0.82rem; }
-.gf select { border: 1px solid #eee; border-radius: 3px; padding: 3px 6px; font-size: 0.82rem; width: 100%; }
-.gf.allenatore { background: #fffde7; padding: 4px; border-radius: 4px; }
+.gf-row { display: flex; align-items: center; margin-bottom: 6px; gap: 0.5rem; }
+.gf-label { font-size: 0.7rem; color: #888; font-weight: bold; text-transform: uppercase; min-width: 90px; flex-shrink: 0; }
+.gf-input { flex: 1; border: 1px solid #eee; border-radius: 3px; padding: 4px 6px; font-size: 0.82rem; }
+.gf-row:last-child { margin-bottom: 0; }
 .giocatori-list { padding: 0.5rem; }
 .giocatore-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.esclusi-editor-box { background: #fff3cd; border: 2px solid #ffc107; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.esclusi-label { font-size: 0.85rem; font-weight: bold; color: #856404; }
+.esclusi-period { font-size: 0.8rem; color: #856404; }
+.escluso-tag { background: #dc3545; color: white; padding: 4px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.esclusi-none { font-size: 0.85rem; color: #666; }
+.esclusioni-manuali { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.esclusi-manuali-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 0.5rem; flex: 1; min-width: 200px; }
+.esclusi-manuali-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.esclusi-manuali-titolo { font-size: 0.7rem; font-weight: bold; color: #495057; }
+.esclusi-select { font-size: 0.75rem; padding: 2px 4px; border: 1px solid #ced4da; border-radius: 4px; max-width: 140px; }
+.esclusi-manuali-tags { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.escluso-tag { background: #6c757d; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; cursor: pointer; }
+.escluso-item { font-size: 0.75rem; color: #856404; padding: 2px 0; font-weight: 600; }
+.escluso-none { font-size: 0.7rem; color: #6c757d; font-style: italic; }
 .pos-num { width: 18px; text-align: right; font-size: 0.8rem; color: #888; flex-shrink: 0; }
 .giocatore-row select { flex: 1; font-size: 0.8rem; padding: 2px 4px; border: 1px solid #eee; border-radius: 3px; }
 .note-section { margin-top: 1rem; }
