@@ -34,6 +34,7 @@ export const getCategorieByStagione = (stagione) => api.get('/categorie/by-stagi
 export const archiviaStagione = (stagione) => api.post('/categorie/archivia/' + stagione)
 export const ripristinaStagione = (stagione) => api.post('/categorie/ripristina/' + stagione)
 export const getCategoriaUtenti = (categoriaId) => api.get('/categorie/' + categoriaId + '/utenti')
+export const getCategoriaResponsabili = (categoriaId) => api.get('/categorie/' + categoriaId + '/responsabili')
 export const assegnaCategoriaUtenti = (categoriaId, utenteIds) => api.put('/categorie/' + categoriaId + '/utenti', { utente_ids: utenteIds })
 export const importaGiocatori = (nuovaCategoriaId) => api.post('/categorie/importa-giocatori/' + nuovaCategoriaId)
 export const getPersone = (categoriaId) => api.get('/persone/?categoria_id=' + categoriaId)

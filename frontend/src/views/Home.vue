@@ -110,7 +110,12 @@
               +{{ cat.giorni.split(',').length - 3 }}
             </span>
           </div>
-          <div class="card-actions" v-if="utenteAttivo?.is_admin || true">
+          <div class="cat-mister" v-if="getResponsabiliCat(cat.id).length > 0">
+            <span class="mister-badge" v-for="m in getResponsabiliCat(cat.id)" :key="m.id">
+              {{ m.cognome }}
+            </span>
+          </div>
+          <div class="card-actions" v-if="utenteAttivo?.is_admin || utenteAttivo?.ruolo === 'mister'">
             <button class="btn-icon" @click.stop="apriModifica(cat)" title="Modifica">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
@@ -135,7 +140,7 @@
         </div>
       </div>
       
-      <div class="categoria-card nuova" @click="apriNuova">
+      <div v-if="utenteAttivo?.is_admin" class="categoria-card nuova" @click="apriNuova">
         <div class="nuova-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"/>
@@ -270,7 +275,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { getCategorie, getAllCategorie, createCategoria, updateCategoria, deleteCategoria, getStagioni, archiviaStagione, getUtenti, getCategoriaUtenti, assegnaCategoriaUtenti, importaGiocatori as importaGiocatoriApi } from "../api/index.js"
+import { getCategorie, getAllCategorie, createCategoria, updateCategoria, deleteCategoria, getStagioni, archiviaStagione, getUtenti, getCategoriaUtenti, assegnaCategoriaUtenti, importaGiocatori as importaGiocatoriApi, getCategoriaResponsabili } from "../api/index.js"
 import { useStore as useCategoria } from "../store.js"
 const { utenteAttivo } = useCategoria()
 
@@ -287,6 +292,7 @@ const archiviaModal = ref({ show: false, loading: false })
 const tuttiUtenti = ref([])
 const modalUtentiSel = ref([])
 const importLoading = ref(false)
+const responsabileMap = ref({})
 
 const tuttiGiorni = [
   { val: 1, nome: "Lunedì" },
@@ -299,6 +305,10 @@ const tuttiGiorni = [
 ]
 
 const nomiBreviGiorni = (val) => tuttiGiorni.find(g => g.val === val)?.nome?.slice(0, 3) || ''
+
+function getResponsabiliCat(catId) {
+  return responsabileMap.value[catId] || []
+}
 
 const planningSettimana = computed(() => {
   return tuttiGiorni.map(g => {
@@ -348,6 +358,17 @@ async function loadCategorie() {
     
     const allRes = await getAllCategorie()
     allCategories.value = allRes.data
+    
+    for (const cat of categorie.value) {
+      try {
+        const respRes = await getCategoriaResponsabili(cat.id)
+        if (respRes.data && respRes.data.length > 0) {
+          responsabileMap.value[cat.id] = respRes.data
+        }
+      } catch (e) {
+        console.warn('Errore caricamento responsabili per categoria', cat.id)
+      }
+    }
     
     if (me?.is_admin) {
       const utentiRes = await getUtenti()
@@ -962,6 +983,25 @@ onMounted(() => {
 .giorno-badge.more {
   background: var(--color-primary);
   color: white;
+}
+
+.cat-mister {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.mister-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.4rem;
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #dc2626;
 }
 
 .badge-portieri {
