@@ -4,6 +4,7 @@
       <button class="btn-back" @click="router.push('/scelta/' + route.params.id)">← Indietro</button>
       <button class="btn-back" @click="router.push('/')">🏠 Home</button>
       <span class="titolo-toolbar">Dati & Matricole — {{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
+      <button class="btn-nuovo" @click="apriNuovo">+ Nuovo Giocatore</button>
     </div>
 
     <div class="dati-body">
@@ -67,7 +68,7 @@
 
     <div v-if="modal.show" class="modal-overlay" @click.self="modal.show = false">
       <div class="modal">
-        <h3>Modifica Dati Giocatore</h3>
+        <h3>{{ modal.isNuovo ? 'Nuovo Giocatore' : 'Modifica Giocatore' }}</h3>
         <div class="form-grid">
           <div class="form-field">
             <label>Cognome</label>
@@ -112,8 +113,11 @@
           </div>
         </div>
         <div class="modal-actions">
-          <button class="btn-annulla" @click="modal.show = false">Annulla</button>
-          <button class="btn-salva" @click="salva">Salva</button>
+          <button v-if="!modal.isNuovo" class="btn-elimina" @click="elimina">🗑 Elimina</button>
+          <div class="modal-actions-right">
+            <button class="btn-annulla" @click="modal.show = false">Annulla</button>
+            <button class="btn-salva" @click="salva">{{ modal.isNuovo ? 'Aggiungi' : 'Salva' }}</button>
+          </div>
         </div>
       </div>
     </div>
@@ -124,7 +128,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../store.js'
-import { getPersone, updatePersona } from '../api/index.js'
+import { getPersone, updatePersona, createPersona, deletePersona } from '../api/index.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -137,7 +141,7 @@ const gruppoFilter = ref('')
 
 const isDirigente = computed(() => utenteAttivo.value?.ruolo === 'dirigente')
 
-const modal = ref({ show: false, id: null, cognome: '', nome: '', numero_maglia: '', data_nascita: '', codice_fiscale: '', telefono: '', matricola: '', scadenza_certificato: '', gruppo_id: 1 })
+const modal = ref({ show: false, isNuovo: false, id: null, cognome: '', nome: '', numero_maglia: '', data_nascita: '', codice_fiscale: '', telefono: '', matricola: '', scadenza_certificato: '', gruppo_id: 1 })
 
 const filteredPersone = computed(() => {
   let result = persone.value.filter(p => {
@@ -168,6 +172,7 @@ function isScaduta(d) {
 function apriModifica(p) {
   modal.value = {
     show: true,
+    isNuovo: false,
     id: p.id,
     cognome: p.cognome,
     nome: p.nome,
@@ -181,8 +186,25 @@ function apriModifica(p) {
   }
 }
 
+function apriNuovo() {
+  modal.value = {
+    show: true,
+    isNuovo: true,
+    id: null,
+    cognome: '',
+    nome: '',
+    numero_maglia: '',
+    data_nascita: '',
+    codice_fiscale: '',
+    telefono: '',
+    matricola: '',
+    scadenza_certificato: '',
+    gruppo_id: 1
+  }
+}
+
 async function salva() {
-  await updatePersona(modal.value.id, {
+  const data = {
     cognome: modal.value.cognome,
     nome: modal.value.nome,
     numero_maglia: modal.value.numero_maglia || null,
@@ -193,7 +215,22 @@ async function salva() {
     scadenza_certificato: modal.value.scadenza_certificato || null,
     gruppo_id: modal.value.gruppo_id,
     categoria_id: categoriaId
-  })
+  }
+  
+  if (modal.value.isNuovo) {
+    await createPersona(data)
+  } else {
+    await updatePersona(modal.value.id, data)
+  }
+  
+  modal.value.show = false
+  const res = await getPersone(categoriaId)
+  persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
+}
+
+async function elimina() {
+  if (!confirm('Eliminare questo giocatore?')) return
+  await deletePersona(modal.value.id)
   modal.value.show = false
   const res = await getPersone(categoriaId)
   persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
@@ -210,6 +247,8 @@ onMounted(async () => {
 .toolbar { display: flex; align-items: center; gap: 0.8rem; padding: 0.5rem 1rem; background: #8B0000; color: white; flex-shrink: 0; }
 .titolo-toolbar { flex: 1; font-weight: bold; font-size: 0.95rem; }
 .btn-back { padding: 4px 12px; border-radius: 4px; border: 1px solid #555; background: #2a2a4a; color: white; cursor: pointer; }
+.btn-nuovo { padding: 4px 14px; border-radius: 4px; border: none; background: #22c55e; color: white; cursor: pointer; font-weight: bold; }
+.btn-nuovo:hover { background: #16a34a; }
 .dati-body { flex: 1; overflow-y: auto; padding: 1rem; background: #111; }
 
 .filters { display: flex; gap: 1rem; margin-bottom: 1rem; }
@@ -248,7 +287,10 @@ onMounted(async () => {
 .form-field label { display: block; font-size: 0.75rem; color: #888; margin-bottom: 0.25rem; text-transform: uppercase; }
 .form-field input, .form-field select { width: 100%; padding: 0.5rem; border: 1px solid #333; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; background: #111; color: #eee; }
 .form-field input:focus, .form-field select:focus { outline: none; border-color: #CC0000; }
-.modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
+.modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
+.modal-actions-right { display: flex; gap: 0.5rem; }
+.btn-elimina { padding: 0.5rem 1rem; border: 1px solid #dc2626; border-radius: 4px; background: transparent; color: #dc2626; cursor: pointer; }
+.btn-elimina:hover { background: #dc2626; color: white; }
 .btn-annulla { padding: 0.5rem 1rem; border: 1px solid #444; border-radius: 4px; background: #222; color: #ddd; cursor: pointer; }
 .btn-salva { padding: 0.5rem 1rem; border: none; border-radius: 4px; background: #CC0000; color: white; cursor: pointer; font-weight: 600; }
 .btn-salva:hover { background: #a30000; }

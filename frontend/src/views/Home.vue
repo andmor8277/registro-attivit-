@@ -188,6 +188,11 @@
                 </label>
               </div>
             </div>
+            <div class="form-group">
+              <label>Google Drive Folder ID</label>
+              <input v-model="modal.drive_folder_id" placeholder="Es. 1a2b3c4d5e6f..." />
+              <p class="form-hint">ID della cartella Google Drive per gli allenamenti</p>
+            </div>
             <div class="form-group" v-if="utenteAttivo?.is_admin && modal.id">
               <label>Utenti che possono accedere</label>
               <div class="utenti-grid" v-if="tuttiUtenti.length > 0">
@@ -318,7 +323,7 @@ function formatDayDate(giornoVal) {
   return data.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
 }
 
-const modal = ref({ show: false, id: null, nome: "", anno: null, stagione: new Date().getFullYear(), giorniSel: [], is_portieri: false })
+const modal = ref({ show: false, id: null, nome: "", anno: null, stagione: new Date().getFullYear(), giorniSel: [], is_portieri: false, drive_folder_id: "" })
 
 function chiudiModal() {
   modal.value.show = false
@@ -327,7 +332,7 @@ function chiudiModal() {
 
 function apriNuova() {
   const currentYear = new Date().getMonth() >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1
-  modal.value = { show: true, id: null, nome: "", anno: null, stagione: currentYear, giorniSel: [], is_portieri: false }
+  modal.value = { show: true, id: null, nome: "", anno: null, stagione: currentYear, giorniSel: [], is_portieri: false, drive_folder_id: "" }
   modalUtentiSel.value = []
   errore.value = ''
 }
@@ -357,7 +362,8 @@ async function apriModifica(cat) {
   modal.value = {
     show: true, id: cat.id, nome: cat.nome, anno: cat.anno, stagione: cat.stagione,
     giorniSel: cat.giorni ? cat.giorni.split(",").map(Number) : [],
-    is_portieri: cat.is_portieri === 1 || cat.is_portieri === true
+    is_portieri: cat.is_portieri === 1 || cat.is_portieri === true,
+    drive_folder_id: cat.drive_folder_id || ""
   }
   
   if (utenteAttivo.value?.is_admin && cat.id) {
@@ -402,7 +408,8 @@ async function salvaCategoria() {
     anno: modal.value.is_portieri ? null : parseInt(modal.value.anno),
     stagione: parseInt(modal.value.stagione),
     giorni: modal.value.giorniSel.sort().join(",") || null,
-    is_portieri: modal.value.is_portieri
+    is_portieri: modal.value.is_portieri,
+    drive_folder_id: modal.value.drive_folder_id || null
   }
   
   try {
@@ -447,7 +454,8 @@ async function importaGiocatori() {
     anno: modal.value.is_portieri ? null : parseInt(modal.value.anno),
     stagione: parseInt(modal.value.stagione),
     giorni: modal.value.giorniSel.sort().join(",") || null,
-    is_portieri: modal.value.is_portieri
+    is_portieri: modal.value.is_portieri,
+    drive_folder_id: modal.value.drive_folder_id || null
   }
   
   try {
