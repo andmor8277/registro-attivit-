@@ -77,6 +77,10 @@ class UtenteUpdate(BaseModel):
 class AssegnaCategorie(BaseModel):
     categoria_ids: List[int]
 
+class PasswordChange(BaseModel):
+    vecchia: Optional[str] = None
+    nuova: str
+
 @router.post("/token")
 def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(Utente).filter(Utente.username == form.username).first()
@@ -175,5 +179,19 @@ def assegna_categorie(uid: int, data: AssegnaCategorie, current_user: Utente = D
 def elimina_utente(uid: int, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
     db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == uid).delete()
     db.query(Utente).filter(Utente.id == uid).delete()
+    db.commit()
+    return {"ok": True}
+
+@router.put("/utenti/{uid}/password")
+def cambia_password(uid: int, data: PasswordChange, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not current_user.is_admin and current_user.id != uid:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    utente = db.query(Utente).filter(Utente.id == uid).first()
+    if not utente:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if not current_user.is_admin:
+        if not data.vecchia or not verify_password(data.vecchia, utente.password_hash):
+            raise HTTPException(status_code=400, detail="Password attuale errata")
+    utente.password_hash = hash_password(data.nuova)
     db.commit()
     return {"ok": True}
