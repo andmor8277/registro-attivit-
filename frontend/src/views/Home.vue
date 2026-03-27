@@ -193,8 +193,8 @@
               <div class="utenti-grid" v-if="tuttiUtenti.length > 0">
                 <label v-for="u in tuttiUtenti" :key="u.id" class="utente-check" :class="{ selected: modalUtentiSel.includes(u.id) }">
                   <input type="checkbox" :value="u.id" v-model="modalUtentiSel" />
-                  <span class="utente-avatar">{{ u.username.charAt(0).toUpperCase() }}</span>
-                  <span class="utente-nome">{{ u.username }}</span>
+                  <span class="utente-avatar">{{ (u.cognome || u.nome || u.username).charAt(0).toUpperCase() }}</span>
+                  <span class="utente-nome">{{ u.cognome || u.nome || u.username }}</span>
                 </label>
               </div>
               <p v-else class="muted-text">Nessun utente non-admin presente</p>
