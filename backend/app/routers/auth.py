@@ -182,6 +182,15 @@ def elimina_utente(uid: int, current_user: Utente = Depends(get_admin), db: Sess
     db.commit()
     return {"ok": True}
 
+@router.put("/utenti/{uid}/reset-password")
+def reset_password(uid: int, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
+    utente = db.query(Utente).filter(Utente.id == uid).first()
+    if not utente:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    utente.password_hash = hash_password("RedTigers2024!")
+    db.commit()
+    return {"ok": True, "message": "Password reimpostata a RedTigers2024!"}
+
 @router.put("/utenti/{uid}/password")
 def cambia_password(uid: int, data: PasswordChange, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
     if not current_user.is_admin and current_user.id != uid:
