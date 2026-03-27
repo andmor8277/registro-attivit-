@@ -1,6 +1,6 @@
 # Red Tigers - Registro Presenze
 
-Sistema di gestione presenze per la squadra Red Tigers.
+Sistema di gestione presenze per la squadra Red Tigers 1957.
 
 ## Stack Tecnologico
 
@@ -8,6 +8,7 @@ Sistema di gestione presenze per la squadra Red Tigers.
 - **Backend**: FastAPI (Python)
 - **Database**: PostgreSQL
 - **Container**: Docker Compose
+- **PDF**: jsPDF
 
 ## Struttura del Progetto
 
@@ -19,13 +20,13 @@ registro_presenze/
 │   │   ├── components/ # Componenti riutilizzabili
 │   │   ├── api/       # Chiamate API
 │   │   └── store.js   # State management
-│   ├── public/        # Asset statici
-│   └── mock-server.js  # Server mock per sviluppo locale
+│   ├── public/        # Asset statici (logo, etc.)
+│   └── mock-server.js # Server mock per sviluppo locale
 ├── backend/           # Backend FastAPI
 │   └── app/
 │       ├── routers/   # API routes
 │       ├── models.py  # Modelli database
-│       └── schemas.py # Pydantic schemas
+│       └── main.py    # Entry point FastAPI
 ├── migrations/        # Script di migrazione database
 ├── docker-compose.yml
 ├── dev.sh             # Script sviluppo locale
@@ -83,6 +84,33 @@ Questo comando:
 - ✅ Campo stagione calcistica (es. 2025 per 2025/2026)
 - ✅ Giorni di allenamento
 - ✅ Categoria speciale **Portieri** (cross-year)
+- ✅ **Google Drive Folder ID** per integrare la cartella allenamenti
+
+### Registro Presenze
+- ✅ Registro con codici: X (presente), P (permesso), R (recupero), A (assente), AG (assente giustificato), AI (infortunio)
+- ✅ Statistiche mensili e totali
+- ✅ Raggruppamento per gruppi di allenamento
+- ✅ Visualizzazione nastrata per categoria
+
+### Dati & Matricole
+- ✅ Tabella giocatori completa (nome, cognome, nr. maglia, data nascita, codice fiscale, telefono, matricola, scadenza certificato, gruppo)
+- ✅ Ricerca per nome, cognome o matricola
+- ✅ Filtro per gruppo di allenamento
+- ✅ **CRUD completo**: creare, modificare, eliminare giocatori
+- ✅ Evidenziazione righe con certificato scaduto o assente (arancione)
+
+### Allenamenti
+- ✅ Integrazione **Google Drive** per la cartella allenamenti
+- ✅ Iframe per visualizzare i file della cartella Drive
+- ✅ Link diretto per aprire Google Drive e modificare i file
+
+### Convocazioni
+- ✅ Creazione e gestione convocazioni multiple per evento
+- ✅ Assegnazione giocatori con posizione in lista
+- ✅ Dettagli gara (data, ora, campo, indirizzo, appuntamento)
+- ✅ Dati mister con cellulare
+- ✅ Note per la convocazione
+- ✅ **Esportazione PDF** con layout professionale (header rosso, dati gare, lista convocati)
 
 ### Stagioni Calcistiche
 - ✅ Impostazione stagione corrente per tutte le categorie
@@ -91,20 +119,9 @@ Questo comando:
 - ✅ Visualizzazione stagioni passate (solo admin)
 - ✅ Ripristino stagione archiviata
 
-### Registro Presenze
-- ✅ Registro con codici: X (presente), P (permesso), R (recupero), A (assente), AG (assente giustificato), AI (infortunio)
-- ✅ Statistiche mensili e totali
-- ✅ Gestione persone/giocatori
-- ✅ Raggruppamento per gruppi di allenamento
-
-### Convocazioni
-- ✅ Creazione e gestione convocazioni
-- ✅ Assegnazione giocatori
-- ✅ Dettagli gara (data, ora, campo, appuntamento)
-
 ### Amministrazione
 - ✅ Gestione utenti e permessi
-- ✅ Assegnazione categorie agli utenti
+- ✅ Assegnazione categorie agli utenti (mister/dirigente/admin)
 - ✅ Ruolo admin con funzionalità avanzate
 
 ## Database
@@ -114,12 +131,31 @@ Questo comando:
 ```sql
 categorie (
   id SERIAL PRIMARY KEY,
-  nome VARCHAR(100),           -- Es. "Esordienti"
-  anno INTEGER,               -- Anno di nascita (es. 2014), NULL per portieri
-  stagione INTEGER,            -- Anno inizio stagione (es. 2025 per 2025/2026)
-  giorni VARCHAR(20),         -- Giorni allenamento (es. "1,3,5" = Lun,Mer,Ven)
+  nome VARCHAR(100),              -- Es. "Esordienti"
+  anno INTEGER,                   -- Anno di nascita (es. 2014), NULL per portieri
+  stagione INTEGER,               -- Anno inizio stagione (es. 2025 per 2025/2026)
+  giorni VARCHAR(20),              -- Giorni allenamento (es. "1,3,5" = Lun,Mer,Ven)
   is_portieri INTEGER DEFAULT 0,  -- 1 = portieri (cross-year)
-  is_archiviata INTEGER DEFAULT 0  -- 1 = stagione archiviata
+  is_archiviata INTEGER DEFAULT 0,-- 1 = stagione archiviata
+  drive_folder_id VARCHAR(100)    -- Google Drive folder ID
+)
+```
+
+### Schema Persone
+
+```sql
+persone (
+  id SERIAL PRIMARY KEY,
+  nome VARCHAR(100),
+  cognome VARCHAR(100),
+  gruppo_id INTEGER,
+  categoria_id INTEGER,
+  data_nascita DATE,
+  codice_fiscale VARCHAR(16),
+  telefono VARCHAR(20),
+  matricola VARCHAR(50),
+  numero_maglia INTEGER,
+  scadenza_certificato DATE
 )
 ```
 
@@ -130,7 +166,7 @@ Le migrazioni vengono eseguite automaticamente durante il deploy. Per eseguirle 
 ```bash
 # Sul server LXC
 cd /opt/registro_presenze
-docker compose exec -T db psql -U registro_user -d registro -f migrations/add_stagione_fields.sql
+docker compose exec -T db psql -U registro_user -d registro -f migrations/001_add_drive_folder.sql
 ```
 
 ## API Endpoints
@@ -142,7 +178,9 @@ docker compose exec -T db psql -U registro_user -d registro -f migrations/add_st
 | GET | `/auth/me` | Info utente corrente |
 | GET | `/auth/utenti` | Lista utenti (admin) |
 | POST | `/auth/utenti` | Crea utente (admin) |
+| PUT | `/auth/utenti/:id` | Modifica utente (admin) |
 | DELETE | `/auth/utenti/:id` | Elimina utente (admin) |
+| PUT | `/auth/utenti/:id/reset-password` | Reset password |
 | PUT | `/auth/utenti/:id/categorie` | Assegna categorie |
 
 ### Categorie
@@ -157,6 +195,14 @@ docker compose exec -T db psql -U registro_user -d registro -f migrations/add_st
 | POST | `/categorie/ripristina/:stagione` | Ripristina stagione (admin) |
 | GET | `/categorie/archived` | Categorie archiviate (admin) |
 | GET | `/categorie/by-stagione/:stagione` | Categorie per stagione |
+
+### Persone
+| Metodo | Endpoint | Descrizione |
+|--------|----------|-------------|
+| GET | `/persone/` | Lista persone per categoria |
+| POST | `/persone/` | Crea persona |
+| PUT | `/persone/:id` | Modifica persona |
+| DELETE | `/persone/:id` | Elimina persona |
 
 ### Registro
 | Metodo | Endpoint | Descrizione |
@@ -173,13 +219,38 @@ docker compose exec -T db psql -U registro_user -d registro -f migrations/add_st
 | PUT | `/convocazioni/:id` | Modifica convocazione |
 | DELETE | `/convocazioni/:id` | Elimina convocazione |
 
+### Allenatori
+| Metodo | Endpoint | Descrizione |
+|--------|----------|-------------|
+| GET | `/allenatori/` | Lista allenatori |
+| POST | `/allenatori/` | Crea allenatore |
+| PUT | `/allenatori/:id` | Modifica allenatore |
+| DELETE | `/allenatori/:id` | Elimina allenatore |
+
+## Ruoli Utente
+
+| Ruolo | Descrizione |
+|-------|-------------|
+| admin | Accesso completo a tutte le funzionalità |
+| mister | Accesso alle proprie categorie assegnate |
+| dirigente | Accesso in sola lettura alle statistiche |
+
 ## Workflow Stagioni
 
 1. **Inizio stagione** (settembre): Admin clicca "Imposta Stagione" e inserisce l'anno (es. 2025)
-2. **Durante stagione**:正常使用
+2. **Durante stagione**: Utilizzo normale del sistema
 3. **Fine stagione** (giugno/luglio): Admin clicca "Archivia Stagione"
 4. Le categorie passano in "Stagioni Passate" e non sono più visibili nella home
 5. Ricomincia da 1 con la nuova stagione
+
+## Integrazione Google Drive
+
+Per abilitare la visualizzazione della cartella Drive nella pagina Allenamenti:
+
+1. In Home, clicca su una categoria → Modifica
+2. Inserisci l'ID della cartella Google Drive
+3. L'ID si trova nella URL della cartella: `drive.google.com/drive/folders/`**`1a2b3c4d`**
+4. Nella pagina Allenamenti apparirà la cartella embedded
 
 ## Licenza
 
