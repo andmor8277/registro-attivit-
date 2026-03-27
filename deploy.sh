@@ -16,5 +16,5 @@ ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose exec -T db
 ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose build && docker compose up -d"
 
 echo "=== Deploy complete! ==="
-echo "Frontend: https://presenzored.crickethouse.mywire.org"
+echo "Frontend: https://redtigers1957.crickethouse.mywire.org"
 echo "Backend:  http://192.168.178.132:8000"
