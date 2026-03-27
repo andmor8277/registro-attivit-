@@ -204,28 +204,38 @@ function apriNuovo() {
 }
 
 async function salva() {
-  const data = {
-    cognome: modal.value.cognome,
-    nome: modal.value.nome,
-    numero_maglia: modal.value.numero_maglia || null,
-    data_nascita: modal.value.data_nascita || null,
-    codice_fiscale: modal.value.codice_fiscale || null,
-    telefono: modal.value.telefono || null,
-    matricola: modal.value.matricola || null,
-    scadenza_certificato: modal.value.scadenza_certificato || null,
-    gruppo_id: modal.value.gruppo_id,
-    categoria_id: categoriaId
+  if (!modal.value.cognome || !modal.value.nome) {
+    alert('Cognome e Nome sono obbligatori')
+    return
   }
   
-  if (modal.value.isNuovo) {
-    await createPersona(data)
-  } else {
-    await updatePersona(modal.value.id, data)
+  try {
+    const data = {
+      nome: modal.value.nome,
+      cognome: modal.value.cognome,
+      gruppo_id: modal.value.gruppo_id || 1,
+      categoria_id: categoriaId,
+      data_nascita: modal.value.data_nascita || null,
+      codice_fiscale: modal.value.codice_fiscale || null,
+      telefono: modal.value.telefono || null,
+      matricola: modal.value.matricola || null,
+      numero_maglia: modal.value.numero_maglia ? parseInt(modal.value.numero_maglia) : null,
+      scadenza_certificato: modal.value.scadenza_certificato || null
+    }
+    
+    if (modal.value.isNuovo) {
+      await createPersona(data)
+    } else {
+      await updatePersona(modal.value.id, data)
+    }
+    
+    modal.value.show = false
+    const res = await getPersone(categoriaId)
+    persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
+  } catch (e) {
+    console.error('Errore salvataggio:', e)
+    alert('Errore durante il salvataggio')
   }
-  
-  modal.value.show = false
-  const res = await getPersone(categoriaId)
-  persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
 }
 
 async function elimina() {
