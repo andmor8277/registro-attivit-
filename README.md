@@ -67,7 +67,7 @@ Questo comando:
 
 ## Accesso
 
-- **Produzione**: https://presenzored.crickethouse.mywire.org
+- **Produzione**: https://redtigers1957.crickethouse.mywire.org
 - **Locale**: http://localhost:5173
 
 ## Credenziali
