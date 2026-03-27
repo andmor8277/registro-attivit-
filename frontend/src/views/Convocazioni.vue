@@ -434,7 +434,7 @@ async function loadStorico() {
 async function loadMisters() {
   try {
     const res = await axios.get(base + '/categorie/' + categoriaId + '/responsabili', { headers: headers() })
-    responsabili.value = res.data
+    responsabili.value = res.data.filter(r => r.ruolo !== 'dirigente')
   } catch (e) {
     console.error('Errore caricamento responsabili:', e)
     responsabili.value = []
@@ -606,7 +606,7 @@ onMounted(async () => {
 .btn-del { padding: 6px 14px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; }
 .gare-scroll { overflow-x: auto; }
 .gare-grid { display: grid; gap: 1rem; min-width: max-content; }
-.gara-col { background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; min-width: 220px; }
+.gara-col { background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; min-width: 260px; }
 .gara-header { background: #CC0000; color: white; font-weight: bold; padding: 6px; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
 .gara-header span { flex-shrink: 0; }
 .gara-title-input { flex: 1; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 3px 8px; color: white; font-size: 0.85rem; font-weight: 600; text-align: center; }
@@ -635,7 +635,7 @@ onMounted(async () => {
 .escluso-item { font-size: 0.75rem; color: #856404; padding: 2px 0; font-weight: 600; }
 .escluso-none { font-size: 0.7rem; color: #6c757d; font-style: italic; }
 .pos-num { width: 18px; text-align: right; font-size: 0.8rem; color: #888; flex-shrink: 0; }
-.giocatore-row select { flex: 1; font-size: 0.8rem; padding: 5px 8px; border: 1px solid #eee; border-radius: 3px; }
+.giocatore-row select { flex: 1; min-width: 120px; font-size: 0.9rem; padding: 6px 10px; border: 1px solid #eee; border-radius: 3px; }
 .note-section { margin-top: 1rem; }
 .note-section label { font-size: 0.8rem; font-weight: bold; color: #555; display: block; margin-bottom: 4px; }
 .note-section textarea { width: 100%; border: 1px solid #CC0000; border-radius: 4px; padding: 10px; font-size: 0.7rem; resize: vertical; background: #CC0000; color: white; font-weight: bold; white-space: pre-wrap; word-wrap: break-word; min-height: 120px; line-height: 1.3; }
