@@ -15,7 +15,10 @@ export const login = (username, password) => {
   return api.post('/auth/token', form)
 }
 export const getMe = () => api.get('/auth/me')
-export const getUtenti = () => api.get('/auth/utenti')
+export const getUtenti = (societaId) => {
+  const params = societaId ? `?societa_id=${societaId}` : ''
+  return api.get('/auth/utenti' + params)
+}
 export const createUtente = (data) => api.post('/auth/utenti', data)
 export const deleteUtente = (id) => api.delete(`/auth/utenti/${id}`)
 export const updateUtente = (id, data) => api.put(`/auth/utenti/${id}`, data)
@@ -23,8 +26,14 @@ export const resetPassword = (id) => api.put(`/auth/utenti/${id}/reset-password`
 export const changePassword = (id, vecchia, nuova) => api.put(`/auth/utenti/${id}/password`, { vecchia, nuova })
 export const assegnaCategorie = (uid, categoria_ids) => api.put(`/auth/utenti/${uid}/categorie`, { categoria_ids })
 
-export const getCategorie = () => api.get('/categorie/')
-export const getAllCategorie = () => api.get('/categorie/all')
+export const getCategorie = (societaId) => {
+  const params = societaId ? `?societa_id=${societaId}` : ''
+  return api.get('/categorie/' + params)
+}
+export const getAllCategorie = (societaId) => {
+  const params = societaId ? `?societa_id=${societaId}` : ''
+  return api.get('/categorie/all' + params)
+}
 export const createCategoria = (data) => api.post('/categorie/', data)
 export const updateCategoria = (id, data) => api.put(`/categorie/${id}`, data)
 export const deleteCategoria = (id) => api.delete('/categorie/' + id)
@@ -61,3 +70,10 @@ export const getSocietaById = (id) => api.get('/societa/' + id)
 export const createSocieta = (data) => api.post('/societa/', data)
 export const updateSocieta = (id, data) => api.put('/societa/' + id, data)
 export const deleteSocieta = (id) => api.delete('/societa/' + id)
+export const uploadSocietaFile = (tipo, file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post(`/societa/upload/${tipo}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}

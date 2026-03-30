@@ -5,13 +5,26 @@
         <h1>Gestione Utenti</h1>
         <p class="page-subtitle">Crea e gestisci gli account degli utenti</p>
       </div>
-      <router-link v-if="isSuperAdmin" to="/admin/societa" class="btn-societa">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-        Gestione Società
-      </router-link>
+      <div class="header-actions">
+        <select v-if="isSuperAdmin" v-model="societaIdSelezionata" @change="onCambiaSocieta" class="societa-select">
+          <option :value="null">Tutte le società</option>
+          <option v-for="s in listaSocieta" :key="s.id" :value="s.id">{{ s.nome }}</option>
+        </select>
+        <button @click="cambiaSocieta" class="btn-societa">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          Cambia Società
+        </button>
+        <router-link v-if="isSuperAdmin" to="/admin/societa" class="btn-societa">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+          Gestione Società
+        </router-link>
+      </div>
     </header>
 
     <div class="card card-create">
@@ -37,7 +50,8 @@
           <label>Ruolo *</label>
           <select v-model="nuovo.ruolo" class="ruolo-select">
             <option value="">Seleziona ruolo...</option>
-            <option value="admin">Admin</option>
+            <option v-if="isSuperAdmin" value="super_admin">SuperAdmin (tutte le società)</option>
+            <option value="admin">Admin Locale</option>
             <option value="mister">Mister</option>
             <option value="dirigente">Dirigente</option>
           </select>
@@ -65,6 +79,13 @@
         <div class="input-group">
           <label>Tesserino</label>
           <input v-model="nuovo.tesserino" placeholder="Numero Tesserino" />
+        </div>
+        <div class="input-group" v-if="isSuperAdmin">
+          <label>Società *</label>
+          <select v-model="nuovo.societa_id" required>
+            <option value="">Seleziona società...</option>
+            <option v-for="s in listaSocieta" :key="s.id" :value="s.id">{{ s.nome }}</option>
+          </select>
         </div>
       </div>
       <div class="form-actions">
@@ -98,9 +119,11 @@
             <div class="user-details">
               <span class="user-name">{{ u.cognome || u.username }}</span>
               <span class="user-fullname">{{ u.nome }} {{ u.cognome }}</span>
-              <span class="badge-role badge-admin" v-if="u.ruolo === 'admin'">ADMIN</span>
+              <span class="badge-role badge-superadmin" v-if="u.ruolo === 'super_admin'">SUPERADMIN</span>
+              <span class="badge-role badge-admin" v-if="u.ruolo === 'admin'">ADMIN LOCALE</span>
               <span class="badge-role badge-mister" v-if="u.ruolo === 'mister'">MISTER</span>
               <span class="badge-role badge-dirigente" v-if="u.ruolo === 'dirigente'">DIRIGENTE</span>
+              <span class="badge-societa">{{ getSocietaNome(u.societa_id) }}</span>
             </div>
           </div>
           <div class="user-data">
@@ -160,15 +183,22 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useStore } from '../store.js'
+import { getUtenti, createUtente, deleteUtente, updateUtente, resetPassword, assegnaCategorie, getCategorie, getCategoriaUtenti, getSocieta } from '../api/index.js'
 
+const router = useRouter()
+const { societaAttiva } = useStore()
 const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === 'true')
-import { getUtenti, createUtente, deleteUtente, updateUtente, resetPassword, assegnaCategorie, getCategorie, getCategoriaUtenti } from '../api/index.js'
 
 const utenti = ref([])
 const tutteCategorie = ref([])
+const listaSocieta = ref([])
+const societaIdSelezionata = ref(null)
 const errore = ref('')
+const loading = ref(false)
 const editingUtente = ref(null)
-const nuovo = ref({ username: '', password: '', nome: '', cognome: '', data_nascita: '', codice_fiscale: '', cellulare: '', tesserino: '', ruolo: '' })
+const nuovo = ref({ username: '', password: '', nome: '', cognome: '', data_nascita: null, codice_fiscale: null, cellulare: null, tesserino: '', ruolo: '', societa_id: '' })
 
 // Track mister assignments: { utenteId: { categoriaId: true/false } }
 const misterMap = ref({})
@@ -178,8 +208,33 @@ function formatData(d) {
   return d.split('-').reverse().join('/')
 }
 
+function cambiaSocieta() {
+  router.push('/login')
+}
+
+function onCambiaSocieta() {
+  load()
+}
+
+function getSocietaNome(societaId) {
+  if (!societaId) return ''
+  const s = listaSocieta.value.find(s => s.id === societaId)
+  return s ? s.nome_breve || s.nome : ''
+}
+
 function resetForm() {
-  nuovo.value = { username: '', password: '', nome: '', cognome: '', data_nascita: '', codice_fiscale: '', cellulare: '', tesserino: '', ruolo: '' }
+  nuovo.value = { 
+    username: '', 
+    password: '', 
+    nome: '', 
+    cognome: '', 
+    data_nascita: null, 
+    codice_fiscale: null, 
+    cellulare: null, 
+    tesserino: '', 
+    ruolo: '', 
+    societa_id: societaIdSelezionata.value || '' 
+  }
   editingUtente.value = null
 }
 
@@ -207,40 +262,113 @@ async function toggleMister(u, catId, event) {
 }
 
 async function load() {
-  const [u, c] = await Promise.all([getUtenti(), getCategorie()])
-  utenti.value = u.data
-  tutteCategorie.value = c.data
-  
-  // Load mister assignments for each category
-  for (const cat of c.data) {
-    const res = await getCategoriaUtenti(cat.id)
-    for (const uid of res.data) {
-      if (!misterMap.value[uid]) {
-        misterMap.value[uid] = {}
-      }
-      misterMap.value[uid][cat.id] = true
+  if (loading.value) return
+  loading.value = true
+  try {
+    // Prima carica la lista società per determinare quale società usare
+    let sData = []
+    try {
+      const sRes = await getSocieta()
+      sData = sRes.data || []
+    } catch (e) {
+      console.error('Errore getSocieta:', e)
+      sData = []
     }
+    
+    listaSocieta.value = sData
+    
+    // Determina la società da usare
+    let societaId = null
+    if (isSuperAdmin.value) {
+      // SuperAdmin: se ha selezionato una società specifica, filtra per quella
+      // altrimenti mostra TUTTI gli utenti
+      societaId = societaIdSelezionata.value || null
+    } else if (societaAttiva.value) {
+      // Admin locale: mostra solo gli utenti della propria società
+      societaId = societaAttiva.value.id || null
+    }
+    
+    console.log('load() - societaId:', societaId, 'isSuperAdmin:', isSuperAdmin.value, 'sData length:', sData.length)
+    
+    let uData = []
+    try {
+      const uRes = await getUtenti(societaId)
+      uData = uRes.data || []
+    } catch (e) {
+      console.error('Errore getUtenti:', e)
+      uData = []
+    }
+    
+    utenti.value = uData
+    
+    // Carica le categorie per la società
+    let categorieData = []
+    if (societaId) {
+      try {
+        const catRes = await getCategorie(societaId)
+        categorieData = catRes.data || []
+      } catch (e) {
+        console.error('Errore getCategorie:', e)
+        categorieData = []
+      }
+      tutteCategorie.value = categorieData
+    } else {
+      tutteCategorie.value = []
+    }
+    
+    // Se admin locale, imposta la società attiva
+    if (!isSuperAdmin.value && societaAttiva.value) {
+      societaIdSelezionata.value = societaAttiva.value.id
+    }
+    
+    // Se utente non è super_admin, preimposta la società
+    if (societaIdSelezionata.value) {
+      nuovo.value.societa_id = societaIdSelezionata.value
+    }
+    
+    // Load mister assignments for each category
+    for (const cat of categorieData) {
+      try {
+        const res = await getCategoriaUtenti(cat.id)
+        if (res.data) {
+          for (const uid of res.data) {
+            if (!misterMap.value[uid]) {
+              misterMap.value[uid] = {}
+            }
+            misterMap.value[uid][cat.id] = true
+          }
+        }
+      } catch (e) {
+        console.error('Errore getCategoriaUtenti:', e)
+      }
+    }
+  } catch (e) {
+    console.error('Errore in load():', e)
+  } finally {
+    loading.value = false
   }
 }
 
 async function creaUtente() {
   errore.value = ''
   const n = nuovo.value
-  if (!n.username || !n.password || !n.nome || !n.cognome || !n.data_nascita || !n.codice_fiscale || !n.cellulare || !n.ruolo) {
-    errore.value = 'Compila tutti i campi obbligatori (*)' 
+  if (!n.username || !n.password || !n.nome || !n.cognome || !n.ruolo || !n.societa_id) {
+    errore.value = 'Compila tutti i campi obbligatori (*)'
     return
   }
   try {
     await createUtente({
       username: n.username,
       password: n.password,
-      is_admin: n.ruolo === 'admin' ? 1 : 0,
+      is_admin: (n.ruolo === 'admin' || n.ruolo === 'super_admin') ? 1 : 0,
+      is_super_admin: n.ruolo === 'super_admin' ? 1 : 0,
+      societa_id: n.societa_id,
       nome: n.nome,
       cognome: n.cognome,
-      data_nascita: n.data_nascita,
-      codice_fiscale: n.codice_fiscale.toUpperCase(),
-      cellulare: n.cellulare,
-      tesserino: n.tesserino || null,
+      data_nascita: n.data_nascita && n.data_nascita !== '' ? n.data_nascita : null,
+      codice_fiscale: n.codice_fiscale && n.codice_fiscale !== '' ? n.codice_fiscale.toUpperCase() : null,
+      cellulare: n.cellulare && n.cellulare !== '' ? n.cellulare : null,
+      tesserino: n.tesserino && n.tesserino !== '' ? n.tesserino : null,
       ruolo: n.ruolo
     })
     resetForm()
@@ -252,6 +380,8 @@ async function creaUtente() {
 
 function modificaUtente(u) {
   editingUtente.value = u.id
+  console.log('modificaUtente - u.societa_id:', u.societa_id, 'u:', u)
+  const societaIdDefault = isSuperAdmin.value ? societaIdSelezionata.value : (societaAttiva.value?.id || null)
   nuovo.value = {
     username: u.username,
     password: '',
@@ -261,8 +391,10 @@ function modificaUtente(u) {
     codice_fiscale: u.codice_fiscale,
     cellulare: u.cellulare,
     tesserino: u.tesserino || '',
-    ruolo: u.ruolo || ''
+    ruolo: u.ruolo || '',
+    societa_id: u.societa_id || societaIdDefault || ''
   }
+  console.log('modificaUtente - nuovo.societa_id:', nuovo.value.societa_id)
 }
 
 function annullaModifica() {
@@ -272,24 +404,39 @@ function annullaModifica() {
 async function salvaUtente() {
   errore.value = ''
   const n = nuovo.value
-  if (!n.nome || !n.cognome || !n.data_nascita || !n.codice_fiscale || !n.cellulare || !n.ruolo) {
-    errore.value = 'Compila tutti i campi obbligatori (*)' 
+  if (!n.nome || !n.cognome || !n.ruolo) {
+    errore.value = 'Compila tutti i campi obbligatori (*)'
     return
   }
   try {
-    await updateUtente(editingUtente.value, {
+    // Determina societa_id
+    let societaIdValue = null
+    if (n.societa_id && n.societa_id !== '') {
+      societaIdValue = parseInt(n.societa_id)
+    } else if (isSuperAdmin.value && societaIdSelezionata.value) {
+      societaIdValue = societaIdSelezionata.value
+    } else if (societaAttiva.value && societaAttiva.value.id) {
+      societaIdValue = societaAttiva.value.id
+    }
+    
+    const data = {
       nome: n.nome,
       cognome: n.cognome,
-      data_nascita: n.data_nascita,
-      codice_fiscale: n.codice_fiscale.toUpperCase(),
-      cellulare: n.cellulare,
-      tesserino: n.tesserino || null,
-      ruolo: n.ruolo
-    })
+      data_nascita: n.data_nascita && n.data_nascita !== '' ? n.data_nascita : null,
+      codice_fiscale: n.codice_fiscale && n.codice_fiscale !== '' ? n.codice_fiscale.toUpperCase() : null,
+      cellulare: n.cellulare && n.cellulare !== '' ? n.cellulare : null,
+      tesserino: n.tesserino && n.tesserino !== '' ? n.tesserino : null,
+      ruolo: n.ruolo,
+      societa_id: societaIdValue,
+      is_super_admin: n.ruolo === 'super_admin' ? 1 : 0
+    }
+    console.log('Salvataggio utente:', editingUtente.value, 'n.societa_id:', n.societa_id, 'societaIdValue:', societaIdValue, 'isSuperAdmin:', isSuperAdmin.value, 'societaIdSelezionata:', societaIdSelezionata.value)
+    await updateUtente(editingUtente.value, data)
     resetForm()
     await load()
   } catch (e) {
-    errore.value = e.response?.data?.detail || 'Errore'
+    console.error('Errore salvataggio utente:', e)
+    errore.value = e.response?.data?.detail || e.message || 'Errore'
   }
 }
 
@@ -406,6 +553,23 @@ onMounted(load)
 .input-group input:disabled {
   background: #e0e0e0;
   cursor: not-allowed;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+}
+
+.checkbox-label span {
+  color: var(--color-text-secondary);
 }
 
 .ruolo-select {
@@ -571,13 +735,28 @@ onMounted(load)
 }
 
 .badge-mister {
-  background: #dc2626;
+  background: var(--color-primary);
   color: white;
 }
 
 .badge-dirigente {
   background: #2563eb;
   color: white;
+}
+
+.badge-superadmin {
+  background: #f59e0b;
+  color: black;
+}
+
+.badge-societa {
+  background: #6b7280;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
 }
 
 .btn-edit {
@@ -753,6 +932,27 @@ onMounted(load)
 
 .header-content {
   flex: 1;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.societa-select {
+  padding: 0.5rem 1rem;
+  background: #1a1a1a;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.societa-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
 }
 
 .btn-societa {

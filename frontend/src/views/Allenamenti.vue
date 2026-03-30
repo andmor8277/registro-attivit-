@@ -61,14 +61,13 @@ const driveFolderId = computed(() => categoriaAttiva.value?.drive_folder_id || '
   flex-direction: column; 
   height: 100vh; 
   background: #111; 
-  --color-primary: #dc2626;
 }
 .toolbar { 
   display: flex; 
   align-items: center; 
   gap: 0.8rem; 
   padding: 0.75rem 1rem; 
-  background: #dc2626; 
+  background: var(--color-primary); 
   color: white; 
   flex-shrink: 0; 
 }
@@ -181,7 +180,7 @@ const driveFolderId = computed(() => categoriaAttiva.value?.drive_folder_id || '
   color: #3b82f6 !important;
 }
 
-.page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: #dc2626; }
+.page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--color-primary); }
 .header-left { display: flex; gap: 0.25rem; }
 .btn-back, .btn-home { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer; transition: background 0.2s; }
 .btn-back:hover, .btn-home:hover { background: rgba(255,255,255,0.2); }

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 
@@ -8,6 +9,12 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Configure multer for file uploads
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Remove /api prefix from requests
 app.use((req, res, next) => {
@@ -44,10 +51,13 @@ function saveData(data) {
 
 function getDefaultData() {
   return {
+    societa: [
+      { id: 1, nome: 'RedTigers 1957', nome_breve: 'RedTigers', logo: '', logosponsor: '', colore_primario: '#dc2626', colore_secondario: '#1f2937', is_attiva: 1 }
+    ],
     utenti: [
-      { id: 1, username: 'admin', is_admin: true, password: 'admin123', categorie_ids: null, nome: 'Admin', cognome: 'Sistema', data_nascita: '1990-01-01', codice_fiscale: 'ADMTTA90A01A000A', cellulare: '3331234567', tesserino: 'ADMIN001', ruolo: 'admin' },
-      { id: 2, username: 'asergi', is_admin: true, password: 'password', categorie_ids: null, nome: 'Alessandro', cognome: 'Sergi', data_nascita: '1985-06-15', codice_fiscale: 'SRGLSN85H15A000A', cellulare: '3332345678', tesserino: 'ASERGI01', ruolo: 'admin' },
-      { id: 3, username: 'agrillo', is_admin: false, password: 'password', categorie_ids: [1, 2], nome: 'Antonio', cognome: 'Grillo', data_nascita: '1980-03-22', codice_fiscale: 'GRLNTN80C22A000A', cellulare: '3333456789', tesserino: 'AGRILLO01', ruolo: 'mister' }
+      { id: 1, username: 'admin', is_admin: true, is_super_admin: true, societa_id: 1, password: 'admin123', categorie_ids: null, nome: 'Admin', cognome: 'Sistema', data_nascita: '1990-01-01', codice_fiscale: 'ADMTTA90A01A000A', cellulare: '3331234567', tesserino: 'ADMIN001', ruolo: 'admin' },
+      { id: 2, username: 'asergi', is_admin: true, is_super_admin: false, societa_id: 1, password: 'password', categorie_ids: null, nome: 'Alessandro', cognome: 'Sergi', data_nascita: '1985-06-15', codice_fiscale: 'SRGLSN85H15A000A', cellulare: '3332345678', tesserino: 'ASERGI01', ruolo: 'admin' },
+      { id: 3, username: 'agrillo', is_admin: false, is_super_admin: false, societa_id: 1, password: 'password', categorie_ids: [1, 2], nome: 'Antonio', cognome: 'Grillo', data_nascita: '1980-03-22', codice_fiscale: 'GRLNTN80C22A000A', cellulare: '3333456789', tesserino: 'AGRILLO01', ruolo: 'mister' }
     ],
     categorie: [
       { id: 1, nome: 'Esordienti', anno: 2014, stagione: 2025, giorni: '1,2,4', is_portieri: 0, is_archiviata: 0 },
@@ -66,6 +76,12 @@ function getDefaultData() {
   };
 }
 
+// Ricarica i dati ad ogni richiesta per development
+function getData() {
+  return loadData();
+}
+
+// Use a getter so we reload data on each request during development
 let data = loadData();
 const MOCK_TOKEN = 'mock-token-12345';
 
@@ -76,11 +92,12 @@ let nextId = Math.max(
 ) + 1;
 const genId = () => nextId++;
 
-function getUtenti() { return data.utenti; }
-function getPersone() { return data.persone; }
-function getRegistro() { return data.registro; }
-function getConvocazioni() { return data.convocazioni; }
-function getAllenatori() { return data.allenatori; }
+function getUtenti() { data = loadData(); return data.utenti; }
+function getPersone() { data = loadData(); return data.persone; }
+function getSocieta() { data = loadData(); return data.societa || []; }
+function getRegistro() { data = loadData(); return data.registro; }
+function getConvocazioni() { data = loadData(); return data.convocazioni; }
+function getAllenatori() { data = loadData(); return data.allenatori || []; }
 function getCodici() {
   return [
     { codice: 'X', tipo: 'presenza', descrizione: 'Presente' },
@@ -130,7 +147,17 @@ app.get('/auth/me', (req, res) => {
 });
 
 app.get('/auth/utenti', (req, res) => {
-  res.json(getUtenti().map(({ password, ...u }) => u));
+  // Ricarica i dati per avere le ultime modifiche
+  data = loadData();
+  let utenti = getUtenti();
+  // Filtra per societa_id se specificato
+  const societaId = req.query.societa_id;
+  console.log('GET /auth/utenti - societaId richiesto:', societaId);
+  console.log('Utenti totali:', utenti.length, utenti.map(u => ({id: u.id, username: u.username, societa_id: u.societa_id})));
+  if (societaId) {
+    utenti = utenti.filter(u => u.societa_id && u.societa_id === parseInt(societaId));
+  }
+  res.json(utenti.map(({ password, ...u }) => u));
 });
 
 app.post('/auth/utenti', (req, res) => {
@@ -138,7 +165,8 @@ app.post('/auth/utenti', (req, res) => {
     id: genId(),
     username: req.body.username,
     password: req.body.password,
-    is_admin: req.body.ruolo === 'admin' ? 1 : 0,
+    is_admin: (req.body.ruolo === 'admin' || req.body.ruolo === 'super_admin') ? 1 : 0,
+    is_super_admin: req.body.is_super_admin || (req.body.ruolo === 'super_admin' ? 1 : 0),
     categorie_ids: [],
     nome: req.body.nome,
     cognome: req.body.cognome,
@@ -146,7 +174,8 @@ app.post('/auth/utenti', (req, res) => {
     codice_fiscale: req.body.codice_fiscale,
     cellulare: req.body.cellulare,
     tesserino: req.body.tesserino,
-    ruolo: req.body.ruolo
+    ruolo: req.body.ruolo,
+    societa_id: req.body.societa_id || null
   };
   data.utenti.push(newUser);
   saveData(data);
@@ -154,6 +183,8 @@ app.post('/auth/utenti', (req, res) => {
 });
 
 app.put('/auth/utenti/:id', (req, res) => {
+  // Ricarica i dati prima dell'operazione
+  data = loadData();
   const idx = data.utenti.findIndex(u => u.id === parseInt(req.params.id));
   if (idx >= 0) {
     data.utenti[idx].nome = req.body.nome;
@@ -163,11 +194,23 @@ app.put('/auth/utenti/:id', (req, res) => {
     data.utenti[idx].cellulare = req.body.cellulare;
     data.utenti[idx].tesserino = req.body.tesserino;
     data.utenti[idx].ruolo = req.body.ruolo;
-    data.utenti[idx].is_admin = req.body.ruolo === 'admin' ? 1 : 0;
+    data.utenti[idx].is_admin = (req.body.ruolo === 'admin' || req.body.ruolo === 'super_admin') ? 1 : 0;
+    if (req.body.is_super_admin !== undefined) {
+      data.utenti[idx].is_super_admin = req.body.is_super_admin;
+    }
+    // Aggiorna societa_id se fornito
+    console.log('PUT utenti - societa_id ricevuto:', req.body.societa_id, 'tipo:', typeof req.body.societa_id);
+    if (req.body.societa_id !== undefined && req.body.societa_id !== null && req.body.societa_id !== '') {
+      data.utenti[idx].societa_id = parseInt(req.body.societa_id);
+    } else if (req.body.societa_id === '') {
+      // Se è una stringa vuota, imposta a null
+      data.utenti[idx].societa_id = null;
+    }
     if (req.body.categorie_ids !== undefined) {
       data.utenti[idx].categorie_ids = req.body.categorie_ids;
     }
     saveData(data);
+    console.log('Utente aggiornato:', data.utenti[idx]);
     res.json(data.utenti[idx]);
   } else {
     res.status(404).json({ detail: 'Utente non trovato' });
@@ -224,11 +267,33 @@ app.put('/auth/utenti/:id/categorie', (req, res) => {
 
 // ============ CATEGORIE ============
 app.get('/categorie/', (req, res) => {
-  res.json(data.categorie.filter(c => !c.is_archiviata));
+  // Ricarica i dati
+  data = loadData();
+  let cats = data.categorie.filter(c => !c.is_archiviata);
+  // Filtra per societa_id se specificato
+  // Mostra anche categorie senza societa_id (retrocompatibilità)
+  const societaId = req.query.societa_id;
+  console.log('GET /categorie - societaId richiesto:', societaId);
+  if (societaId && societaId !== 'null' && societaId !== 'undefined') {
+    const parsedId = parseInt(societaId);
+    cats = cats.filter(c => !c.societa_id || c.societa_id === parsedId);
+  }
+  console.log('Categorie totali:', cats.length, cats.map(c => ({id: c.id, nome: c.nome, societa_id: c.societa_id})));
+  res.json(cats);
 });
 
 app.get('/categorie/all', (req, res) => {
-  res.json(data.categorie.filter(c => !c.is_archiviata));
+  // Ricarica i dati
+  data = loadData();
+  let cats = data.categorie.filter(c => !c.is_archiviata);
+  // Filtra per societa_id se specificato
+  // Mostra anche categorie senza societa_id (retrocompatibilità)
+  const societaId = req.query.societa_id;
+  if (societaId && societaId !== 'null' && societaId !== 'undefined') {
+    const parsedId = parseInt(societaId);
+    cats = cats.filter(c => !c.societa_id || c.societa_id === parsedId);
+  }
+  res.json(cats);
 });
 
 app.post('/categorie/', (req, res) => {
@@ -333,12 +398,15 @@ app.post('/categorie/ripristina/:stagione', (req, res) => {
 });
 
 app.get('/categorie/:id/utenti', (req, res) => {
+  data = loadData();
   const catId = parseInt(req.params.id);
   const utentiIds = data.utenti.filter(u => u.categorie_ids && u.categorie_ids.includes(catId)).map(u => u.id);
+  console.log('GET /categorie/:id/utenti - catId:', catId, 'utentiIds:', utentiIds);
   res.json(utentiIds);
 });
 
 app.put('/categorie/:id/utenti', (req, res) => {
+  data = loadData();
   const catId = parseInt(req.params.id);
   const utenteIds = req.body.utente_ids || [];
   data.utenti.forEach(u => {
@@ -359,15 +427,18 @@ app.put('/categorie/:id/utenti', (req, res) => {
 });
 
 app.get('/categorie/:id/responsabili', (req, res) => {
+  data = loadData();
   const catId = parseInt(req.params.id);
   const responsabili = data.utenti.filter(u => 
     u.categorie_ids && u.categorie_ids.includes(catId) &&
-    u.ruolo === 'mister'
+    (u.ruolo === 'mister' || u.ruolo === 'dirigente')
   ).map(u => ({
     id: u.id,
     cognome: u.cognome,
-    cellulare: u.cellulare
+    cellulare: u.cellulare,
+    ruolo: u.ruolo
   }));
+  console.log('GET /categorie/:id/responsabili - catId:', catId, 'responsabili:', responsabili);
   res.json(responsabili);
 });
 
@@ -541,6 +612,74 @@ app.post('/allenamenti/', (req, res) => {
   
   saveData(data);
   res.json({ ok: true });
+});
+
+// Societa endpoints
+app.get('/societa/', (req, res) => {
+  res.json(data.societa || []);
+});
+
+app.get('/societa/:id', (req, res) => {
+  const s = (data.societa || []).find(s => s.id === parseInt(req.params.id));
+  if (s) {
+    res.json(s);
+  } else {
+    res.status(404).json({ detail: 'Società non trovata' });
+  }
+});
+
+app.post('/societa/', (req, res) => {
+  const maxId = Math.max(...(data.societa || []).map(s => s.id), 0);
+  const newSocieta = { id: maxId + 1, ...req.body };
+  if (!data.societa) data.societa = [];
+  data.societa.push(newSocieta);
+  saveData(data);
+  res.json(newSocieta);
+});
+
+app.put('/societa/:id', (req, res) => {
+  const idx = (data.societa || []).findIndex(s => s.id === parseInt(req.params.id));
+  if (idx >= 0) {
+    data.societa[idx] = { ...data.societa[idx], ...req.body };
+    saveData(data);
+    res.json(data.societa[idx]);
+  } else {
+    res.status(404).json({ detail: 'Società non trovata' });
+  }
+});
+
+// Upload endpoint for societa logos
+app.post('/societa/upload/:tipo', upload.single('file'), (req, res) => {
+  const tipo = req.params.tipo;
+  const filename = `${tipo}_${Date.now()}.png`;
+  const uploadsDir = path.join(__dirname, 'uploads');
+  
+  // Create uploads dir if not exists
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  
+  // Save the file
+  if (req.file) {
+    const filepath = path.join(uploadsDir, filename);
+    fs.writeFileSync(filepath, req.file.buffer);
+    console.log('File uploaded:', filepath);
+  } else {
+    console.log('No file uploaded, using placeholder');
+  }
+  
+  res.json({ filename });
+});
+
+app.delete('/societa/:id', (req, res) => {
+  const idx = (data.societa || []).findIndex(s => s.id === parseInt(req.params.id));
+  if (idx >= 0) {
+    data.societa.splice(idx, 1);
+    saveData(data);
+    res.json({ ok: true });
+  } else {
+    res.status(404).json({ detail: 'Società non trovata' });
+  }
 });
 
 const PORT = 8000;

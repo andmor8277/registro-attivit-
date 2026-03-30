@@ -23,17 +23,23 @@ const router = createRouter({
     { path: '/dati/:id', component: DatiMatricole, meta: { requiresAuth: true } },
     { path: '/allenamenti/:id', component: Allenamenti, meta: { requiresAuth: true } },
     { path: '/admin', component: Admin, meta: { requiresAuth: true, requiresAdmin: true } },
-    { path: '/admin/societa', component: Societa, meta: { requiresAuth: true, requiresSuperAdmin: true } }
+    { path: '/admin/societa', component: Societa, meta: { requiresAuth: true } }
   ]
 })
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
+  const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true'
   if (to.meta.requiresAuth && !token) return next('/login')
-  if (to.path === '/login' && token) return next('/')
+  // SuperAdmin can go to /login to change society
+  if (to.path === '/login' && token && !isSuperAdmin) return next('/')
   if (to.meta.requiresSuperAdmin) {
-    const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true'
     if (!isSuperAdmin) return next('/')
+  }
+  // Check for requiresAdmin (allows both admin and super_admin)
+  if (to.meta.requiresAdmin) {
+    const isAdmin = localStorage.getItem('is_admin') === 'true' || isSuperAdmin
+    if (!isAdmin) return next('/')
   }
   next()
 })

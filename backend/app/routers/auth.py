@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, date
@@ -56,26 +57,32 @@ def get_admin(current_user: Utente = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin")
     return current_user
 
+def get_super_admin(current_user: Utente = Depends(get_current_user)):
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Solo super admin")
+    return current_user
+
 class UtenteCreate(BaseModel):
     username: str
     password: str
     is_admin: Optional[int] = 0
     is_super_admin: Optional[int] = 0
-    societa_id: int
+    societa_id: Optional[int] = None
     nome: str
     cognome: str
-    data_nascita: date
-    codice_fiscale: str
-    cellulare: str
+    data_nascita: Optional[date] = None
+    codice_fiscale: Optional[str] = None
+    cellulare: Optional[str] = None
     tesserino: Optional[str] = None
     ruolo: Optional[str] = None
 
 class UtenteUpdate(BaseModel):
     nome: str
     cognome: str
-    data_nascita: date
-    codice_fiscale: str
-    cellulare: str
+    data_nascita: Optional[date] = None
+    codice_fiscale: Optional[str] = None
+    cellulare: Optional[str] = None
+    societa_id: Optional[int] = None
     tesserino: Optional[str] = None
     ruolo: Optional[str] = None
     is_super_admin: Optional[int] = 0
@@ -110,7 +117,7 @@ def me(current_user: Utente = Depends(get_current_user), db: Session = Depends(g
         "username": current_user.username,
         "is_admin": current_user.is_admin,
         "is_super_admin": current_user.is_super_admin,
-        "societa_id": current_user.societa_id,
+        "societa_id": None if current_user.is_super_admin else current_user.societa_id,
         "categorie_ids": categorie_ids,
         "nome": current_user.nome,
         "cognome": current_user.cognome,
@@ -125,11 +132,24 @@ def me(current_user: Utente = Depends(get_current_user), db: Session = Depends(g
 def crea_utente(data: UtenteCreate, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
     if db.query(Utente).filter(Utente.username == data.username).first():
         raise HTTPException(status_code=400, detail="Username già esistente")
+    
+    # Se il ruolo è super_admin, imposta is_super_admin = 1 e is_admin = 1
+    is_super = 1 if data.ruolo == 'super_admin' else 0
+    is_admin = 1 if data.ruolo in ('super_admin', 'admin') else 0
+    
+    # Solo super_admin può creare super_admin
+    if is_super and not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Non autorizzato a creare super admin")
+    
+    # Admin locale può creare utenti solo per la propria società
+    if not current_user.is_super_admin and data.societa_id != current_user.societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato a creare utenti per altre società")
+    
     utente = Utente(
         username=data.username,
         password_hash=hash_password(data.password),
-        is_admin=data.is_admin,
-        is_super_admin=data.is_super_admin,
+        is_admin=is_admin,
+        is_super_admin=is_super,
         societa_id=data.societa_id,
         nome=data.nome,
         cognome=data.cognome,
@@ -148,27 +168,57 @@ def modifica_utente(uid: int, data: UtenteUpdate, current_user: Utente = Depends
     utente = db.query(Utente).filter(Utente.id == uid).first()
     if not utente:
         raise HTTPException(status_code=404, detail="Utente non trovato")
+    # Non super_admin può modificare solo utenti della propria società
+    if not current_user.is_super_admin and utente.societa_id != current_user.societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato a modificare utenti di altre società")
+    # Non super_admin non può modificare super_admin
+    if utente.is_super_admin and not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Non autorizzato a modificare super admin")
     utente.nome = data.nome
     utente.cognome = data.cognome
     utente.data_nascita = data.data_nascita
     utente.codice_fiscale = data.codice_fiscale
     utente.cellulare = data.cellulare
     utente.tesserino = data.tesserino
+    # Solo super_admin può modificare società dell'utente
+    if current_user.is_super_admin:
+        # Converti in int se è una stringa
+        if data.societa_id is not None:
+            if isinstance(data.societa_id, str):
+                utente.societa_id = int(data.societa_id)
+            else:
+                utente.societa_id = data.societa_id
+    # Non super_admin non può assegnare ruolo super_admin
+    if data.ruolo == 'super_admin' and not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Non autorizzato ad assegnare ruolo super_admin")
     utente.ruolo = data.ruolo
-    utente.is_admin = 1 if data.ruolo == 'admin' else 0
+    utente.is_admin = 1 if data.ruolo in ('admin', 'super_admin') else 0
     # Solo super_admin può modificare is_super_admin
     if current_user.is_super_admin:
-        utente.is_super_admin = data.is_super_admin
+        utente.is_super_admin = 1 if data.ruolo == 'super_admin' else 0
     db.commit()
     return {"ok": True}
 
 @router.get("/utenti")
-def lista_utenti(current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
-    # Se non è super_admin, mostra solo utenti della propria società
+def lista_utenti(
+    societa_id: Optional[int] = None,
+    current_user: Utente = Depends(get_admin), 
+    db: Session = Depends(get_db)
+):
+    # Se non è super_admin, mostra solo utenti della propria società (escludendo super_admin)
     if not current_user.is_super_admin:
-        utenti = db.query(Utente).filter(Utente.societa_id == current_user.societa_id).all()
+        utenti = db.query(Utente).filter(
+            and_(
+                Utente.societa_id == current_user.societa_id,
+                or_(Utente.is_super_admin == 0, Utente.is_super_admin == None)
+            )
+        ).all()
     else:
-        utenti = db.query(Utente).all()
+        # Superadmin: filtra per società se specificata
+        if societa_id:
+            utenti = db.query(Utente).filter(Utente.societa_id == societa_id).all()
+        else:
+            utenti = db.query(Utente).all()
     result = []
     for u in utenti:
         rows = db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == u.id).all()
@@ -199,6 +249,12 @@ def assegna_categorie(uid: int, data: AssegnaCategorie, current_user: Utente = D
 
 @router.delete("/utenti/{uid}")
 def elimina_utente(uid: int, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
+    utente = db.query(Utente).filter(Utente.id == uid).first()
+    if not utente:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    # Non super_admin non può eliminare super_admin
+    if utente.is_super_admin and not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Non autorizzato a eliminare super admin")
     db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == uid).delete()
     db.query(Utente).filter(Utente.id == uid).delete()
     db.commit()

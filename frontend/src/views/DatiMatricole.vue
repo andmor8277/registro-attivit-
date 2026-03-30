@@ -266,7 +266,7 @@ onMounted(async () => {
 
 <style scoped>
 .dati-page { display: flex; flex-direction: column; height: 100vh; }
-.toolbar { display: flex; align-items: center; gap: 0.8rem; padding: 0.5rem 1rem; background: #8B0000; color: white; flex-shrink: 0; }
+.toolbar { display: flex; align-items: center; gap: 0.8rem; padding: 0.5rem 1rem; background: var(--color-primary); color: white; flex-shrink: 0; }
 .titolo-toolbar { flex: 1; font-weight: bold; font-size: 0.95rem; }
 .btn-back { padding: 4px 12px; border-radius: 4px; border: 1px solid #555; background: #2a2a4a; color: white; cursor: pointer; }
 .btn-nuovo { padding: 4px 14px; border-radius: 4px; border: none; background: #22c55e; color: white; cursor: pointer; font-weight: bold; }
@@ -280,7 +280,7 @@ onMounted(async () => {
 
 .tabella-wrapper { overflow-x: auto; background: #1a1a1a; border-radius: 8px; }
 .tabella-giocatori { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.tabella-giocatori th { background: #CC0000; color: white; padding: 0.75rem 0.5rem; text-align: left; font-weight: 600; white-space: nowrap; }
+.tabella-giocatori th { background: var(--color-primary); color: white; padding: 0.75rem 0.5rem; text-align: left; font-weight: 600; white-space: nowrap; }
 .tabella-giocatori td { padding: 0.6rem 0.5rem; border-bottom: 1px solid #2a2a2a; color: #ddd; }
 .tabella-giocatori tr:hover { background: #252525; }
 .tabella-giocatori tr.row-scad { background: rgba(234, 88, 12, 0.15); }
@@ -299,7 +299,7 @@ onMounted(async () => {
 .badge-g4 { background: #ea580c; }
 .cell-action { width: 50px; text-align: center; }
 .btn-modifica { background: #333; border: none; cursor: pointer; font-size: 1rem; padding: 4px 10px; border-radius: 4px; color: #ddd; }
-.btn-modifica:hover { background: #CC0000; color: white; }
+.btn-modifica:hover { background: var(--color-primary); color: white; }
 .no-data { text-align: center; padding: 2rem; color: #666; }
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; }
@@ -308,16 +308,16 @@ onMounted(async () => {
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .form-field label { display: block; font-size: 0.75rem; color: #888; margin-bottom: 0.25rem; text-transform: uppercase; }
 .form-field input, .form-field select { width: 100%; padding: 0.5rem; border: 1px solid #333; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; background: #111; color: #eee; }
-.form-field input:focus, .form-field select:focus { outline: none; border-color: #CC0000; }
+.form-field input:focus, .form-field select:focus { outline: none; border-color: var(--color-primary); }
 .modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
 .modal-actions-right { display: flex; gap: 0.5rem; }
-.btn-elimina { padding: 0.5rem 1rem; border: 1px solid #dc2626; border-radius: 4px; background: transparent; color: #dc2626; cursor: pointer; }
-.btn-elimina:hover { background: #dc2626; color: white; }
+.btn-elimina { padding: 0.5rem 1rem; border: 1px solid var(--color-primary); border-radius: 4px; background: transparent; color: var(--color-primary); cursor: pointer; }
+.btn-elimina:hover { background: var(--color-primary); color: white; }
 .btn-annulla { padding: 0.5rem 1rem; border: 1px solid #444; border-radius: 4px; background: #222; color: #ddd; cursor: pointer; }
-.btn-salva { padding: 0.5rem 1rem; border: none; border-radius: 4px; background: #CC0000; color: white; cursor: pointer; font-weight: 600; }
-.btn-salva:hover { background: #a30000; }
+.btn-salva { padding: 0.5rem 1rem; border: none; border-radius: 4px; background: var(--color-primary); color: white; cursor: pointer; font-weight: 600; }
+.btn-salva:hover { background: var(--color-primary-dark); }
 
-.page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: #8B0000; }
+.page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--color-primary); }
 .header-left { display: flex; gap: 0.25rem; }
 .btn-back, .btn-home { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer; transition: background 0.2s; }
 .btn-back:hover, .btn-home:hover { background: rgba(255,255,255,0.2); }

@@ -1,10 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
+import os
+import shutil
+from pathlib import Path
 from ..database import SessionLocal
 from ..models import Societa
 from .auth import get_admin, get_current_user
+
+UPLOAD_DIR = Path(__file__).parent.parent.parent / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 router = APIRouter(prefix="/societa", tags=["societa"])
 
@@ -74,3 +81,16 @@ def elimina_societa(sid: int, db: Session = Depends(get_db), current_user=Depend
     db.delete(s)
     db.commit()
     return {"ok": True}
+
+@router.post("/upload/{tipo}")
+async def upload_file(tipo: str, file: UploadFile = File(...), current_user=Depends(get_admin)):
+    if tipo not in ["logo", "logosponsor"]:
+        raise HTTPException(status_code=400, detail="Tipo file non valido")
+    
+    filename = f"{tipo}_{file.filename}"
+    filepath = UPLOAD_DIR / filename
+    
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    return {"filename": filename}

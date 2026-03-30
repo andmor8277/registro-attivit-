@@ -1,8 +1,8 @@
 <template>
   <div class="admin">
     <header class="page-header">
-      <h1>Gestione Società</h1>
-      <p class="page-subtitle">Crea e gestisci le società sportive</p>
+      <h1>{{ isSuperAdmin ? 'Gestione Società' : 'Modifica la tua Società' }}</h1>
+      <p class="page-subtitle">{{ isSuperAdmin ? 'Crea e gestisci le società sportive' : 'Modifica logo e colori della tua società' }}</p>
     </header>
 
     <div class="card card-create">
@@ -19,14 +19,10 @@
           <input v-model="nuovo.nome" placeholder="Es. RedTigers 1957" />
         </div>
         <div class="input-group">
-          <label>Nome Breve</label>
-          <input v-model="nuovo.nome_breve" placeholder="Es. RedTigers" />
-        </div>
-        <div class="input-group">
           <label>Colore Primario</label>
           <div class="color-input">
             <input type="color" v-model="nuovo.colore_primario" />
-            <input v-model="nuovo.colore_primario" placeholder="#dc2626" />
+            <input v-model="nuovo.colore_primario" placeholder="var(--color-primary)" />
           </div>
         </div>
         <div class="input-group">
@@ -36,24 +32,40 @@
             <input v-model="nuovo.colore_secondario" placeholder="#1f2937" />
           </div>
         </div>
-        <div class="input-group">
+      </div>
+      
+      <!-- Logo upload -->
+      <div class="logo-upload-section">
+        <div class="logo-upload-group">
           <label>Logo</label>
-          <input v-model="nuovo.logo" placeholder="nomefile.jpg" />
+          <div class="logo-preview" v-if="nuovo.logo || logoPreview">
+            <img v-if="logoPreview" :src="logoPreview" alt="Logo" />
+            <img v-else-if="nuovo.logo" :src="`/uploads/${nuovo.logo}`" alt="Logo" />
+          </div>
+          <input type="file" @change="handleLogoUpload" accept="image/*" />
+          <button v-if="nuovo.logo" type="button" class="btn-remove" @click="rimuoviLogo">Rimuovi logo</button>
         </div>
-        <div class="input-group">
+        
+        <div class="logo-upload-group">
           <label>Logo Sponsor</label>
-          <input v-model="nuovo.logosponsor" placeholder="nomefile.png" />
+          <div class="logo-preview" v-if="nuovo.logosponsor || logosponsorPreview">
+            <img v-if="logosponsorPreview" :src="logosponsorPreview" alt="Logo Sponsor" />
+            <img v-else-if="nuovo.logosponsor" :src="`/uploads/${nuovo.logosponsor}`" alt="Logo Sponsor" />
+          </div>
+          <input type="file" @change="handleLogosponsorUpload" accept="image/*" />
+          <button v-if="nuovo.logosponsor" type="button" class="btn-remove" @click="rimuoviLogosponsor">Rimuovi logo sponsor</button>
         </div>
       </div>
+      
       <div class="form-actions">
-        <button class="btn-secondary" @click="resetForm" v-if="editing">Annulla</button>
+        <button class="btn-secondary" @click="isSuperAdmin ? resetForm() : router.push('/')" v-if="editing">Annulla</button>
         <button class="btn-primary" @click="salva">
           {{ editing ? 'Salva modifiche' : 'Crea società' }}
         </button>
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" v-if="isSuperAdmin">
       <div class="card-header">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
@@ -61,26 +73,27 @@
         </svg>
         <h3>Società esistenti</h3>
       </div>
-      <table class="data-table">
+        <table class="data-table">
         <thead>
           <tr>
-            <th>Colore</th>
-            <th>Nome</th>
-            <th>Nome Breve</th>
             <th>Logo</th>
-            <th>Logo Sponsor</th>
+            <th>Nome</th>
+            <th>Colore</th>
             <th>Azioni</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="s in societa" :key="s.id">
             <td>
-              <div class="color-badge" :style="{ background: s.colore_primario }"></div>
+              <div class="logo-badge" :style="{ background: s.colore_primario }">
+                <img v-if="s.logo" :src="`/uploads/${s.logo}`" :alt="s.nome" />
+                <span v-else>{{ s.nome?.charAt(0) || 'S' }}</span>
+              </div>
             </td>
             <td>{{ s.nome }}</td>
-            <td>{{ s.nome_breve || '-' }}</td>
-            <td>{{ s.logo || '-' }}</td>
-            <td>{{ s.logosponsor || '-' }}</td>
+            <td>
+              <div class="color-badge" :style="{ background: s.colore_primario }"></div>
+            </td>
             <td>
               <div class="action-btns">
                 <button class="btn-icon" @click="modifica(s)" title="Modifica">
@@ -89,7 +102,7 @@
                     <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                   </svg>
                 </button>
-                <button class="btn-icon btn-danger" @click="elimina(s.id)" title="Elimina" v-if="societa.length > 1">
+                <button class="btn-icon btn-danger" @click="elimina(s.id)" title="Elimina">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="3 6 5 6 21 6"/>
                     <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
@@ -105,19 +118,60 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { getSocieta, createSocieta, updateSocieta, deleteSocieta } from '../api/index.js'
+import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { getSocieta, createSocieta, updateSocieta, deleteSocieta, uploadSocietaFile } from '../api/index.js'
+import { useStore } from '../store.js'
+
+const { setSocietaAttiva } = useStore()
+
+const route = useRoute()
+const router = useRouter()
+
+const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === 'true')
 
 const societa = ref([])
 const editing = ref(null)
+const logoFile = ref(null)
+const logosponsorFile = ref(null)
+const logoPreview = ref(null)
+const logosponsorPreview = ref(null)
 const nuovo = ref({
   nome: '',
   nome_breve: '',
   logo: '',
   logosponsor: '',
-  colore_primario: '#dc2626',
+  colore_primario: 'var(--color-primary)',
   colore_secondario: '#1f2937'
 })
+
+function handleLogoUpload(event) {
+  const file = event.target.files[0]
+  if (file) {
+    logoFile.value = file
+    logoPreview.value = URL.createObjectURL(file)
+  }
+}
+
+function handleLogosponsorUpload(event) {
+  const file = event.target.files[0]
+  if (file) {
+    logosponsorFile.value = file
+    logosponsorPreview.value = URL.createObjectURL(file)
+  }
+}
+
+function rimuoviLogo() {
+  logoFile.value = null
+  logoPreview.value = null
+  nuovo.value.logo = ''
+}
+
+function rimuoviLogosponsor() {
+  logosponsorFile.value = null
+  logosponsorPreview.value = null
+  nuovo.value.logosponsor = ''
+}
 
 async function load() {
   const res = await getSocieta()
@@ -126,12 +180,16 @@ async function load() {
 
 function resetForm() {
   editing.value = null
+  logoFile.value = null
+  logosponsorFile.value = null
+  logoPreview.value = null
+  logosponsorPreview.value = null
   nuovo.value = {
     nome: '',
     nome_breve: '',
     logo: '',
     logosponsor: '',
-    colore_primario: '#dc2626',
+    colore_primario: 'var(--color-primary)',
     colore_secondario: '#1f2937'
   }
 }
@@ -147,14 +205,37 @@ async function salva() {
     return
   }
   
-  if (editing.value) {
-    await updateSocieta(editing.value, nuovo.value)
-  } else {
-    await createSocieta(nuovo.value)
+  try {
+    // Upload logo if changed
+    if (logoFile.value) {
+      const uploadRes = await uploadSocietaFile('logo', logoFile.value)
+      nuovo.value.logo = uploadRes.data.filename
+    }
+    
+    // Upload logosponsor if changed
+    if (logosponsorFile.value) {
+      const uploadRes = await uploadSocietaFile('logosponsor', logosponsorFile.value)
+      nuovo.value.logosponsor = uploadRes.data.filename
+    }
+    
+    if (editing.value) {
+      await updateSocieta(editing.value, nuovo.value)
+    } else {
+      await createSocieta(nuovo.value)
+    }
+    
+    // Aggiorna i colori della società anche nel store
+    if (!isSuperAdmin.value) {
+      setSocietaAttiva(nuovo.value)
+      router.push('/')
+      return
+    }
+    
+    await load()
+    resetForm()
+  } catch (e) {
+    alert('Errore: ' + (e.response?.data?.detail || e.message))
   }
-  
-  await load()
-  resetForm()
 }
 
 async function elimina(id) {
@@ -163,7 +244,16 @@ async function elimina(id) {
   await load()
 }
 
-onMounted(load)
+onMounted(async () => {
+  await load()
+  // Se c'è un id nella query, modifica direttamente quella società
+  if (route.query.id) {
+    const s = societa.value.find(s => s.id === parseInt(route.query.id))
+    if (s) {
+      modifica(s)
+    }
+  }
+})
 </script>
 
 <style scoped>
@@ -209,7 +299,7 @@ onMounted(load)
 .card-header svg {
   width: 24px;
   height: 24px;
-  color: #dc2626;
+  color: var(--color-primary);
 }
 
 .card-header h3 {
@@ -248,7 +338,7 @@ onMounted(load)
 
 .input-group input:focus {
   outline: none;
-  border-color: #dc2626;
+  border-color: var(--color-primary);
 }
 
 .color-input {
@@ -262,6 +352,68 @@ onMounted(load)
   cursor: pointer;
 }
 
+.logo-upload-section {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #0d0d0d;
+  border-radius: var(--radius-md);
+}
+
+.logo-upload-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.logo-upload-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #aaa;
+}
+
+.logo-upload-group input[type="file"] {
+  padding: 0.5rem;
+  background: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: var(--radius-md);
+  color: #ccc;
+  font-size: 0.875rem;
+}
+
+.logo-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #fff;
+  border: 2px solid #333;
+}
+
+.logo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.btn-remove {
+  padding: 0.375rem 0.75rem;
+  background: transparent;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-remove:hover {
+  background: var(--color-primary);
+  color: white;
+}
+
 .form-actions {
   display: flex;
   gap: 1rem;
@@ -270,7 +422,7 @@ onMounted(load)
 
 .btn-primary {
   padding: 0.75rem 1.5rem;
-  background: #dc2626;
+  background: var(--color-primary);
   border: none;
   border-radius: var(--radius-md);
   color: white;
@@ -318,6 +470,29 @@ onMounted(load)
   border: 2px solid #444;
 }
 
+.logo-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.logo-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.logo-badge span {
+  font-weight: 700;
+  color: white;
+  font-size: 1rem;
+}
+
 .action-btns {
   display: flex;
   gap: 0.5rem;
@@ -342,7 +517,7 @@ onMounted(load)
 }
 
 .btn-icon.btn-danger:hover {
-  background: #dc2626;
+  background: var(--color-primary);
 }
 
 .btn-icon svg {
