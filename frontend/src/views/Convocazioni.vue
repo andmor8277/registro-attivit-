@@ -102,13 +102,15 @@
           <div class="gare-grid" :style="{ gridTemplateColumns: 'repeat(' + convocazione.gare.length + ', minmax(220px, 1fr))' }">
             <!-- HEADER -->
             <div class="gare-header-full" :style="{ gridColumn: '1 / -1' }">
-              <img src="/logosponsor.png" alt="logo" class="logo-rt logo-left" />
+              <img v-if="societaAttiva?.logosponsor" :src="'/uploads/' + societaAttiva.logosponsor" alt="logo" class="logo-rt logo-left" />
+              <img v-else src="/logosponsor.png" alt="logo" class="logo-rt logo-left" />
               <div class="header-rt-text">
-                <div class="header-rt-title">RED TIGERS 1957</div>
+                <div class="header-rt-title">{{ societaAttiva?.nome || 'SQUADRA' }}</div>
                 <div class="header-rt-subtitle">CONVOCAZIONE GARE</div>
                 <div class="header-rt-category">{{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</div>
               </div>
-              <img src="/logo.jpg" alt="logo" class="logo-rt logo-right" />
+              <img v-if="societaAttiva?.logo" :src="'/uploads/' + societaAttiva.logo" alt="logo" class="logo-rt logo-right" />
+              <img v-else src="/logo.jpg" alt="logo" class="logo-rt logo-right" />
             </div>
             <div v-for="(gara, gi) in convocazione.gare" :key="gi" class="gara-col">
               <div class="gara-header">
@@ -182,7 +184,7 @@ import html2canvas from 'html2canvas'
 
 const router = useRouter()
 const route = useRoute()
-const { categoriaAttiva } = useStore()
+const { categoriaAttiva, societaAttiva } = useStore()
 const categoriaId = parseInt(route.params.id)
 
 const base = '/api'
@@ -540,13 +542,13 @@ onMounted(async () => {
 <style scoped>
 .conv-page { display: flex; flex-direction: column; height: 100vh; width: 100%; max-width: none; }
 .editor { flex: 1; overflow-y: auto; padding: 1rem; width: 100%; max-width: none; }
-.toolbar { display: flex; align-items: center; gap: 0.8rem; padding: 0.5rem 1rem; background: #8B0000; color: white; flex-shrink: 0; }
+.toolbar { display: flex; align-items: center; gap: 0.8rem; padding: 0.5rem 1rem; background: var(--color-primary); color: white; flex-shrink: 0; }
 .titolo-toolbar { flex: 1; font-weight: bold; font-size: 0.95rem; }
 .btn-back { padding: 4px 12px; border-radius: 4px; border: 1px solid #555; background: #2a2a4a; color: white; cursor: pointer; }
-.btn-nuovo { padding: 4px 14px; border-radius: 4px; border: none; background: #e94560; color: white; cursor: pointer; font-weight: bold; }
+.btn-nuovo { padding: 4px 14px; border-radius: 4px; border: none; background: var(--color-primary); color: white; cursor: pointer; font-weight: bold; }
 .conv-body { display: flex; flex: 1; overflow: hidden; }
 
-.gare-header-full { background: linear-gradient(135deg, #8B0000 0%, #CC0000 100%); color: white; padding: 10px 10px; display: flex; align-items: center; justify-content: center; gap: 1.5rem; border-radius: 8px 8px 0 0; }
+.gare-header-full { background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%); color: white; padding: 10px 10px; display: flex; align-items: center; justify-content: center; gap: 1.5rem; border-radius: 8px 8px 0 0; }
 .logo-rt { width: 70px; height: 70px; object-fit: contain; border-radius: 50%; background: white; padding: 2px; margin: 0; }
 .header-rt-text { text-align: center; }
 .header-rt-title { font-size: 1.5rem; font-weight: 900; letter-spacing: 3px; }
@@ -584,7 +586,7 @@ onMounted(async () => {
 
 .storico-item { padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-bottom: 3px; background: #f5f5f5; color: #333; }
 .storico-item:hover { background: #e0e0e0; }
-.storico-item.attivo { background: #CC0000; color: white; }
+.storico-item.attivo { background: var(--color-primary); color: white; }
 
 .misters-section { background: #fff8f8; }
 .mister-item {
@@ -607,12 +609,12 @@ onMounted(async () => {
 .field-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
 .field-row input { padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; }
 .actions { display: flex; gap: 0.5rem; margin-left: auto; }
-.btn-salva { padding: 6px 18px; background: #CC0000; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-.btn-del { padding: 6px 14px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; }
+.btn-salva { padding: 6px 18px; background: var(--color-primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.btn-del { padding: 6px 14px; background: var(--color-primary); color: white; border: none; border-radius: 4px; cursor: pointer; }
 .gare-scroll { overflow-x: auto; width: 100%; }
 .gare-grid { display: grid; gap: 1rem; min-width: max-content; width: 100%; }
 .gara-col { background: white; border: 1px solid #ddd; border-radius: 8px; min-width: 320px; }
-.gara-header { background: #CC0000; color: white; font-weight: bold; padding: 10px 14px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 50px; }
+.gara-header { background: var(--color-primary); color: white; font-weight: bold; padding: 10px 14px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 50px; }
 .gara-header span { flex-shrink: 0; }
 .gara-title-input { flex: 1; min-width: 0; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 8px 14px; color: white; font-size: 1.1rem; font-weight: 700; text-align: center; line-height: 1.2; }
 .gara-title-input::placeholder { color: rgba(255,255,255,0.6); }
@@ -643,10 +645,10 @@ onMounted(async () => {
 .giocatore-row select { flex: 1; min-width: 150px; font-size: 1rem; padding: 6px 12px; border: 1px solid #eee; border-radius: 3px; }
 .note-section { margin-top: 1rem; }
 .note-section label { font-size: 0.8rem; font-weight: bold; color: #555; display: block; margin-bottom: 4px; }
-.note-section textarea { width: 100%; border: 1px solid #CC0000; border-radius: 4px; padding: 10px; font-size: 0.7rem; resize: vertical; background: #CC0000; color: white; font-weight: bold; white-space: pre-wrap; word-wrap: break-word; min-height: 120px; line-height: 1.3; }
+.note-section textarea { width: 100%; border: 1px solid var(--color-primary); border-radius: 4px; padding: 10px; font-size: 0.7rem; resize: vertical; background: var(--color-primary); color: white; font-weight: bold; white-space: pre-wrap; word-wrap: break-word; min-height: 120px; line-height: 1.3; }
 .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 1rem; }
 
-.page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: #CC0000; }
+.page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--color-primary); }
 .header-left { display: flex; align-items: center; gap: 0.25rem; }
 .btn-back, .btn-home { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer; transition: background 0.2s; }
 .btn-back:hover, .btn-home:hover { background: rgba(255,255,255,0.2); }

@@ -40,6 +40,16 @@
           <h1>Seleziona Categoria</h1>
           <p class="page-subtitle">Scegli la categoria da gestire</p>
         </div>
+        <!-- Pulsante per cambiare società per SuperAdmin -->
+        <div v-if="isSuperAdmin" class="societa-button">
+          <button class="btn-societa" @click="vaiSelezioneSocieta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            {{ societaAttiva?.nome || 'Seleziona Società' }}
+          </button>
+        </div>
         <div class="header-actions" v-if="stagioni.archiviate.length > 0 || utenteAttivo?.is_admin">
           <button v-if="stagioni.archiviate.length > 0" class="btn-archived" @click="mostraStagioniArchiviate = !mostraStagioniArchiviate">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -170,6 +180,13 @@
           </div>
           
           <div class="modal-body">
+            <div class="form-group" v-if="isSuperAdmin">
+              <label>Società *</label>
+              <select v-model="societaIdSelezionata" required>
+                <option :value="null" disabled>Seleziona società...</option>
+                <option v-for="s in listaSocieta" :key="s.id" :value="s.id">{{ s.nome }}</option>
+              </select>
+            </div>
             <div class="form-group">
               <label>Nome</label>
               <input v-model="modal.nome" placeholder="Es. Esordienti" />
@@ -315,12 +332,28 @@
 <script setup>
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { getCategorie, getAllCategorie, createCategoria, updateCategoria, deleteCategoria, getStagioni, archiviaStagione, getUtenti, getCategoriaUtenti, assegnaCategoriaUtenti, importaGiocatori as importaGiocatoriApi, getCategoriaResponsabili } from "../api/index.js"
+import { getCategorie, getAllCategorie, createCategoria, updateCategoria, deleteCategoria, getStagioni, archiviaStagione, getUtenti, getCategoriaUtenti, assegnaCategoriaUtenti, importaGiocatori as importaGiocatoriApi, getCategoriaResponsabili, getSocieta } from "../api/index.js"
 import { useStore as useCategoria } from "../store.js"
-const { utenteAttivo } = useCategoria()
+const { utenteAttivo, societaAttiva, setSocietaAttiva } = useCategoria()
 
 const router = useRouter()
 const { setCategoria, setStagioneCorrente } = useCategoria()
+const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === 'true')
+const listaSocieta = ref([])
+const societaIdSelezionata = ref(null)
+
+function cambiaSocieta() {
+  const societa = listaSocieta.value.find(s => s.id === societaIdSelezionata.value)
+  if (societa) {
+    setSocietaAttiva(societa)
+    loadCategorie()
+    loadStagioni()
+  }
+}
+
+function vaiSelezioneSocieta() {
+  router.push('/login')
+}
 const categorie = ref([])
 const allCategories = ref([])
 const loading = ref(false)
@@ -414,14 +447,32 @@ function apriNuova() {
 
 async function loadCategorie() {
   try {
+    // Carica sempre le società
+    const societaRes = await getSocieta()
+    listaSocieta.value = societaRes.data
+    
+    // Se è superadmin
+    if (isSuperAdmin.value) {
+      // SuperAdmin: non imposta una società specifica come attiva
+      // Vedrà TUTTE le società
+      societaIdSelezionata.value = null
+      setSocietaAttiva(null)
+    } else if (societaAttiva.value) {
+      // Non superadmin: usa la società assegnata
+      listaSocieta.value = [societaAttiva.value]
+      societaIdSelezionata.value = societaAttiva.value.id
+    }
+    
     const meRes = await import("../api/index.js").then(m => m.getMe())
     const me = meRes.data
-    const res = await getCategorie()
-    categorie.value = me.is_admin || me.categorie_ids === null
+    // SuperAdmin vede TUTTE le categorie, Admin locale solo le proprie
+    const societaIdForApi = isSuperAdmin.value ? null : (societaAttiva.value?.id || null)
+    const res = await getCategorie(societaIdForApi)
+    categorie.value = me.is_super_admin || me.is_admin || me.categorie_ids === null
       ? res.data
       : res.data.filter(c => me.categorie_ids.includes(c.id))
     
-    const allRes = await getAllCategorie()
+    const allRes = await getAllCategorie(societaIdForApi)
     allCategories.value = allRes.data
     
     for (const cat of categorie.value) {
@@ -436,7 +487,8 @@ async function loadCategorie() {
     }
     
     if (me?.is_admin) {
-      const utentiRes = await getUtenti()
+      // SuperAdmin vede tutti gli utenti, Admin locale solo quelli della propria società
+      const utentiRes = await getUtenti(isSuperAdmin.value ? null : societaAttiva.value?.id)
       tuttiUtenti.value = utentiRes.data.filter(u => !u.is_admin)
     }
   } catch (e) {
@@ -487,7 +539,16 @@ async function salvaCategoria() {
     return
   }
   
+  // SuperAdmin deve selezionare una società specifica
+  if (isSuperAdmin.value && !societaIdSelezionata.value) {
+    errore.value = 'Seleziona una società specifica per creare una categoria'
+    return
+  }
+  
   loading.value = true
+  
+  const societaId = isSuperAdmin.value ? societaIdSelezionata.value : (societaAttiva.value?.id || null)
+  console.log('Creando categoria - societa_id:', societaId, 'isSuperAdmin:', isSuperAdmin.value, 'societaAttiva:', societaAttiva.value)
   
   const payload = {
     nome: modal.value.nome,
@@ -495,7 +556,8 @@ async function salvaCategoria() {
     stagione: parseInt(modal.value.stagione),
     giorni: modal.value.giorniSel.sort().join(",") || null,
     is_portieri: modal.value.is_portieri,
-    drive_folder_id: modal.value.drive_folder_id || null
+    drive_folder_id: modal.value.drive_folder_id || null,
+    societa_id: societaId
   }
   
   try {
@@ -528,6 +590,12 @@ async function importaGiocatori() {
     return
   }
   
+  // SuperAdmin deve selezionare una società
+  if (isSuperAdmin.value && !societaIdSelezionata.value) {
+    errore.value = 'Seleziona una società specifica per importare giocatori'
+    return
+  }
+  
   if (!confirm('Importare i giocatori dalla categoria corrispondente della stagione precedente?')) {
     return
   }
@@ -535,13 +603,16 @@ async function importaGiocatori() {
   importLoading.value = true
   errore.value = ''
   
+  const societaId = isSuperAdmin.value ? societaIdSelezionata.value : (societaAttiva.value?.id || null)
+  
   const payload = {
     nome: modal.value.nome,
     anno: modal.value.is_portieri ? null : parseInt(modal.value.anno),
     stagione: parseInt(modal.value.stagione),
     giorni: modal.value.giorniSel.sort().join(",") || null,
     is_portieri: modal.value.is_portieri,
-    drive_folder_id: modal.value.drive_folder_id || null
+    drive_folder_id: modal.value.drive_folder_id || null,
+    societa_id: societaId
   }
   
   try {
@@ -695,6 +766,61 @@ onMounted(() => {
   align-items: flex-start;
   flex-wrap: wrap;
   gap: 1rem;
+}
+
+.societa-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.societa-selector label {
+  font-size: 0.875rem;
+  color: #aaa;
+}
+
+.societa-selector select {
+  padding: 0.5rem 1rem;
+  background: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.societa-button {
+  display: flex;
+  align-items: center;
+}
+
+.btn-societa {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: #1a1a1a;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-societa:hover {
+  background: var(--color-primary);
+}
+
+.btn-societa svg {
+  width: 18px;
+  height: 18px;
+}
+
+.societa-selector select:focus {
+  outline: none;
+  border-color: var(--color-primary);
 }
 
 .header-actions {
@@ -1007,7 +1133,7 @@ onMounted(() => {
 .cat-anno {
   font-size: 2.5rem;
   font-weight: 800;
-  color: #dc2626;
+  color: var(--color-primary);
   line-height: 1;
   margin-bottom: 0.5rem;
   letter-spacing: -0.03em;
@@ -1077,7 +1203,7 @@ onMounted(() => {
   border-radius: var(--radius-sm);
   font-size: 0.7rem;
   font-weight: 600;
-  color: #dc2626;
+  color: var(--color-primary);
 }
 
 .dirigente-badge {
