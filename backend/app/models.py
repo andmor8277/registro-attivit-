@@ -1,9 +1,21 @@
 from sqlalchemy import Column, Integer, String, Date, ForeignKey
 from .database import Base
 
+class Societa(Base):
+    __tablename__ = "societa"
+    id = Column(Integer, primary_key=True)
+    nome = Column(String(100), nullable=False)
+    nome_breve = Column(String(50), nullable=True)  # es. "RedTigers"
+    logo = Column(String(200), nullable=True)  # path/logo filename
+    logosponsor = Column(String(200), nullable=True)  # path/logosponsor filename
+    colore_primario = Column(String(7), default="#dc2626")  # hex color
+    colore_secondario = Column(String(7), default="#1f2937")  # hex color
+    is_attiva = Column(Integer, default=1)
+
 class Categoria(Base):
     __tablename__ = "categorie"
     id = Column(Integer, primary_key=True)
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
     nome = Column(String(100), nullable=False)
     anno = Column(Integer, nullable=True)  # anno di nascita (es. 2014)
     stagione = Column(Integer, nullable=True)  # anno inizio stagione (es. 2025 per 2025/2026)
@@ -20,6 +32,7 @@ class Gruppo(Base):
 class Persona(Base):
     __tablename__ = "persone"
     id = Column(Integer, primary_key=True)
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
     nome = Column(String(100), nullable=False)
     cognome = Column(String(100), nullable=False)
     gruppo_id = Column(Integer, ForeignKey("gruppi.id"))
@@ -40,6 +53,7 @@ class CodicePresenza(Base):
 class Registro(Base):
     __tablename__ = "registro"
     id = Column(Integer, primary_key=True)
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
     persona_id = Column(Integer, ForeignKey("persone.id"), nullable=False)
     data = Column(Date, nullable=False)
     codice = Column(String(5), ForeignKey("codici.codice"), nullable=True)
@@ -48,9 +62,11 @@ class Registro(Base):
 class Utente(Base):
     __tablename__ = "utenti"
     id = Column(Integer, primary_key=True)
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
     username = Column(String(100), unique=True, nullable=False)
     password_hash = Column(String(200), nullable=False)
     is_admin = Column(Integer, default=0)
+    is_super_admin = Column(Integer, default=0)
     nome = Column(String(100), nullable=False)
     cognome = Column(String(100), nullable=False)
     data_nascita = Column(Date, nullable=False)
@@ -69,6 +85,7 @@ class UtenteCategoria(Base):
 class Convocazione(Base):
     __tablename__ = "convocazioni"
     id = Column(Integer, primary_key=True)
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
     categoria_id = Column(Integer, ForeignKey("categorie.id", ondelete="CASCADE"))
     data_inizio = Column(Date, nullable=False)
     data_fine = Column(Date, nullable=True)
