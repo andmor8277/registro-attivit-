@@ -1,5 +1,8 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 from .database import Base, engine
 from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa
 from .routers.auth import router as auth_router, get_current_user
@@ -60,6 +63,20 @@ with engine.connect() as conn:
         conn.commit()
         print("Migration: Added is_super_admin to utenti")
     
+    # Migration: Ensure admin user is super_admin
+    result = conn.execute(text("""
+        SELECT id FROM utenti WHERE username = 'admin' LIMIT 1
+    """))
+    admin_user = result.fetchone()
+    if admin_user:
+        conn.execute(text("UPDATE utenti SET is_super_admin = 1, is_admin = 1 WHERE username = 'admin'"))
+        conn.commit()
+        print("Migration: Set admin user as super_admin")
+    
+    # Ensure all other users have is_super_admin = 0
+    conn.execute(text("UPDATE utenti SET is_super_admin = 0 WHERE username != 'admin' AND is_super_admin IS NULL"))
+    conn.commit()
+    
     # Migration: Create default society if none exists
     result = conn.execute(text("SELECT COUNT(*) FROM societa"))
     if result.fetchone()[0] == 0:
@@ -81,6 +98,10 @@ with engine.connect() as conn:
 
 app = FastAPI(title="Registro Presenze API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], expose_headers=["*"])
+
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 app.include_router(auth_router)
 app.include_router(societa.router, dependencies=[Depends(get_current_user)])

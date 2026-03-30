@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from .. import models
@@ -26,11 +26,20 @@ def get_societa_filter(current_user: Utente):
     return current_user.societa_id
 
 @router.get("/")
-def get_categorie(db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
-    societa_id = get_societa_filter(current_user)
+def get_categorie(
+    db: Session = Depends(get_db), 
+    current_user: Utente = Depends(get_current_user),
+    societa_id: Optional[int] = Query(None)
+):
+    # Se è super_admin e societa_id è specificato, usa quello
+    if current_user.is_super_admin and societa_id:
+        filter_societa_id = societa_id
+    else:
+        filter_societa_id = get_societa_filter(current_user)
+    
     query = db.query(models.Categoria).filter(models.Categoria.is_archiviata == 0)
-    if societa_id:
-        query = query.filter(models.Categoria.societa_id == societa_id)
+    if filter_societa_id:
+        query = query.filter(models.Categoria.societa_id == filter_societa_id)
     tutte = query.order_by(models.Categoria.anno.desc()).all()
     
     if current_user.is_super_admin or current_user.is_admin:
@@ -40,11 +49,19 @@ def get_categorie(db: Session = Depends(get_db), current_user: Utente = Depends(
     return [c for c in tutte if c.id in ids]
 
 @router.get("/all")
-def get_all_categorie(db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def get_all_categorie(
+    db: Session = Depends(get_db), 
+    current_user: Utente = Depends(get_current_user),
+    societa_id: Optional[int] = Query(None)
+):
+    if current_user.is_super_admin and societa_id:
+        filter_societa_id = societa_id
+    else:
+        filter_societa_id = get_societa_filter(current_user)
+    
     query = db.query(models.Categoria).filter(models.Categoria.is_archiviata == 0)
-    societa_id = get_societa_filter(current_user)
-    if societa_id:
-        query = query.filter(models.Categoria.societa_id == societa_id)
+    if filter_societa_id:
+        query = query.filter(models.Categoria.societa_id == filter_societa_id)
     return query.order_by(models.Categoria.anno.desc()).all()
 
 @router.get("/archived")
@@ -111,8 +128,10 @@ def get_categorie_by_stagione(stagione: int, db: Session = Depends(get_db), curr
 
 @router.post("/")
 def create_categoria(c: CategoriaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
-    # Super admin può specificare società, altrimenti usa la sua
-    if current_user.is_super_admin and c.societa_id:
+    # Super admin deve specificare società, admin locale usa la sua
+    if current_user.is_super_admin:
+        if not c.societa_id:
+            raise HTTPException(status_code=400, detail="Specificare la società")
         societa_id = c.societa_id
     else:
         societa_id = current_user.societa_id
@@ -139,9 +158,10 @@ def update_categoria(categoria_id: int, c: CategoriaCreate, db: Session = Depend
     if not cat:
         raise HTTPException(status_code=404, detail="Categoria non trovata")
     # Verifica che la categoria sia della stessa società
-    societa_id = get_societa_filter(current_user)
-    if societa_id and cat.societa_id != societa_id:
-        raise HTTPException(status_code=403, detail="Non autorizzato")
+    # Superadmin può modificare solo categorie della società specificata o tutte
+    if not current_user.is_super_admin:
+        if cat.societa_id != current_user.societa_id:
+            raise HTTPException(status_code=403, detail="Non autorizzato")
     cat.nome = c.nome
     cat.anno = c.anno
     cat.stagione = c.stagione
@@ -157,9 +177,9 @@ def delete_categoria(categoria_id: int, db: Session = Depends(get_db), current_u
     if not cat:
         raise HTTPException(status_code=404, detail="Categoria non trovata")
     # Verifica che la categoria sia della stessa società
-    societa_id = get_societa_filter(current_user)
-    if societa_id and cat.societa_id != societa_id:
-        raise HTTPException(status_code=403, detail="Non autorizzato")
+    if not current_user.is_super_admin:
+        if cat.societa_id != current_user.societa_id:
+            raise HTTPException(status_code=403, detail="Non autorizzato")
     db.query(models.Registro).filter(models.Registro.categoria_id == categoria_id).delete()
     db.query(models.Persona).filter(models.Persona.categoria_id == categoria_id).delete()
     db.query(UtenteCategoria).filter(UtenteCategoria.categoria_id == categoria_id).delete()

@@ -2,13 +2,24 @@
   <div class="login-wrapper">
     <div class="login-bg"></div>
     <div class="login-card">
-      <!-- Selezione Società (per super_admin) -->
-      <div v-if="showSocietaSelection" class="societa-selection">
-        <div class="login-header">
-          <img src="/logo.jpg" alt="RedTigers" class="login-logo" />
-          <h1>Seleziona <span class="home-text">Società</span></h1>
-          <p class="subtitle">Scegli su quale società lavorare</p>
-        </div>
+        <!-- Selezione Società (per super_admin) -->
+        <div v-if="showSocietaSelection" class="societa-selection">
+          <div class="login-header">
+            <h1>The Home of <span class="home-text">Football</span></h1>
+            <p class="subtitle">Seleziona la società</p>
+          </div>
+          
+          <!-- Logo società selezionata -->
+          <div v-if="societaSelezionata" class="selected-societa-preview">
+            <img v-if="societaSelezionataObj?.logo" :src="`/uploads/${societaSelezionataObj.logo}`" :alt="societaSelezionataObj.nome" class="preview-logo" />
+            <div v-else class="preview-logo-placeholder" :style="{ background: societaSelezionataObj?.colore_primario }">
+              {{ societaSelezionataObj?.nome?.charAt(0) || 'S' }}
+            </div>
+            <div class="preview-info">
+              <h3>{{ societaSelezionataObj?.nome }}</h3>
+              <p>{{ societaSelezionataObj?.nome_breve }}</p>
+            </div>
+          </div>
         
         <div class="societa-grid">
           <div 
@@ -18,12 +29,18 @@
             @click="societaSelezionata = s.id"
           >
             <div class="societa-logo" :style="{ background: s.colore_primario }">
-              {{ s.nome_breve?.charAt(0) || s.nome.charAt(0) }}
+              <img v-if="s.logo" :src="`/uploads/${s.logo}`" :alt="s.nome" />
+              <span v-else>{{ s.nome?.charAt(0) || 'S' }}</span>
             </div>
             <div class="societa-info">
               <h3>{{ s.nome }}</h3>
-              <p>{{ s.nome_breve }}</p>
             </div>
+            <button type="button" v-if="isSuperAdmin" class="btn-edit-societa" @click.stop="modificaSocieta(s)" title="Modifica">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
           </div>
         </div>
         
@@ -34,13 +51,93 @@
             <polyline points="12 5 19 12 12 19"/>
           </svg>
         </button>
+        
+        <div class="create-societa" v-if="isSuperAdmin">
+          <button type="button" class="btn-create" @click="showCreateSocieta = true">
+            + Crea nuova società
+          </button>
+          <button type="button" class="btn-gestione" @click="vaiGestioneSocieta">
+            ⚙️ Gestione Società
+          </button>
+        </div>
+        
+        <!-- Modal creazione società -->
+        <div v-if="showCreateSocieta" class="create-modal">
+          <div class="create-modal-content">
+            <h3>Crea nuova società</h3>
+            
+            <div class="form-section">
+              <h4>Dati Società</h4>
+              <div class="form-group">
+                <label>Nome Società *</label>
+                <input v-model="newSocieta.nome" placeholder="Es. Nuova Società" />
+              </div>
+              <div class="form-group">
+                <label>Colore Primario</label>
+                <input type="color" v-model="newSocieta.colore_primario" />
+              </div>
+              <div class="form-group">
+                <label>Colore Secondario</label>
+                <input type="color" v-model="newSocieta.colore_secondario" />
+              </div>
+              <div class="form-group">
+                <label>Logo</label>
+                <input type="file" @change="handleLogoUpload" accept="image/*" />
+              </div>
+              <div class="form-group">
+                <label>Logo Sponsor</label>
+                <input type="file" @change="handleLogosponsorUpload" accept="image/*" />
+              </div>
+            </div>
+            
+            <div class="form-section">
+              <h4>Amministratore Locale</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Username *</label>
+                  <input v-model="newAdmin.username" placeholder="admin" />
+                </div>
+                <div class="form-group">
+                  <label>Password *</label>
+                  <input v-model="newAdmin.password" type="password" placeholder="Password" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Nome *</label>
+                  <input v-model="newAdmin.nome" placeholder="Nome" />
+                </div>
+                <div class="form-group">
+                  <label>Cognome *</label>
+                  <input v-model="newAdmin.cognome" placeholder="Cognome" />
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-section">
+              <h4>Stagione</h4>
+              <div class="form-group">
+                <label>Stagione *</label>
+                <select v-model="newStagione">
+                  <option :value="currentYear">{{ currentYear }}/{{ currentYear + 1 }}</option>
+                  <option :value="currentYear - 1">{{ currentYear - 1 }}/{{ currentYear }}</option>
+                  <option :value="currentYear + 1">{{ currentYear + 1 }}/{{ currentYear + 2 }}</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary" @click="showCreateSocieta = false">Annulla</button>
+              <button type="button" class="btn-primary" @click="creaSocieta">Crea</button>
+            </div>
+          </div>
+        </div>
       </div>
       
       <!-- Login Form -->
       <div v-else>
         <div class="login-header">
-          <img src="/logo.jpg" alt="RedTigers" class="login-logo" />
-          <h1>Red Tigers <span class="home-text">Home</span></h1>
+          <h1>The Home of <span class="home-text">Football</span></h1>
           <p class="subtitle">Accedi al tuo account</p>
         </div>
         
@@ -119,9 +216,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { login, getMe, getSocieta, getSocietaById } from '../api/index.js'
+import { login, getMe, getSocieta, getSocietaById, createSocieta, uploadSocietaFile, createUtente, createCategoria } from '../api/index.js'
 import { useStore } from '../store.js'
 
 const username = ref('')
@@ -132,8 +229,45 @@ const showPassword = ref(false)
 const showSocietaSelection = ref(false)
 const societaOptions = ref([])
 const societaSelezionata = ref(null)
+const societaSelezionataObj = computed(() => societaOptions.value.find(s => s.id === societaSelezionata.value))
+const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === 'true')
+const showCreateSocieta = ref(false)
+const newSocieta = ref({
+  nome: '',
+  nome_breve: null,
+  colore_primario: 'var(--color-primary)',
+  colore_secondario: '#1f2937',
+  logo: '',
+  logosponsor: ''
+})
+const logoFile = ref(null)
+const logosponsorFile = ref(null)
+const currentYear = new Date().getFullYear()
+const newStagione = ref(new Date().getFullYear())
+const newAdmin = ref({
+  username: '',
+  password: '',
+  nome: '',
+  cognome: ''
+})
+
+function handleLogoUpload(event) {
+  const file = event.target.files[0]
+  if (file) {
+    logoFile.value = file
+    newSocieta.value.logo = file.name
+  }
+}
+
+function handleLogosponsorUpload(event) {
+  const file = event.target.files[0]
+  if (file) {
+    logosponsorFile.value = file
+    newSocieta.value.logosponsor = file.name
+  }
+}
 const router = useRouter()
-const { setToken, utenteAttivo, setSocietaAttiva, setListaSocieta } = useStore()
+const { setToken, utenteAttivo, setSocietaAttiva, setListaSocieta, societaAttiva } = useStore()
 
 onMounted(async () => {
   // Carica lista società per selezione
@@ -141,6 +275,17 @@ onMounted(async () => {
     const res = await getSocieta()
     societaOptions.value = res.data
     setListaSocieta(res.data)
+    
+    // Se utente già loggato e super_admin, mostra selezione società
+    const token = localStorage.getItem('token')
+    const isSuper = localStorage.getItem('is_super_admin') === 'true'
+    if (token && isSuper) {
+      const me = await getMe()
+      utenteAttivo.value = me.data
+      showSocietaSelection.value = true
+      // Resetta società attiva per obbligare la scelta
+      setSocietaAttiva(null)
+    }
   } catch (e) {
     console.error('Errore caricamento società:', e)
   }
@@ -157,19 +302,23 @@ async function doLogin() {
     const me = await getMe()
     utenteAttivo.value = me.data
     
-    // Salva is_super_admin
-    localStorage.setItem('is_super_admin', me.data.is_super_admin ? 'true' : 'false')
+    // Salva is_super_admin e is_admin
+    const isSuper = me.data.is_super_admin || me.data.ruolo === 'super_admin'
+    const isAdmin = me.data.is_admin || me.data.ruolo === 'admin' || me.data.ruolo === 'super_admin'
+    localStorage.setItem('is_super_admin', isSuper ? 'true' : 'false')
+    localStorage.setItem('is_admin', isAdmin ? 'true' : 'false')
     
-    // Se è super_admin, mostra selezione società
-    if (me.data.is_super_admin) {
+    // Se è super_admin (ruolo o flag), mostra selezione società
+    if (isSuper) {
       showSocietaSelection.value = true
       loading.value = false
       return
     }
     
-    // Altrimenti, carica la società dell'utente e vai alla home
+    // Admin locale: carica la società dell'utente e vai alla home
     if (me.data.societa_id) {
       const societaRes = await getSocietaById(me.data.societa_id)
+      console.log('Login - societa caricata:', societaRes.data)
       setSocietaAttiva(societaRes.data)
     }
     
@@ -189,6 +338,91 @@ async function confermaSocieta() {
   const societa = societaOptions.value.find(s => s.id === societaSelezionata.value)
   setSocietaAttiva(societa)
   router.push('/')
+}
+
+function vaiGestioneSocieta() {
+  router.push('/admin/societa')
+}
+
+function modificaSocieta(s) {
+  // Popola il form con i dati della società esistente
+  newSocieta.value = { 
+    nome: s.nome, 
+    nome_breve: s.nome_breve, 
+    colore_primario: s.colore_primario, 
+    colore_secondario: s.colore_secondario, 
+    logo: s.logo || '', 
+    logosponsor: s.logosponsor || '' 
+  }
+  societaSelezionata.value = s.id
+  showCreateSocieta.value = true
+}
+
+async function creaSocieta() {
+  if (!newSocieta.value.nome) {
+    alert('Inserisci il nome della società')
+    return
+  }
+  if (!newAdmin.value.username || !newAdmin.value.password || !newAdmin.value.nome || !newAdmin.value.cognome) {
+    alert('Compila tutti i dati dell\'amministratore')
+    return
+  }
+  try {
+    // Upload logo
+    if (logoFile.value) {
+      const uploadRes = await uploadSocietaFile('logo', logoFile.value)
+      newSocieta.value.logo = uploadRes.data.filename
+    }
+    // Upload logosponsor
+    if (logosponsorFile.value) {
+      const uploadRes = await uploadSocietaFile('logosponsor', logosponsorFile.value)
+      newSocieta.value.logosponsor = uploadRes.data.filename
+    }
+    
+    // Crea società
+    const res = await createSocieta(newSocieta.value)
+    const nuova = res.data
+    
+    // Crea utente admin per la società
+    await createUtente({
+      username: newAdmin.value.username,
+      password: newAdmin.value.password,
+      nome: newAdmin.value.nome,
+      cognome: newAdmin.value.cognome,
+      data_nascita: null,
+      codice_fiscale: null,
+      cellulare: null,
+      tesserino: null,
+      ruolo: 'admin',
+      is_admin: 1,
+      societa_id: nuova.id
+    })
+    
+    // Crea la stagione come categoria attiva
+    await createCategoria({
+      nome: 'Stagione ' + newStagione.value + '/' + (newStagione.value + 1),
+      anno: newStagione.value,
+      stagione: newStagione.value,
+      giorni: null,
+      is_portieri: false,
+      societa_id: nuova.id
+    })
+    
+    societaOptions.value.push(nuova)
+    societaSelezionata.value = nuova.id
+    setListaSocieta(societaOptions.value)
+    setSocietaAttiva(nuova)
+    showCreateSocieta.value = false
+    newSocieta.value = { nome: '', nome_breve: null, colore_primario: 'var(--color-primary)', colore_secondario: '#1f2937', logo: '', logosponsor: '' }
+    newAdmin.value = { username: '', password: '', nome: '', cognome: '' }
+    newStagione.value = currentYear
+    logoFile.value = null
+    logosponsorFile.value = null
+    router.push('/')
+  } catch (e) {
+    console.error('Errore nella creazione:', e)
+    alert('Errore nella creazione della società: ' + (e.response?.data?.detail || e.message))
+  }
 }
 </script>
 
@@ -230,13 +464,6 @@ async function confermaSocieta() {
   margin-bottom: 2rem;
 }
 
-.login-logo {
-  width: 100px;
-  height: auto;
-  margin: 0 auto 1rem;
-  object-fit: contain;
-}
-
 h1 {
   font-size: 1.75rem;
   font-weight: 800;
@@ -246,7 +473,7 @@ h1 {
 }
 
 .home-text {
-  color: #dc2626;
+  color: var(--color-primary);
 }
 
 .subtitle {
@@ -293,7 +520,7 @@ h1 {
 
 .form-group input:focus {
   outline: none;
-  border-color: #dc2626;
+  border-color: var(--color-primary);
   background: #0d0d0d;
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
 }
@@ -359,7 +586,7 @@ h1 {
   justify-content: center;
   gap: 0.5rem;
   padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   border: none;
   border-radius: var(--radius-md);
   color: white;
@@ -410,10 +637,172 @@ h1 {
   .login-card {
     padding: 1.5rem;
   }
+}
 
-  .login-logo {
-    width: 80px;
-  }
+.create-societa {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.btn-create {
+  background: transparent;
+  border: 2px dashed #444;
+  border-radius: var(--radius-md);
+  color: #888;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.btn-create:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.btn-gestione {
+  margin-top: 0.5rem;
+  background: #333;
+  border: none;
+  border-radius: var(--radius-md);
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-gestione:hover {
+  background: #444;
+}
+
+.create-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+}
+
+.create-modal-content {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.create-modal-content h3 {
+  color: #fff;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.create-modal-content .form-group {
+  margin-bottom: 1rem;
+}
+
+.create-modal-content .form-group label {
+  display: block;
+  font-size: 0.875rem;
+  color: #aaa;
+  margin-bottom: 0.5rem;
+}
+
+.create-modal-content .form-group input[type="color"] {
+  width: 50px;
+  height: 40px;
+  padding: 0.25rem;
+  cursor: pointer;
+}
+
+.create-modal-content .form-group input[type="file"] {
+  padding: 0.5rem;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: var(--radius-md);
+  color: #ccc;
+  font-size: 0.875rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.modal-actions .btn-primary {
+  flex: 1;
+}
+
+.modal-actions .btn-secondary {
+  flex: 1;
+  padding: 0.75rem;
+  background: #333;
+  border: none;
+  border-radius: var(--radius-md);
+  color: #fff;
+  cursor: pointer;
+}
+
+.form-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.form-section:last-of-type {
+  border-bottom: none;
+}
+
+.form-section h4 {
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.form-section .form-group {
+  margin-bottom: 0.75rem;
+}
+
+.create-modal-content .form-group input[type="file"] {
+  padding: 0.5rem;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: var(--radius-md);
+  color: #ccc;
+  font-size: 0.875rem;
+}
+
+.create-modal-content .form-group select {
+  padding: 0.75rem 1rem;
+  border: 2px solid #333;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  color: #fff;
+  background: #1a1a1a;
+  cursor: pointer;
+}
+
+.create-modal-content .form-group select:focus {
+  outline: none;
+  border-color: var(--color-primary);
 }
 
 .societa-selection {
@@ -432,21 +821,50 @@ h1 {
   align-items: center;
   gap: 1rem;
   padding: 1rem;
+  padding-right: 3rem;
   background: #1a1a1a;
   border: 2px solid #333;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
+  position: relative;
 }
 
 .societa-card:hover {
-  border-color: #dc2626;
+  border-color: var(--color-primary);
   transform: translateY(-2px);
 }
 
 .societa-card.selected {
-  border-color: #dc2626;
+  border-color: var(--color-primary);
   background: rgba(220, 38, 38, 0.1);
+}
+
+.btn-edit-societa {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.1);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #888;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-edit-societa:hover {
+  background: rgba(220, 38, 38, 0.3);
+  color: #fff;
+}
+
+.btn-edit-societa svg {
+  width: 16px;
+  height: 16px;
 }
 
 .societa-logo {
@@ -459,6 +877,13 @@ h1 {
   font-size: 1.5rem;
   font-weight: 700;
   color: white;
+  overflow: hidden;
+}
+
+.societa-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .societa-info h3 {
@@ -469,6 +894,49 @@ h1 {
 }
 
 .societa-info p {
+  font-size: 0.875rem;
+  color: #888;
+}
+
+.selected-societa-preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(220, 38, 38, 0.1);
+  border: 2px solid rgba(220, 38, 38, 0.3);
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
+}
+
+.preview-logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: white;
+}
+
+.preview-logo-placeholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+}
+
+.preview-info h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 0.25rem;
+}
+
+.preview-info p {
   font-size: 0.875rem;
   color: #888;
 }
