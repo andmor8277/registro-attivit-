@@ -1,13 +1,14 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from .database import Base, engine
-from .routers import persone, registro, codici, categorie, convocazioni, allenatori
+from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
 
 Base.metadata.create_all(bind=engine)
 
 with engine.connect() as conn:
+    # Migration: Add drive_folder_id to categorie
     result = conn.execute(text("""
         SELECT column_name FROM information_schema.columns 
         WHERE table_name = 'categorie' AND column_name = 'drive_folder_id'
@@ -16,11 +17,73 @@ with engine.connect() as conn:
         conn.execute(text("ALTER TABLE categorie ADD COLUMN drive_folder_id VARCHAR(100)"))
         conn.commit()
         print("Migration: Added drive_folder_id column")
+    
+    # Migration: Create societa table
+    result = conn.execute(text("""
+        SELECT table_name FROM information_schema.tables 
+        WHERE table_name = 'societa'
+    """))
+    if result.fetchone() is None:
+        conn.execute(text("""
+            CREATE TABLE societa (
+                id SERIAL PRIMARY KEY,
+                nome VARCHAR(100) NOT NULL,
+                nome_breve VARCHAR(50),
+                logo VARCHAR(200),
+                logosponsor VARCHAR(200),
+                colore_primario VARCHAR(7) DEFAULT '#dc2626',
+                colore_secondario VARCHAR(7) DEFAULT '#1f2937',
+                is_attiva INTEGER DEFAULT 1
+            )
+        """))
+        conn.commit()
+        print("Migration: Created societa table")
+    
+    # Migration: Add societa_id to existing tables
+    for table in ['utenti', 'categorie', 'persone', 'registro', 'convocazioni']:
+        result = conn.execute(text(f"""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = '{table}' AND column_name = 'societa_id'
+        """))
+        if result.fetchone() is None:
+            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN societa_id INTEGER REFERENCES societa(id)"))
+            conn.commit()
+            print(f"Migration: Added societa_id to {table}")
+    
+    # Migration: Add is_super_admin to utenti
+    result = conn.execute(text("""
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'utenti' AND column_name = 'is_super_admin'
+    """))
+    if result.fetchone() is None:
+        conn.execute(text("ALTER TABLE utenti ADD COLUMN is_super_admin INTEGER DEFAULT 0"))
+        conn.commit()
+        print("Migration: Added is_super_admin to utenti")
+    
+    # Migration: Create default society if none exists
+    result = conn.execute(text("SELECT COUNT(*) FROM societa"))
+    if result.fetchone()[0] == 0:
+        conn.execute(text("""
+            INSERT INTO societa (nome, nome_breve, colore_primario, colore_secondario)
+            VALUES ('RedTigers 1957', 'RedTigers', '#dc2626', '#1f2937')
+        """))
+        conn.commit()
+        print("Migration: Created default society")
+        
+        # Assign all existing data to society id 1
+        conn.execute(text("UPDATE utenti SET societa_id = 1 WHERE societa_id IS NULL"))
+        conn.execute(text("UPDATE categorie SET societa_id = 1 WHERE societa_id IS NULL"))
+        conn.execute(text("UPDATE persone SET societa_id = 1 WHERE societa_id IS NULL"))
+        conn.execute(text("UPDATE registro SET societa_id = 1 WHERE societa_id IS NULL"))
+        conn.execute(text("UPDATE convocazioni SET societa_id = 1 WHERE societa_id IS NULL"))
+        conn.commit()
+        print("Migration: Assigned existing data to default society")
 
 app = FastAPI(title="Registro Presenze API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], expose_headers=["*"])
 
 app.include_router(auth_router)
+app.include_router(societa.router, dependencies=[Depends(get_current_user)])
 app.include_router(persone.router, dependencies=[Depends(get_current_user)])
 app.include_router(registro.router, dependencies=[Depends(get_current_user)])
 app.include_router(codici.router, dependencies=[Depends(get_current_user)])
