@@ -157,6 +157,9 @@ async function doLogin() {
     const me = await getMe()
     utenteAttivo.value = me.data
     
+    // Salva is_super_admin
+    localStorage.setItem('is_super_admin', me.data.is_super_admin ? 'true' : 'false')
+    
     // Se è super_admin, mostra selezione società
     if (me.data.is_super_admin) {
       showSocietaSelection.value = true
