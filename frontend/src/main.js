@@ -10,6 +10,7 @@ import Scelta from './views/Scelta.vue'
 import Convocazioni from './views/Convocazioni.vue'
 import DatiMatricole from './views/DatiMatricole.vue'
 import Allenamenti from './views/Allenamenti.vue'
+import Societa from './views/Societa.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -21,7 +22,8 @@ const router = createRouter({
     { path: '/convocazioni/:id', component: Convocazioni, meta: { requiresAuth: true } },
     { path: '/dati/:id', component: DatiMatricole, meta: { requiresAuth: true } },
     { path: '/allenamenti/:id', component: Allenamenti, meta: { requiresAuth: true } },
-    { path: '/admin', component: Admin, meta: { requiresAuth: true, requiresAdmin: true } }
+    { path: '/admin', component: Admin, meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/admin/societa', component: Societa, meta: { requiresAuth: true, requiresSuperAdmin: true } }
   ]
 })
 
@@ -29,6 +31,10 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   if (to.meta.requiresAuth && !token) return next('/login')
   if (to.path === '/login' && token) return next('/')
+  if (to.meta.requiresSuperAdmin) {
+    const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true'
+    if (!isSuperAdmin) return next('/')
+  }
   next()
 })
 

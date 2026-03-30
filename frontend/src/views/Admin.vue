@@ -1,8 +1,17 @@
 <template>
   <div class="admin">
     <header class="page-header">
-      <h1>Gestione Utenti</h1>
-      <p class="page-subtitle">Crea e gestisci gli account degli utenti</p>
+      <div class="header-content">
+        <h1>Gestione Utenti</h1>
+        <p class="page-subtitle">Crea e gestisci gli account degli utenti</p>
+      </div>
+      <router-link v-if="isSuperAdmin" to="/admin/societa" class="btn-societa">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        Gestione Società
+      </router-link>
     </header>
 
     <div class="card card-create">
@@ -150,7 +159,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+
+const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === 'true')
 import { getUtenti, createUtente, deleteUtente, updateUtente, resetPassword, assegnaCategorie, getCategorie, getCategoriaUtenti } from '../api/index.js'
 
 const utenti = ref([])
@@ -728,6 +739,42 @@ onMounted(load)
 }
 
 .admin-note svg {
+  width: 18px;
+  height: 18px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-content {
+  flex: 1;
+}
+
+.btn-societa {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(220, 38, 38, 0.2);
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.btn-societa:hover {
+  background: rgba(220, 38, 38, 0.3);
+}
+
+.btn-societa svg {
   width: 18px;
   height: 18px;
 }
