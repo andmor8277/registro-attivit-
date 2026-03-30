@@ -17,41 +17,61 @@ class CategoriaCreate(BaseModel):
     giorni: Optional[str] = None
     is_portieri: bool = False
     drive_folder_id: Optional[str] = None
+    societa_id: Optional[int] = None
+
+def get_societa_filter(current_user: Utente):
+    """Restituisce il filter per societa_id - solo super_admin vede tutto"""
+    if current_user.is_super_admin:
+        return None  # Nessun filtro
+    return current_user.societa_id
 
 @router.get("/")
 def get_categorie(db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
-    tutte = db.query(models.Categoria).filter(
-        models.Categoria.is_archiviata == 0
-    ).order_by(models.Categoria.anno.desc()).all()
-    if current_user.is_admin:
+    societa_id = get_societa_filter(current_user)
+    query = db.query(models.Categoria).filter(models.Categoria.is_archiviata == 0)
+    if societa_id:
+        query = query.filter(models.Categoria.societa_id == societa_id)
+    tutte = query.order_by(models.Categoria.anno.desc()).all()
+    
+    if current_user.is_super_admin or current_user.is_admin:
         return tutte
     assegnate = db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == current_user.id).all()
     ids = {r.categoria_id for r in assegnate}
     return [c for c in tutte if c.id in ids]
 
 @router.get("/all")
-def get_all_categorie(db: Session = Depends(get_db)):
-    return db.query(models.Categoria).filter(
-        models.Categoria.is_archiviata == 0
-    ).order_by(models.Categoria.anno.desc()).all()
+def get_all_categorie(db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    query = db.query(models.Categoria).filter(models.Categoria.is_archiviata == 0)
+    societa_id = get_societa_filter(current_user)
+    if societa_id:
+        query = query.filter(models.Categoria.societa_id == societa_id)
+    return query.order_by(models.Categoria.anno.desc()).all()
 
 @router.get("/archived")
 def get_categorie_archived(db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
-    return db.query(models.Categoria).filter(
-        models.Categoria.is_archiviata == 1
-    ).order_by(models.Categoria.anno.desc()).all()
+    query = db.query(models.Categoria).filter(models.Categoria.is_archiviata == 1)
+    societa_id = get_societa_filter(current_user)
+    if societa_id:
+        query = query.filter(models.Categoria.societa_id == societa_id)
+    return query.order_by(models.Categoria.anno.desc()).all()
 
 @router.get("/stagioni")
 def get_stagioni(db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
-    stagioni_attive = db.query(models.Categoria.stagione).filter(
+    query_attive = db.query(models.Categoria.stagione).filter(
         models.Categoria.is_archiviata == 0,
         models.Categoria.stagione.isnot(None)
-    ).distinct().order_by(models.Categoria.stagione.desc()).all()
-    
-    stagioni_archiviate = db.query(models.Categoria.stagione).filter(
+    )
+    query_archiviate = db.query(models.Categoria.stagione).filter(
         models.Categoria.is_archiviata == 1,
         models.Categoria.stagione.isnot(None)
-    ).distinct().order_by(models.Categoria.stagione.desc()).all()
+    )
+    societa_id = get_societa_filter(current_user)
+    if societa_id:
+        query_attive = query_attive.filter(models.Categoria.societa_id == societa_id)
+        query_archiviate = query_archiviate.filter(models.Categoria.societa_id == societa_id)
+    
+    stagioni_attive = query_attive.distinct().order_by(models.Categoria.stagione.desc()).all()
+    stagioni_archiviate = query_archiviate.distinct().order_by(models.Categoria.stagione.desc()).all()
     
     return {
         "attiva": [s.stagione for s in stagioni_attive],
@@ -60,32 +80,44 @@ def get_stagioni(db: Session = Depends(get_db), current_user: Utente = Depends(g
 
 @router.post("/archivia/{stagione}")
 def archivia_stagione(stagione: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
-    db.query(models.Categoria).filter(
-        models.Categoria.stagione == stagione
-    ).update({"is_archiviata": 1})
+    query = db.query(models.Categoria).filter(models.Categoria.stagione == stagione)
+    societa_id = get_societa_filter(current_user)
+    if societa_id:
+        query = query.filter(models.Categoria.societa_id == societa_id)
+    query.update({"is_archiviata": 1})
     db.commit()
     return {"ok": True, "messaggio": f"Stagione {stagione}/{stagione+1} archiviata"}
 
 @router.post("/ripristina/{stagione}")
 def ripristina_stagione(stagione: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
-    db.query(models.Categoria).filter(
-        models.Categoria.stagione == stagione
-    ).update({"is_archiviata": 0})
+    query = db.query(models.Categoria).filter(models.Categoria.stagione == stagione)
+    societa_id = get_societa_filter(current_user)
+    if societa_id:
+        query = query.filter(models.Categoria.societa_id == societa_id)
+    query.update({"is_archiviata": 0})
     db.commit()
     return {"ok": True, "messaggio": f"Stagione {stagione}/{stagione+1} ripristinata"}
 
 @router.get("/by-stagione/{stagione}")
 def get_categorie_by_stagione(stagione: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
-    categorie = db.query(models.Categoria).filter(
-        models.Categoria.stagione == stagione
-    ).order_by(models.Categoria.nome).all()
+    query = db.query(models.Categoria).filter(models.Categoria.stagione == stagione)
+    societa_id = get_societa_filter(current_user)
+    if societa_id:
+        query = query.filter(models.Categoria.societa_id == societa_id)
+    categorie = query.order_by(models.Categoria.nome).all()
     if not categorie:
         raise HTTPException(status_code=404, detail="Nessuna categoria per questa stagione")
     return categorie
 
 @router.post("/")
 def create_categoria(c: CategoriaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    # Super admin può specificare società, altrimenti usa la sua
+    if current_user.is_super_admin and c.societa_id:
+        societa_id = c.societa_id
+    else:
+        societa_id = current_user.societa_id
     cat = models.Categoria(
+        societa_id=societa_id,
         nome=c.nome,
         anno=c.anno,
         stagione=c.stagione,
@@ -96,7 +128,7 @@ def create_categoria(c: CategoriaCreate, db: Session = Depends(get_db), current_
     db.add(cat)
     db.commit()
     db.refresh(cat)
-    if not current_user.is_admin:
+    if not current_user.is_super_admin and not current_user.is_admin:
         db.add(UtenteCategoria(utente_id=current_user.id, categoria_id=cat.id))
         db.commit()
     return cat
@@ -106,6 +138,10 @@ def update_categoria(categoria_id: int, c: CategoriaCreate, db: Session = Depend
     cat = db.query(models.Categoria).filter(models.Categoria.id == categoria_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="Categoria non trovata")
+    # Verifica che la categoria sia della stessa società
+    societa_id = get_societa_filter(current_user)
+    if societa_id and cat.societa_id != societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     cat.nome = c.nome
     cat.anno = c.anno
     cat.stagione = c.stagione
@@ -117,10 +153,17 @@ def update_categoria(categoria_id: int, c: CategoriaCreate, db: Session = Depend
 
 @router.delete("/{categoria_id}")
 def delete_categoria(categoria_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
+    cat = db.query(models.Categoria).filter(models.Categoria.id == categoria_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Categoria non trovata")
+    # Verifica che la categoria sia della stessa società
+    societa_id = get_societa_filter(current_user)
+    if societa_id and cat.societa_id != societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     db.query(models.Registro).filter(models.Registro.categoria_id == categoria_id).delete()
     db.query(models.Persona).filter(models.Persona.categoria_id == categoria_id).delete()
     db.query(UtenteCategoria).filter(UtenteCategoria.categoria_id == categoria_id).delete()
-    db.query(models.Categoria).filter(models.Categoria.id == categoria_id).delete()
+    db.delete(cat)
     db.commit()
     return {"ok": True}
 
