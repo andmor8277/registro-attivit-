@@ -2,8 +2,8 @@
   <div class="app-layout">
     <nav v-if="token" class="topbar">
       <div class="topbar-brand">
-        <img src="/logo.jpg" alt="RedTigers" class="logo-img" />
-        <span class="brand-text">RED<span class="brand-red">TIGERS</span></span>
+        <img v-if="societaAttiva?.logo" :src="`/uploads/${societaAttiva.logo}`" :alt="societaAttiva.nome" class="logo-img" />
+        <span class="brand-text">{{ societaAttiva?.nome_breve || societaAttiva?.nome || 'Società' }}</span>
       </div>
       <div class="topbar-season" :class="{ empty: !stagioneCorrente }">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -20,20 +20,27 @@
           </svg>
           {{ utenteAttivo?.cognome || utenteAttivo?.username }}
         </span>
-        <router-link v-if="utenteAttivo?.is_admin" to="/admin" class="btn-nav btn-admin">
+        <router-link v-if="utenteAttivo?.is_admin || utenteAttivo?.is_super_admin || utenteAttivo?.ruolo === 'super_admin'" to="/admin" class="btn-nav btn-admin">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
           </svg>
           Admin
         </router-link>
-        <router-link to="/" class="btn-nav">
+        <router-link v-if="!isSuperAdmin" to="/" class="btn-nav">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
             <polyline points="9 22 9 12 15 12 15 22"/>
           </svg>
           Home
         </router-link>
+        <button v-else @click="vaiSelezioneSocieta" class="btn-nav">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          Home
+        </button>
         <button @click="logout" class="btn-logout">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
@@ -48,6 +55,13 @@
             <path d="M7 11V7a5 5 0 0110 0v4"/>
           </svg>
           Password
+        </button>
+        <button v-if="!isSuperAdmin && societaAttiva" @click="modificaSocietaAttiva" class="btn-nav">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Modifica Società
         </button>
       </div>
     </nav>
@@ -97,18 +111,60 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useStore } from './store.js'
 import { useRouter } from 'vue-router'
 import { getMe, getStagioni, changePassword } from './api/index.js'
+import { watch, onMounted } from 'vue'
 
-const { token, utenteAttivo, clearToken, setStagioneCorrente,stagioneCorrente } = useStore()
+const { token, utenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva } = useStore()
 const router = useRouter()
+
+// Apply colors on mount if societaAttiva exists
+onMounted(() => {
+  if (societaAttiva.value && societaAttiva.value.colore_primario) {
+    const hex = societaAttiva.value.colore_primario.replace('#', '')
+    const r = parseInt(hex.substring(0, 2), 16)
+    const g = parseInt(hex.substring(2, 4), 16)
+    const b = parseInt(hex.substring(4, 6), 16)
+    const dark = `rgb(${Math.max(0, r-30)}, ${Math.max(0, g-30)}, ${Math.max(0, b-30)})`
+    const light = `rgba(${r}, ${g}, ${b}, 0.3)`
+    document.documentElement.style.setProperty('--color-primary', societaAttiva.value.colore_primario)
+    document.documentElement.style.setProperty('--color-primary-dark', dark)
+    document.documentElement.style.setProperty('--color-primary-light', light)
+    console.log('App mounted - applied colors:', societaAttiva.value.colore_primario)
+  }
+})
 const showPasswordModal = ref(false)
 const passwordForm = ref({ attuale: '', nuova: '', conferma: '' })
 const passwordErrore = ref('')
 const passwordSuccess = ref('')
 const passwordLoading = ref(false)
+const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === 'true')
+
+// Watch for societaAttiva changes and apply colors
+watch(societaAttiva, (newVal) => {
+  if (newVal && newVal.colore_primario) {
+    const hex = newVal.colore_primario.replace('#', '')
+    const r = parseInt(hex.substring(0, 2), 16)
+    const g = parseInt(hex.substring(2, 4), 16)
+    const b = parseInt(hex.substring(4, 6), 16)
+    const dark = `rgb(${Math.max(0, r-30)}, ${Math.max(0, g-30)}, ${Math.max(0, b-30)})`
+    const light = `rgba(${r}, ${g}, ${b}, 0.3)`
+    document.documentElement.style.setProperty('--color-primary', newVal.colore_primario)
+    document.documentElement.style.setProperty('--color-primary-dark', dark)
+    document.documentElement.style.setProperty('--color-primary-light', light)
+  }
+}, { deep: true })
+
+function vaiSelezioneSocieta() {
+  router.push('/login?selezione=societa')
+}
+
+function modificaSocietaAttiva() {
+  console.log('modificaSocietaAttiva - societaAttiva:', societaAttiva.value)
+  router.push({ path: '/admin/societa', query: { id: societaAttiva.value.id } })
+}
 
 async function cambiaPassword() {
   passwordErrore.value = ''

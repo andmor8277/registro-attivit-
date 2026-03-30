@@ -341,8 +341,8 @@ watch([anno, mese], loadRegistro)
 }
 
 .btn-back:hover, .btn-home:hover {
-  background: #dc2626;
-  border-color: #dc2626;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   color: white;
 }
 
@@ -422,7 +422,7 @@ watch([anno, mese], loadRegistro)
 }
 
 .badge.presenza { background: #dcfce7; color: #166534; }
-.badge.assenza { background: #fee2e2; color: #dc2626; }
+.badge.assenza { background: #fee2e2; color: var(--color-primary); }
 .badge.extra { background: #fef3c7; color: #92400e; }
 
 .table-wrapper {
@@ -442,7 +442,7 @@ watch([anno, mese], loadRegistro)
   align-items: center;
   gap: 0.5rem;
   padding: 0.875rem 1.25rem;
-  background: #dc2626;
+  background: var(--color-primary);
   color: white;
   font-weight: 600;
   font-size: 0.9375rem;
@@ -493,10 +493,10 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
 
 .cella:hover { background: #fee2e2; }
 .cella.presenza { background: #dcfce7; color: #166534; }
-.cella.assenza { background: #fee2e2; color: #dc2626; }
+.cella.assenza { background: #fee2e2; color: var(--color-primary); }
 .cella.cod-ag { background: #fef3c7 !important; color: #92400e !important; }
 .cella.cod-p { background: #fef3c7 !important; color: #92400e !important; }
-.cella.cod-r { background: #dcfce7 !important; color: #dc2626 !important; font-weight: 700; }
+.cella.cod-r { background: #dcfce7 !important; color: var(--color-primary) !important; font-weight: 700; }
 
 .td-pres { color: #166534; font-weight: 700; }
 
@@ -509,14 +509,14 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
 }
 
 .riga-totale.pres td { color: #166534; }
-.riga-totale.ass td { color: #dc2626; }
+.riga-totale.ass td { color: var(--color-primary); }
 
 .tot-cell { font-weight: 600; font-family: var(--font-mono); color: #111827; }
 
 .totale-generale {
   margin-top: 1.5rem;
   background: #ffffff;
-  border: 2px solid #dc2626;
+  border: 2px solid var(--color-primary);
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
@@ -526,7 +526,7 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   align-items: center;
   gap: 0.5rem;
   padding: 0.875rem 1.25rem;
-  background: #dc2626;
+  background: var(--color-primary);
   color: white;
   font-weight: 700;
   font-size: 0.875rem;
@@ -555,7 +555,7 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
 }
 
 .tot-pres { background: #dcfce7 !important; color: #166534; }
-.tot-ass { background: #fee2e2 !important; color: #dc2626; }
+.tot-ass { background: #fee2e2 !important; color: var(--color-primary); }
 
 .modal-overlay {
   position: fixed;
@@ -665,7 +665,7 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
 
 .btn-codice.presenza { border-color: #166534; background: #dcfce7; color: #166534; }
 .btn-codice.presenza:hover { background: #bbf7d0; }
-.btn-codice.assenza { border-color: #dc2626; background: #fee2e2; color: #dc2626; }
+.btn-codice.assenza { border-color: var(--color-primary); background: #fee2e2; color: var(--color-primary); }
 .btn-codice.assenza:hover { background: #fecaca; }
 .btn-codice.extra { border-color: #92400e; background: #fef3c7; color: #92400e; }
 .btn-codice.extra:hover { background: #fde68a; }
@@ -722,7 +722,7 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
 
 .form-group input:focus, .form-group select:focus {
   outline: none;
-  border-color: #dc2626;
+  border-color: var(--color-primary);
   background: #ffffff;
 }
 
@@ -750,7 +750,7 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
 
 .btn-primary {
   padding: 0.75rem 1.5rem;
-  background: #dc2626;
+  background: var(--color-primary);
   border: none;
   border-radius: var(--radius-md);
   color: white;
@@ -761,7 +761,7 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
 }
 
 .btn-primary:hover {
-  background: #b91c1c;
+  background: var(--color-primary-dark);
   transform: translateY(-1px);
 }
 

@@ -14,6 +14,11 @@ export default defineConfig({
         target: host,
         changeOrigin: true,
         secure: host !== 'http://localhost:8000',
+      },
+      '/uploads': {
+        target: host,
+        changeOrigin: true,
+        secure: host !== 'http://localhost:8000',
       }
     }
   }
