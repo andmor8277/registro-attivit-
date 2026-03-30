@@ -44,6 +44,9 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         user = db.query(Utente).filter(Utente.username == username).first()
         if not user:
             raise HTTPException(status_code=401, detail="Utente non trovato")
+        # Aggiorna dati da token in caso di modifiche
+        user.societa_id = payload.get("societa_id", user.societa_id)
+        user.is_super_admin = payload.get("is_super_admin", user.is_super_admin)
         return user
     except JWTError:
         raise HTTPException(status_code=401, detail="Token non valido")
@@ -57,6 +60,8 @@ class UtenteCreate(BaseModel):
     username: str
     password: str
     is_admin: Optional[int] = 0
+    is_super_admin: Optional[int] = 0
+    societa_id: int
     nome: str
     cognome: str
     data_nascita: date
@@ -73,6 +78,7 @@ class UtenteUpdate(BaseModel):
     cellulare: str
     tesserino: Optional[str] = None
     ruolo: Optional[str] = None
+    is_super_admin: Optional[int] = 0
 
 class AssegnaCategorie(BaseModel):
     categoria_ids: List[int]
@@ -86,13 +92,16 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
     user = db.query(Utente).filter(Utente.username == form.username).first()
     if not user or not verify_password(form.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Credenziali errate")
-    token = create_token({"sub": user.username, "is_admin": user.is_admin})
+    token = create_token({"sub": user.username, "is_admin": user.is_admin, "societa_id": user.societa_id, "is_super_admin": user.is_super_admin})
     return {"access_token": token, "token_type": "bearer"}
 
 @router.get("/me")
 def me(current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.is_admin:
-        categorie_ids = None  # admin vede tutto
+    if current_user.is_super_admin:
+        categorie_ids = None  # super_admin vede tutto
+    elif current_user.is_admin:
+        # admin locale vede solo le categorie della propria società
+        categorie_ids = None
     else:
         rows = db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == current_user.id).all()
         categorie_ids = [r.categoria_id for r in rows]
@@ -100,6 +109,8 @@ def me(current_user: Utente = Depends(get_current_user), db: Session = Depends(g
         "id": current_user.id,
         "username": current_user.username,
         "is_admin": current_user.is_admin,
+        "is_super_admin": current_user.is_super_admin,
+        "societa_id": current_user.societa_id,
         "categorie_ids": categorie_ids,
         "nome": current_user.nome,
         "cognome": current_user.cognome,
@@ -118,6 +129,8 @@ def crea_utente(data: UtenteCreate, current_user: Utente = Depends(get_admin), d
         username=data.username,
         password_hash=hash_password(data.password),
         is_admin=data.is_admin,
+        is_super_admin=data.is_super_admin,
+        societa_id=data.societa_id,
         nome=data.nome,
         cognome=data.cognome,
         data_nascita=data.data_nascita,
@@ -143,12 +156,19 @@ def modifica_utente(uid: int, data: UtenteUpdate, current_user: Utente = Depends
     utente.tesserino = data.tesserino
     utente.ruolo = data.ruolo
     utente.is_admin = 1 if data.ruolo == 'admin' else 0
+    # Solo super_admin può modificare is_super_admin
+    if current_user.is_super_admin:
+        utente.is_super_admin = data.is_super_admin
     db.commit()
     return {"ok": True}
 
 @router.get("/utenti")
 def lista_utenti(current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
-    utenti = db.query(Utente).all()
+    # Se non è super_admin, mostra solo utenti della propria società
+    if not current_user.is_super_admin:
+        utenti = db.query(Utente).filter(Utente.societa_id == current_user.societa_id).all()
+    else:
+        utenti = db.query(Utente).all()
     result = []
     for u in utenti:
         rows = db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == u.id).all()
@@ -156,6 +176,8 @@ def lista_utenti(current_user: Utente = Depends(get_admin), db: Session = Depend
             "id": u.id,
             "username": u.username,
             "is_admin": u.is_admin,
+            "is_super_admin": u.is_super_admin,
+            "societa_id": u.societa_id,
             "categorie_ids": [r.categoria_id for r in rows],
             "nome": u.nome,
             "cognome": u.cognome,
