@@ -227,13 +227,70 @@ docker compose exec -T db psql -U registro_user -d registro -f migrations/001_ad
 | PUT | `/allenatori/:id` | Modifica allenatore |
 | DELETE | `/allenatori/:id` | Elimina allenatore |
 
-## Ruoli Utente
+### Società
+| Metodo | Endpoint | Descrizione |
+|--------|----------|-------------|
+| GET | `/societa/` | Lista società |
+| GET | `/societa/:id` | Dettagli società |
+| POST | `/societa/` | Crea società (solo super_admin) |
+| PUT | `/societa/:id` | Modifica società |
+| DELETE | `/societa/:id` | Elimina società |
+| POST | `/societa/upload/:tipo` | Upload logo (:tipo = logo/logosponsor) |
+
+## Multi-Società
+
+Il sistema supporta **multiple società sportive** con dati isolati:
+
+### Ruoli Utente
 
 | Ruolo | Descrizione |
 |-------|-------------|
-| admin | Accesso completo a tutte le funzionalità |
+| super_admin | Accesso completo a TUTTE le società (crea società, gestisce tutto) |
+| admin | Accesso alla propria società assegnata |
 | mister | Accesso alle proprie categorie assegnate |
 | dirigente | Accesso in sola lettura alle statistiche |
+
+### Funzionalità Multi-Società
+
+- ✅ **SuperAdmin**: può creare/modificare tutte le società
+- ✅ **Admin locale**: può modificare solo la propria società (logo, colori)
+- ✅ **Società**: ogni società ha i propri colori, logo, logo sponsor
+- ✅ **Isolamento dati**: utenti, categorie, giocatori sono associati a una società
+- ✅ **Tema dinamico**: i colori della società vengono applicati a tutte le pagine
+
+### Schema Società
+
+```sql
+societa (
+  id SERIAL PRIMARY KEY,
+  nome VARCHAR(100),              -- Nome completo (es. "RedTigers 1957")
+  nome_breve VARCHAR(50),          -- Nome breve (es. "RedTigers")
+  logo VARCHAR(255),               -- Path logo società
+  logosponsor VARCHAR(255),        -- Path logo sponsor
+  colore_primario VARCHAR(7),     -- Colore hex (es. "#dc2626")
+  colore_secondario VARCHAR(7),   -- Colore hex secondario
+  is_attiva INTEGER DEFAULT 1    -- 1 = attiva
+)
+```
+
+### Schema Utenti (aggiornato)
+
+```sql
+utenti (
+  ...
+  societa_id INTEGER REFERENCES societa(id),  -- Società di appartenenza
+  is_super_admin INTEGER DEFAULT 0            -- 1 = super admin
+)
+```
+
+### Schema Categorie (aggiornato)
+
+```sql
+categorie (
+  ...
+  societa_id INTEGER REFERENCES societa(id)   -- Società di appartenenza
+)
+```
 
 ## Workflow Stagioni
 
