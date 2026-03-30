@@ -2,13 +2,49 @@
   <div class="login-wrapper">
     <div class="login-bg"></div>
     <div class="login-card">
-      <div class="login-header">
-        <img src="/logo.jpg" alt="RedTigers" class="login-logo" />
-        <h1>Red Tigers <span class="home-text">Home</span></h1>
-        <p class="subtitle">Accedi al tuo account</p>
+      <!-- Selezione Società (per super_admin) -->
+      <div v-if="showSocietaSelection" class="societa-selection">
+        <div class="login-header">
+          <img src="/logo.jpg" alt="RedTigers" class="login-logo" />
+          <h1>Seleziona <span class="home-text">Società</span></h1>
+          <p class="subtitle">Scegli su quale società lavorare</p>
+        </div>
+        
+        <div class="societa-grid">
+          <div 
+            v-for="s in societaOptions" 
+            :key="s.id"
+            :class="['societa-card', { selected: societaSelezionata === s.id }]"
+            @click="societaSelezionata = s.id"
+          >
+            <div class="societa-logo" :style="{ background: s.colore_primario }">
+              {{ s.nome_breve?.charAt(0) || s.nome.charAt(0) }}
+            </div>
+            <div class="societa-info">
+              <h3>{{ s.nome }}</h3>
+              <p>{{ s.nome_breve }}</p>
+            </div>
+          </div>
+        </div>
+        
+        <button type="button" class="btn-login" @click="confermaSocieta">
+          Continua
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </button>
       </div>
       
-      <form @submit.prevent="doLogin" class="login-form">
+      <!-- Login Form -->
+      <div v-else>
+        <div class="login-header">
+          <img src="/logo.jpg" alt="RedTigers" class="login-logo" />
+          <h1>Red Tigers <span class="home-text">Home</span></h1>
+          <p class="subtitle">Accedi al tuo account</p>
+        </div>
+        
+        <form @submit.prevent="doLogin" class="login-form">
         <div class="form-group">
           <label for="username">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -77,14 +113,15 @@
           </template>
         </button>
       </form>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { login, getMe } from '../api/index.js'
+import { login, getMe, getSocieta, getSocietaById } from '../api/index.js'
 import { useStore } from '../store.js'
 
 const username = ref('')
@@ -92,8 +129,22 @@ const password = ref('')
 const errore = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
+const showSocietaSelection = ref(false)
+const societaOptions = ref([])
+const societaSelezionata = ref(null)
 const router = useRouter()
-const { setToken, utenteAttivo } = useStore()
+const { setToken, utenteAttivo, setSocietaAttiva, setListaSocieta } = useStore()
+
+onMounted(async () => {
+  // Carica lista società per selezione
+  try {
+    const res = await getSocieta()
+    societaOptions.value = res.data
+    setListaSocieta(res.data)
+  } catch (e) {
+    console.error('Errore caricamento società:', e)
+  }
+})
 
 async function doLogin() {
   if (loading.value) return
@@ -105,12 +156,36 @@ async function doLogin() {
     setToken(res.data.access_token)
     const me = await getMe()
     utenteAttivo.value = me.data
+    
+    // Se è super_admin, mostra selezione società
+    if (me.data.is_super_admin) {
+      showSocietaSelection.value = true
+      loading.value = false
+      return
+    }
+    
+    // Altrimenti, carica la società dell'utente e vai alla home
+    if (me.data.societa_id) {
+      const societaRes = await getSocietaById(me.data.societa_id)
+      setSocietaAttiva(societaRes.data)
+    }
+    
     router.push('/')
   } catch {
     errore.value = 'Credenziali non valide. Riprova.'
   } finally {
     loading.value = false
   }
+}
+
+async function confermaSocieta() {
+  if (!societaSelezionata.value) {
+    errore.value = 'Seleziona una società'
+    return
+  }
+  const societa = societaOptions.value.find(s => s.id === societaSelezionata.value)
+  setSocietaAttiva(societa)
+  router.push('/')
 }
 </script>
 
@@ -336,5 +411,62 @@ h1 {
   .login-logo {
     width: 80px;
   }
+}
+
+.societa-selection {
+  animation: scaleIn 0.4s ease-out;
+}
+
+.societa-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.societa-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.societa-card:hover {
+  border-color: #dc2626;
+  transform: translateY(-2px);
+}
+
+.societa-card.selected {
+  border-color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.societa-logo {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+}
+
+.societa-info h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 0.25rem;
+}
+
+.societa-info p {
+  font-size: 0.875rem;
+  color: #888;
 }
 </style>
