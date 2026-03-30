@@ -13,6 +13,7 @@ class PersonaCreate(BaseModel):
     matricola: Optional[str] = None
     numero_maglia: Optional[int] = None
     scadenza_certificato: Optional[date] = None
+    societa_id: Optional[int] = None
 
 class PersonaOut(BaseModel):
     id: int
@@ -26,6 +27,7 @@ class PersonaOut(BaseModel):
     matricola: Optional[str]
     numero_maglia: Optional[int]
     scadenza_certificato: Optional[date]
+    societa_id: Optional[int]
     class Config: from_attributes = True
 
 class CodiceOut(BaseModel):
@@ -39,6 +41,7 @@ class RegistroEntry(BaseModel):
     data: date
     codice: Optional[str] = None
     categoria_id: Optional[int] = None
+    societa_id: Optional[int] = None
 
 class RegistroOut(BaseModel):
     id: int
@@ -46,4 +49,5 @@ class RegistroOut(BaseModel):
     data: date
     codice: Optional[str]
     categoria_id: Optional[int]
+    societa_id: Optional[int]
     class Config: from_attributes = True

@@ -4,7 +4,7 @@ from typing import List, Optional
 from datetime import date
 from pydantic import BaseModel
 from ..database import SessionLocal
-from ..models import Convocazione, ConvocazioneGara, ConvocazioneGiocatore, Persona
+from ..models import Convocazione, ConvocazioneGara, ConvocazioneGiocatore, Persona, Utente
 from .auth import get_current_user
 
 router = APIRouter(prefix="/convocazioni", tags=["convocazioni"])
@@ -15,6 +15,11 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def get_societa_filter(current_user: Utente):
+    if current_user.is_super_admin:
+        return None
+    return current_user.societa_id
 
 class GiocatoreIn(BaseModel):
     persona_id: int
@@ -39,15 +44,19 @@ class ConvocazioneIn(BaseModel):
     gare: List[GaraIn] = []
 
 @router.get("/")
-def lista(categoria_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def lista(categoria_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     convs = db.query(Convocazione).filter(Convocazione.categoria_id == categoria_id).order_by(Convocazione.data_inizio.desc()).all()
     return [{"id": c.id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "categoria_id": c.categoria_id} for c in convs]
 
 @router.get("/{cid}")
-def dettaglio(cid: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def dettaglio(cid: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     c = db.query(Convocazione).filter(Convocazione.id == cid).first()
     if not c:
         raise HTTPException(status_code=404, detail="Non trovata")
+    # Verifica società
+    societa_id = get_societa_filter(current_user)
+    if societa_id and c.societa_id != societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     gare = db.query(ConvocazioneGara).filter(ConvocazioneGara.convocazione_id == cid).order_by(ConvocazioneGara.numero).all()
     result_gare = []
     for g in gare:
@@ -64,8 +73,9 @@ def dettaglio(cid: int, db: Session = Depends(get_db), current_user=Depends(get_
     return {"id": c.id, "categoria_id": c.categoria_id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "note": c.note, "gare": result_gare}
 
 @router.post("/")
-def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    c = Convocazione(categoria_id=data.categoria_id, data_inizio=data.data_inizio, data_fine=data.data_fine, note=data.note)
+def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    societa_id = get_societa_filter(current_user) or current_user.societa_id
+    c = Convocazione(societa_id=societa_id, categoria_id=data.categoria_id, data_inizio=data.data_inizio, data_fine=data.data_fine, note=data.note)
     db.add(c)
     db.flush()
     for g in data.gare:
@@ -80,10 +90,14 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user=Depen
     return {"id": c.id}
 
 @router.put("/{cid}")
-def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     c = db.query(Convocazione).filter(Convocazione.id == cid).first()
     if not c:
         raise HTTPException(status_code=404, detail="Non trovata")
+    # Verifica società
+    societa_id = get_societa_filter(current_user)
+    if societa_id and c.societa_id != societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     c.data_inizio = data.data_inizio
     c.data_fine = data.data_fine
     c.note = data.note
