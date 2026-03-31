@@ -6,10 +6,6 @@
         <p class="page-subtitle">Crea e gestisci gli account degli utenti</p>
       </div>
       <div class="header-actions">
-        <select v-if="isSuperAdmin" v-model="societaIdSelezionata" @change="onCambiaSocieta" class="societa-select">
-          <option :value="null">Tutte le società</option>
-          <option v-for="s in listaSocieta" :key="s.id" :value="s.id">{{ s.nome }}</option>
-        </select>
         <button @click="cambiaSocieta" class="btn-societa">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
@@ -182,7 +178,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '../store.js'
 import { getUtenti, createUtente, deleteUtente, updateUtente, resetPassword, assegnaCategorie, getCategorie, getCategoriaUtenti, getSocieta } from '../api/index.js'
@@ -195,6 +191,7 @@ const utenti = ref([])
 const tutteCategorie = ref([])
 const listaSocieta = ref([])
 const societaIdSelezionata = ref(null)
+
 const errore = ref('')
 const loading = ref(false)
 const editingUtente = ref(null)
@@ -277,18 +274,9 @@ async function load() {
     
     listaSocieta.value = sData
     
-    // Determina la società da usare
-    let societaId = null
-    if (isSuperAdmin.value) {
-      // SuperAdmin: se ha selezionato una società specifica, filtra per quella
-      // altrimenti mostra TUTTI gli utenti
-      societaId = societaIdSelezionata.value || null
-    } else if (societaAttiva.value) {
-      // Admin locale: mostra solo gli utenti della propria società
-      societaId = societaAttiva.value.id || null
-    }
-    
-    console.log('load() - societaId:', societaId, 'isSuperAdmin:', isSuperAdmin.value, 'sData length:', sData.length)
+    // SuperAdmin: usa la società attiva (selezionata dopo login)
+    // Admin locale: usa la società assegnata
+    const societaId = societaAttiva.value?.id || null
     
     let uData = []
     try {
@@ -316,14 +304,9 @@ async function load() {
       tutteCategorie.value = []
     }
     
-    // Se admin locale, imposta la società attiva
-    if (!isSuperAdmin.value && societaAttiva.value) {
-      societaIdSelezionata.value = societaAttiva.value.id
-    }
-    
-    // Se utente non è super_admin, preimposta la società
-    if (societaIdSelezionata.value) {
-      nuovo.value.societa_id = societaIdSelezionata.value
+    // Preimposta la società per nuovi utenti
+    if (societaAttiva.value?.id) {
+      nuovo.value.societa_id = societaAttiva.value.id
     }
     
     // Load mister assignments for each category
@@ -380,8 +363,7 @@ async function creaUtente() {
 
 function modificaUtente(u) {
   editingUtente.value = u.id
-  console.log('modificaUtente - u.societa_id:', u.societa_id, 'u:', u)
-  const societaIdDefault = isSuperAdmin.value ? societaIdSelezionata.value : (societaAttiva.value?.id || null)
+  const societaIdDefault = societaAttiva.value?.id || null
   nuovo.value = {
     username: u.username,
     password: '',
@@ -394,7 +376,6 @@ function modificaUtente(u) {
     ruolo: u.ruolo || '',
     societa_id: u.societa_id || societaIdDefault || ''
   }
-  console.log('modificaUtente - nuovo.societa_id:', nuovo.value.societa_id)
 }
 
 function annullaModifica() {
@@ -410,14 +391,7 @@ async function salvaUtente() {
   }
   try {
     // Determina societa_id
-    let societaIdValue = null
-    if (n.societa_id && n.societa_id !== '') {
-      societaIdValue = parseInt(n.societa_id)
-    } else if (isSuperAdmin.value && societaIdSelezionata.value) {
-      societaIdValue = societaIdSelezionata.value
-    } else if (societaAttiva.value && societaAttiva.value.id) {
-      societaIdValue = societaAttiva.value.id
-    }
+    let societaIdValue = societaAttiva.value?.id || null
     
     const data = {
       nome: n.nome,
@@ -430,7 +404,6 @@ async function salvaUtente() {
       societa_id: societaIdValue,
       is_super_admin: n.ruolo === 'super_admin' ? 1 : 0
     }
-    console.log('Salvataggio utente:', editingUtente.value, 'n.societa_id:', n.societa_id, 'societaIdValue:', societaIdValue, 'isSuperAdmin:', isSuperAdmin.value, 'societaIdSelezionata:', societaIdSelezionata.value)
     await updateUtente(editingUtente.value, data)
     resetForm()
     await load()

@@ -73,7 +73,11 @@ def get_categorie_archived(db: Session = Depends(get_db), current_user: Utente =
     return query.order_by(models.Categoria.anno.desc()).all()
 
 @router.get("/stagioni")
-def get_stagioni(db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def get_stagioni(
+    db: Session = Depends(get_db), 
+    current_user: Utente = Depends(get_current_user),
+    societa_id: Optional[int] = Query(None)
+):
     query_attive = db.query(models.Categoria.stagione).filter(
         models.Categoria.is_archiviata == 0,
         models.Categoria.stagione.isnot(None)
@@ -82,10 +86,14 @@ def get_stagioni(db: Session = Depends(get_db), current_user: Utente = Depends(g
         models.Categoria.is_archiviata == 1,
         models.Categoria.stagione.isnot(None)
     )
-    societa_id = get_societa_filter(current_user)
-    if societa_id:
-        query_attive = query_attive.filter(models.Categoria.societa_id == societa_id)
-        query_archiviate = query_archiviate.filter(models.Categoria.societa_id == societa_id)
+    # Se super_admin e societa_id specificato, usa quello
+    if current_user.is_super_admin and societa_id:
+        filter_id = societa_id
+    else:
+        filter_id = get_societa_filter(current_user)
+    if filter_id:
+        query_attive = query_attive.filter(models.Categoria.societa_id == filter_id)
+        query_archiviate = query_archiviate.filter(models.Categoria.societa_id == filter_id)
     
     stagioni_attive = query_attive.distinct().order_by(models.Categoria.stagione.desc()).all()
     stagioni_archiviate = query_archiviate.distinct().order_by(models.Categoria.stagione.desc()).all()
