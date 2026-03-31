@@ -1,6 +1,6 @@
-# Red Tigers - Registro Presenze
+# The Home of Football
 
-Sistema di gestione presenze per la squadra Red Tigers 1957.
+Sistema di gestione di una squadradi calcio dilettantistico
 
 ## Stack Tecnologico
 
