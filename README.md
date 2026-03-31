@@ -72,9 +72,7 @@ Questo comando:
 
 ## Credenziali
 
-| Utente | Password | Ruolo |
-|--------|---------|-------|
-| admin | admin123 | Amministratore |
+Le credenziali sono configurate nel database. Contattare l'amministratore per l'accesso.
 
 ## Funzionalità
 
