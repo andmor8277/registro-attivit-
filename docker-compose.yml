@@ -31,7 +31,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: https://redtigers1957.crickethouse.mywire.org/api
+        VITE_API_URL: https://thof.crickethouse.mywire.org/api
     restart: unless-stopped
     ports:
       - "3000:80"
