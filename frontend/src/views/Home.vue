@@ -330,7 +330,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue"
+import { ref, computed, onMounted, watch } from "vue"
 import { useRouter } from "vue-router"
 import { getCategorie, getAllCategorie, createCategoria, updateCategoria, deleteCategoria, getStagioni, archiviaStagione, getUtenti, getCategoriaUtenti, assegnaCategoriaUtenti, importaGiocatori as importaGiocatoriApi, getCategoriaResponsabili, getSocieta } from "../api/index.js"
 import { useStore as useCategoria } from "../store.js"
@@ -341,6 +341,12 @@ const { setCategoria, setStagioneCorrente } = useCategoria()
 const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === 'true')
 const listaSocieta = ref([])
 const societaIdSelezionata = ref(null)
+
+watch(societaIdSelezionata, (newVal) => {
+  if (newVal && isSuperAdmin.value) {
+    cambiaSocieta()
+  }
+})
 
 function cambiaSocieta() {
   const societa = listaSocieta.value.find(s => s.id === societaIdSelezionata.value)
@@ -453,10 +459,12 @@ async function loadCategorie() {
     
     // Se è superadmin
     if (isSuperAdmin.value) {
-      // SuperAdmin: non imposta una società specifica come attiva
-      // Vedrà TUTTE le società
-      societaIdSelezionata.value = null
-      setSocietaAttiva(null)
+      // SuperAdmin: mantiene la società selezionata dal login
+      // Se non c'è società attiva, usa la prima disponibile
+      if (!societaAttiva.value && listaSocieta.value.length > 0) {
+        setSocietaAttiva(listaSocieta.value[0])
+        societaIdSelezionata.value = listaSocieta.value[0].id
+      }
     } else if (societaAttiva.value) {
       // Non superadmin: usa la società assegnata
       listaSocieta.value = [societaAttiva.value]
@@ -465,8 +473,8 @@ async function loadCategorie() {
     
     const meRes = await import("../api/index.js").then(m => m.getMe())
     const me = meRes.data
-    // SuperAdmin vede TUTTE le categorie, Admin locale solo le proprie
-    const societaIdForApi = isSuperAdmin.value ? null : (societaAttiva.value?.id || null)
+    // SuperAdmin vede categorie della società attualmente selezionata
+    const societaIdForApi = societaAttiva.value?.id || null
     const res = await getCategorie(societaIdForApi)
     categorie.value = me.is_super_admin || me.is_admin || me.categorie_ids === null
       ? res.data
@@ -487,8 +495,8 @@ async function loadCategorie() {
     }
     
     if (me?.is_admin) {
-      // SuperAdmin vede tutti gli utenti, Admin locale solo quelli della propria società
-      const utentiRes = await getUtenti(isSuperAdmin.value ? null : societaAttiva.value?.id)
+      // SuperAdmin vede utenti della società attualmente selezionata
+      const utentiRes = await getUtenti(societaAttiva.value?.id)
       tuttiUtenti.value = utentiRes.data.filter(u => !u.is_admin)
     }
   } catch (e) {
@@ -547,8 +555,7 @@ async function salvaCategoria() {
   
   loading.value = true
   
-  const societaId = isSuperAdmin.value ? societaIdSelezionata.value : (societaAttiva.value?.id || null)
-  console.log('Creando categoria - societa_id:', societaId, 'isSuperAdmin:', isSuperAdmin.value, 'societaAttiva:', societaAttiva.value)
+  const societaId = societaAttiva.value?.id || null
   
   const payload = {
     nome: modal.value.nome,
@@ -603,7 +610,7 @@ async function importaGiocatori() {
   importLoading.value = true
   errore.value = ''
   
-  const societaId = isSuperAdmin.value ? societaIdSelezionata.value : (societaAttiva.value?.id || null)
+  const societaId = societaAttiva.value?.id || null
   
   const payload = {
     nome: modal.value.nome,
@@ -641,7 +648,8 @@ async function eliminaCategoria(id) {
 
 async function loadStagioni() {
   try {
-    const res = await getStagioni()
+    const societaId = societaAttiva.value?.id || null
+    const res = await getStagioni(societaId)
     stagioni.value = res.data
     if (res.data.attiva && res.data.attiva.length > 0) {
       setStagioneCorrente(res.data.attiva[0])

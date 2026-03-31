@@ -235,7 +235,7 @@ const showCreateSocieta = ref(false)
 const newSocieta = ref({
   nome: '',
   nome_breve: null,
-  colore_primario: 'var(--color-primary)',
+  colore_primario: '#dc2626',
   colore_secondario: '#1f2937',
   logo: '',
   logosponsor: ''
@@ -318,7 +318,6 @@ async function doLogin() {
     // Admin locale: carica la società dell'utente e vai alla home
     if (me.data.societa_id) {
       const societaRes = await getSocietaById(me.data.societa_id)
-      console.log('Login - societa caricata:', societaRes.data)
       setSocietaAttiva(societaRes.data)
     }
     
@@ -413,7 +412,7 @@ async function creaSocieta() {
     setListaSocieta(societaOptions.value)
     setSocietaAttiva(nuova)
     showCreateSocieta.value = false
-    newSocieta.value = { nome: '', nome_breve: null, colore_primario: 'var(--color-primary)', colore_secondario: '#1f2937', logo: '', logosponsor: '' }
+    newSocieta.value = { nome: '', nome_breve: null, colore_primario: '#dc2626', colore_secondario: '#1f2937', logo: '', logosponsor: '' }
     newAdmin.value = { username: '', password: '', nome: '', cognome: '' }
     newStagione.value = currentYear
     logoFile.value = null

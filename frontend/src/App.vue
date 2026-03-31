@@ -132,7 +132,6 @@ onMounted(() => {
     document.documentElement.style.setProperty('--color-primary', societaAttiva.value.colore_primario)
     document.documentElement.style.setProperty('--color-primary-dark', dark)
     document.documentElement.style.setProperty('--color-primary-light', light)
-    console.log('App mounted - applied colors:', societaAttiva.value.colore_primario)
   }
 })
 const showPasswordModal = ref(false)
@@ -162,7 +161,6 @@ function vaiSelezioneSocieta() {
 }
 
 function modificaSocietaAttiva() {
-  console.log('modificaSocietaAttiva - societaAttiva:', societaAttiva.value)
   router.push({ path: '/admin/societa', query: { id: societaAttiva.value.id } })
 }
 
@@ -209,8 +207,7 @@ async function logout() {
 
 async function loadStagione() {
   try {
-    const res = await getStagioni()
-    console.log('Stagioni risposta:', res.data)
+    const res = await getStagioni(societaAttiva.value?.id || null)
     const stagioniAttive = res.data?.attiva || []
     if (stagioniAttive.length > 0) {
       setStagioneCorrente(stagioniAttive[0])

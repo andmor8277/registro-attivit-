@@ -37,7 +37,10 @@ export const getAllCategorie = (societaId) => {
 export const createCategoria = (data) => api.post('/categorie/', data)
 export const updateCategoria = (id, data) => api.put(`/categorie/${id}`, data)
 export const deleteCategoria = (id) => api.delete('/categorie/' + id)
-export const getStagioni = () => api.get('/categorie/stagioni')
+export const getStagioni = (societaId) => {
+  const params = societaId ? `?societa_id=${societaId}` : ''
+  return api.get('/categorie/stagioni' + params)
+}
 export const getCategorieArchived = () => api.get('/categorie/archived')
 export const getCategorieByStagione = (stagione) => api.get('/categorie/by-stagione/' + stagione)
 export const archiviaStagione = (stagione) => api.post('/categorie/archivia/' + stagione)

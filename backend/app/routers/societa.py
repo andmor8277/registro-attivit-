@@ -44,11 +44,11 @@ class SocietaOut(BaseModel):
         from_attributes = True
 
 @router.get("/", response_model=list[SocietaOut])
-def lista_societa(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def lista_societa(db: Session = Depends(get_db)):
     return db.query(Societa).all()
 
 @router.get("/{sid}", response_model=SocietaOut)
-def get_societa(sid: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def get_societa(sid: int, db: Session = Depends(get_db)):
     s = db.query(Societa).filter(Societa.id == sid).first()
     if not s:
         raise HTTPException(status_code=404, detail="Società non trovata")

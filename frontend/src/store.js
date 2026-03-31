@@ -49,6 +49,9 @@ export function useStore() {
     societaAttiva.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('societa_id')
+    localStorage.removeItem('societa_data')
+    localStorage.removeItem('is_super_admin')
+    localStorage.removeItem('is_admin')
   }
   
   // Carica società salvata
