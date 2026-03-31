@@ -16,7 +16,11 @@
         </button>
       </div>
       <span class="titolo-toolbar">Dati & Matricole — {{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
-      <button v-if="!isDirigente" class="btn-nuovo" @click="apriNuovo">+ Nuovo Giocatore</button>
+      <div class="header-right">
+        <button v-if="!gdprSbloccato" class="btn-sblocca" @click="apriSbloccoGdpr">🔒 Dati Sensibili</button>
+        <button v-else class="btn-sblocca sbloccato" @click="gdprSbloccato = false">🔓 Blocca</button>
+        <button v-if="!isDirigente" class="btn-nuovo" @click="apriNuovo">+ Nuovo Giocatore</button>
+      </div>
     </header>
 
     <div class="dati-body">
@@ -39,13 +43,13 @@
               <th>Cognome</th>
               <th>Nome</th>
               <th>Nr.</th>
-              <th>Data Nascita</th>
-              <th>Codice Fiscale</th>
-              <th>Telefono</th>
-              <th>Matricola</th>
-              <th>Scad. Cert.</th>
+              <th v-if="gdprSbloccato">Data Nascita</th>
+              <th v-if="gdprSbloccato">Codice Fiscale</th>
+              <th v-if="gdprSbloccato">Telefono</th>
+              <th v-if="gdprSbloccato">Matricola</th>
+              <th v-if="gdprSbloccato">Scad. Cert.</th>
               <th v-if="!isDirigente">Gruppo</th>
-              <th></th>
+              <th v-if="!gdprSbloccato"></th>
             </tr>
           </thead>
           <tbody>
@@ -54,13 +58,15 @@
               <td>{{ p.cognome }}</td>
               <td>{{ p.nome }}</td>
               <td class="cell-numero">{{ p.numero_maglia || '-' }}</td>
-              <td>{{ formatData(p.data_nascita) }}</td>
-              <td class="cell-cf">{{ p.codice_fiscale || '-' }}</td>
-              <td>{{ p.telefono || '-' }}</td>
-              <td class="cell-matricola">{{ p.matricola || '-' }}</td>
-              <td class="cell-scadenza" :class="{ 'scad-rossa': isScaduta(p.scadenza_certificato) }">
-                {{ formatData(p.scadenza_certificato) }}
-              </td>
+              <template v-if="gdprSbloccato">
+                <td>{{ formatData(p.data_nascita) }}</td>
+                <td class="cell-cf">{{ p.codice_fiscale || '-' }}</td>
+                <td>{{ p.telefono || '-' }}</td>
+                <td class="cell-matricola">{{ p.matricola || '-' }}</td>
+                <td class="cell-scadenza" :class="{ 'scad-rossa': isScaduta(p.scadenza_certificato) }">
+                  {{ formatData(p.scadenza_certificato) }}
+                </td>
+              </template>
               <td v-if="!isDirigente" class="cell-gruppo">
                 <span class="badge" :class="'badge-g' + p.gruppo_id">
                   {{ p.gruppo_id === 1 ? '1°' : p.gruppo_id === 2 ? '2°' : p.gruppo_id === 3 ? '3°' : p.gruppo_id === 4 ? 'P' : '-' }}
@@ -71,10 +77,27 @@
               </td>
             </tr>
             <tr v-if="filteredPersone.length === 0">
-              <td :colspan="isDirigente ? 9 : 10" class="no-data">Nessun giocatore trovato</td>
+              <td :colspan="isDirigente ? (gdprSbloccato ? 9 : 5) : (gdprSbloccato ? 11 : 7)" class="no-data">Nessun giocatore trovato</td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Modal sblocco GDPR -->
+    <div v-if="gdprModal.show" class="modal-overlay" @click.self="gdprModal.show = false">
+      <div class="modal modal-small">
+        <h3>🔒 Sblocco Dati Sensibili</h3>
+        <p class="gdpr-info">Inserisci la password per visualizzare i dati personali dei giocatori (CF, telefono, data nascita)</p>
+        <div class="form-field">
+          <label>Password</label>
+          <input v-model="gdprModal.password" type="password" @keyup.enter="verificaPasswordGdpr" />
+        </div>
+        <p v-if="gdprModal.errore" class="error-msg">{{ gdprModal.errore }}</p>
+        <div class="modal-actions">
+          <button class="btn-annulla" @click="gdprModal.show = false">Annulla</button>
+          <button class="btn-salva" @click="verificaPasswordGdpr">Sblocca</button>
+        </div>
       </div>
     </div>
 
@@ -153,7 +176,34 @@ const gruppoFilter = ref('')
 
 const isDirigente = computed(() => utenteAttivo.value?.ruolo === 'dirigente')
 
+// GDPR state
+const gdprSbloccato = ref(false)
+const gdprModal = ref({ show: false, password: '', errore: '' })
+
 const modal = ref({ show: false, isNuovo: false, id: null, cognome: '', nome: '', numero_maglia: '', data_nascita: '', codice_fiscale: '', telefono: '', matricola: '', scadenza_certificato: '', gruppo_id: 1 })
+
+function apriSbloccoGdpr() {
+  gdprModal.value = { show: true, password: '', errore: '' }
+}
+
+async function verificaPasswordGdpr() {
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    const res = await fetch(`${apiUrl}/auth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `username=${utenteAttivo.value?.username || ''}&password=${gdprModal.value.password}`
+    })
+    if (res.ok) {
+      gdprSbloccato.value = true
+      gdprModal.value.show = false
+    } else {
+      gdprModal.value.errore = 'Password non valida'
+    }
+  } catch (e) {
+    gdprModal.value.errore = 'Errore di verifica'
+  }
+}
 
 const filteredPersone = computed(() => {
   let result = persone.value.filter(p => {
@@ -323,6 +373,14 @@ onMounted(async () => {
 .btn-back:hover, .btn-home:hover { background: rgba(255,255,255,0.2); }
 .btn-back svg, .btn-home svg { width: 18px; height: 18px; }
 .titolo-toolbar { flex: 1; font-weight: bold; font-size: 0.95rem; color: white; }
+.header-right { display: flex; gap: 0.5rem; align-items: center; }
+.btn-sblocca { padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.1); color: white; cursor: pointer; font-size: 0.8rem; }
+.btn-sblocca:hover { background: rgba(255,255,255,0.2); }
+.btn-sblocca.sbloccato { background: #22c55e; border-color: #22c55e; }
 .btn-nuovo { padding: 6px 14px; border-radius: 6px; border: none; background: #22c55e; color: white; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
 .btn-nuovo:hover { background: #16a34a; }
+
+.modal-small { max-width: 350px; }
+.gdpr-info { font-size: 0.9rem; color: #888; margin-bottom: 1rem; }
+.error-msg { color: #ef4444; font-size: 0.85rem; margin-top: 0.5rem; }
 </style>

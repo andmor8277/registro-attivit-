@@ -1,24 +1,20 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-const host = process.env.VITE_USE_MOCK === 'true' 
-  ? 'http://localhost:8000' 
-  : 'https://thof.crickethouse.mywire.org';
-
 export default defineConfig({
   plugins: [vue()],
   server: {
     port: 5173,
     proxy: {
       '/api': {
-        target: host,
+        target: 'http://localhost:8000',
         changeOrigin: true,
-        secure: host !== 'http://localhost:8000',
+        secure: false,
       },
       '/uploads': {
-        target: host,
+        target: 'http://localhost:8000',
         changeOrigin: true,
-        secure: host !== 'http://localhost:8000',
+        secure: false,
       }
     }
   }
