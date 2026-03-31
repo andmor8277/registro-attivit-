@@ -265,9 +265,9 @@ def reset_password(uid: int, current_user: Utente = Depends(get_admin), db: Sess
     utente = db.query(Utente).filter(Utente.id == uid).first()
     if not utente:
         raise HTTPException(status_code=404, detail="Utente non trovato")
-    utente.password_hash = hash_password("RedTigers2024!")
+    utente.password_hash = hash_password("REMOVED")
     db.commit()
-    return {"ok": True, "message": "Password reimpostata a RedTigers2024!"}
+    return {"ok": True, "message": "Password reimpostata a REMOVED"}
 
 @router.put("/utenti/{uid}/password")
 def cambia_password(uid: int, data: PasswordChange, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
