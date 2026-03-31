@@ -22,7 +22,7 @@
           <label>Colore Primario</label>
           <div class="color-input">
             <input type="color" v-model="nuovo.colore_primario" />
-            <input v-model="nuovo.colore_primario" placeholder="var(--color-primary)" />
+            <input v-model="nuovo.colore_primario" placeholder="#dc2626" />
           </div>
         </div>
         <div class="input-group">
@@ -141,7 +141,7 @@ const nuovo = ref({
   nome_breve: '',
   logo: '',
   logosponsor: '',
-  colore_primario: 'var(--color-primary)',
+  colore_primario: '#dc2626',
   colore_secondario: '#1f2937'
 })
 
@@ -189,7 +189,7 @@ function resetForm() {
     nome_breve: '',
     logo: '',
     logosponsor: '',
-    colore_primario: 'var(--color-primary)',
+    colore_primario: '#dc2626',
     colore_secondario: '#1f2937'
   }
 }

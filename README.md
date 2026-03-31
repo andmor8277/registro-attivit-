@@ -1,6 +1,6 @@
 # The Home of Football
 
-Sistema di gestione di una squadradi calcio dilettantistico
+Sistema di gestione di una squadra di calcio dilettantistico
 
 ## Stack Tecnologico
 
@@ -237,7 +237,7 @@ docker compose exec -T db psql -U registro_user -d registro -f migrations/001_ad
 
 ## Multi-Società
 
-Il sistema supporta **multiple società sportive** con dati isolati:
+Il sistema supporta la **gestione di più società sportive** con dati isolati:
 
 ### Ruoli Utente
 
