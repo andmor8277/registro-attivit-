@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 
 const host = process.env.VITE_USE_MOCK === 'true' 
   ? 'http://localhost:8000' 
-  : 'https://redtigers1957.crickethouse.mywire.org';
+  : 'https://thof.crickethouse.mywire.org';
 
 export default defineConfig({
   plugins: [vue()],
