@@ -65,6 +65,7 @@
         </button>
       </div>
     </nav>
+
     <main class="main-content">
       <router-view />
     </main>
@@ -111,50 +112,20 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useStore } from './store.js'
 import { useRouter } from 'vue-router'
 import { getMe, getStagioni, changePassword } from './api/index.js'
-import { watch, onMounted } from 'vue'
 
 const { token, utenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva } = useStore()
 const router = useRouter()
 
-// Apply colors on mount if societaAttiva exists
-onMounted(() => {
-  if (societaAttiva.value && societaAttiva.value.colore_primario) {
-    const hex = societaAttiva.value.colore_primario.replace('#', '')
-    const r = parseInt(hex.substring(0, 2), 16)
-    const g = parseInt(hex.substring(2, 4), 16)
-    const b = parseInt(hex.substring(4, 6), 16)
-    const dark = `rgb(${Math.max(0, r-30)}, ${Math.max(0, g-30)}, ${Math.max(0, b-30)})`
-    const light = `rgba(${r}, ${g}, ${b}, 0.3)`
-    document.documentElement.style.setProperty('--color-primary', societaAttiva.value.colore_primario)
-    document.documentElement.style.setProperty('--color-primary-dark', dark)
-    document.documentElement.style.setProperty('--color-primary-light', light)
-  }
-})
 const showPasswordModal = ref(false)
 const passwordForm = ref({ attuale: '', nuova: '', conferma: '' })
 const passwordErrore = ref('')
 const passwordSuccess = ref('')
 const passwordLoading = ref(false)
 const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === 'true')
-
-// Watch for societaAttiva changes and apply colors
-watch(societaAttiva, (newVal) => {
-  if (newVal && newVal.colore_primario) {
-    const hex = newVal.colore_primario.replace('#', '')
-    const r = parseInt(hex.substring(0, 2), 16)
-    const g = parseInt(hex.substring(2, 4), 16)
-    const b = parseInt(hex.substring(4, 6), 16)
-    const dark = `rgb(${Math.max(0, r-30)}, ${Math.max(0, g-30)}, ${Math.max(0, b-30)})`
-    const light = `rgba(${r}, ${g}, ${b}, 0.3)`
-    document.documentElement.style.setProperty('--color-primary', newVal.colore_primario)
-    document.documentElement.style.setProperty('--color-primary-dark', dark)
-    document.documentElement.style.setProperty('--color-primary-light', light)
-  }
-}, { deep: true })
 
 function vaiSelezioneSocieta() {
   router.push('/login?selezione=societa')

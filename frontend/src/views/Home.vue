@@ -215,11 +215,6 @@
                 </label>
               </div>
             </div>
-            <div class="form-group">
-              <label>Google Drive Folder ID</label>
-              <input v-model="modal.drive_folder_id" placeholder="Es. 1a2b3c4d5e6f..." />
-              <p class="form-hint">ID della cartella Google Drive per gli allenamenti</p>
-            </div>
             <div class="form-group" v-if="utenteAttivo?.is_admin && modal.id">
               <label>Utenti che possono accedere</label>
               <div class="utenti-grid" v-if="tuttiUtenti.length > 0">
@@ -279,6 +274,14 @@
               <select v-model="stagioneModal.stagione">
                 <option v-for="s in stagioniOptions" :key="s" :value="s">{{ s }}/{{ s + 1 }}</option>
               </select>
+            </div>
+            <div class="form-group">
+              <label>Inizio Stagione</label>
+              <input v-model="stagioneModal.data_inizio_stagione" type="date" />
+            </div>
+            <div class="form-group">
+              <label>Fine Stagione</label>
+              <input v-model="stagioneModal.data_fine_stagione" type="date" />
             </div>
           </div>
           <div class="modal-footer">
@@ -366,7 +369,7 @@ const loading = ref(false)
 const errore = ref('')
 const stagioni = ref({ attiva: [], archiviate: [] })
 const mostraStagioniArchiviate = ref(false)
-const stagioneModal = ref({ show: false, stagione: new Date().getFullYear(), loading: false, errore: '' })
+const stagioneModal = ref({ show: false, stagione: new Date().getFullYear(), data_inizio_stagione: '', data_fine_stagione: '', loading: false, errore: '' })
 const archiviaModal = ref({ show: false, loading: false, stagione: null })
 
 const stagioniDisponibili = computed(() => {
@@ -437,7 +440,7 @@ function formatDayDate(giornoVal) {
   return data.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
 }
 
-const modal = ref({ show: false, id: null, nome: "", anno: null, stagione: new Date().getFullYear(), giorniSel: [], is_portieri: false, drive_folder_id: "" })
+const modal = ref({ show: false, id: null, nome: "", anno: null, stagione: new Date().getFullYear(), giorniSel: [], is_portieri: false, data_inizio_stagione: "", data_fine_stagione: "" })
 
 function chiudiModal() {
   modal.value.show = false
@@ -446,7 +449,7 @@ function chiudiModal() {
 
 function apriNuova() {
   const currentYear = new Date().getMonth() >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1
-  modal.value = { show: true, id: null, nome: "", anno: null, stagione: currentYear, giorniSel: [], is_portieri: false, drive_folder_id: "" }
+  modal.value = { show: true, id: null, nome: "", anno: null, stagione: currentYear, giorniSel: [], is_portieri: false, data_inizio_stagione: "", data_fine_stagione: "" }
   modalUtentiSel.value = []
   errore.value = ''
 }
@@ -509,7 +512,8 @@ async function apriModifica(cat) {
     show: true, id: cat.id, nome: cat.nome, anno: cat.anno, stagione: cat.stagione,
     giorniSel: cat.giorni ? cat.giorni.split(",").map(Number) : [],
     is_portieri: cat.is_portieri === 1 || cat.is_portieri === true,
-    drive_folder_id: cat.drive_folder_id || ""
+    data_inizio_stagione: cat.data_inizio_stagione || "",
+    data_fine_stagione: cat.data_fine_stagione || ""
   }
   
   if (utenteAttivo.value?.is_admin && cat.id) {
@@ -563,8 +567,9 @@ async function salvaCategoria() {
     stagione: parseInt(modal.value.stagione),
     giorni: modal.value.giorniSel.sort().join(",") || null,
     is_portieri: modal.value.is_portieri,
-    drive_folder_id: modal.value.drive_folder_id || null,
-    societa_id: societaId
+    societa_id: societaId,
+    data_inizio_stagione: modal.value.data_inizio_stagione || null,
+    data_fine_stagione: modal.value.data_fine_stagione || null
   }
   
   try {
@@ -618,7 +623,6 @@ async function importaGiocatori() {
     stagione: parseInt(modal.value.stagione),
     giorni: modal.value.giorniSel.sort().join(",") || null,
     is_portieri: modal.value.is_portieri,
-    drive_folder_id: modal.value.drive_folder_id || null,
     societa_id: societaId
   }
   
@@ -695,10 +699,12 @@ function apriStagioneArchiviata(stagione) {
 
 function apriImpostaStagione() {
   const categorieConStagione = categorie.value.filter(c => c.stagione)
-  const stagioneEsistente = categorieConStagione.length > 0 ? categorieConStagione[0].stagione : null
+  const primaCat = categorieConStagione.length > 0 ? categorieConStagione[0] : null
   stagioneModal.value = { 
     show: true, 
-    stagione: stagioneEsistente || new Date().getFullYear(), 
+    stagione: primaCat?.stagione || new Date().getFullYear(),
+    data_inizio_stagione: primaCat?.data_inizio_stagione || '',
+    data_fine_stagione: primaCat?.data_fine_stagione || '',
     loading: false, 
     errore: '' 
   }
@@ -724,7 +730,9 @@ async function impostaStagioneTutte() {
         anno: cat.anno,
         stagione: parseInt(stagioneModal.value.stagione),
         giorni: cat.giorni,
-        is_portieri: cat.is_portieri === 1
+        is_portieri: cat.is_portieri === 1,
+        data_inizio_stagione: stagioneModal.value.data_inizio_stagione || null,
+        data_fine_stagione: stagioneModal.value.data_fine_stagione || null
       })
     }
     stagioneModal.value.show = false
@@ -1205,21 +1213,21 @@ onMounted(() => {
 .mister-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.4rem;
-  background: rgba(220, 38, 38, 0.1);
-  border: 1px solid rgba(220, 38, 38, 0.3);
+  padding: 0.2rem 0.5rem;
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid #dc2626;
   border-radius: var(--radius-sm);
   font-size: 0.7rem;
   font-weight: 600;
-  color: var(--color-primary);
+  color: #dc2626;
 }
 
 .dirigente-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.4rem;
-  background: rgba(37, 99, 235, 0.1);
-  border: 1px solid rgba(37, 99, 235, 0.3);
+  padding: 0.2rem 0.5rem;
+  background: rgba(37, 99, 235, 0.15);
+  border: 1px solid #2563eb;
   border-radius: var(--radius-sm);
   font-size: 0.7rem;
   font-weight: 600;

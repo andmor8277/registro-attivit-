@@ -7,6 +7,7 @@ from ..routers.auth import get_current_user, get_admin
 from ..models import Utente, UtenteCategoria
 from pydantic import BaseModel
 from typing import Optional, List
+from datetime import date
 
 router = APIRouter(prefix="/categorie", tags=["categorie"])
 
@@ -16,8 +17,9 @@ class CategoriaCreate(BaseModel):
     stagione: Optional[int] = None
     giorni: Optional[str] = None
     is_portieri: bool = False
-    drive_folder_id: Optional[str] = None
     societa_id: Optional[int] = None
+    data_inizio_stagione: Optional[date] = None
+    data_fine_stagione: Optional[date] = None
 
 def get_societa_filter(current_user: Utente):
     """Restituisce il filter per societa_id - solo super_admin vede tutto"""
@@ -150,7 +152,8 @@ def create_categoria(c: CategoriaCreate, db: Session = Depends(get_db), current_
         stagione=c.stagione,
         giorni=c.giorni,
         is_portieri=1 if c.is_portieri else 0,
-        drive_folder_id=c.drive_folder_id
+        data_inizio_stagione=c.data_inizio_stagione,
+        data_fine_stagione=c.data_fine_stagione
     )
     db.add(cat)
     db.commit()
@@ -175,7 +178,8 @@ def update_categoria(categoria_id: int, c: CategoriaCreate, db: Session = Depend
     cat.stagione = c.stagione
     cat.giorni = c.giorni
     cat.is_portieri = 1 if c.is_portieri else 0
-    cat.drive_folder_id = c.drive_folder_id
+    cat.data_inizio_stagione = c.data_inizio_stagione
+    cat.data_fine_stagione = c.data_fine_stagione
     db.commit(); db.refresh(cat)
     return cat
 
