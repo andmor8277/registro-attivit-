@@ -114,7 +114,7 @@
         </div>
       </div>
 
-      <div class="scelta-card" @click="router.push('/reportistica/' + categoria?.id)">
+      <div v-if="!isDirigente" class="scelta-card" @click="router.push('/reportistica/' + categoria?.id)">
         <div class="card-icon" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="20" x2="18" y2="10"/>
