@@ -17,7 +17,7 @@
       </div>
       <span class="titolo-toolbar">Dati Giocatori — {{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
       <div class="header-right">
-        <button v-if="utenteAttivo?.is_admin" class="btn-header" @click="gdprModal.show = true" title="Sblocca Dati Sensibili">
+        <button v-if="utenteAttivo?.is_admin || utenteAttivo?.ruolo === 'mister'" class="btn-header" @click="gdprModal.show = true" title="Sblocca Dati Sensibili">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
