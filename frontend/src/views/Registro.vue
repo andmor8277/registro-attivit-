@@ -15,7 +15,10 @@
           </svg>
         </button>
       </div>
-      <div class="mese-selector">
+      <span class="titolo-toolbar">Registro Presenze — {{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
+    </header>
+
+    <div class="mese-selector">
         <button class="btn-nav-mese" @click="prevMese">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 18 9 12 15 6"/>
@@ -28,7 +31,6 @@
           </svg>
         </button>
       </div>
-    </header>
     
     <div class="legenda">
       <span v-for="c in codiciOrdinati" :key="c.codice" :class="['badge', c.tipo]">
