@@ -11,19 +11,21 @@ import Convocazioni from './views/Convocazioni.vue'
 import DatiMatricole from './views/DatiMatricole.vue'
 import Allenamenti from './views/Allenamenti.vue'
 import Societa from './views/Societa.vue'
+import Reportistica from './views/Reportistica.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/login', component: Login },
-    { path: '/', component: Home, meta: { requiresAuth: true } },
-    { path: '/scelta/:id', component: Scelta, meta: { requiresAuth: true } },
-    { path: '/registro/:id', component: Registro, meta: { requiresAuth: true } },
-    { path: '/convocazioni/:id', component: Convocazioni, meta: { requiresAuth: true } },
-    { path: '/dati/:id', component: DatiMatricole, meta: { requiresAuth: true } },
-    { path: '/allenamenti/:id', component: Allenamenti, meta: { requiresAuth: true } },
-    { path: '/admin', component: Admin, meta: { requiresAuth: true, requiresAdmin: true } },
-    { path: '/admin/societa', component: Societa, meta: { requiresAuth: true } }
+    { path: '/login', component: Login, name: 'login' },
+    { path: '/', component: Home, name: 'home', meta: { requiresAuth: true } },
+    { path: '/scelta/:id', component: Scelta, name: 'scelta', meta: { requiresAuth: true } },
+    { path: '/registro/:id', component: Registro, name: 'registro', meta: { requiresAuth: true } },
+    { path: '/convocazioni/:id', component: Convocazioni, name: 'convocazioni', meta: { requiresAuth: true } },
+    { path: '/dati/:id', component: DatiMatricole, name: 'dati-matricole', meta: { requiresAuth: true } },
+    { path: '/allenamenti/:id', component: Allenamenti, name: 'allenamenti', meta: { requiresAuth: true } },
+    { path: '/admin', component: Admin, name: 'admin', meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/admin/societa', component: Societa, name: 'societa', meta: { requiresAuth: true } },
+    { path: '/reportistica/:id', component: Reportistica, name: 'reportistica', meta: { requiresAuth: true } }
   ]
 })
 

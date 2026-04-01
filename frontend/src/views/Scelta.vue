@@ -113,6 +113,24 @@
           </svg>
         </div>
       </div>
+
+      <div class="scelta-card" @click="router.push('/reportistica/' + categoria?.id)">
+        <div class="card-icon" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+        </div>
+        <div class="card-label">Reportistica</div>
+        <div class="card-desc">Statistiche e report presenze</div>
+        <div class="card-arrow" style="background: #a855f7;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </div>
+      </div>
     </div>
   </div>
 </template>

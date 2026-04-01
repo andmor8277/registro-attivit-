@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, Float, Text
 from .database import Base
 
 class Societa(Base):
@@ -22,7 +22,8 @@ class Categoria(Base):
     giorni = Column(String(20), nullable=True)  # es. "1,3,5" = Lun,Mer,Ven
     is_portieri = Column(Integer, default=0)  # 1 = portieri (cross-year)
     is_archiviata = Column(Integer, default=0)  # 1 = categoria archiviata
-    drive_folder_id = Column(String(100), nullable=True)  # Google Drive folder ID
+    data_inizio_stagione = Column(Date, nullable=True)
+    data_fine_stagione = Column(Date, nullable=True)
 
 class Gruppo(Base):
     __tablename__ = "gruppi"
@@ -116,3 +117,47 @@ class Allenatore(Base):
     id = Column(Integer, primary_key=True)
     cognome = Column(String(100), nullable=False)
     telefono = Column(String(30), nullable=True)
+
+class AllenamentoMese(Base):
+    __tablename__ = "allenamenti_mese"
+    id = Column(Integer, primary_key=True)
+    categoria_id = Column(Integer, ForeignKey("categorie.id"), nullable=False)
+    nome_mese = Column(String(20), nullable=False)
+    created_at = Column(Date, nullable=True)
+
+class AllenamentoSettimana(Base):
+    __tablename__ = "allenamenti_settimana"
+    id = Column(Integer, primary_key=True)
+    mese_id = Column(Integer, ForeignKey("allenamenti_mese.id"), nullable=False)
+    numero_settimana = Column(Integer, nullable=False)
+    data_inizio = Column(Date, nullable=False)
+    created_at = Column(Date, nullable=True)
+
+class AllenamentoGiorno(Base):
+    __tablename__ = "allenamenti_giorno"
+    id = Column(Integer, primary_key=True)
+    settimana_id = Column(Integer, ForeignKey("allenamenti_settimana.id"), nullable=False)
+    data = Column(Date, nullable=False)
+    note = Column(Text, nullable=True)
+    created_at = Column(Date, nullable=True)
+
+class AllenamentoEsercizio(Base):
+    __tablename__ = "allenamenti_esercizio"
+    id = Column(Integer, primary_key=True)
+    giorno_id = Column(Integer, ForeignKey("allenamenti_giorno.id"), nullable=False)
+    ordine = Column(Integer, nullable=False)
+    titolo = Column(String(200), nullable=True)
+    descrizione = Column(Text, nullable=True)
+    campo_con_righe = Column(Boolean, default=True)
+    created_at = Column(Date, nullable=True)
+
+class AllenamentoElemento(Base):
+    __tablename__ = "allenamenti_elemento"
+    id = Column(Integer, primary_key=True)
+    esercizio_id = Column(Integer, ForeignKey("allenamenti_esercizio.id"), nullable=False)
+    tipo = Column(String(50), nullable=False)
+    x = Column(Float, nullable=False)
+    y = Column(Float, nullable=False)
+    rotazione = Column(Float, default=0)
+    colore = Column(String(20), nullable=True)
+    numero = Column(Integer, nullable=True)
