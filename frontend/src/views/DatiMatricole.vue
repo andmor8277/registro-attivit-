@@ -15,11 +15,20 @@
           </svg>
         </button>
       </div>
-      <span class="titolo-toolbar">Dati & Matricole — {{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
+      <span class="titolo-toolbar">Dati Giocatori — {{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
       <div class="header-right">
-        <button v-if="!gdprSbloccato" class="btn-sblocca" @click="apriSbloccoGdpr">🔒 Dati Sensibili</button>
-        <button v-else class="btn-sblocca sbloccato" @click="gdprSbloccato = false">🔓 Blocca</button>
-        <button v-if="!isDirigente" class="btn-nuovo" @click="apriNuovo">+ Nuovo Giocatore</button>
+        <button v-if="utenteAttivo?.is_admin" class="btn-header" @click="gdprModal.show = true" title="Sblocca Dati Sensibili">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </button>
+        <button v-if="utenteAttivo?.is_admin || utenteAttivo?.ruolo === 'mister'" class="btn-header" @click="apriNuovo" title="Aggiungi Giocatore">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
       </div>
     </header>
 
@@ -368,6 +377,10 @@ onMounted(async () => {
 .btn-salva:hover { background: var(--color-primary-dark); }
 
 .page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--color-primary); }
+.header-right { display: flex; gap: 0.25rem; margin-left: auto; }
+.btn-header { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer; }
+.btn-header:hover { background: rgba(255,255,255,0.2); }
+.btn-header svg { width: 18px; height: 18px; }
 .header-left { display: flex; gap: 0.25rem; }
 .btn-back, .btn-home { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer; transition: background 0.2s; }
 .btn-back:hover, .btn-home:hover { background: rgba(255,255,255,0.2); }
