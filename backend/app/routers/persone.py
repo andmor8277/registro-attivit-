@@ -75,7 +75,7 @@ def get_persone(categoria_id: Optional[int] = None, db: Session = Depends(get_db
         # Decodifica i campi crittografati (se presenti come hex string - 64 char = encrypted)
         for field in ['codice_fiscale', 'telefono']:
             val = r.get(field)
-            if val and isinstance(val, str) and len(val) == 64 and all(c in '0123456789abcdef' for c in val):
+            if val and isinstance(val, str) and len(val) >= 32 and all(c in '0123456789abcdef' for c in val):
                 try:
                     db.rollback()
                     decrypted = db.execute(text(
