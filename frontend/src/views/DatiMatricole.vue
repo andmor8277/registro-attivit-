@@ -69,8 +69,8 @@
               <td class="cell-numero">{{ p.numero_maglia || '-' }}</td>
               <template v-if="gdprSbloccato">
                 <td>{{ formatData(p.data_nascita) }}</td>
-                <td class="cell-cf">{{ p.codice_fiscale || '-' }}</td>
-                <td>{{ p.telefono || '-' }}</td>
+                <td class="cell-cf">{{ gdprSbloccato ? (p.codice_fiscale || '-') : '••••••••••••' }}</td>
+                <td>{{ gdprSbloccato ? (p.telefono || '-') : '••••' }}</td>
                 <td class="cell-matricola">{{ p.matricola || '-' }}</td>
                 <td class="cell-scadenza" :class="{ 'scad-rossa': isScaduta(p.scadenza_certificato) }">
                   {{ formatData(p.scadenza_certificato) }}
@@ -240,6 +240,13 @@ function isScaduta(d) {
   return scad < oggi
 }
 
+function mascheraDato(dato) {
+  if (!dato) return ''
+  if (gdprSbloccato.value) return dato
+  if (dato.length > 4) return '••••••••••••'
+  return dato
+}
+
 function apriModifica(p) {
   modal.value = {
     show: true,
@@ -249,8 +256,8 @@ function apriModifica(p) {
     nome: p.nome,
     numero_maglia: p.numero_maglia || '',
     data_nascita: p.data_nascita || '',
-    codice_fiscale: p.codice_fiscale || '',
-    telefono: p.telefono || '',
+    codice_fiscale: mascheraDato(p.codice_fiscale),
+    telefono: mascheraDato(p.telefono),
     matricola: p.matricola || '',
     scadenza_certificato: p.scadenza_certificato || '',
     gruppo_id: p.gruppo_id || 1
@@ -280,6 +287,11 @@ async function salva() {
     return
   }
   
+  if (!gdprSbloccato.value && (modal.value.codice_fiscale || modal.value.telefono)) {
+    alert('Sblocca i dati GDPR prima di modificare CF o telefono')
+    return
+  }
+  
   try {
     const data = {
       nome: modal.value.nome,
@@ -287,8 +299,8 @@ async function salva() {
       gruppo_id: modal.value.gruppo_id || 1,
       categoria_id: categoriaId,
       data_nascita: modal.value.data_nascita || null,
-      codice_fiscale: modal.value.codice_fiscale || null,
-      telefono: modal.value.telefono || null,
+      codice_fiscale: modal.value.codice_fiscale?.startsWith('••') ? null : (modal.value.codice_fiscale || null),
+      telefono: modal.value.telefono?.startsWith('••') ? null : (modal.value.telefono || null),
       matricola: modal.value.matricola || null,
       numero_maglia: modal.value.numero_maglia ? parseInt(modal.value.numero_maglia) : null,
       scadenza_certificato: modal.value.scadenza_certificato || null
