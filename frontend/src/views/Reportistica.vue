@@ -390,10 +390,10 @@ onMounted(async () => {
 .month-nav .nav-btn svg { width: 18px; height: 18px; }
 .month-nav .current-month { font-size: 1.1rem; font-weight: 600; color: #ddd; min-width: 180px; text-align: center; }
 
-.table-wrapper { background: #1a1a1a; border-radius: 8px; overflow: hidden; }
-.report-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.report-table th { background: var(--color-primary); color: white; padding: 0.75rem; text-align: left; font-weight: 600; }
-.report-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #2a2a2a; color: #ddd; }
+.table-wrapper { background: #1a1a1a; border-radius: 8px; overflow: hidden; overflow-x: auto; }
+.report-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 400px; }
+.report-table th { background: var(--color-primary); color: white; padding: 0.75rem; text-align: left; font-weight: 600; white-space: nowrap; }
+.report-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #2a2a2a; color: #ddd; white-space: nowrap; }
 .report-table tr:hover { background: #252525; }
 
 .text-danger { color: #ef4444; }
