@@ -420,9 +420,9 @@ async function eliminaUtente(id) {
 }
 
 async function resetsPassword(id) {
-  if (!confirm('Resettare la password a "REMOVED"?')) return
+  if (!confirm('Resettare la password?')) return
   await resetPassword(id)
-  alert('Password resettata! La nuova password è: REMOVED')
+  alert('Password resettata!')
   await load()
 }
 
