@@ -72,15 +72,18 @@ def get_persone(categoria_id: Optional[int] = None, db: Session = Depends(get_db
     results = []
     for row in rows:
         r = dict(row._mapping)
-        # Decodifica i campi crittografati (se presenti come hex)
+        # Decodifica i campi crittografati (se presenti come hex string - 64 char = encrypted)
         for field in ['codice_fiscale', 'telefono']:
-            if r.get(field):
+            val = r.get(field)
+            if val and isinstance(val, str) and len(val) == 64 and all(c in '0123456789abcdef' for c in val):
                 try:
+                    db.rollback()
                     decrypted = db.execute(text(
-                        f"SELECT decrypt(decode('{r[field]}', 'hex'), '{ENCRYPTION_KEY}', 'aes')::text"
+                        f"SELECT decrypt(decode('{val}', 'hex'), '{ENCRYPTION_KEY}', 'aes')::text"
                     )).scalar()
-                    r[field] = decrypted if decrypted else r[field]
+                    r[field] = decrypted if decrypted else val
                 except Exception as e:
+                    db.rollback()
                     logger.warning(f"Could not decrypt {field}: {e}")
         results.append(r)
     
