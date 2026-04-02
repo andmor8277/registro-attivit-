@@ -207,6 +207,7 @@ onMounted(async () => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 .topbar {
@@ -363,6 +364,8 @@ onMounted(async () => {
     padding: 0.75rem 1rem;
     flex-wrap: wrap;
     gap: 0.75rem;
+    position: sticky;
+    top: 0;
   }
   
   .topbar-actions {
@@ -387,6 +390,48 @@ onMounted(async () => {
   .btn-nav,
   .btn-logout {
     padding: 0.5rem 0.75rem;
+  }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+  .topbar {
+    padding: 0.5rem 0.75rem;
+    min-height: 48px;
+  }
+  
+  .topbar-brand {
+    gap: 0.5rem;
+  }
+  
+  .brand-text {
+    font-size: 0.9rem;
+  }
+  
+  .logo-img {
+    height: 28px;
+  }
+  
+  .topbar-season {
+    display: none;
+  }
+  
+  .topbar-actions {
+    gap: 0.25rem;
+  }
+  
+  .btn-nav,
+  .btn-logout {
+    padding: 0.4rem;
+  }
+  
+  .btn-nav svg,
+  .btn-logout svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .btn-admin {
+    display: none;
   }
 }
 
