@@ -2,6 +2,7 @@
 backend/__pycache__/
 backend/*.pyc
 backend/.venv/
+backend/.env
 *.egg-info/
 
 # Frontend
@@ -31,3 +32,6 @@ npm-debug.log*
 # Test
 test.txt
 mock-data.json
+
+# Release archives (do not commit these)
+releases/

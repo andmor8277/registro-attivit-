@@ -1,6 +1,6 @@
-# The Home of Football
+# The Home of Football (THOF)
 
-Sistema di gestione di una squadra di calcio dilettantistico
+Sistema di gestione multi-società per società sportive dilettantistiche (calcio)
 
 ## Stack Tecnologico
 
@@ -8,7 +8,6 @@ Sistema di gestione di una squadra di calcio dilettantistico
 - **Backend**: FastAPI (Python)
 - **Database**: PostgreSQL
 - **Container**: Docker Compose
-- **PDF**: jsPDF
 
 ## Struttura del Progetto
 
@@ -17,20 +16,18 @@ registro_presenze/
 ├── frontend/           # Frontend Vue 3
 │   ├── src/
 │   │   ├── views/     # Pagine dell'applicazione
-│   │   ├── components/ # Componenti riutilizzabili
 │   │   ├── api/       # Chiamate API
 │   │   └── store.js   # State management
-│   ├── public/        # Asset statici (logo, etc.)
-│   └── mock-server.js # Server mock per sviluppo locale
+│   └── public/        # Asset statici
 ├── backend/           # Backend FastAPI
 │   └── app/
 │       ├── routers/   # API routes
 │       ├── models.py  # Modelli database
-│       └── main.py    # Entry point FastAPI
-├── migrations/        # Script di migrazione database
+│       └── main.py    # Entry point
+├── migrations/        # Script migrazione database
 ├── docker-compose.yml
 ├── dev.sh             # Script sviluppo locale
-└── deploy.sh          # Script deploy produzione
+└── deploy.sh         # Script deploy produzione
 ```
 
 ## Setup Locale
@@ -38,37 +35,52 @@ registro_presenze/
 ### Requisiti
 
 - Node.js 18+
-- npm o yarn
-- Docker (per il server di produzione)
+- Python 3.14+ (per backend locale)
+- Docker (per il server)
 
-### Sviluppo Locale (con Mock API)
+### Sviluppo Locale
 
 ```bash
-# Avvia il server di sviluppo con API mock (senza bisogno di VPN)
+# Avvia il server di sviluppo
 ./dev.sh
 ```
 
 - **Frontend**: http://localhost:5173
-- **API Mock**: http://localhost:8000
-- **Login**: `admin` / `admin123`
+- **Backend API**: http://localhost:8000
 
 ### Deploy in Produzione
 
 ```bash
-# Deploy sul server LXC
 ./deploy.sh
 ```
-
-Questo comando:
-1. Fa pull delle ultime modifiche dal repository
-2. Esegue le migrazioni database se necessario
-3. Ricostruisce i container Docker
-4. Riavvia i servizi
 
 ## Accesso
 
 - **Produzione**: https://thof.crickethouse.mywire.org
 - **Locale**: http://localhost:5173
+
+## 📦 Release
+
+<!-- RELEASE_INFO -->
+La versione attuale è **v1.1.0**.
+
+Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
+
+---
+
+**Come creare una release:**
+
+```bash
+# Minor release (es. 1.0.0 → 1.1.0)
+./release.sh minor "Descrizione novità"
+
+# Major release (es. 1.0.0 → 2.0.0)
+./release.sh major "Grandi novità"
+```
+
+Le release vengono salvate nella cartella `releases/vX.X.X/` per i rollback.
+
+---
 
 ## Credenziali
 
@@ -82,25 +94,35 @@ Le credenziali sono configurate nel database. Contattare l'amministratore per l'
 - ✅ Campo stagione calcistica (es. 2025 per 2025/2026)
 - ✅ Giorni di allenamento
 - ✅ Categoria speciale **Portieri** (cross-year)
-- ✅ **Google Drive Folder ID** per integrare la cartella allenamenti
+- ✅ Colori distintivi per Mister (rosso) e Dirigenti (blu)
 
 ### Registro Presenze
 - ✅ Registro con codici: X (presente), P (permesso), R (recupero), A (assente), AG (assente giustificato), AI (infortunio)
 - ✅ Statistiche mensili e totali
 - ✅ Raggruppamento per gruppi di allenamento
-- ✅ Visualizzazione nastrata per categoria
 
 ### Dati & Matricole
 - ✅ Tabella giocatori completa (nome, cognome, nr. maglia, data nascita, codice fiscale, telefono, matricola, scadenza certificato, gruppo)
 - ✅ Ricerca per nome, cognome o matricola
 - ✅ Filtro per gruppo di allenamento
-- ✅ **CRUD completo**: creare, modificare, eliminare giocatori
-- ✅ Evidenziazione righe con certificato scaduto o assente (arancione)
+- ✅ CRUD completo: creare, modificare, eliminare giocatori
+- ✅ Evidenziazione righe con certificato scaduto (arancione)
+- ✅ Protezione **GDPR**: dati sensibili (CF, telefono, data nascita) nascosti dietro password
 
-### Allenamenti
-- ✅ Integrazione **Google Drive** per la cartella allenamenti
-- ✅ Iframe per visualizzare i file della cartella Drive
-- ✅ Link diretto per aprire Google Drive e modificare i file
+### Allenamenti (Lavagna Tattica)
+- ✅ Campo da calcio realistico con percentuali
+- ✅ **Libreria oggetti sportivi** (3 set):
+  - Set 1: Palloni, Coni, Paletti, Bandierine, Dischi, Anelli, Scale, Porte
+  - Set 2: Ostacoli, Telai, Attrezzi fitness, Palloni sport vari
+  - Set 3: Barre, Griglie, Piattaforme
+- ✅ **Frecce tattiche calcio** (5 tipi):
+  - Passaggio (linea continua)
+  - Conduzione palla (tratteggiata)
+  - Combinazione a muro (bidirezionale)
+  - Tiro in porta (spessa)
+  - Movimento senza palla (termina con pallino)
+- ✅ Frecce ruotabili, allungabili, ondolabili
+- ✅ Personalizzazione colore frecce
 
 ### Convocazioni
 - ✅ Creazione e gestione convocazioni multiple per evento
@@ -108,10 +130,11 @@ Le credenziali sono configurate nel database. Contattare l'amministratore per l'
 - ✅ Dettagli gara (data, ora, campo, indirizzo, appuntamento)
 - ✅ Dati mister con cellulare
 - ✅ Note per la convocazione
-- ✅ **Esportazione PDF** con layout professionale (header rosso, dati gare, lista convocati)
+- ✅ **Esportazione PDF** professionale
 
 ### Stagioni Calcistiche
 - ✅ Impostazione stagione corrente per tutte le categorie
+- ✅ **Inizio/Fine Stagione** globali (valgono per tutte le categorie)
 - ✅ Stagione corrente visualizzata nella navbar
 - ✅ Archiviazione stagione a fine anno
 - ✅ Visualizzazione stagioni passate (solo admin)
@@ -129,13 +152,15 @@ Le credenziali sono configurate nel database. Contattare l'amministratore per l'
 ```sql
 categorie (
   id SERIAL PRIMARY KEY,
-  nome VARCHAR(100),              -- Es. "Esordienti"
-  anno INTEGER,                   -- Anno di nascita (es. 2014), NULL per portieri
-  stagione INTEGER,               -- Anno inizio stagione (es. 2025 per 2025/2026)
-  giorni VARCHAR(20),              -- Giorni allenamento (es. "1,3,5" = Lun,Mer,Ven)
-  is_portieri INTEGER DEFAULT 0,  -- 1 = portieri (cross-year)
-  is_archiviata INTEGER DEFAULT 0,-- 1 = stagione archiviata
-  drive_folder_id VARCHAR(100)    -- Google Drive folder ID
+  nome VARCHAR(100),
+  anno INTEGER,
+  stagione INTEGER,
+  giorni VARCHAR(20),
+  is_portieri INTEGER DEFAULT 0,
+  is_archiviata INTEGER DEFAULT 0,
+  data_inizio_stagione DATE,
+  data_fine_stagione DATE,
+  societa_id INTEGER REFERENCES societa(id)
 )
 ```
 
@@ -157,16 +182,6 @@ persone (
 )
 ```
 
-### Migrazioni
-
-Le migrazioni vengono eseguite automaticamente durante il deploy. Per eseguirle manualmente:
-
-```bash
-# Sul server LXC
-cd /opt/registro_presenze
-docker compose exec -T db psql -U registro_user -d registro -f migrations/001_add_drive_folder.sql
-```
-
 ## API Endpoints
 
 ### Auth
@@ -178,8 +193,6 @@ docker compose exec -T db psql -U registro_user -d registro -f migrations/001_ad
 | POST | `/auth/utenti` | Crea utente (admin) |
 | PUT | `/auth/utenti/:id` | Modifica utente (admin) |
 | DELETE | `/auth/utenti/:id` | Elimina utente (admin) |
-| PUT | `/auth/utenti/:id/reset-password` | Reset password |
-| PUT | `/auth/utenti/:id/categorie` | Assegna categorie |
 
 ### Categorie
 | Metodo | Endpoint | Descrizione |
@@ -187,12 +200,7 @@ docker compose exec -T db psql -U registro_user -d registro -f migrations/001_ad
 | GET | `/categorie/` | Lista categorie attive |
 | POST | `/categorie/` | Crea categoria |
 | PUT | `/categorie/:id` | Modifica categoria |
-| DELETE | `/categorie/:id` | Elimina categoria (admin) |
-| GET | `/categorie/stagioni` | Lista stagioni attive/archiviate |
-| POST | `/categorie/archivia/:stagione` | Archivia stagione (admin) |
-| POST | `/categorie/ripristina/:stagione` | Ripristina stagione (admin) |
-| GET | `/categorie/archived` | Categorie archiviate (admin) |
-| GET | `/categorie/by-stagione/:stagione` | Categorie per stagione |
+| DELETE | `/categorie/:id` | Elimina categoria |
 
 ### Persone
 | Metodo | Endpoint | Descrizione |
@@ -208,104 +216,57 @@ docker compose exec -T db psql -U registro_user -d registro -f migrations/001_ad
 | GET | `/registro/mese/:catId/:anno/:mese` | Presenze mese |
 | POST | `/registro/` | Inserisci/modifica presenza |
 
+### Allenamenti
+| Metodo | Endpoint | Descrizione |
+|--------|----------|-------------|
+| GET | `/allenamenti/` | Lista allenamenti |
+| GET | `/allenamenti/giorno/:catId/:data` | Dettagli giorno |
+| POST | `/allenamenti/` | Salva allenamenti |
+
 ### Convocazioni
 | Metodo | Endpoint | Descrizione |
 |--------|----------|-------------|
 | GET | `/convocazioni/` | Lista convocazioni |
-| GET | `/convocazioni/:id` | Dettagli convocazione |
-| POST | `/convocazioni/` | Crea convocazione |
-| PUT | `/convocazioni/:id` | Modifica convocazione |
-| DELETE | `/convocazioni/:id` | Elimina convocazione |
-
-### Allenatori
-| Metodo | Endpoint | Descrizione |
-|--------|----------|-------------|
-| GET | `/allenatori/` | Lista allenatori |
-| POST | `/allenatori/` | Crea allenatore |
-| PUT | `/allenatori/:id` | Modifica allenatore |
-| DELETE | `/allenatori/:id` | Elimina allenatore |
+| GET | `/convocazioni/:id` | Dettagli |
+| POST | `/convocazioni/` | Crea |
+| PUT | `/convocazioni/:id` | Modifica |
+| DELETE | `/convocazioni/:id` | Elimina |
 
 ### Società
 | Metodo | Endpoint | Descrizione |
 |--------|----------|-------------|
 | GET | `/societa/` | Lista società |
-| GET | `/societa/:id` | Dettagli società |
-| POST | `/societa/` | Crea società (solo super_admin) |
-| PUT | `/societa/:id` | Modifica società |
-| DELETE | `/societa/:id` | Elimina società |
-| POST | `/societa/upload/:tipo` | Upload logo (:tipo = logo/logosponsor) |
+| GET | `/societa/:id` | Dettagli |
+| POST | `/societa/` | Crea (super_admin) |
+| PUT | `/societa/:id` | Modifica |
 
 ## Multi-Società
 
-Il sistema supporta la **gestione di più società sportive** con dati isolati:
+Il sistema supporta la **gestione di più società sportive** con dati isolati.
 
 ### Ruoli Utente
 
 | Ruolo | Descrizione |
 |-------|-------------|
-| super_admin | Accesso completo a TUTTE le società (crea società, gestisce tutto) |
+| super_admin | Accesso completo a TUTTE le società |
 | admin | Accesso alla propria società assegnata |
 | mister | Accesso alle proprie categorie assegnate |
 | dirigente | Accesso in sola lettura alle statistiche |
 
-### Funzionalità Multi-Società
+### Funzionalità
 
-- ✅ **SuperAdmin**: può creare/modificare tutte le società
-- ✅ **Admin locale**: può modificare solo la propria società (logo, colori)
-- ✅ **Società**: ogni società ha i propri colori, logo, logo sponsor
-- ✅ **Isolamento dati**: utenti, categorie, giocatori sono associati a una società
-- ✅ **Tema dinamico**: i colori della società vengono applicati a tutte le pagine
-
-### Schema Società
-
-```sql
-societa (
-  id SERIAL PRIMARY KEY,
-  nome VARCHAR(100),              -- Nome completo (es. "RedTigers 1957")
-  nome_breve VARCHAR(50),          -- Nome breve (es. "RedTigers")
-  logo VARCHAR(255),               -- Path logo società
-  logosponsor VARCHAR(255),        -- Path logo sponsor
-  colore_primario VARCHAR(7),     -- Colore hex (es. "#dc2626")
-  colore_secondario VARCHAR(7),   -- Colore hex secondario
-  is_attiva INTEGER DEFAULT 1    -- 1 = attiva
-)
-```
-
-### Schema Utenti (aggiornato)
-
-```sql
-utenti (
-  ...
-  societa_id INTEGER REFERENCES societa(id),  -- Società di appartenenza
-  is_super_admin INTEGER DEFAULT 0            -- 1 = super admin
-)
-```
-
-### Schema Categorie (aggiornato)
-
-```sql
-categorie (
-  ...
-  societa_id INTEGER REFERENCES societa(id)   -- Società di appartenenza
-)
-```
+- ✅ **SuperAdmin**: crea/modifica tutte le società
+- ✅ **Admin locale**: modifica solo la propria società
+- ✅ **Isolamento dati**: utenti, categorie, giocatori associati a società
+- ✅ **Tema dinamico**: colori società applicati a tutte le pagine
 
 ## Workflow Stagioni
 
-1. **Inizio stagione** (settembre): Admin clicca "Imposta Stagione" e inserisce l'anno (es. 2025)
-2. **Durante stagione**: Utilizzo normale del sistema
-3. **Fine stagione** (giugno/luglio): Admin clicca "Archivia Stagione"
-4. Le categorie passano in "Stagioni Passate" e non sono più visibili nella home
+1. **Inizio stagione** (settembre): Admin clicca "Imposta Stagione" (anno + date inizio/fine)
+2. **Durante stagione**: utilizzo normale
+3. **Fine stagione** (giugno): Admin clicca "Archivia Stagione"
+4. Le categorie passano in "Stagioni Passate"
 5. Ricomincia da 1 con la nuova stagione
-
-## Integrazione Google Drive
-
-Per abilitare la visualizzazione della cartella Drive nella pagina Allenamenti:
-
-1. In Home, clicca su una categoria → Modifica
-2. Inserisci l'ID della cartella Google Drive
-3. L'ID si trova nella URL della cartella: `drive.google.com/drive/folders/`**`1a2b3c4d`**
-4. Nella pagina Allenamenti apparirà la cartella embedded
 
 ## Licenza
 
