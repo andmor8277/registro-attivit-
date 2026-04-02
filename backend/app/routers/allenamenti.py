@@ -133,24 +133,53 @@ def create_mese(data: MeseCreate, db: Session = Depends(get_db)):
     return mese
 
 @router.post("/")
-def create_allenamento_completo(data: MeseCreate, db: Session = Depends(get_db)):
-    mese = models.AllenamentoMese(categoria_id=1, nome_mese=data.nome_mese, created_at=datetime.now())
-    db.add(mese)
-    db.commit()
-    db.refresh(mese)
+def create_allenamento_completo(data: MeseCreate, db: Session = Depends(get_db), categoria_id: int = 1):
+    from datetime import datetime
     
-    for sem_data in data.settimane:
-        settimana = models.AllenamentoSettimana(mese_id=mese.id, numero_settimana=sem_data.numero_settimana, data_inizio=sem_data.data_inizio, created_at=datetime.now())
-        db.add(settimana)
+    # Parse nome_mese to get anno and mese
+    anno, mese_num = map(int, data.nome_mese.split('-'))
+    
+    # Find or create month
+    mese = db.query(models.AllenamentoMese).filter(
+        models.AllenamentoMese.categoria_id == categoria_id,
+        models.AllenamentoMese.nome_mese == data.nome_mese
+    ).first()
+    
+    if not mese:
+        mese = models.AllenamentoMese(categoria_id=categoria_id, nome_mese=data.nome_mese, created_at=datetime.now())
+        db.add(mese)
         db.commit()
-        db.refresh(settimana)
+        db.refresh(mese)
+    
+    # Process each week
+    for sem_data in data.settimane:
+        settimana = db.query(models.AllenamentoSettimana).filter(
+            models.AllenamentoSettimana.mese_id == mese.id,
+            models.AllenamentoSettimana.numero_settimana == sem_data.numero_settimana
+        ).first()
+        
+        if not settimana:
+            settimana = models.AllenamentoSettimana(mese_id=mese.id, numero_settimana=sem_data.numero_settimana, data_inizio=sem_data.data_inizio, created_at=datetime.now())
+            db.add(settimana)
+            db.commit()
+            db.refresh(settimana)
         
         for g_data in sem_data.giorni:
-            giorno = models.AllenamentoGiorno(settimana_id=settimana.id, data=g_data.data, note=g_data.note, created_at=datetime.now())
-            db.add(giorno)
-            db.commit()
-            db.refresh(giorno)
+            giorno = db.query(models.AllenamentoGiorno).filter(
+                models.AllenamentoGiorno.settimana_id == settimana.id,
+                models.AllenamentoGiorno.data == g_data.data
+            ).first()
             
+            if not giorno:
+                giorno = models.AllenamentoGiorno(settimana_id=settimana.id, data=g_data.data, note=g_data.note, created_at=datetime.now())
+                db.add(giorno)
+                db.commit()
+                db.refresh(giorno)
+            
+            # Delete existing exercises for this day
+            db.query(models.AllenamentoEsercizio).filter(models.AllenamentoEsercizio.giorno_id == giorno.id).delete()
+            
+            # Create new exercises
             for e_data in g_data.esercizi:
                 esercizio = models.AllenamentoEsercizio(giorno_id=giorno.id, ordine=e_data.ordine, titolo=e_data.titolo, descrizione=e_data.descrizione, campo_con_righe=e_data.campo_con_righe, created_at=datetime.now())
                 db.add(esercizio)
