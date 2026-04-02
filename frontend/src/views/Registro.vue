@@ -357,11 +357,15 @@ watch([anno, mese], loadRegistro)
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  justify-content: center;
+  padding: 0.75rem;
+  background: var(--color-surface);
+  margin-bottom: 0.5rem;
 }
 
 .btn-nav-mese {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -371,6 +375,7 @@ watch([anno, mese], loadRegistro)
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .btn-nav-mese:hover {
@@ -380,8 +385,8 @@ watch([anno, mese], loadRegistro)
 }
 
 .btn-nav-mese svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 .mese-label {
@@ -390,6 +395,28 @@ watch([anno, mese], loadRegistro)
   color: var(--color-text);
   min-width: 180px;
   text-align: center;
+}
+
+@media (max-width: 480px) {
+  .mese-selector {
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+  
+  .btn-nav-mese {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .btn-nav-mese svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .mese-label {
+    font-size: 1.1rem;
+    min-width: 140px;
+  }
 }
 
 .legenda {
