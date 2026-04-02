@@ -79,7 +79,7 @@ def get_persone(categoria_id: Optional[int] = None, db: Session = Depends(get_db
                 try:
                     db.rollback()
                     decrypted = db.execute(text(
-                        f"SELECT decrypt(decode('{val}', 'hex'), '{ENCRYPTION_KEY}', 'aes')::text"
+                        f"SELECT convert_from(decrypt(decode('{val}', 'hex'), '{ENCRYPTION_KEY}', 'aes'), 'UTF8')"
                     )).scalar()
                     r[field] = decrypted if decrypted else val
                 except Exception as e:
