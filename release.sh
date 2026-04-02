@@ -52,7 +52,7 @@ echo "🚀 Creando release v$NEW_VERSION (type: $RELEASE_TYPE)..."
 # Crea la cartella della release
 mkdir -p releases/v$NEW_VERSION
 
-# Copia i file sorgente (no node_modules, no dist, no __pycache__)
+# Copia i file sorgente (no node_modules, no dist, no __pycache__, no secrets)
 echo "📦 Copiando file..."
 rm -rf releases/v$NEW_VERSION/*
 
@@ -61,8 +61,6 @@ mkdir -p releases/v$NEW_VERSION/backend
 cp -r backend/app releases/v$NEW_VERSION/backend/
 cp backend/requirements.txt releases/v$NEW_VERSION/backend/
 cp backend/migrations releases/v$NEW_VERSION/backend/ -rf
-cp backend/Dockerfile releases/v$NEW_VERSION/backend/ 2>/dev/null || true
-cp backend/.env releases/v$NEW_VERSION/backend/ 2>/dev/null || true
 
 # Frontend
 mkdir -p releases/v$NEW_VERSION/frontend
@@ -71,9 +69,7 @@ cp -r frontend/public releases/v$NEW_VERSION/frontend/ 2>/dev/null || true
 cp frontend/index.html releases/v$NEW_VERSION/frontend/
 cp frontend/vite.config.js releases/v$NEW_VERSION/frontend/
 cp frontend/package.json releases/v$NEW_VERSION/frontend/
-cp frontend/Dockerfile releases/v$NEW_VERSION/frontend/ 2>/dev/null || true
 cp frontend/nginx.conf releases/v$NEW_VERSION/frontend/ 2>/dev/null || true
-cp frontend/.env releases/v$NEW_VERSION/frontend/ 2>/dev/null || true
 
 # Root files
 cp docker-compose.yml releases/v$NEW_VERSION/
@@ -83,6 +79,10 @@ cp README.md releases/v$NEW_VERSION/
 
 # Copia il CHANGELOG nella release
 cp CHANGELOG.md releases/v$NEW_VERSION/
+
+# GitHub Actions (per automazione)
+mkdir -p releases/v$NEW_VERSION/.github
+cp -r .github/workflows releases/v$NEW_VERSION/.github/ 2>/dev/null || true
 
 # Aggiorna il CHANGELOG con la nuova versione
 echo "" >> CHANGELOG.md
