@@ -77,8 +77,8 @@ def get_persone(categoria_id: Optional[int] = None, db: Session = Depends(get_db
             if r.get(field):
                 try:
                     decrypted = db.execute(text(
-                        "SELECT decrypt(decode(:value, 'hex'), :key, 'aes')::text"
-                    ), {"value": r[field], "key": ENCRYPTION_KEY}).scalar()
+                        f"SELECT decrypt(decode('{r[field]}', 'hex'), '{ENCRYPTION_KEY}', 'aes')::text"
+                    )).scalar()
                     r[field] = decrypted if decrypted else r[field]
                 except Exception as e:
                     logger.warning(f"Could not decrypt {field}: {e}")
