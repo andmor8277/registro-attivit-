@@ -19,17 +19,46 @@
     </header>
 
     <div class="reportistica-body">
-      <div class="filters">
-        <div class="date-range">
-          <label>Da:</label>
-          <input type="date" v-model="dataInizio" @change="ricalcolaDati">
-          <label>A:</label>
-          <input type="date" v-model="dataFine" @change="ricalcolaDati">
+      <div class="section">
+        <h3 class="section-title">📉 Assenze mensili</h3>
+        <div class="month-nav">
+          <button class="nav-btn" @click="mesePrecedente">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span class="current-month">{{ mesi[meseSelezionato-1] }} {{ annoSelezionato }}</span>
+          <button class="nav-btn" @click="meseSuccessivo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        <div class="table-wrapper">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Cognome</th>
+                <th>Nome</th>
+                <th>Assenze</th>
+                <th>% Assenze</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(g, idx) in assenzeMensili" :key="g.id">
+                <td>{{ idx + 1 }}</td>
+                <td>{{ g.cognome }}</td>
+                <td>{{ g.nome }}</td>
+                <td class="text-danger">{{ g.assenze }}</td>
+                <td>{{ g.percentuale }}%</td>
+              </tr>
+              <tr v-if="assenzeMensili.length === 0">
+                <td colspan="5" class="no-data">Seleziona un mese</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       <div class="section">
-        <h3 class="section-title">📉 Assenze per Giocatore</h3>
+        <h3 class="section-title">📉 Assenze annuali (stagione)</h3>
         <div class="table-wrapper">
           <table class="report-table">
             <thead>
@@ -58,7 +87,7 @@
       </div>
 
       <div class="section">
-        <h3 class="section-title">⚽ Convocazioni per Giornata</h3>
+        <h3 class="section-title">📉 Doppie durante l'anno</h3>
         <div class="table-wrapper">
           <table class="report-table">
             <thead>
@@ -100,6 +129,10 @@ const categoria = ref(null)
 const dataInizio = ref('')
 const dataFine = ref('')
 const assenzePerGiocatore = ref([])
+const assenzeMensili = ref([])
+const meseSelezionato = ref(new Date().getMonth() + 1)
+const annoSelezionato = ref(new Date().getFullYear())
+const mesi = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
 const convocatiPerGiornata = ref([])
 const personeMap = ref(new Map())
 
@@ -164,6 +197,69 @@ async function ricalcolaDati() {
     g.percentuale = tot > 0 ? Math.min(100, Math.round((g.assenze / tot) * 100)) : 0
     return g
   }).sort((a, b) => b.assenze - a.assenze)
+}
+
+async function ricalcolaAssenzeMensili() {
+  if (!meseSelezionato.value) {
+    assenzeMensili.value = []
+    return
+  }
+  
+  const mese = parseInt(meseSelezionato.value)
+  const anno = annoSelezionato.value
+  
+  const giocatoriMap = new Map()
+  const giorniTotali = new Set()
+  
+  for (const [id, p] of personeMap.value) {
+    giocatoriMap.set(id, { id: id, cognome: p.cognome, nome: p.nome, assenze: 0 })
+  }
+  
+  try {
+    const regRes = await getRegistroMese(categoriaId, anno, mese)
+    const entries = regRes.data || []
+    
+    for (const e of entries) {
+      if (!e.data) continue
+      
+      giorniTotali.add(e.data)
+      
+      if (e.codice === 'AG' || e.codice === 'AI') {
+        if (giocatoriMap.has(e.persona_id)) {
+          giocatoriMap.get(e.persona_id).assenze++
+        }
+      }
+    }
+  } catch (e) {
+    // no data for this month
+  }
+  
+  const tot = giorniTotali.size
+  
+  assenzeMensili.value = Array.from(giocatoriMap.values()).map(g => {
+    g.percentuale = tot > 0 ? Math.min(100, Math.round((g.assenze / tot) * 100)) : 0
+    return g
+  }).sort((a, b) => b.assenze - a.assenze)
+}
+
+function mesePrecedente() {
+  if (meseSelezionato.value === 1) {
+    meseSelezionato.value = 12
+    annoSelezionato.value--
+  } else {
+    meseSelezionato.value--
+  }
+  ricalcolaAssenzeMensili()
+}
+
+function meseSuccessivo() {
+  if (meseSelezionato.value === 12) {
+    meseSelezionato.value = 1
+    annoSelezionato.value++
+  } else {
+    meseSelezionato.value++
+  }
+  ricalcolaAssenzeMensili()
 }
 
 async function caricaConvocati() {
@@ -264,6 +360,7 @@ onMounted(async () => {
     
     await Promise.all([
       ricalcolaDati(),
+      ricalcolaAssenzeMensili(),
       caricaConvocati()
     ])
     
@@ -284,13 +381,14 @@ onMounted(async () => {
 
 .reportistica-body { flex: 1; overflow-y: auto; padding: 1rem; }
 
-.filters { margin-bottom: 1.5rem; }
-.date-range { display: flex; align-items: center; gap: 0.5rem; background: #1a1a1a; padding: 1rem; border-radius: 8px; }
-.date-range label { color: #888; }
-.date-range input { background: #2a2a2a; border: 1px solid #444; color: #ddd; padding: 0.5rem; border-radius: 4px; }
-
 .section { margin-bottom: 1.5rem; }
 .section-title { font-size: 1rem; color: #ddd; margin-bottom: 0.75rem; padding-left: 0.5rem; border-left: 3px solid var(--color-primary); }
+
+.month-nav { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1rem; }
+.month-nav .nav-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: #ddd; cursor: pointer; }
+.month-nav .nav-btn:hover { background: #3a3a3a; }
+.month-nav .nav-btn svg { width: 18px; height: 18px; }
+.month-nav .current-month { font-size: 1.1rem; font-weight: 600; color: #ddd; min-width: 180px; text-align: center; }
 
 .table-wrapper { background: #1a1a1a; border-radius: 8px; overflow: hidden; }
 .report-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
