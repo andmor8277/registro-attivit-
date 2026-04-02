@@ -34,6 +34,7 @@
           <h3>Allenamento del {{ formatDate(selectedDay.data) }}</h3>
           <button class="btn-add-exercise" @click="addEsercizio">+ Esercizio</button>
           <button class="btn-save-exercise" @click="saveCurrentExercise" title="Salva">💾 Salva</button>
+          <button class="btn-save-exercise" @click="exportPdf" title="Esporta PDF">📄 PDF</button>
         </div>
 
         <div class="esercizi-list">
@@ -417,6 +418,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../store.js'
 import { getAllCategorie, getAllenamentiGiornoByData, saveAllenamenti } from '../api/index.js'
+import { jsPDF } from 'jspdf'
 
 const router = useRouter()
 const route = useRoute()
@@ -598,6 +600,36 @@ function saveCurrentExercise() {
   }
 }
 
+function exportPdf() {
+  const doc = new jsPDF()
+  const pageWidth = doc.internal.pageSize.getWidth()
+  let y = 20
+  
+  doc.setFontSize(18)
+  doc.text('Allenamento del ' + formatDate(selectedDay.value?.data || ''), pageWidth / 2, y, { align: 'center' })
+  y += 15
+  
+  esercizi.value.forEach((ex, idx) => {
+    if (y > 270) {
+      doc.addPage()
+      y = 20
+    }
+    
+    doc.setFontSize(14)
+    doc.setTextColor(220, 38, 38)
+    doc.text('Esercizio ' + (idx + 1) + ': ' + (ex.titolo || 'Senza titolo'), 15, y)
+    y += 8
+    
+    doc.setFontSize(11)
+    doc.setTextColor(0, 0, 0)
+    const descLines = doc.splitTextToSize(ex.descrizione || '', pageWidth - 30)
+    doc.text(descLines, 15, y)
+    y += descLines.length * 6 + 10
+  })
+  
+  doc.save('allenamento-' + (selectedDay.value?.data || 'data') + '.pdf')
+}
+
 function saveEsercizio(ex) {
   if (!selectedDay.value) return
   
@@ -626,7 +658,7 @@ function saveEsercizio(ex) {
     }]
   }
   
-  saveAllenamenti(data).then(() => {
+  saveAllenamenti(categoriaId, data).then(() => {
     console.log('Allenamenti salvati!')
   }).catch(err => {
     console.error('Errore nel salvataggio:', err)
