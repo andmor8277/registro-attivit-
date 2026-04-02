@@ -9,8 +9,10 @@ from pydantic import BaseModel
 from typing import Optional, List
 from ..database import SessionLocal
 from ..models import Utente, UtenteCategoria, Categoria
+import os
 
-SECRET_KEY = "cambia-questa-chiave-segreta-123"
+SECRET_KEY = os.environ.get("SECRET_KEY", "cambia-questa-chiave-segreta-123")
+DEFAULT_PASSWORD = os.environ.get("DEFAULT_PASSWORD", "THOF2026!")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
 
@@ -265,9 +267,9 @@ def reset_password(uid: int, current_user: Utente = Depends(get_admin), db: Sess
     utente = db.query(Utente).filter(Utente.id == uid).first()
     if not utente:
         raise HTTPException(status_code=404, detail="Utente non trovato")
-    utente.password_hash = hash_password("THOF2026!")
+    utente.password_hash = hash_password(DEFAULT_PASSWORD)
     db.commit()
-    return {"ok": True, "message": "Password reimpostata a THOF2026!"}
+    return {"ok": True, "message": "Password reimpostata"}
 
 @router.put("/utenti/{uid}/password")
 def cambia_password(uid: int, data: PasswordChange, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
