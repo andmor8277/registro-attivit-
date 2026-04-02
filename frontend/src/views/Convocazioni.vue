@@ -16,6 +16,7 @@
         </button>
       </div>
       <span class="titolo-toolbar">Convocazioni — {{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
+      <button class="btn-nuovo" @click="nuovaConvocazione">+ Nuovo Weekend</button>
     </header>
 
     <div class="conv-body">
