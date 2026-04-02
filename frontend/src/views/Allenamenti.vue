@@ -33,6 +33,7 @@
         <div class="day-header">
           <h3>Allenamento del {{ formatDate(selectedDay.data) }}</h3>
           <button class="btn-add-exercise" @click="addEsercizio">+ Esercizio</button>
+          <button class="btn-save-exercise" @click="saveCurrentExercise" title="Salva">💾 Salva</button>
         </div>
 
         <div class="esercizi-list">
@@ -86,14 +87,55 @@
                   <div class="tools-section">
                     <div class="tools-label">PALLONI</div>
                     <div class="tools-grid">
-                      <button class="tool-btn" :class="{ active: currentTool === 'ball' }" @click="selectTool('ball')" title="Pallone">
-                        <svg viewBox="0 0 24 24" class="tool-icon"><circle cx="12" cy="12" r="10" fill="white" stroke="#000" stroke-width="1.5"/><path d="M12,2 L15,7 L12,22 L9,7 Z" fill="white" stroke="#000" stroke-width="1"/><circle cx="12" cy="12" r="2" fill="none" stroke="#000" stroke-width="1"/></svg>
+                      <button class="tool-btn" :class="{ active: currentTool === 'ball' }" @click="selectTool('ball')" title="Pallone Bianco/Nero">
+                        <svg viewBox="0 0 24 24" class="tool-icon">
+                          <circle cx="12" cy="12" r="10" fill="#fff" stroke="#000" stroke-width="2"/>
+                          <polygon points="12,7 8,10 8,14 12,17 16,14 16,10" fill="#000"/>
+                          <polygon points="7,8 4,11 4,13 7,16" fill="#000"/>
+                          <polygon points="17,8 20,11 20,13 17,16" fill="#000"/>
+                          <polygon points="8,5 5,9 5,11 8,14" fill="#000"/>
+                          <polygon points="16,5 19,9 19,11 16,14" fill="#000"/>
+                        </svg>
                       </button>
                       <button class="tool-btn" :class="{ active: currentTool === 'ball-blue' }" @click="selectTool('ball-blue')" title="Pallone Blu">
-                        <svg viewBox="0 0 24 24" class="tool-icon"><circle cx="12" cy="12" r="10" fill="#3b82f6" stroke="#000" stroke-width="1.5"/><path d="M12,2 L15,7 L12,22 L9,7 Z" fill="#60a5fa" stroke="#000" stroke-width="1"/><circle cx="12" cy="12" r="2" fill="none" stroke="#fff" stroke-width="1"/></svg>
+                        <svg viewBox="0 0 24 24" class="tool-icon">
+                          <circle cx="12" cy="12" r="10" fill="#fff" stroke="#003399" stroke-width="2"/>
+                          <polygon points="12,7 8,10 8,14 12,17 16,14 16,10" fill="#003399"/>
+                          <polygon points="7,8 4,11 4,13 7,16" fill="#003399"/>
+                          <polygon points="17,8 20,11 20,13 17,16" fill="#003399"/>
+                          <polygon points="8,5 5,9 5,11 8,14" fill="#003399"/>
+                          <polygon points="16,5 19,9 19,11 16,14" fill="#003399"/>
+                        </svg>
                       </button>
                       <button class="tool-btn" :class="{ active: currentTool === 'ball-red' }" @click="selectTool('ball-red')" title="Pallone Rosso">
-                        <svg viewBox="0 0 24 24" class="tool-icon"><circle cx="12" cy="12" r="10" fill="#ef4444" stroke="#000" stroke-width="1.5"/><path d="M12,2 L15,7 L12,22 L9,7 Z" fill="#fca5a5" stroke="#000" stroke-width="1"/><circle cx="12" cy="12" r="2" fill="none" stroke="#fff" stroke-width="1"/></svg>
+                        <svg viewBox="0 0 24 24" class="tool-icon">
+                          <circle cx="12" cy="12" r="10" fill="#fff" stroke="#990000" stroke-width="2"/>
+                          <polygon points="12,7 8,10 8,14 12,17 16,14 16,10" fill="#cc0000"/>
+                          <polygon points="7,8 4,11 4,13 7,16" fill="#cc0000"/>
+                          <polygon points="17,8 20,11 20,13 17,16" fill="#cc0000"/>
+                          <polygon points="8,5 5,9 5,11 8,14" fill="#cc0000"/>
+                          <polygon points="16,5 19,9 19,11 16,14" fill="#cc0000"/>
+                        </svg>
+                      </button>
+                      <button class="tool-btn" :class="{ active: currentTool === 'ball-yellow' }" @click="selectTool('ball-yellow')" title="Pallone Giallo">
+                        <svg viewBox="0 0 24 24" class="tool-icon">
+                          <circle cx="12" cy="12" r="10" fill="#ffd700" stroke="#000" stroke-width="2"/>
+                          <polygon points="12,7 8,10 8,14 12,17 16,14 16,10" fill="#000"/>
+                          <polygon points="7,8 4,11 4,13 7,16" fill="#000"/>
+                          <polygon points="17,8 20,11 20,13 17,16" fill="#000"/>
+                          <polygon points="8,5 5,9 5,11 8,14" fill="#000"/>
+                          <polygon points="16,5 19,9 19,11 16,14" fill="#000"/>
+                        </svg>
+                      </button>
+                      <button class="tool-btn" :class="{ active: currentTool === 'ball-orange' }" @click="selectTool('ball-orange')" title="Pallone Arancione">
+                        <svg viewBox="0 0 24 24" class="tool-icon">
+                          <circle cx="12" cy="12" r="10" fill="#fff" stroke="#cc4400" stroke-width="2"/>
+                          <polygon points="12,7 8,10 8,14 12,17 16,14 16,10" fill="#ff6600"/>
+                          <polygon points="7,8 4,11 4,13 7,16" fill="#ff6600"/>
+                          <polygon points="17,8 20,11 20,13 17,16" fill="#ff6600"/>
+                          <polygon points="8,5 5,9 5,11 8,14" fill="#ff6600"/>
+                          <polygon points="16,5 19,9 19,11 16,14" fill="#ff6600"/>
+                        </svg>
                       </button>
                     </div>
                   </div>
@@ -258,36 +300,6 @@
                   </div>
 
                   <div class="tools-section">
-                    <div class="tools-label">PALLONI</div>
-                    <div class="tools-grid">
-                      <button class="tool-btn" :class="{ active: currentTool === 'ball-tennis' }" @click="selectTool('ball-tennis')" title="Pallina Tennis">
-                        <svg viewBox="0 0 24 24" class="tool-icon"><circle cx="12" cy="12" r="10" fill="#ccff00" stroke="#86efac" stroke-width="1.5"/><path d="M4,12 Q12,4 20,12 Q12,20 4,12" fill="none" stroke="#fff" stroke-width="1.5"/></svg>
-                      </button>
-                      <button class="tool-btn" :class="{ active: currentTool === 'ball-volleyball' }" @click="selectTool('ball-volleyball')" title="Pallone Pallavolo">
-                        <svg viewBox="0 0 24 24" class="tool-icon"><circle cx="12" cy="12" r="10" fill="#fef08a" stroke="#eab308" stroke-width="1.5"/><path d="M6,8 L18,8 M6,16 L18,16 M8,6 L8,18 M16,6 L16,18" stroke="#2563eb" stroke-width="1"/><path d="M8,8 L16,16 M16,8 L8,16" stroke="#2563eb" stroke-width="1"/></svg>
-                      </button>
-                      <button class="tool-btn" :class="{ active: currentTool === 'ball-basket' }" @click="selectTool('ball-basket')" title="Pallone Basket">
-                        <svg viewBox="0 0 24 24" class="tool-icon"><circle cx="12" cy="12" r="10" fill="#f97316" stroke="#ea580c" stroke-width="1.5"/><path d="M4,12 Q12,6 20,12" fill="none" stroke="#000" stroke-width="1.5"/><path d="M4,12 Q12,18 20,12" fill="none" stroke="#000" stroke-width="1.5"/></svg>
-                      </button>
-                      <button class="tool-btn" :class="{ active: currentTool === 'ball-futsal' }" @click="selectTool('ball-futsal')" title="Pallone Futsal">
-                        <svg viewBox="0 0 24 24" class="tool-icon"><circle cx="12" cy="12" r="10" fill="#fff" stroke="#000" stroke-width="1.5"/><path d="M8,6 L10,6 L9,9 L6,9 L5,12 L6,15 L9,15 L10,18 L8,18 L8,15 L5,15 L5,12 L8,9 L8,6" fill="#666"/><path d="M14,6 L16,6 L15,9 L18,9 L19,12 L18,15 L15,15 L14,18 L16,18 L16,15 L19,15 L19,12 L16,9 L14,9" fill="#666"/></svg>
-                      </button>
-                      <button class="tool-btn" :class="{ active: currentTool === 'ball-hockey' }" @click="selectTool('ball-hockey')" title="Puck Hockey">
-                        <svg viewBox="0 0 24 24" class="tool-icon"><ellipse cx="12" cy="14" rx="10" ry="4" fill="#1f2937" stroke="#000" stroke-width="1.5"/></svg>
-                      </button>
-                      <button class="tool-btn" :class="{ active: currentTool === 'ball-football-us' }" @click="selectTool('ball-football-us')" title="Football Americano">
-                        <svg viewBox="0 0 24 24" class="tool-icon"><ellipse cx="12" cy="12" rx="11" ry="7" fill="#78350f" stroke="#451a03" stroke-width="1.5"/><path d="M6,9 L6,15 M18,9 L18,15" stroke="#fff" stroke-width="1.5"/></svg>
-                      </button>
-                      <button class="tool-btn" :class="{ active: currentTool === 'ball-rugby' }" @click="selectTool('ball-rugby')" title="Pallone Rugby">
-                        <svg viewBox="0 0 24 24" class="tool-icon"><ellipse cx="12" cy="12" rx="11" ry="7" fill="#fff" stroke="#000" stroke-width="1.5"/><path d="M7,7 L17,17 M17,7 L7,17" stroke="#ef4444" stroke-width="1.5"/></svg>
-                      </button>
-                      <button class="tool-btn" :class="{ active: currentTool === 'ball-golf' }" @click="selectTool('ball-golf')" title="Pallina Golf">
-                        <svg viewBox="0 0 24 24" class="tool-icon"><circle cx="12" cy="12" r="8" fill="#fff" stroke="#d1d5db" stroke-width="1.5"/><circle cx="10" cy="10" r="1" fill="#e5e7eb"/><circle cx="14" cy="11" r="1" fill="#e5e7eb"/><circle cx="12" cy="14" r="1" fill="#e5e7eb"/></svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="tools-section">
                     <div class="tools-label">SCALE</div>
                     <div class="tools-grid">
                       <button class="tool-btn" :class="{ active: currentTool === 'ladder-gray' }" @click="selectTool('ladder-gray')" title="Scala Grigia">
@@ -376,7 +388,11 @@
                         {{ selectedElement.wavy ? 'Sì' : 'No' }}
                       </button>
                     </div>
-                    <button class="action-btn btn-delete-element" @click="deleteSelected">🗑️ Elimina</button>
+                    <div class="element-actions">
+                      <button class="action-btn btn-copy-element" @click="copySelected" :disabled="!selectedElement">📋 Copia</button>
+                      <button class="action-btn btn-paste-element" @click="pasteElement" :disabled="!copiedElement">📄 Incolla</button>
+                      <button class="action-btn btn-delete-element" @click="deleteSelected">🗑️ Elimina</button>
+                    </div>
                   </div>
                 </div>
 
@@ -426,6 +442,7 @@ const isDragging = ref(false)
 const dragOffset = ref({ x: 0, y: 0 })
 const elementControlsOpen = ref(false)
 const selectedElementExercise = ref(null)
+const copiedElement = ref(null)
 
 const colors = ['#ef4444', '#3b82f6', '#eab308', '#22c55e', '#ffffff', '#000000', '#a855f7', '#f97316']
 
@@ -543,11 +560,6 @@ function loadEsercizi(data) {
     const dayData = res.data
     if (dayData.esercizi && dayData.esercizi.length > 0) {
       esercizi.value = dayData.esercizi
-    } else {
-      esercizi.value = [
-        { id: Date.now() + 1, ordine: 1, titolo: '', descrizione: '', campo_con_righe: true, elementi: [] },
-        { id: Date.now() + 2, ordine: 2, titolo: '', descrizione: '', campo_con_righe: true, elementi: [] }
-      ]
     }
     selectedExercise.value = esercizi.value[0]
     nextTick(() => {
@@ -555,8 +567,7 @@ function loadEsercizi(data) {
     })
   }).catch(() => {
     esercizi.value = [
-      { id: Date.now() + 1, ordine: 1, titolo: '', descrizione: '', campo_con_righe: true, elementi: [] },
-      { id: Date.now() + 2, ordine: 2, titolo: '', descrizione: '', campo_con_righe: true, elementi: [] }
+      { id: Date.now(), ordine: 1, titolo: '', descrizione: '', campo_con_righe: true, elementi: [] }
     ]
     selectedExercise.value = esercizi.value[0]
     nextTick(() => {
@@ -574,6 +585,16 @@ function deleteEsercizio(ex) {
   esercizi.value = esercizi.value.filter(e => e.id !== ex.id)
   if (esercizi.value.length > 0) {
     saveEsercizio(esercizi.value[0])
+  }
+}
+
+function saveCurrentExercise() {
+  if (selectedExercise.value) {
+    saveEsercizio(selectedExercise.value)
+    alert('Esercizio salvato!')
+  } else if (esercizi.value.length > 0) {
+    saveEsercizio(esercizi.value[0])
+    alert('Esercizio salvato!')
   }
 }
 
@@ -662,6 +683,28 @@ function deleteSelected() {
       ex.elementi = ex.elementi.filter(el => el !== selectedElement.value)
       selectedElement.value = null
       selectedElementExercise.value = null
+      drawBoard(ex)
+      saveEsercizio(ex)
+    }
+  }
+}
+
+function copySelected() {
+  if (selectedElement.value) {
+    copiedElement.value = JSON.parse(JSON.stringify(selectedElement.value))
+  }
+}
+
+function pasteElement() {
+  if (copiedElement.value) {
+    const ex = selectedExercise.value || esercizi.value[0]
+    if (ex) {
+      const newEl = JSON.parse(JSON.stringify(copiedElement.value))
+      newEl.id = Date.now()
+      newEl.x = (newEl.x + 5) % 100
+      newEl.y = (newEl.y + 5) % 100
+      ex.elementi = ex.elementi || []
+      ex.elementi.push(newEl)
       drawBoard(ex)
       saveEsercizio(ex)
     }
@@ -763,7 +806,7 @@ function handleMouseUp(event, ex) {
 function getToolColor(tool) {
   const colors = { 
     'player-red': '#ef4444', 'player-blue': '#3b82f6', 'player-yellow': '#eab308', 'player-green': '#22c55e', 'player-white': '#ffffff', 'player-black': '#000000',
-    'ball-blue': '#3b82f6', 'ball-red': '#ef4444',
+    'ball': '#111111', 'ball-blue': '#003399', 'ball-red': '#cc0000', 'ball-yellow': '#1a1a1a', 'ball-orange': '#ff6600',
     'cone': '#ff6600', 'cone-small': '#eab308', 'cone-striped': '#ffffff',
     'pole-red': '#ef4444', 'pole-yellow': '#eab308', 'pole-white': '#ffffff',
     'flag-red': '#ef4444', 'flag-yellow': '#eab308',
@@ -1052,32 +1095,6 @@ function drawBoard(ex) {
         ctx.arc(0, 0, 5, 0, Math.PI * 2)
         ctx.fill()
         break
-      case 'ball-blue': case 'ball-red':
-        ctx.beginPath()
-        ctx.arc(0, 0, 12, 0, Math.PI * 2)
-        ctx.fillStyle = el.colore || '#3b82f6'
-        ctx.fill()
-        ctx.strokeStyle = '#000'
-        ctx.lineWidth = 1.5
-        ctx.stroke()
-        ctx.beginPath()
-        ctx.moveTo(0, -12)
-        ctx.lineTo(3, -4)
-        ctx.lineTo(12, 0)
-        ctx.lineTo(3, 8)
-        ctx.lineTo(0, 12)
-        ctx.lineTo(-3, 8)
-        ctx.lineTo(-12, 0)
-        ctx.lineTo(-3, -4)
-        ctx.closePath()
-        ctx.fillStyle = el.colore === '#3b82f6' ? '#60a5fa' : '#fca5a5'
-        ctx.fill()
-        ctx.stroke()
-        ctx.beginPath()
-        ctx.arc(0, 0, 3, 0, Math.PI * 2)
-        ctx.fillStyle = '#000'
-        ctx.fill()
-        break
       case 'disc':
         ctx.fillStyle = el.colore || '#ff6600'
         ctx.beginPath()
@@ -1133,31 +1150,79 @@ function drawBoard(ex) {
         ctx.lineWidth = 1
         ctx.stroke()
         break
-      case 'ball':
+      case 'ball': case 'ball-blue': case 'ball-red': case 'ball-yellow': case 'ball-orange':
+        const ballPrimary = el.colore || '#111111'
+        const ballSecondary = '#ffffff'
+        const ballOutline = el.tipo === 'ball-blue' ? '#002277' : el.tipo === 'ball-red' ? '#990000' : el.tipo === 'ball-orange' ? '#cc4400' : el.tipo === 'ball-yellow' ? '#000000' : '#111111'
+        const r = 18
         ctx.beginPath()
-        ctx.arc(0, 0, 12, 0, Math.PI * 2)
-        ctx.fillStyle = '#fff'
+        ctx.arc(0, 0, r, 0, Math.PI * 2)
+        ctx.fillStyle = ballSecondary
         ctx.fill()
-        ctx.strokeStyle = '#000'
-        ctx.lineWidth = 1.5
+        ctx.strokeStyle = ballOutline
+        ctx.lineWidth = 2.5
         ctx.stroke()
+        
+        const pentSize = r * 0.22
+        const hexSize = r * 0.35
+        const centerOffset = r * 0.35
+        
+        ctx.lineWidth = 2
+        ctx.strokeStyle = ballOutline
+        
+        for (let i = 0; i < 5; i++) {
+          const angle = (i * 72 - 90) * Math.PI / 180
+          const hx = Math.cos(angle) * centerOffset
+          const hy = Math.sin(angle) * centerOffset
+          
+          ctx.beginPath()
+          for (let j = 0; j < 6; j++) {
+            const a = (angle + (j * 60 - 30) * Math.PI / 180)
+            const px = hx + Math.cos(a) * hexSize
+            const py = hy + Math.sin(a) * hexSize
+            if (j === 0) ctx.moveTo(px, py)
+            else ctx.lineTo(px, py)
+          }
+          ctx.closePath()
+          ctx.fillStyle = ballSecondary
+          ctx.fill()
+          ctx.stroke()
+        }
+        
         ctx.beginPath()
-        ctx.moveTo(0, -12)
-        ctx.lineTo(3, -4)
-        ctx.lineTo(12, 0)
-        ctx.lineTo(3, 8)
-        ctx.lineTo(0, 12)
-        ctx.lineTo(-3, 8)
-        ctx.lineTo(-12, 0)
-        ctx.lineTo(-3, -4)
+        for (let j = 0; j < 5; j++) {
+          const a = (j * 72 - 90 + 36) * Math.PI / 180
+          const px = Math.cos(a) * pentSize
+          const py = Math.sin(a) * pentSize
+          if (j === 0) ctx.moveTo(px, py)
+          else ctx.lineTo(px, py)
+        }
         ctx.closePath()
-        ctx.fillStyle = '#fff'
+        ctx.fillStyle = ballPrimary
         ctx.fill()
         ctx.stroke()
-        ctx.beginPath()
-        ctx.arc(0, 0, 3, 0, Math.PI * 2)
-        ctx.fillStyle = '#000'
-        ctx.fill()
+        
+        for (let i = 0; i < 5; i++) {
+          const angle = (i * 72 - 90) * Math.PI / 180
+          const hx = Math.cos(angle) * centerOffset
+          const hy = Math.sin(angle) * centerOffset
+          const outerAngle = angle + 30 * Math.PI / 180
+          const ox = hx + Math.cos(outerAngle) * hexSize * 0.8
+          const oy = hy + Math.sin(outerAngle) * hexSize * 0.8
+          
+          ctx.beginPath()
+          for (let j = 0; j < 5; j++) {
+            const a = (outerAngle + (j * 72) * Math.PI / 180)
+            const px = ox + Math.cos(a) * pentSize * 0.7
+            const py = oy + Math.sin(a) * pentSize * 0.7
+            if (j === 0) ctx.moveTo(px, py)
+            else ctx.lineTo(px, py)
+          }
+          ctx.closePath()
+          ctx.fillStyle = ballPrimary
+          ctx.fill()
+          ctx.stroke()
+        }
         break
       case 'zone':
         ctx.beginPath()
@@ -1821,6 +1886,8 @@ onMounted(async () => {
 .day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 .day-header h3 { color: #fff; margin: 0; }
 .btn-add-exercise { padding: 0.5rem 1rem; background: var(--color-primary); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; }
+.btn-save-exercise { padding: 0.5rem 1rem; background: #22c55e; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; margin-left: 0.5rem; }
+.btn-save-exercise:hover { background: #16a34a; }
 .esercizi-list { display: flex; flex-direction: column; gap: 2rem; }
 .esercizio-card { background: #1a1a1a; border-radius: 12px; padding: 1.25rem; }
 .esercizio-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
@@ -1878,6 +1945,11 @@ onMounted(async () => {
 .toggle-btn { padding: 0.25rem 0.75rem; border-radius: 4px; border: 1px solid #444; background: #1a1a1a; color: #888; font-size: 0.75rem; cursor: pointer; }
 .toggle-btn.active { background: var(--color-primary); border-color: var(--color-primary); color: white; }
 .btn-delete-element { background: #dc2626; border-color: #dc2626; margin-top: 0.5rem; }
+.element-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.btn-copy-element { flex: 1; padding: 0.4rem 0.8rem; background: #6366f1; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 0.8rem; }
+.btn-paste-element { flex: 1; padding: 0.4rem 0.8rem; background: #22c55e; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 0.8rem; }
+.btn-copy-element:disabled, .btn-paste-element:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-copy-element:hover:not(:disabled), .btn-paste-element:hover:not(:disabled) { opacity: 0.9; }
 
 .tactical-board-container { border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
 .tactical-board-wrapper { position: relative; width: 100%; }
