@@ -95,14 +95,14 @@ def create_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db), curr
     # Crittografa i campi sensibili prima di salvare
     if data.get("codice_fiscale"):
         encrypted = db.execute(text(
-            "SELECT encode(encrypt(:value::bytea, :key, 'aes'), 'hex')"
-        ), {"value": data["codice_fiscale"], "key": ENCRYPTION_KEY}).scalar()
+            f"SELECT encode(encrypt('{data['codice_fiscale']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
+        )).scalar()
         data["codice_fiscale"] = encrypted
     
     if data.get("telefono"):
         encrypted = db.execute(text(
-            "SELECT encode(encrypt(:value::bytea, :key, 'aes'), 'hex')"
-        ), {"value": data["telefono"], "key": ENCRYPTION_KEY}).scalar()
+            f"SELECT encode(encrypt('{data['telefono']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
+        )).scalar()
         data["telefono"] = encrypted
     
     persona = models.Persona(**data)
@@ -120,14 +120,14 @@ def update_persona(persona_id: int, p: schemas.PersonaCreate, db: Session = Depe
     # Crittografa i campi sensibili prima di salvare
     if data.get("codice_fiscale"):
         encrypted = db.execute(text(
-            "SELECT encode(encrypt(:value::bytea, :key, 'aes'), 'hex')"
-        ), {"value": data["codice_fiscale"], "key": ENCRYPTION_KEY}).scalar()
+            f"SELECT encode(encrypt('{data['codice_fiscale']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
+        )).scalar()
         data["codice_fiscale"] = encrypted
     
     if data.get("telefono"):
         encrypted = db.execute(text(
-            "SELECT encode(encrypt(:value::bytea, :key, 'aes'), 'hex')"
-        ), {"value": data["telefono"], "key": ENCRYPTION_KEY}).scalar()
+            f"SELECT encode(encrypt('{data['telefono']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
+        )).scalar()
         data["telefono"] = encrypted
     
     for key, value in data.items():
