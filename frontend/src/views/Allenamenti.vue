@@ -601,33 +601,42 @@ function saveCurrentExercise() {
 }
 
 function exportPdf() {
-  const doc = new jsPDF()
-  const pageWidth = doc.internal.pageSize.getWidth()
-  let y = 20
-  
-  doc.setFontSize(18)
-  doc.text('Allenamento del ' + formatDate(selectedDay.value?.data || ''), pageWidth / 2, y, { align: 'center' })
-  y += 15
-  
-  esercizi.value.forEach((ex, idx) => {
-    if (y > 270) {
-      doc.addPage()
-      y = 20
+  getAllenamentiGiornoByData(categoriaId, selectedDay.value.data).then(res => {
+    const eserciziSalvati = res.data.esercizi || []
+    
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    let y = 20
+    
+    doc.setFontSize(18)
+    doc.text('Allenamento del ' + formatDate(selectedDay.value?.data || ''), pageWidth / 2, y, { align: 'center' })
+    y += 15
+    
+    if (eserciziSalvati.length === 0) {
+      doc.setFontSize(12)
+      doc.text('Nessun esercizio salvato', 15, y)
+    } else {
+      eserciziSalvati.forEach((ex, idx) => {
+        if (y > 270) {
+          doc.addPage()
+          y = 20
+        }
+        
+        doc.setFontSize(14)
+        doc.setTextColor(220, 38, 38)
+        doc.text('Esercizio ' + (idx + 1) + ': ' + (ex.titolo || 'Senza titolo'), 15, y)
+        y += 8
+        
+        doc.setFontSize(11)
+        doc.setTextColor(0, 0, 0)
+        const descLines = doc.splitTextToSize(ex.descrizione || '', pageWidth - 30)
+        doc.text(descLines, 15, y)
+        y += descLines.length * 6 + 10
+      })
     }
     
-    doc.setFontSize(14)
-    doc.setTextColor(220, 38, 38)
-    doc.text('Esercizio ' + (idx + 1) + ': ' + (ex.titolo || 'Senza titolo'), 15, y)
-    y += 8
-    
-    doc.setFontSize(11)
-    doc.setTextColor(0, 0, 0)
-    const descLines = doc.splitTextToSize(ex.descrizione || '', pageWidth - 30)
-    doc.text(descLines, 15, y)
-    y += descLines.length * 6 + 10
+    doc.save('allenamento-' + (selectedDay.value?.data || 'data') + '.pdf')
   })
-  
-  doc.save('allenamento-' + (selectedDay.value?.data || 'data') + '.pdf')
 }
 
 function saveEsercizio(ex) {
