@@ -419,6 +419,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../store.js'
 import { getAllCategorie, getAllenamentiGiornoByData, saveAllenamenti } from '../api/index.js'
 import { jsPDF } from 'jspdf'
+import html2canvas from 'html2canvas'
 
 const router = useRouter()
 const route = useRoute()
@@ -601,11 +602,12 @@ function saveCurrentExercise() {
 }
 
 function exportPdf() {
-  getAllenamentiGiornoByData(categoriaId, selectedDay.value.data).then(res => {
+  getAllenamentiGiornoByData(categoriaId, selectedDay.value.data).then(async res => {
     const eserciziSalvati = res.data.esercizi || []
     
-    const doc = new jsPDF()
+    const doc = new jsPDF('portrait', 'mm', 'a4')
     const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
     let y = 20
     
     doc.setFontSize(18)
@@ -616,8 +618,10 @@ function exportPdf() {
       doc.setFontSize(12)
       doc.text('Nessun esercizio salvato', 15, y)
     } else {
-      eserciziSalvati.forEach((ex, idx) => {
-        if (y > 270) {
+      for (let idx = 0; idx < eserciziSalvati.length; idx++) {
+        const ex = eserciziSalvati[idx]
+        
+        if (y > pageHeight - 80) {
           doc.addPage()
           y = 20
         }
@@ -627,12 +631,36 @@ function exportPdf() {
         doc.text('Esercizio ' + (idx + 1) + ': ' + (ex.titolo || 'Senza titolo'), 15, y)
         y += 8
         
+        const canvas = boardCanvasRefs.value[ex.id]
+        if (canvas) {
+          try {
+            const canvasEl = await html2canvas(canvas, {
+              scale: 1.5,
+              backgroundColor: '#1a5c1a',
+              logging: false
+            })
+            const imgData = canvasEl.toDataURL('image/png')
+            const imgWidth = pageWidth - 30
+            const imgHeight = imgWidth * (canvasEl.height / canvasEl.width)
+            
+            if (y + imgHeight > pageHeight - 20) {
+              doc.addPage()
+              y = 20
+            }
+            
+            doc.addImage(imgData, 'PNG', 15, y, imgWidth, Math.min(imgHeight, 80))
+            y += Math.min(imgHeight, 80) + 5
+          } catch (e) {
+            console.error('Errore cattura campo:', e)
+          }
+        }
+        
         doc.setFontSize(11)
         doc.setTextColor(0, 0, 0)
         const descLines = doc.splitTextToSize(ex.descrizione || '', pageWidth - 30)
         doc.text(descLines, 15, y)
-        y += descLines.length * 6 + 10
-      })
+        y += descLines.length * 6 + 15
+      }
     }
     
     doc.save('allenamento-' + (selectedDay.value?.data || 'data') + '.pdf')
