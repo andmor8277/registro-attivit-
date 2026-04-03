@@ -645,22 +645,14 @@ function exportPdf() {
           y = 20
         }
         
-        doc.setFontSize(14 / scaleRatio)
+        doc.setFontSize(14)
         doc.setTextColor(220, 38, 38)
         doc.text('Esercizio ' + (idx + 1) + ': ' + (ex.titolo || 'Senza titolo'), 15, y)
         y += 8
         
-        const canvasWidth = 400
-        const canvasHeight = 260
-        const marginX = canvasWidth * 0.03
-        const marginY = canvasHeight * 0.03
-        const fieldW = canvasWidth - marginX * 2
-        const fieldH = canvasHeight - marginY * 2
-        
         const fieldWidth = (pageWidth - 30) * 0.55
         const fieldX = 15
-        const fieldHeight = fieldWidth * (canvasHeight / canvasWidth)
-        const scaleRatio = fieldWidth / canvasWidth
+        const fieldHeight = fieldWidth * (260 / 400)
         
         if (y + fieldHeight > pageHeight - 20) {
           doc.addPage()
@@ -756,7 +748,6 @@ function exportPdf() {
             ctx.save()
             ctx.translate(x, yPos)
             ctx.rotate(rot)
-            ctx.scale(scaleRatio, scaleRatio)
             
             switch (el.tipo) {
               case 'player-red': case 'player-blue': case 'player-yellow': case 'player-green': case 'player-white': case 'player-black':
@@ -765,11 +756,11 @@ function exportPdf() {
                 ctx.fillStyle = el.colore || '#fff'
                 ctx.fill()
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 2 / scaleRatio
+                ctx.lineWidth = 2
                 ctx.stroke()
                 if (el.numero) {
                   ctx.fillStyle = '#fff'
-                  ctx.font = 'bold ' + (14 / scaleRatio) + 'px Arial'
+                  ctx.font = 'bold 14px Arial'
                   ctx.textAlign = 'center'
                   ctx.textBaseline = 'middle'
                   ctx.fillText(el.numero.toString(), 0, 1)
@@ -781,13 +772,13 @@ function exportPdf() {
                 ctx.ellipse(0, 0, 8, 14, 0, 0, Math.PI * 2)
                 ctx.fill()
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1 / scaleRatio
+                ctx.lineWidth = 1
                 ctx.stroke()
                 ctx.beginPath()
                 ctx.moveTo(0, -12)
                 ctx.lineTo(0, 12)
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 1 / scaleRatio
+                ctx.lineWidth = 1
                 ctx.stroke()
                 break
               case 'palla': case 'ball':
@@ -796,17 +787,17 @@ function exportPdf() {
                 ctx.fillStyle = el.colore || '#fff'
                 ctx.fill()
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1 / scaleRatio
+                ctx.lineWidth = 1
                 ctx.stroke()
                 ctx.beginPath()
                 ctx.arc(0, 0, 8, 0, Math.PI * 2)
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1 / scaleRatio
+                ctx.lineWidth = 1
                 ctx.stroke()
                 break
               case 'goal-large':
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 3 / scaleRatio
+                ctx.lineWidth = 3
                 ctx.beginPath()
                 ctx.moveTo(-45, -25)
                 ctx.lineTo(-45, 25)
@@ -822,7 +813,7 @@ function exportPdf() {
                 ctx.lineTo(45, -25)
                 ctx.stroke()
                 ctx.strokeStyle = 'rgba(255,255,255,0.4)'
-                ctx.lineWidth = 1 / scaleRatio
+                ctx.lineWidth = 1
                 for (let gy = -20; gy <= 15; gy += 7) {
                   ctx.beginPath()
                   ctx.moveTo(-40, gy)
@@ -838,7 +829,7 @@ function exportPdf() {
                 break
               case 'goal-small':
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 2 / scaleRatio
+                ctx.lineWidth = 2
                 ctx.beginPath()
                 ctx.moveTo(-18, -12)
                 ctx.lineTo(-18, 12)
@@ -846,7 +837,7 @@ function exportPdf() {
                 ctx.lineTo(18, -12)
                 ctx.stroke()
                 ctx.strokeStyle = 'rgba(255,255,255,0.4)'
-                ctx.lineWidth = 1 / scaleRatio
+                ctx.lineWidth = 1
                 for (let gy = -8; gy <= 8; gy += 4) {
                   ctx.beginPath()
                   ctx.moveTo(-15, gy)
