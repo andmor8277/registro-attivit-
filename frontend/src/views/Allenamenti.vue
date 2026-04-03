@@ -622,7 +622,7 @@ function exportPdf() {
   getAllenamentiGiornoByData(categoriaId, selectedDay.value.data).then(async res => {
     const eserciziSalvati = res.data.esercizi || []
     
-    const doc = new jsPDF('landscape', 'mm', 'a4')
+    const doc = new jsPDF('portrait', 'mm', 'a4')
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
     let y = 20
@@ -638,7 +638,7 @@ function exportPdf() {
       for (let idx = 0; idx < eserciziSalvati.length; idx++) {
         const ex = eserciziSalvati[idx]
         
-        if (y > pageHeight - 70) {
+        if (y > pageHeight - 90) {
           doc.addPage()
           y = 20
         }
@@ -646,42 +646,53 @@ function exportPdf() {
         doc.setFontSize(14)
         doc.setTextColor(220, 38, 38)
         doc.text('Esercizio ' + (idx + 1) + ': ' + (ex.titolo || 'Senza titolo'), 15, y)
+        y += 10
         
-        const canvas = boardCanvasRefs.value[ex.id]
-        let imgHeight = 0
-        if (canvas) {
-          try {
-            const canvasEl = await html2canvas(canvas, {
-              scale: 1.5,
-              backgroundColor: '#1a5c1a',
-              logging: false
-            })
-            const imgData = canvasEl.toDataURL('image/png')
-            const fieldWidth = (pageWidth - 30) * 0.55
-            imgHeight = fieldWidth * (canvasEl.height / canvasEl.width)
+        try {
+          const boardContainers = document.querySelectorAll('.tactical-board-container')
+          let boardCanvas = null
+          
+          for (const container of boardContainers) {
+            const canvas = container.querySelector('canvas')
+            if (canvas && canvas.width > 0) {
+              boardCanvas = canvas
+              break
+            }
+          }
+          
+          if (boardCanvas) {
+            const tempCanvas = document.createElement('canvas')
+            tempCanvas.width = boardCanvas.width
+            tempCanvas.height = boardCanvas.height
+            const ctx = tempCanvas.getContext('2d')
+            ctx.fillStyle = '#1a5c1a'
+            ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
+            ctx.drawImage(boardCanvas, 0, 0)
             
-            if (y + imgHeight > pageHeight - 10) {
+            const imgData = tempCanvas.toDataURL('image/png')
+            const fieldWidth = pageWidth - 30
+            const imgHeight = fieldWidth * (boardCanvas.height / boardCanvas.width)
+            
+            if (y + imgHeight > pageHeight - 20) {
               doc.addPage()
               y = 20
             }
             
-            doc.addImage(imgData, 'PNG', 15, y + 5, fieldWidth, imgHeight)
-          } catch (e) {
-            console.error('Errore cattura campo:', e)
+            doc.addImage(imgData, 'PNG', 15, y, fieldWidth, Math.min(imgHeight, 70))
+            y += Math.min(imgHeight, 70) + 5
           }
+        } catch (e) {
+          console.error('Errore cattura campo:', e)
         }
-        
-        const descX = 15 + (pageWidth - 30) * 0.55 + 10
-        const descMaxWidth = pageWidth - descX - 15
         
         doc.setFontSize(11)
         doc.setTextColor(0, 0, 0)
         if (ex.descrizione) {
-          const descLines = doc.splitTextToSize(ex.descrizione, descMaxWidth)
-          doc.text(descLines, descX, y + 5)
+          const descLines = doc.splitTextToSize(ex.descrizione, pageWidth - 30)
+          doc.text(descLines, 15, y)
         }
         
-        y += Math.max(imgHeight, 30) + 15
+        y += 25
       }
     }
     
