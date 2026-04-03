@@ -38,7 +38,7 @@
         </div>
 
         <div class="esercizi-list">
-          <div v-for="(ex, idx) in esercizi" :key="ex.id" class="esercizio-card" :class="{ active: selectedExercise?.id === ex.id }" @click="selectExercise(ex)">
+          <div v-for="(ex, idx) in esercizi" :key="ex.id" class="esercizio-card" :class="{ active: selectedExercise?.id === ex.id }" :data-ex-id="ex.id" @click="selectExercise(ex)">
             <div class="esercizio-header">
               <span class="esercizio-num">{{ idx + 1 }}</span>
               <input v-model="ex.titolo" class="esercizio-titolo" placeholder="Titolo esercizio..." @change="saveEsercizio(ex)" />
@@ -656,11 +656,17 @@ function exportPdf() {
           if (exData) {
             selectedExercise.value = exData
             await nextTick()
-            await new Promise(r => setTimeout(r, 100))
+            await new Promise(r => setTimeout(r, 300))
+            
+            const cardEl = document.querySelector(`.esercizio-card[data-ex-id="${ex.id}"]`)
+            if (cardEl) {
+              cardEl.click()
+              await new Promise(r => setTimeout(r, 300))
+            }
           }
           
-          const activeContainer = document.querySelector('.tactical-board-container')
-          const boardCanvas = activeContainer ? activeContainer.querySelector('canvas') : null
+          const activeBoard = document.querySelector('.tactical-board-container:not([style*="display: none"])')
+          const boardCanvas = activeBoard ? activeBoard.querySelector('canvas') : null
           
           const fieldWidth = (pageWidth - 30) * 0.55
           const fieldX = 15
