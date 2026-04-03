@@ -605,7 +605,7 @@ function exportPdf() {
   getAllenamentiGiornoByData(categoriaId, selectedDay.value.data).then(async res => {
     const eserciziSalvati = res.data.esercizi || []
     
-    const doc = new jsPDF('portrait', 'mm', 'a4')
+    const doc = new jsPDF('landscape', 'mm', 'a4')
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
     let y = 20
@@ -621,7 +621,7 @@ function exportPdf() {
       for (let idx = 0; idx < eserciziSalvati.length; idx++) {
         const ex = eserciziSalvati[idx]
         
-        if (y > pageHeight - 80) {
+        if (y > pageHeight - 70) {
           doc.addPage()
           y = 20
         }
@@ -629,9 +629,9 @@ function exportPdf() {
         doc.setFontSize(14)
         doc.setTextColor(220, 38, 38)
         doc.text('Esercizio ' + (idx + 1) + ': ' + (ex.titolo || 'Senza titolo'), 15, y)
-        y += 8
         
         const canvas = boardCanvasRefs.value[ex.id]
+        let imgHeight = 0
         if (canvas) {
           try {
             const canvasEl = await html2canvas(canvas, {
@@ -640,26 +640,31 @@ function exportPdf() {
               logging: false
             })
             const imgData = canvasEl.toDataURL('image/png')
-            const imgWidth = pageWidth - 30
-            const imgHeight = imgWidth * (canvasEl.height / canvasEl.width)
+            const fieldWidth = (pageWidth - 30) * 0.55
+            imgHeight = fieldWidth * (canvasEl.height / canvasEl.width)
             
-            if (y + imgHeight > pageHeight - 20) {
+            if (y + imgHeight > pageHeight - 10) {
               doc.addPage()
               y = 20
             }
             
-            doc.addImage(imgData, 'PNG', 15, y, imgWidth, Math.min(imgHeight, 80))
-            y += Math.min(imgHeight, 80) + 5
+            doc.addImage(imgData, 'PNG', 15, y + 5, fieldWidth, imgHeight)
           } catch (e) {
             console.error('Errore cattura campo:', e)
           }
         }
         
+        const descX = 15 + (pageWidth - 30) * 0.55 + 10
+        const descMaxWidth = pageWidth - descX - 15
+        
         doc.setFontSize(11)
         doc.setTextColor(0, 0, 0)
-        const descLines = doc.splitTextToSize(ex.descrizione || '', pageWidth - 30)
-        doc.text(descLines, 15, y)
-        y += descLines.length * 6 + 15
+        if (ex.descrizione) {
+          const descLines = doc.splitTextToSize(ex.descrizione, descMaxWidth)
+          doc.text(descLines, descX, y + 5)
+        }
+        
+        y += Math.max(imgHeight, 30) + 15
       }
     }
     
