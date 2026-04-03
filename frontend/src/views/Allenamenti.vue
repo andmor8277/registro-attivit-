@@ -655,6 +655,16 @@ function exportPdf() {
         const fieldW = canvasWidth - marginX * 2
         const fieldH = canvasHeight - marginY * 2
         
+        const fieldWidth = (pageWidth - 30) * 0.55
+        const fieldX = 15
+        const fieldHeight = fieldWidth * (canvasHeight / canvasWidth)
+        const scaleRatio = fieldWidth / canvasWidth
+        
+        if (y + fieldHeight > pageHeight - 20) {
+          doc.addPage()
+          y = 20
+        }
+        
         try {
           const tempCanvas = document.createElement('canvas')
           tempCanvas.width = canvasWidth
@@ -734,7 +744,7 @@ function exportPdf() {
           for (const el of elementi) {
             const x = (el.x / 100) * canvasWidth
             const yPos = (el.y / 100) * canvasHeight
-            const size = el.size || 1
+            const size = (el.size || 1) * scaleRatio
             const rot = (el.rotazione || 0) * Math.PI / 180
             
             ctx.save()
@@ -864,226 +874,19 @@ function exportPdf() {
           console.error('Errore disegno campo PDF:', e)
         }
         
-        const fieldWidth = (pageWidth - 30) * 0.55
-        const fieldX = 15
-        const fieldHeight = fieldWidth * (canvasHeight / canvasWidth)
+        doc.addImage(tempCanvas.toDataURL('image/png'), 'PNG', fieldX, y, fieldWidth, fieldHeight)
         
-        const scaleRatio = fieldWidth / canvasWidth
+        const descX = fieldX + fieldWidth + 10
+        const descWidth = pageWidth - descX - 15
         
-        try {
-          const tempCanvas = document.createElement('canvas')
-          tempCanvas.width = canvasWidth
-          tempCanvas.height = canvasHeight
-          const ctx = tempCanvas.getContext('2d')
-          ctx.scale(scaleRatio, scaleRatio)
-          
-          const marginX = canvasWidth * 0.03
-          const marginY = canvasHeight * 0.03
-          const fieldW = canvasWidth - marginX * 2
-          const fieldH = canvasHeight - marginY * 2
-          
-          const stripeCount = 12
-          const stripeWidth = fieldW / stripeCount
-          for (let i = 0; i < stripeCount; i++) {
-            ctx.fillStyle = i % 2 === 0 ? '#2d5a1b' : '#3a7a24'
-            ctx.fillRect(marginX + i * stripeWidth, marginY, stripeWidth, fieldH)
-          }
-          
-          if (ex.campo_con_righe !== false) {
-            ctx.strokeStyle = '#fff'
-            ctx.lineWidth = 2
-            ctx.strokeRect(marginX, marginY, fieldW, fieldH)
-            ctx.beginPath()
-            ctx.moveTo(canvasWidth / 2, marginY)
-            ctx.lineTo(canvasWidth / 2, canvasHeight - marginY)
-            ctx.stroke()
-            const centerR = fieldW * 0.15
-            ctx.beginPath()
-            ctx.arc(canvasWidth / 2, canvasHeight / 2, centerR, 0, Math.PI * 2)
-            ctx.stroke()
-            ctx.beginPath()
-            ctx.arc(canvasWidth / 2, canvasHeight / 2, 3, 0, Math.PI * 2)
-            ctx.fillStyle = '#fff'
-            ctx.fill()
-            const smallDepth = fieldW * 0.05
-            const smallHeight = fieldH * 0.27
-            const penaltyDepth = fieldW * 0.16
-            const penaltyHeight = fieldH * 0.59
-            const arcR = fieldW * 0.09
-            const goalHeight = fieldH * 0.07
-            const goalDepth = fieldW * 0.02
-            const smallTop = canvasHeight / 2 - smallHeight / 2
-            const penaltyTop = canvasHeight / 2 - penaltyHeight / 2
-            ctx.strokeRect(marginX, smallTop, smallDepth, smallHeight)
-            ctx.strokeRect(canvasWidth - marginX - smallDepth, smallTop, smallDepth, smallHeight)
-            ctx.strokeRect(marginX, penaltyTop, penaltyDepth, penaltyHeight)
-            ctx.strokeRect(canvasWidth - marginX - penaltyDepth, penaltyTop, penaltyDepth, penaltyHeight)
-            const lunetteCenterX = marginX + penaltyDepth
-            const lunetteCenterXRight = canvasWidth - marginX - penaltyDepth
-            ctx.beginPath()
-            ctx.arc(lunetteCenterX, canvasHeight / 2, arcR, -Math.PI / 2, Math.PI / 2)
-            ctx.stroke()
-            ctx.beginPath()
-            ctx.arc(lunetteCenterXRight, canvasHeight / 2, arcR, Math.PI / 2, -Math.PI / 2)
-            ctx.stroke()
-            const penaltySpotX = fieldW * 0.105
-            ctx.beginPath()
-            ctx.arc(marginX + penaltySpotX, canvasHeight / 2, 3, 0, Math.PI * 2)
-            ctx.fill()
-            ctx.beginPath()
-            ctx.arc(canvasWidth - marginX - penaltySpotX, canvasHeight / 2, 3, 0, Math.PI * 2)
-            ctx.fill()
-            ctx.strokeRect(marginX - goalDepth, canvasHeight / 2 - goalHeight / 2, goalDepth, goalHeight)
-            ctx.strokeRect(canvasWidth - marginX, canvasHeight / 2 - goalHeight / 2, goalDepth, goalHeight)
-          }
-          
-          const elementi = ex.elementi || []
-          for (const el of elementi) {
-            const x = (el.x / 100) * canvasWidth
-            const yPos = (el.y / 100) * canvasHeight
-            const size = el.size || 1
-            const rot = (el.rotazione || 0) * Math.PI / 180
-            ctx.save()
-            ctx.translate(x, yPos)
-            ctx.rotate(rot)
-            ctx.scale(size, size)
-            switch (el.tipo) {
-              case 'player-red': case 'player-blue': case 'player-yellow': case 'player-green': case 'player-white': case 'player-black':
-                ctx.beginPath()
-                ctx.arc(0, 0, 18, 0, Math.PI * 2)
-                ctx.fillStyle = el.colore || '#fff'
-                ctx.fill()
-                ctx.strokeStyle = '#000'
-                ctx.lineWidth = 2
-                ctx.stroke()
-                if (el.numero) {
-                  ctx.fillStyle = '#fff'
-                  ctx.font = 'bold 14px Arial'
-                  ctx.textAlign = 'center'
-                  ctx.textBaseline = 'middle'
-                  ctx.fillText(el.numero.toString(), 0, 1)
-                }
-                break
-              case 'cone': case 'cone-yellow':
-                ctx.fillStyle = el.colore || '#ff6600'
-                ctx.beginPath()
-                ctx.ellipse(0, 0, 8, 14, 0, 0, Math.PI * 2)
-                ctx.fill()
-                ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1
-                ctx.stroke()
-                ctx.beginPath()
-                ctx.moveTo(0, -12)
-                ctx.lineTo(0, 12)
-                ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 1
-                ctx.stroke()
-                break
-              case 'palla': case 'ball':
-                ctx.beginPath()
-                ctx.arc(0, 0, 12, 0, Math.PI * 2)
-                ctx.fillStyle = el.colore || '#fff'
-                ctx.fill()
-                ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1
-                ctx.stroke()
-                ctx.beginPath()
-                ctx.arc(0, 0, 8, 0, Math.PI * 2)
-                ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1
-                ctx.stroke()
-                break
-              case 'goal-large':
-                ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 3
-                ctx.beginPath()
-                ctx.moveTo(-45, -25)
-                ctx.lineTo(-45, 25)
-                ctx.lineTo(45, 25)
-                ctx.lineTo(45, -25)
-                ctx.stroke()
-                ctx.beginPath()
-                ctx.moveTo(-45, -25)
-                ctx.lineTo(-40, -25)
-                ctx.lineTo(-40, 20)
-                ctx.lineTo(40, 20)
-                ctx.lineTo(40, -25)
-                ctx.lineTo(45, -25)
-                ctx.stroke()
-                ctx.strokeStyle = 'rgba(255,255,255,0.4)'
-                ctx.lineWidth = 1
-                for (let gy = -20; gy <= 15; gy += 7) {
-                  ctx.beginPath()
-                  ctx.moveTo(-40, gy)
-                  ctx.lineTo(40, gy)
-                  ctx.stroke()
-                }
-                for (let gx = -35; gx <= 35; gx += 7) {
-                  ctx.beginPath()
-                  ctx.moveTo(gx, -20)
-                  ctx.lineTo(gx, 20)
-                  ctx.stroke()
-                }
-                break
-              case 'goal-small':
-                ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 2
-                ctx.beginPath()
-                ctx.moveTo(-18, -12)
-                ctx.lineTo(-18, 12)
-                ctx.lineTo(18, 12)
-                ctx.lineTo(18, -12)
-                ctx.stroke()
-                ctx.strokeStyle = 'rgba(255,255,255,0.4)'
-                ctx.lineWidth = 1
-                for (let gy = -8; gy <= 8; gy += 4) {
-                  ctx.beginPath()
-                  ctx.moveTo(-15, gy)
-                  ctx.lineTo(15, gy)
-                  ctx.stroke()
-                }
-                for (let gx = -12; gx <= 12; gx += 4) {
-                  ctx.beginPath()
-                  ctx.moveTo(gx, -8)
-                  ctx.lineTo(gx, 8)
-                  ctx.stroke()
-                }
-                break
-              case 'stairs':
-                ctx.fillStyle = el.colore || '#ff6600'
-                for (let s = 0; s < 4; s++) {
-                  ctx.fillRect(-30 + s * 20, -20 + s * 10, 18, 8)
-                }
-                break
-              case 'ladder':
-                ctx.fillStyle = el.colore || '#ff6600'
-                for (let s = 0; s < 4; s++) {
-                  ctx.fillRect(-20 + s * 12, -10, 10, 20)
-                }
-                break
-            }
-            ctx.restore()
-          }
-          
-          if (y + fieldHeight > pageHeight - 20) {
-            doc.addPage()
-            y = 20
-          }
-          doc.addImage(tempCanvas.toDataURL('image/png'), 'PNG', fieldX, y, fieldWidth, fieldHeight)
-          const descWidth = pageWidth - descX - 15
-          
-          doc.setFontSize(11)
-          doc.setTextColor(0, 0, 0)
-          if (ex.descrizione) {
-            const descLines = doc.splitTextToSize(ex.descrizione, descWidth)
-            doc.text(descLines, descX, y + 5)
-          }
-          
-          y += Math.max(fieldHeight, 30) + 10
-        } catch (e) {
-          console.error('Errore disegno campo:', e)
-          y += 30
+        doc.setFontSize(11)
+        doc.setTextColor(0, 0, 0)
+        if (ex.descrizione) {
+          const descLines = doc.splitTextToSize(ex.descrizione, descWidth)
+          doc.text(descLines, descX, y + 5)
         }
+        
+        y += Math.max(fieldHeight, 30) + 10
       }
     }
     
