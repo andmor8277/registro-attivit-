@@ -645,7 +645,7 @@ function exportPdf() {
           y = 20
         }
         
-        doc.setFontSize(14)
+        doc.setFontSize(14 / scaleRatio)
         doc.setTextColor(220, 38, 38)
         doc.text('Esercizio ' + (idx + 1) + ': ' + (ex.titolo || 'Senza titolo'), 15, y)
         y += 8
@@ -687,7 +687,7 @@ function exportPdf() {
           
           if (ex.campo_con_righe !== false) {
             ctx.strokeStyle = '#fff'
-            ctx.lineWidth = 2
+            ctx.lineWidth = 2 / scaleRatio
             
             ctx.strokeRect(marginX, marginY, fieldW, fieldH)
             
@@ -756,6 +756,7 @@ function exportPdf() {
             ctx.save()
             ctx.translate(x, yPos)
             ctx.rotate(rot)
+            ctx.scale(scaleRatio, scaleRatio)
             
             switch (el.tipo) {
               case 'player-red': case 'player-blue': case 'player-yellow': case 'player-green': case 'player-white': case 'player-black':
@@ -764,11 +765,11 @@ function exportPdf() {
                 ctx.fillStyle = el.colore || '#fff'
                 ctx.fill()
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 2
+                ctx.lineWidth = 2 / scaleRatio
                 ctx.stroke()
                 if (el.numero) {
                   ctx.fillStyle = '#fff'
-                  ctx.font = 'bold 14px Arial'
+                  ctx.font = 'bold ' + (14 / scaleRatio) + 'px Arial'
                   ctx.textAlign = 'center'
                   ctx.textBaseline = 'middle'
                   ctx.fillText(el.numero.toString(), 0, 1)
@@ -780,13 +781,13 @@ function exportPdf() {
                 ctx.ellipse(0, 0, 8, 14, 0, 0, Math.PI * 2)
                 ctx.fill()
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1
+                ctx.lineWidth = 1 / scaleRatio
                 ctx.stroke()
                 ctx.beginPath()
                 ctx.moveTo(0, -12)
                 ctx.lineTo(0, 12)
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 1
+                ctx.lineWidth = 1 / scaleRatio
                 ctx.stroke()
                 break
               case 'palla': case 'ball':
@@ -795,17 +796,17 @@ function exportPdf() {
                 ctx.fillStyle = el.colore || '#fff'
                 ctx.fill()
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1
+                ctx.lineWidth = 1 / scaleRatio
                 ctx.stroke()
                 ctx.beginPath()
                 ctx.arc(0, 0, 8, 0, Math.PI * 2)
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1
+                ctx.lineWidth = 1 / scaleRatio
                 ctx.stroke()
                 break
               case 'goal-large':
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 3
+                ctx.lineWidth = 3 / scaleRatio
                 ctx.beginPath()
                 ctx.moveTo(-45, -25)
                 ctx.lineTo(-45, 25)
@@ -821,7 +822,7 @@ function exportPdf() {
                 ctx.lineTo(45, -25)
                 ctx.stroke()
                 ctx.strokeStyle = 'rgba(255,255,255,0.4)'
-                ctx.lineWidth = 1
+                ctx.lineWidth = 1 / scaleRatio
                 for (let gy = -20; gy <= 15; gy += 7) {
                   ctx.beginPath()
                   ctx.moveTo(-40, gy)
@@ -837,7 +838,7 @@ function exportPdf() {
                 break
               case 'goal-small':
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 2
+                ctx.lineWidth = 2 / scaleRatio
                 ctx.beginPath()
                 ctx.moveTo(-18, -12)
                 ctx.lineTo(-18, 12)
@@ -845,7 +846,7 @@ function exportPdf() {
                 ctx.lineTo(18, -12)
                 ctx.stroke()
                 ctx.strokeStyle = 'rgba(255,255,255,0.4)'
-                ctx.lineWidth = 1
+                ctx.lineWidth = 1 / scaleRatio
                 for (let gy = -8; gy <= 8; gy += 4) {
                   ctx.beginPath()
                   ctx.moveTo(-15, gy)
