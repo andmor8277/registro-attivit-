@@ -877,11 +877,11 @@ function exportPdf() {
             
             ctx.restore()
           }
+          
+          doc.addImage(tempCanvas.toDataURL('image/png'), 'PNG', fieldX, y, fieldWidth, fieldHeight)
         } catch (e) {
           console.error('Errore disegno campo PDF:', e)
         }
-        
-        doc.addImage(tempCanvas.toDataURL('image/png'), 'PNG', fieldX, y, fieldWidth, fieldHeight)
         
         const descX = fieldX + fieldWidth + 10
         const descWidth = pageWidth - descX - 15
