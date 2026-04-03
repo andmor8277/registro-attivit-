@@ -660,6 +660,7 @@ function saveEsercizio(ex) {
   
   saveAllenamenti(categoriaId, data).then(() => {
     console.log('Allenamenti salvati!')
+    loadEsercizi(selectedDay.value.data)
   }).catch(err => {
     console.error('Errore nel salvataggio:', err)
   })
