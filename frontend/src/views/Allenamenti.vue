@@ -619,10 +619,7 @@ function saveCurrentExercise() {
 }
 
 function exportPdf() {
-  const eserciziOriginali = [...esercizi.value]
-  const selectedOriginal = selectedExercise.value
-  
-  getAllenamentiGiornoByData(categoriaId, selectedDay.value.data).then(async res => {
+  getAllenamentiGiornoByData(categoriaId, selectedDay.value.data).then(res => {
     const eserciziSalvati = res.data.esercizi || []
     
     const doc = new jsPDF('portrait', 'mm', 'a4')
@@ -651,66 +648,121 @@ function exportPdf() {
         doc.text('Esercizio ' + (idx + 1) + ': ' + (ex.titolo || 'Senza titolo'), 15, y)
         y += 8
         
+        const fieldWidth = (pageWidth - 30) * 0.55
+        const fieldX = 15
+        let fieldHeight = 0
+        
         try {
-          const exData = eserciziOriginali.find(e => e.id === ex.id)
-          if (exData) {
-            selectedExercise.value = exData
-            await nextTick()
-            await new Promise(r => setTimeout(r, 300))
+          const canvasWidth = 400
+          const canvasHeight = 260
+          const tempCanvas = document.createElement('canvas')
+          tempCanvas.width = canvasWidth
+          tempCanvas.height = canvasHeight
+          const ctx = tempCanvas.getContext('2d')
+          
+          ctx.fillStyle = '#1a5c1a'
+          ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+          
+          if (ex.campo_con_righe !== false) {
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+            ctx.lineWidth = 1
+            for (let i = 1; i < 8; i++) {
+              ctx.beginPath()
+              ctx.moveTo(i * canvasWidth / 8, 0)
+              ctx.lineTo(i * canvasWidth / 8, canvasHeight)
+              ctx.stroke()
+              ctx.beginPath()
+              ctx.moveTo(0, i * canvasHeight / 5)
+              ctx.lineTo(canvasWidth, i * canvasHeight / 5)
+              ctx.stroke()
+            }
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)'
+            ctx.lineWidth = 2
+            ctx.strokeRect(10, 10, canvasWidth - 20, canvasHeight - 20)
+            ctx.beginPath()
+            ctx.arc(canvasWidth / 2, canvasHeight / 2, 30, 0, Math.PI * 2)
+            ctx.stroke()
+          }
+          
+          const elementi = ex.elementi || []
+          for (const el of elementi) {
+            const x = (el.x / 100) * canvasWidth
+            const yPos = (el.y / 100) * canvasHeight
             
-            const cardEl = document.querySelector(`.esercizio-card[data-ex-id="${ex.id}"]`)
-            if (cardEl) {
-              cardEl.click()
-              await new Promise(r => setTimeout(r, 300))
+            if (el.tipo === 'player-red' || el.tipo === 'player-blue' || el.tipo === 'player-yellow' || el.tipo === 'player-white') {
+              ctx.beginPath()
+              ctx.arc(x, yPos, 12, 0, Math.PI * 2)
+              ctx.fillStyle = el.colore || '#ef4444'
+              ctx.fill()
+              ctx.strokeStyle = '#000'
+              ctx.lineWidth = 2
+              ctx.stroke()
+              if (el.numero) {
+                ctx.fillStyle = '#fff'
+                ctx.font = 'bold 12px Arial'
+                ctx.textAlign = 'center'
+                ctx.textBaseline = 'middle'
+                ctx.fillText(el.numero.toString(), x, yPos)
+              }
+            } else if (el.tipo === 'player-black') {
+              ctx.beginPath()
+              ctx.arc(x, yPos, 12, 0, Math.PI * 2)
+              ctx.fillStyle = '#111'
+              ctx.fill()
+              ctx.strokeStyle = '#fff'
+              ctx.lineWidth = 2
+              ctx.stroke()
+            } else if (el.tipo === 'cone' || el.tipo === 'cone-yellow') {
+              ctx.beginPath()
+              ctx.moveTo(x, yPos - 10)
+              ctx.lineTo(x - 8, yPos + 8)
+              ctx.lineTo(x + 8, yPos + 8)
+              ctx.closePath()
+              ctx.fillStyle = el.colore || '#f59e0b'
+              ctx.fill()
+            } else if (el.tipo === 'goal-large') {
+              ctx.strokeStyle = '#fff'
+              ctx.lineWidth = 4
+              ctx.strokeRect(x - 25, yPos - 15, 50, 30)
+            } else if (el.tipo === 'goal-small') {
+              ctx.strokeStyle = '#fff'
+              ctx.lineWidth = 3
+              ctx.strokeRect(x - 15, yPos - 10, 30, 20)
+            } else if (el.tipo === 'palla') {
+              ctx.beginPath()
+              ctx.arc(x, yPos, 10, 0, Math.PI * 2)
+              ctx.fillStyle = '#fff'
+              ctx.fill()
+              ctx.strokeStyle = '#000'
+              ctx.lineWidth = 1
+              ctx.stroke()
             }
           }
           
-          const activeBoard = document.querySelector('.tactical-board-container:not([style*="display: none"])')
-          const boardCanvas = activeBoard ? activeBoard.querySelector('canvas') : null
+          fieldHeight = fieldWidth * (canvasHeight / canvasWidth)
           
-          const fieldWidth = (pageWidth - 30) * 0.55
-          const fieldX = 15
-          let fieldHeight = 0
-          
-          if (boardCanvas) {
-            const tempCanvas = document.createElement('canvas')
-            tempCanvas.width = boardCanvas.width
-            tempCanvas.height = boardCanvas.height
-            const ctx = tempCanvas.getContext('2d')
-            ctx.fillStyle = '#1a5c1a'
-            ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
-            ctx.drawImage(boardCanvas, 0, 0)
-            
-            const imgData = tempCanvas.toDataURL('image/png')
-            fieldHeight = fieldWidth * (boardCanvas.height / boardCanvas.width)
-            
-            if (y + fieldHeight > pageHeight - 20) {
-              doc.addPage()
-              y = 20
-            }
-            
-            doc.addImage(imgData, 'PNG', fieldX, y, fieldWidth, fieldHeight)
+          const imgData = tempCanvas.toDataURL('image/png')
+          if (y + fieldHeight > pageHeight - 20) {
+            doc.addPage()
+            y = 20
           }
-          
-          const descX = fieldX + fieldWidth + 8
-          const descWidth = pageWidth - descX - 15
-          
-          doc.setFontSize(11)
-          doc.setTextColor(0, 0, 0)
-          if (ex.descrizione) {
-            const descLines = doc.splitTextToSize(ex.descrizione, descWidth)
-            doc.text(descLines, descX, y + 5)
-          }
-          
-          y += Math.max(fieldHeight, 30) + 10
+          doc.addImage(imgData, 'PNG', fieldX, y, fieldWidth, fieldHeight)
         } catch (e) {
-          console.error('Errore cattura campo:', e)
-          y += 30
+          console.error('Errore disegno campo:', e)
         }
+        
+        const descX = fieldX + fieldWidth + 8
+        const descWidth = pageWidth - descX - 15
+        
+        doc.setFontSize(11)
+        doc.setTextColor(0, 0, 0)
+        if (ex.descrizione) {
+          const descLines = doc.splitTextToSize(ex.descrizione, descWidth)
+          doc.text(descLines, descX, y + 5)
+        }
+        
+        y += Math.max(fieldHeight, 30) + 10
       }
-      
-      selectedExercise.value = selectedOriginal
-      await nextTick()
     }
     
     doc.save('allenamento-' + (selectedDay.value?.data || 'data') + '.pdf')
