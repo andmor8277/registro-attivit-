@@ -86,4 +86,11 @@ export const getAllenamentiSettimane = (meseId) => api.get('/allenamenti/settima
 export const getAllenamentiGiorni = (giornoId) => api.get('/allenamenti/giorno/' + giornoId)
 export const getAllenamentiEsercizi = (giornoId) => api.get('/allenamenti/esercizio/' + giornoId)
 export const getAllenamentiGiornoByData = (categoriaId, data) => api.get('/allenamenti/giorno-by-data/' + categoriaId + '/' + data)
-export const saveAllenamenti = (categoriaId, data) => api.post('/allenamenti/?categoria_id=' + categoriaId, data)
+export const saveAllenamenti = (categoriaId, data) => {
+  const payload = {
+    categoria_id: categoriaId,
+    data: data.settimane[0]?.giorni[0]?.data || data.settimane[0]?.data_inizio,
+    esercizi: data.settimane[0]?.giorni[0]?.esercizi || []
+  }
+  return api.post('/allenamenti/', payload)
+}
