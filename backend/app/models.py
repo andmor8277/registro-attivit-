@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, Float, Text
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, Float, Text, DateTime, JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from .database import Base
 
 class Societa(Base):
@@ -117,6 +118,15 @@ class Allenatore(Base):
     id = Column(Integer, primary_key=True)
     cognome = Column(String(100), nullable=False)
     telefono = Column(String(30), nullable=True)
+
+class Allenamento(Base):
+    __tablename__ = "allenamenti"
+    id = Column(Integer, primary_key=True)
+    categoria_id = Column(Integer, ForeignKey("categorie.id"), nullable=True)
+    data = Column(Date, nullable=False)
+    esercizi = Column(JSONB, default=[])
+    created_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, nullable=True)
 
 class AllenamentoMese(Base):
     __tablename__ = "allenamenti_mese"
