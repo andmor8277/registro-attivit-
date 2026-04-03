@@ -619,6 +619,9 @@ function saveCurrentExercise() {
 }
 
 function exportPdf() {
+  const eserciziOriginali = [...esercizi.value]
+  const selectedOriginal = selectedExercise.value
+  
   getAllenamentiGiornoByData(categoriaId, selectedDay.value.data).then(async res => {
     const eserciziSalvati = res.data.esercizi || []
     
@@ -649,16 +652,15 @@ function exportPdf() {
         y += 8
         
         try {
-          const boardContainers = document.querySelectorAll('.tactical-board-container')
-          let boardCanvas = null
-          
-          for (const container of boardContainers) {
-            const canvas = container.querySelector('canvas')
-            if (canvas && canvas.width > 0) {
-              boardCanvas = canvas
-              break
-            }
+          const exData = eserciziOriginali.find(e => e.id === ex.id)
+          if (exData) {
+            selectedExercise.value = exData
+            await nextTick()
+            await new Promise(r => setTimeout(r, 100))
           }
+          
+          const activeContainer = document.querySelector('.tactical-board-container')
+          const boardCanvas = activeContainer ? activeContainer.querySelector('canvas') : null
           
           const fieldWidth = (pageWidth - 30) * 0.55
           const fieldX = 15
@@ -700,6 +702,9 @@ function exportPdf() {
           y += 30
         }
       }
+      
+      selectedExercise.value = selectedOriginal
+      await nextTick()
     }
     
     doc.save('allenamento-' + (selectedDay.value?.data || 'data') + '.pdf')
