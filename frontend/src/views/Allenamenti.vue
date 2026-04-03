@@ -638,7 +638,7 @@ function exportPdf() {
       for (let idx = 0; idx < eserciziSalvati.length; idx++) {
         const ex = eserciziSalvati[idx]
         
-        if (y > pageHeight - 90) {
+        if (y > pageHeight - 80) {
           doc.addPage()
           y = 20
         }
@@ -646,7 +646,7 @@ function exportPdf() {
         doc.setFontSize(14)
         doc.setTextColor(220, 38, 38)
         doc.text('Esercizio ' + (idx + 1) + ': ' + (ex.titolo || 'Senza titolo'), 15, y)
-        y += 10
+        y += 8
         
         try {
           const boardContainers = document.querySelectorAll('.tactical-board-container')
@@ -660,6 +660,10 @@ function exportPdf() {
             }
           }
           
+          const fieldWidth = (pageWidth - 30) * 0.55
+          const fieldX = 15
+          let fieldHeight = 0
+          
           if (boardCanvas) {
             const tempCanvas = document.createElement('canvas')
             tempCanvas.width = boardCanvas.width
@@ -670,29 +674,31 @@ function exportPdf() {
             ctx.drawImage(boardCanvas, 0, 0)
             
             const imgData = tempCanvas.toDataURL('image/png')
-            const fieldWidth = pageWidth - 30
-            const imgHeight = fieldWidth * (boardCanvas.height / boardCanvas.width)
+            fieldHeight = fieldWidth * (boardCanvas.height / boardCanvas.width)
             
-            if (y + imgHeight > pageHeight - 20) {
+            if (y + fieldHeight > pageHeight - 20) {
               doc.addPage()
               y = 20
             }
             
-            doc.addImage(imgData, 'PNG', 15, y, fieldWidth, Math.min(imgHeight, 70))
-            y += Math.min(imgHeight, 70) + 5
+            doc.addImage(imgData, 'PNG', fieldX, y, fieldWidth, fieldHeight)
           }
+          
+          const descX = fieldX + fieldWidth + 8
+          const descWidth = pageWidth - descX - 15
+          
+          doc.setFontSize(11)
+          doc.setTextColor(0, 0, 0)
+          if (ex.descrizione) {
+            const descLines = doc.splitTextToSize(ex.descrizione, descWidth)
+            doc.text(descLines, descX, y + 5)
+          }
+          
+          y += Math.max(fieldHeight, 30) + 10
         } catch (e) {
           console.error('Errore cattura campo:', e)
+          y += 30
         }
-        
-        doc.setFontSize(11)
-        doc.setTextColor(0, 0, 0)
-        if (ex.descrizione) {
-          const descLines = doc.splitTextToSize(ex.descrizione, pageWidth - 30)
-          doc.text(descLines, 15, y)
-        }
-        
-        y += 25
       }
     }
     
