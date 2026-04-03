@@ -580,14 +580,21 @@ function loadEsercizi(data) {
 }
 
 function addEsercizio() {
-  esercizi.value.push({ id: Date.now(), ordine: esercizi.value.length + 1, titolo: '', descrizione: '', campo_con_righe: true, elementi: [] })
-  saveEsercizio(esercizi.value[esercizi.value.length - 1])
+  const newId = Date.now()
+  esercizi.value.push({ id: newId, ordine: esercizi.value.length + 1, titolo: '', descrizione: '', campo_con_righe: true, elementi: [] })
+  selectedExercise.value = esercizi.value[esercizi.value.length - 1]
+  nextTick(() => {
+    drawBoard(selectedExercise.value)
+  })
 }
 
 function deleteEsercizio(ex) { 
   esercizi.value = esercizi.value.filter(e => e.id !== ex.id)
   if (esercizi.value.length > 0) {
-    saveEsercizio(esercizi.value[0])
+    selectedExercise.value = esercizi.value[0]
+    nextTick(() => {
+      drawBoard(selectedExercise.value)
+    })
   }
 }
 
