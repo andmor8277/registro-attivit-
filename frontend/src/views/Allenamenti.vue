@@ -653,7 +653,7 @@ function exportPdf() {
         const canvasWidth = 400
         const canvasHeight = 260
         
-        const fieldWidth = (pageWidth - 30) * 0.55
+        const fieldWidth = (pageWidth - 30) * 0.75
         const fieldX = 15
         const fieldHeight = fieldWidth * (canvasHeight / canvasWidth)
         
