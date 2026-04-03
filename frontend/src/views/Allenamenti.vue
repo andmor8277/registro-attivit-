@@ -664,18 +664,14 @@ function exportPdf() {
         
         try {
           const tempCanvas = document.createElement('canvas')
-          tempCanvas.width = 400
-          tempCanvas.height = 260
+          tempCanvas.width = fieldWidth
+          tempCanvas.height = fieldHeight
           const ctx = tempCanvas.getContext('2d')
           
-          const marginX = 400 * 0.03
-          const marginY = 260 * 0.03
-          const fieldW = 400 - marginX * 2
-          const fieldH = 260 - marginY * 2
-          
-          const scaleFactor = fieldWidth / 400
-          
-          ctx.scale(scaleFactor, scaleFactor)
+          const marginX = fieldWidth * 0.03
+          const marginY = fieldHeight * 0.03
+          const fieldW = fieldWidth - marginX * 2
+          const fieldH = fieldHeight - marginY * 2
           
           const stripeCount = 12
           const stripeWidth = fieldW / stripeCount
@@ -691,16 +687,16 @@ function exportPdf() {
             ctx.strokeRect(marginX, marginY, fieldW, fieldH)
             
             ctx.beginPath()
-            ctx.moveTo(400 / 2, marginY)
-            ctx.lineTo(400 / 2, 260 - marginY)
+            ctx.moveTo(fieldWidth / 2, marginY)
+            ctx.lineTo(fieldWidth / 2, fieldHeight - marginY)
             ctx.stroke()
             
             const centerR = fieldW * 0.15
             ctx.beginPath()
-            ctx.arc(400 / 2, 260 / 2, centerR, 0, Math.PI * 2)
+            ctx.arc(fieldWidth / 2, fieldHeight / 2, centerR, 0, Math.PI * 2)
             ctx.stroke()
             ctx.beginPath()
-            ctx.arc(400 / 2, 260 / 2, 3, 0, Math.PI * 2)
+            ctx.arc(fieldWidth / 2, fieldHeight / 2, 3, 0, Math.PI * 2)
             ctx.fillStyle = '#fff'
             ctx.fill()
             
@@ -712,44 +708,44 @@ function exportPdf() {
             const goalHeight = fieldH * 0.07
             const goalDepth = fieldW * 0.02
             
-            const smallTop = 260 / 2 - smallHeight / 2
-            const penaltyTop = 260 / 2 - penaltyHeight / 2
+            const smallTop = fieldHeight / 2 - smallHeight / 2
+            const penaltyTop = fieldHeight / 2 - penaltyHeight / 2
             
             ctx.strokeRect(marginX, smallTop, smallDepth, smallHeight)
-            ctx.strokeRect(400 - marginX - smallDepth, smallTop, smallDepth, smallHeight)
+            ctx.strokeRect(fieldWidth - marginX - smallDepth, smallTop, smallDepth, smallHeight)
             
             ctx.strokeRect(marginX, penaltyTop, penaltyDepth, penaltyHeight)
-            ctx.strokeRect(400 - marginX - penaltyDepth, penaltyTop, penaltyDepth, penaltyHeight)
+            ctx.strokeRect(fieldWidth - marginX - penaltyDepth, penaltyTop, penaltyDepth, penaltyHeight)
             
             const lunetteCenterX = marginX + penaltyDepth
-            const lunetteCenterXRight = 400 - marginX - penaltyDepth
+            const lunetteCenterXRight = fieldWidth - marginX - penaltyDepth
             
             ctx.beginPath()
-            ctx.arc(lunetteCenterX, 260 / 2, arcR, -Math.PI / 2, Math.PI / 2)
+            ctx.arc(lunetteCenterX, fieldHeight / 2, arcR, -Math.PI / 2, Math.PI / 2)
             ctx.strokeStyle = '#fff'
             ctx.stroke()
             ctx.beginPath()
-            ctx.arc(lunetteCenterXRight, 260 / 2, arcR, Math.PI / 2, -Math.PI / 2)
+            ctx.arc(lunetteCenterXRight, fieldHeight / 2, arcR, Math.PI / 2, -Math.PI / 2)
             ctx.stroke()
             
             const penaltySpotX = fieldW * 0.105
             
             ctx.beginPath()
-            ctx.arc(marginX + penaltySpotX, 260 / 2, 3, 0, Math.PI * 2)
+            ctx.arc(marginX + penaltySpotX, fieldHeight / 2, 3, 0, Math.PI * 2)
             ctx.fillStyle = '#fff'
             ctx.fill()
             ctx.beginPath()
-            ctx.arc(400 - marginX - penaltySpotX, 260 / 2, 3, 0, Math.PI * 2)
+            ctx.arc(fieldWidth - marginX - penaltySpotX, fieldHeight / 2, 3, 0, Math.PI * 2)
             ctx.fill()
             
-            ctx.strokeRect(marginX - goalDepth, 260 / 2 - goalHeight / 2, goalDepth, goalHeight)
-            ctx.strokeRect(400 - marginX, 260 / 2 - goalHeight / 2, goalDepth, goalHeight)
+            ctx.strokeRect(marginX - goalDepth, fieldHeight / 2 - goalHeight / 2, goalDepth, goalHeight)
+            ctx.strokeRect(fieldWidth - marginX, fieldHeight / 2 - goalHeight / 2, goalDepth, goalHeight)
           }
           
           const elementi = ex.elementi || []
           for (const el of elementi) {
-            const x = (el.x / 100) * 400
-            const yPos = (el.y / 100) * 260
+            const x = (el.x / 100) * fieldWidth
+            const yPos = (el.y / 100) * fieldHeight
             const rot = (el.rotazione || 0) * Math.PI / 180
             
             ctx.save()
