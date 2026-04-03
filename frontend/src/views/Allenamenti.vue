@@ -557,13 +557,23 @@ function loadEsercizi(data) {
   selectedExercise.value = null
   selectedElement.value = null
   selectedElementExercise.value = null
-  esercizi.value = []
   
   getAllenamentiGiornoByData(categoriaId, data).then(res => {
     const dayData = res.data
+    let loadedEsercizi = []
+    
     if (dayData.esercizi && dayData.esercizi.length > 0) {
-      esercizi.value = dayData.esercizi
+      loadedEsercizi = dayData.esercizi.map((e, idx) => ({
+        ...e,
+        id: e.id || ('loaded_' + idx + '_' + Date.now())
+      }))
     }
+    
+    if (loadedEsercizi.length === 0) {
+      loadedEsercizi = [{ id: Date.now(), ordine: 1, titolo: '', descrizione: '', campo_con_righe: true, elementi: [] }]
+    }
+    
+    esercizi.value = loadedEsercizi
     selectedExercise.value = esercizi.value[0]
     nextTick(() => {
       esercizi.value.forEach(ex => drawBoard(ex))
