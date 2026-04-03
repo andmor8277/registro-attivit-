@@ -744,13 +744,11 @@ function exportPdf() {
           for (const el of elementi) {
             const x = (el.x / 100) * canvasWidth
             const yPos = (el.y / 100) * canvasHeight
-            const size = (el.size || 1) * scaleRatio
             const rot = (el.rotazione || 0) * Math.PI / 180
             
             ctx.save()
             ctx.translate(x, yPos)
             ctx.rotate(rot)
-            ctx.scale(size, size)
             
             switch (el.tipo) {
               case 'player-red': case 'player-blue': case 'player-yellow': case 'player-green': case 'player-white': case 'player-black':
