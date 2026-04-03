@@ -619,7 +619,9 @@ function saveCurrentExercise() {
 }
 
 function exportPdf() {
+  console.log('Export PDF clicked')
   getAllenamentiGiornoByData(categoriaId, selectedDay.value.data).then(res => {
+    console.log('Got data:', res.data)
     const eserciziSalvati = res.data.esercizi || []
     
     const doc = new jsPDF('portrait', 'mm', 'a4')
