@@ -635,6 +635,7 @@ onMounted(async () => {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  display: none;
 }
 
 .sidebar-section {
@@ -815,13 +816,9 @@ onMounted(async () => {
   to { opacity: 1; }
 }
 
-@media (min-width: 769px) {
-  .hamburger { display: none; }
-  .mobile-menu-overlay { display: none; }
-}
+.hamburger { display: flex !important; }
 
 @media (max-width: 768px) {
-  .left-sidebar { display: none !important; }
   .conv-body { flex-direction: column; }
 }
 </style>
