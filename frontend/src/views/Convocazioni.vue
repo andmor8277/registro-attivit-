@@ -821,7 +821,7 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
-  .left-sidebar { display: none; }
+  .left-sidebar { display: none !important; }
   .conv-body { flex-direction: column; }
 }
 </style>
