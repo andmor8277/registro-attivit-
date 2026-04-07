@@ -23,7 +23,6 @@
         </button>
       </div>
       <span class="titolo-toolbar">Convocazioni — {{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
-      <button class="btn-nuovo" @click="nuovaConvocazione">+ Nuovo</button>
     </header>
 
     <div v-if="mobileMenuOpen" class="mobile-menu-overlay" @click="mobileMenuOpen = false">
