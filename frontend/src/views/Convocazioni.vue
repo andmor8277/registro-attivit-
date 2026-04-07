@@ -866,5 +866,7 @@ onMounted(async () => {
 
 @media (max-width: 768px) {
   .conv-body { flex-direction: column; }
+  .gare-scroll { overflow-x: visible; }
+  .gare-grid { grid-template-columns: 1fr !important; min-width: auto; }
 }
 </style>
