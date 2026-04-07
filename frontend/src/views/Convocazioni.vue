@@ -38,23 +38,26 @@
           </button>
         </div>
         <div class="mobile-menu-content">
-          <button class="mobile-menu-item" @click="scrollToStorico">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-            Storico
-          </button>
-          <button class="mobile-menu-item" @click="scrollToMister">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-              <path d="M16 3.13a4 4 0 010 7.75"/>
-            </svg>
-            Mister
-          </button>
-          <button class="mobile-menu-item" @click="nuovaConvocazione(); mobileMenuOpen = false">
+          <div class="mobile-menu-section">
+            <div class="mobile-menu-section-title">📅 Storico</div>
+            <div v-for="c in storico" :key="c.id" 
+              :class="['mobile-menu-link', { attivo: convocazioneId === c.id }]"
+              @click="caricaConvocazione(c.id); mobileMenuOpen = false">
+              WE {{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' - ' + formatDataShort(c.data_fine) : '' }}
+            </div>
+            <div v-if="storico.length === 0" class="mobile-menu-empty">Nessuno storico</div>
+          </div>
+          
+          <div class="mobile-menu-section">
+            <div class="mobile-menu-section-title">👥 Mister</div>
+            <div v-for="r in responsabili" :key="r.id" class="mobile-menu-mister">
+              <span class="mister-nome">{{ r.cognome }}</span>
+              <span class="mister-tel">{{ r.cellulare }}</span>
+            </div>
+            <div v-if="responsabili.length === 0" class="mobile-menu-empty">Nessun mister</div>
+          </div>
+          
+          <button class="mobile-menu-item mobile-menu-action" @click="nuovaConvocazione(); mobileMenuOpen = false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
               <line x1="12" y1="8" x2="12" y2="16"/>
@@ -804,6 +807,51 @@ onMounted(async () => {
 }
 
 .mobile-menu-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+.mobile-menu-section {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.mobile-menu-section-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #aaa;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+}
+
+.mobile-menu-link {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: white;
+  margin-bottom: 4px;
+  background: rgba(255,255,255,0.05);
+}
+
+.mobile-menu-link:hover { background: rgba(255,255,255,0.1); }
+.mobile-menu-link.attivo { background: var(--color-primary); }
+
+.mobile-menu-mister {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.mobile-menu-mister:last-child { border-bottom: none; }
+.mister-nome { color: white; font-weight: 600; }
+.mister-tel { color: #aaa; }
+
+.mobile-menu-empty { font-size: 0.8rem; color: #666; padding: 0.5rem; text-align: center; }
+
+.mobile-menu-action { margin-top: 0.5rem; background: rgba(220, 38, 38, 0.3); border-color: rgba(220, 38, 38, 0.5); }
 
 @keyframes slideInLeft {
   from { transform: translateX(-100%); }
