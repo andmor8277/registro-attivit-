@@ -513,7 +513,12 @@ async function esportaPDF() {
       pdf.text(lines, 15, noteY + 8)
     }
     
-    pdf.save(`convocazione_${convocazione.value.data_inizio || 'draft'}.pdf`)
+    const categoriaNome = categoriaAttiva.value?.nome || 'Categoria'
+    const dataInizio = convocazione.value.data_inizio || ''
+    const dataFine = convocazione.value.data_fine || ''
+    const dataFormattata = dataInizio ? dataInizio.split('-').reverse().join('/') : 'data'
+    const dataFinale = dataFine ? dataInizio.split('-').reverse().join('/') + ' - ' + dataFine.split('-').reverse().join('/') : dataFormattata
+    pdf.save('Convocazioni ' + categoriaNome + ' del ' + dataFinale + '.pdf')
   } catch (e) {
     console.error('Errore PDF:', e)
     alert('Errore nella generazione del PDF')
