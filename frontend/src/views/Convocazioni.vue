@@ -819,4 +819,9 @@ onMounted(async () => {
   .hamburger { display: none; }
   .mobile-menu-overlay { display: none; }
 }
+
+@media (max-width: 768px) {
+  .left-sidebar { display: none; }
+  .conv-body { flex-direction: column; }
+}
 </style>
