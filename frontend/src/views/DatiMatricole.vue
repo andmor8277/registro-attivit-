@@ -349,7 +349,7 @@ onMounted(async () => {
 .search-input::placeholder { color: #666; }
 .gruppo-filter { padding: 0.5rem 1rem; border: 1px solid #333; border-radius: 4px; font-size: 0.9rem; background: #1a1a1a; color: #eee; }
 
-.tabella-wrapper { overflow-x: auto; background: #1a1a1a; border-radius: 8px; }
+.tabella-wrapper { overflow-x: auto; background: #1a1a1a; border-radius: 8px; -webkit-overflow-scrolling: touch; }
 .tabella-giocatori { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 .tabella-giocatori th { background: var(--color-primary); color: white; padding: 0.75rem 0.5rem; text-align: left; font-weight: 600; white-space: nowrap; }
 .tabella-giocatori td { padding: 0.6rem 0.5rem; border-bottom: 1px solid #2a2a2a; color: #ddd; }
