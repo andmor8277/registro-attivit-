@@ -2,6 +2,13 @@
   <div class="conv-page">
     <header class="page-header">
       <div class="header-left">
+        <button class="hamburger" @click="mobileMenuOpen = true" aria-label="Menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
         <button class="btn-back" @click="router.push('/scelta/' + route.params.id)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="19" y1="12" x2="5" y2="12"/>
@@ -16,8 +23,55 @@
         </button>
       </div>
       <span class="titolo-toolbar">Convocazioni — {{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
-      <button class="btn-nuovo" @click="nuovaConvocazione">+ Nuovo Weekend</button>
+      <button class="btn-nuovo" @click="nuovaConvocazione">+ Nuovo</button>
     </header>
+
+    <div v-if="mobileMenuOpen" class="mobile-menu-overlay" @click="mobileMenuOpen = false">
+      <div class="mobile-menu" @click.stop>
+        <div class="mobile-menu-header">
+          <span>Menu Convocazioni</span>
+          <button class="mobile-menu-close" @click="mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="mobile-menu-content">
+          <button class="mobile-menu-item" @click="scrollToStorico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Storico
+          </button>
+          <button class="mobile-menu-item" @click="scrollToMister">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+              <path d="M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+            Mister
+          </button>
+          <button class="mobile-menu-item" @click="nuovaConvocazione(); mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="16"/>
+              <line x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
+            Nuovo Weekend
+          </button>
+          <button class="mobile-menu-item" @click="router.push('/'); mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Home
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div class="conv-body">
       <!-- SIDEBAR SINISTRA -->
@@ -198,6 +252,19 @@ const persone = ref([])
 const responsabili = ref([])
 const numPartite = ref(1)
 const registro = ref([])
+const mobileMenuOpen = ref(false)
+
+function scrollToStorico() {
+  mobileMenuOpen.value = false
+  const el = document.querySelector('.sidebar-section:first-child')
+  if (el) el.scrollIntoView({ behavior: 'smooth' })
+}
+
+function scrollToMister() {
+  mobileMenuOpen.value = false
+  const el = document.querySelector('.misters-section')
+  if (el) el.scrollIntoView({ behavior: 'smooth' })
+}
 
 const oggi = new Date()
 const annoCorrente = oggi.getFullYear()
@@ -655,10 +722,101 @@ onMounted(async () => {
 
 .page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--color-primary); }
 .header-left { display: flex; align-items: center; gap: 0.25rem; }
-.btn-back, .btn-home { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer; transition: background 0.2s; }
-.btn-back:hover, .btn-home:hover { background: rgba(255,255,255,0.2); }
-.btn-back svg, .btn-home svg { width: 18px; height: 18px; }
+.btn-back, .btn-home, .hamburger { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer; transition: background 0.2s; }
+.btn-back:hover, .btn-home:hover, .hamburger:hover { background: rgba(255,255,255,0.2); }
+.btn-back svg, .btn-home svg, .hamburger svg { width: 18px; height: 18px; }
 .titolo-toolbar { flex: 1; font-weight: bold; font-size: 1rem; color: white; }
 .btn-nuovo { padding: 6px 14px; border-radius: 6px; border: none; background: rgba(255,255,255,0.2); color: white; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
 .btn-nuovo:hover { background: rgba(255,255,255,0.3); }
+
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 200;
+  animation: fadeIn 0.2s ease-out;
+  backdrop-filter: blur(4px);
+}
+
+.mobile-menu {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 85vw;
+  background: #1a1a1a;
+  animation: slideInLeft 0.3s ease-out;
+  overflow-y: auto;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+}
+
+.mobile-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  font-weight: 700;
+  color: white;
+  background: var(--color-primary);
+}
+
+.mobile-menu-close {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+}
+
+.mobile-menu-close:hover { background: rgba(255,255,255,0.1); }
+.mobile-menu-close svg { width: 24px; height: 24px; }
+
+.mobile-menu-content {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  text-align: left;
+}
+
+.mobile-menu-item:hover {
+  background: rgba(255,255,255,0.12);
+  transform: translateX(4px);
+}
+
+.mobile-menu-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (min-width: 769px) {
+  .hamburger { display: none; }
+  .mobile-menu-overlay { display: none; }
+}
 </style>
