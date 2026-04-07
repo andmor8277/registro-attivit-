@@ -633,9 +633,8 @@ onMounted(async () => {
   background: #f5f5f5;
   border-right: 1px solid #ddd;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
   display: none;
+  flex-direction: column;
 }
 
 .sidebar-section {
