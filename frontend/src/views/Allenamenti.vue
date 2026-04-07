@@ -1056,7 +1056,10 @@ function exportPdf() {
       }
     }
     
-    doc.save('allenamento-' + (selectedDay.value?.data || 'data') + '.pdf')
+    const categoriaNome = categoriaAttiva.value?.nome || 'Categoria'
+    const dataSelezionata = selectedDay.value?.data || 'data'
+    const dataFormattata = dataSelezionata.split('-').reverse().join('/')
+    doc.save('Scheda ' + categoriaNome + ' del ' + dataFormattata + '.pdf')
   })
 }
 
