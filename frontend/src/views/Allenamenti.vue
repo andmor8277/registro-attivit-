@@ -336,7 +336,7 @@
                     </div>
                   </div>
                    
-                  <div class="tools-actions">
+                   <div class="tools-actions">
                     <button class="action-btn btn-clear" @click="clearBoard(ex)" title="Pulisci">🗑️ Pulisci</button>
                     <button class="action-btn btn-undo" @click="undoLast(ex)" title="Annulla">↩️ Undo</button>
                   </div>
@@ -359,8 +359,8 @@
               </div>
 
               <div class="board-sidebar">
-                <div v-if="selectedElement && selectedElementExercise?.id === ex.id" class="element-controls">
-                  <div class="element-controls-header" @click="elementControlsOpen = !elementControlsOpen">
+                <div v-if="selectedElement && selectedElementExercise?.id === ex.id" class="element-controls" @click.stop>
+                  <div class="element-controls-header" @click.stop="elementControlsOpen = !elementControlsOpen">
                     <span>MODIFICA OGGETTO</span>
                     <span class="toggle-icon">{{ elementControlsOpen ? '▼' : '▶' }}</span>
                   </div>
@@ -368,7 +368,7 @@
                     <div class="control-row">
                       <label>Colore:</label>
                       <div class="color-picker">
-                        <button v-for="c in colors" :key="c" class="color-btn" :class="{ active: selectedElement.colore === c }" :style="{ background: c }" @click="changeColor(c)"></button>
+                        <button v-for="c in colors" :key="c" class="color-btn" :class="{ active: selectedElement.colore === c }" :style="{ background: c }" @click.stop="changeColor(c)"></button>
                       </div>
                     </div>
                     <div class="control-row">
@@ -385,14 +385,14 @@
                     </div>
                     <div v-if="selectedElement.tipo?.startsWith('tactic-')" class="control-row">
                       <label>Ondulata:</label>
-                      <button class="toggle-btn" :class="{ active: selectedElement.wavy }" @click="toggleWavy">
+                      <button class="toggle-btn" :class="{ active: selectedElement.wavy }" @click.stop="toggleWavy">
                         {{ selectedElement.wavy ? 'Sì' : 'No' }}
                       </button>
                     </div>
                     <div class="element-actions">
-                      <button class="action-btn btn-copy-element" @click="copySelected" :disabled="!selectedElement">📋 Copia</button>
-                      <button class="action-btn btn-paste-element" @click="pasteElement" :disabled="!copiedElement">📄 Incolla</button>
-                      <button class="action-btn btn-delete-element" @click="deleteSelected">🗑️ Elimina</button>
+                      <button class="action-btn btn-copy-element" @click.stop="copySelected" :disabled="!selectedElement">📋 Copia</button>
+                      <button class="action-btn btn-paste-element" @click.stop="pasteElement" :disabled="!copiedElement">📄 Incolla</button>
+                      <button class="action-btn btn-delete-element" @click.stop="deleteSelected">🗑️ Elimina</button>
                     </div>
                   </div>
                 </div>
@@ -446,6 +446,7 @@ const dragOffset = ref({ x: 0, y: 0 })
 const elementControlsOpen = ref(false)
 const selectedElementExercise = ref(null)
 const copiedElement = ref(null)
+
 
 const colors = ['#ef4444', '#3b82f6', '#eab308', '#22c55e', '#ffffff', '#000000', '#a855f7', '#f97316']
 
@@ -664,14 +665,14 @@ function exportPdf() {
         
         try {
           const tempCanvas = document.createElement('canvas')
-          tempCanvas.width = fieldWidth
-          tempCanvas.height = fieldHeight
+          tempCanvas.width = 400
+          tempCanvas.height = 260
           const ctx = tempCanvas.getContext('2d')
           
-          const marginX = fieldWidth * 0.03
-          const marginY = fieldHeight * 0.03
-          const fieldW = fieldWidth - marginX * 2
-          const fieldH = fieldHeight - marginY * 2
+          const marginX = 400 * 0.03
+          const marginY = 260 * 0.03
+          const fieldW = 400 - marginX * 2
+          const fieldH = 260 - marginY * 2
           
           const stripeCount = 12
           const stripeWidth = fieldW / stripeCount
@@ -682,21 +683,21 @@ function exportPdf() {
           
           if (ex.campo_con_righe !== false) {
             ctx.strokeStyle = '#fff'
-            ctx.lineWidth = 2
+            ctx.lineWidth = 1
             
             ctx.strokeRect(marginX, marginY, fieldW, fieldH)
             
             ctx.beginPath()
-            ctx.moveTo(fieldWidth / 2, marginY)
-            ctx.lineTo(fieldWidth / 2, fieldHeight - marginY)
+            ctx.moveTo(400 / 2, marginY)
+            ctx.lineTo(400 / 2, 260 - marginY)
             ctx.stroke()
             
             const centerR = fieldW * 0.15
             ctx.beginPath()
-            ctx.arc(fieldWidth / 2, fieldHeight / 2, centerR, 0, Math.PI * 2)
+            ctx.arc(400 / 2, 260 / 2, centerR, 0, Math.PI * 2)
             ctx.stroke()
             ctx.beginPath()
-            ctx.arc(fieldWidth / 2, fieldHeight / 2, 3, 0, Math.PI * 2)
+            ctx.arc(400 / 2, 260 / 2, 3, 0, Math.PI * 2)
             ctx.fillStyle = '#fff'
             ctx.fill()
             
@@ -708,44 +709,45 @@ function exportPdf() {
             const goalHeight = fieldH * 0.07
             const goalDepth = fieldW * 0.02
             
-            const smallTop = fieldHeight / 2 - smallHeight / 2
-            const penaltyTop = fieldHeight / 2 - penaltyHeight / 2
+            const smallTop = 260 / 2 - smallHeight / 2
+            const penaltyTop = 260 / 2 - penaltyHeight / 2
             
             ctx.strokeRect(marginX, smallTop, smallDepth, smallHeight)
-            ctx.strokeRect(fieldWidth - marginX - smallDepth, smallTop, smallDepth, smallHeight)
+            ctx.strokeRect(400 - marginX - smallDepth, smallTop, smallDepth, smallHeight)
             
             ctx.strokeRect(marginX, penaltyTop, penaltyDepth, penaltyHeight)
-            ctx.strokeRect(fieldWidth - marginX - penaltyDepth, penaltyTop, penaltyDepth, penaltyHeight)
+            ctx.strokeRect(400 - marginX - penaltyDepth, penaltyTop, penaltyDepth, penaltyHeight)
             
             const lunetteCenterX = marginX + penaltyDepth
-            const lunetteCenterXRight = fieldWidth - marginX - penaltyDepth
+            const lunetteCenterXRight = 400 - marginX - penaltyDepth
             
             ctx.beginPath()
-            ctx.arc(lunetteCenterX, fieldHeight / 2, arcR, -Math.PI / 2, Math.PI / 2)
+            ctx.arc(lunetteCenterX, 260 / 2, arcR, -Math.PI / 2, Math.PI / 2)
             ctx.strokeStyle = '#fff'
             ctx.stroke()
             ctx.beginPath()
-            ctx.arc(lunetteCenterXRight, fieldHeight / 2, arcR, Math.PI / 2, -Math.PI / 2)
+            ctx.arc(lunetteCenterXRight, 260 / 2, arcR, Math.PI / 2, -Math.PI / 2)
             ctx.stroke()
             
             const penaltySpotX = fieldW * 0.105
             
             ctx.beginPath()
-            ctx.arc(marginX + penaltySpotX, fieldHeight / 2, 3, 0, Math.PI * 2)
+            ctx.arc(marginX + penaltySpotX, 260 / 2, 3, 0, Math.PI * 2)
             ctx.fillStyle = '#fff'
             ctx.fill()
             ctx.beginPath()
-            ctx.arc(fieldWidth - marginX - penaltySpotX, fieldHeight / 2, 3, 0, Math.PI * 2)
+            ctx.arc(400 - marginX - penaltySpotX, 260 / 2, 3, 0, Math.PI * 2)
             ctx.fill()
             
-            ctx.strokeRect(marginX - goalDepth, fieldHeight / 2 - goalHeight / 2, goalDepth, goalHeight)
-            ctx.strokeRect(fieldWidth - marginX, fieldHeight / 2 - goalHeight / 2, goalDepth, goalHeight)
+            ctx.strokeRect(marginX - goalDepth, 260 / 2 - goalHeight / 2, goalDepth, goalHeight)
+            ctx.strokeRect(400 - marginX, 260 / 2 - goalHeight / 2, goalDepth, goalHeight)
           }
           
           const elementi = ex.elementi || []
+          
           for (const el of elementi) {
-            const x = (el.x / 100) * fieldWidth
-            const yPos = (el.y / 100) * fieldHeight
+            const x = (el.x / 100) * 400
+            const yPos = (el.y / 100) * 260
             const rot = (el.rotazione || 0) * Math.PI / 180
             
             ctx.save()
@@ -755,115 +757,279 @@ function exportPdf() {
             switch (el.tipo) {
               case 'player-red': case 'player-blue': case 'player-yellow': case 'player-green': case 'player-white': case 'player-black':
                 ctx.beginPath()
-                ctx.arc(0, 0, 18, 0, Math.PI * 2)
+                ctx.arc(0, 0, 12, 0, Math.PI * 2)
                 ctx.fillStyle = el.colore || '#fff'
                 ctx.fill()
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 2
+                ctx.lineWidth = 1.5
                 ctx.stroke()
                 if (el.numero) {
                   ctx.fillStyle = '#fff'
-                  ctx.font = 'bold 14px Arial'
+                  ctx.font = 'bold 9px Arial'
                   ctx.textAlign = 'center'
                   ctx.textBaseline = 'middle'
                   ctx.fillText(el.numero.toString(), 0, 1)
                 }
                 break
               case 'cone': case 'cone-yellow':
-                ctx.fillStyle = el.colore || '#ff6600'
+                const pdfBaseW = 11
+                const pdfTopW = 1.5
+                const pdfHeight = 18
+                const pdfRimH = 2
+                const pdfConeColor = el.colore || '#ff6600'
+                
+                ctx.fillStyle = pdfConeColor
                 ctx.beginPath()
-                ctx.ellipse(0, 0, 8, 14, 0, 0, Math.PI * 2)
+                ctx.moveTo(-pdfBaseW/2, 0)
+                ctx.quadraticCurveTo(-pdfBaseW/2 - 1.5, -pdfHeight/3, -pdfTopW, -pdfHeight)
+                ctx.quadraticCurveTo(0, -pdfHeight + 1, pdfTopW, -pdfHeight)
+                ctx.quadraticCurveTo(pdfBaseW/2 + 1.5, -pdfHeight/3, pdfBaseW/2, 0)
+                ctx.closePath()
                 ctx.fill()
-                ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1
-                ctx.stroke()
+                
+                const pdfGrad = ctx.createLinearGradient(-pdfBaseW/2, 0, pdfBaseW/2, 0)
+                pdfGrad.addColorStop(0, 'rgba(0,0,0,0.3)')
+                pdfGrad.addColorStop(0.3, 'rgba(0,0,0,0)')
+                pdfGrad.addColorStop(0.7, 'rgba(0,0,0,0)')
+                pdfGrad.addColorStop(1, 'rgba(0,0,0,0.4)')
+                ctx.fillStyle = pdfGrad
+                ctx.fill()
+                
+                ctx.fillStyle = pdfConeColor
                 ctx.beginPath()
-                ctx.moveTo(0, -12)
-                ctx.lineTo(0, 12)
-                ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 1
-                ctx.stroke()
+                ctx.ellipse(0, 0, pdfBaseW/2 + 0.5, pdfRimH/2, 0, 0, Math.PI * 2)
+                ctx.fill()
+                break
+              case 'cone-small':
+                const pdfSmBaseW = 7
+                const pdfSmTopW = 1
+                const pdfSmHeight = 12
+                const pdfSmRimH = 1.5
+                const pdfSmConeColor = el.colore || '#eab308'
+                
+                ctx.fillStyle = pdfSmConeColor
+                ctx.beginPath()
+                ctx.moveTo(-pdfSmBaseW/2, 0)
+                ctx.quadraticCurveTo(-pdfSmBaseW/2 - 1, -pdfSmHeight/3, -pdfSmTopW, -pdfSmHeight)
+                ctx.quadraticCurveTo(0, -pdfSmHeight + 0.8, pdfSmTopW, -pdfSmHeight)
+                ctx.quadraticCurveTo(pdfSmBaseW/2 + 1, -pdfSmHeight/3, pdfSmBaseW/2, 0)
+                ctx.closePath()
+                ctx.fill()
+                
+                const pdfSmGrad = ctx.createLinearGradient(-pdfSmBaseW/2, 0, pdfSmBaseW/2, 0)
+                pdfSmGrad.addColorStop(0, 'rgba(0,0,0,0.3)')
+                pdfSmGrad.addColorStop(0.3, 'rgba(0,0,0,0)')
+                pdfSmGrad.addColorStop(0.7, 'rgba(0,0,0,0)')
+                pdfSmGrad.addColorStop(1, 'rgba(0,0,0,0.4)')
+                ctx.fillStyle = pdfSmGrad
+                ctx.fill()
+                
+                ctx.fillStyle = pdfSmConeColor
+                ctx.beginPath()
+                ctx.ellipse(0, 0, pdfSmBaseW/2 + 0.3, pdfSmRimH/2, 0, 0, Math.PI * 2)
+                ctx.fill()
+                break
+              case 'cone-striped':
+                const strPdfBaseW = 11
+                const strPdfTopW = 1.5
+                const strPdfHeight = 18
+                const strPdfRimH = 2
+                const strPdfConeColor = el.colore || '#ffffff'
+                
+                ctx.fillStyle = strPdfConeColor
+                ctx.beginPath()
+                ctx.moveTo(-strPdfBaseW/2, 0)
+                ctx.quadraticCurveTo(-strPdfBaseW/2 - 1.5, -strPdfHeight/3, -strPdfTopW, -strPdfHeight)
+                ctx.quadraticCurveTo(0, -strPdfHeight + 1, strPdfTopW, -strPdfHeight)
+                ctx.quadraticCurveTo(strPdfBaseW/2 + 1.5, -strPdfHeight/3, strPdfBaseW/2, 0)
+                ctx.closePath()
+                ctx.fill()
+                
+                ctx.save()
+                ctx.clip()
+                ctx.strokeStyle = '#ef4444'
+                ctx.lineWidth = 1.5
+                for (let i = -15; i < 30; i += 6) {
+                  ctx.beginPath()
+                  ctx.moveTo(-strPdfBaseW + i, 0)
+                  ctx.lineTo(i, -strPdfHeight)
+                  ctx.stroke()
+                }
+                ctx.restore()
+                
+                const strPdfGrad = ctx.createLinearGradient(-strPdfBaseW/2, 0, strPdfBaseW/2, 0)
+                strPdfGrad.addColorStop(0, 'rgba(0,0,0,0.3)')
+                strPdfGrad.addColorStop(0.3, 'rgba(0,0,0,0)')
+                strPdfGrad.addColorStop(0.7, 'rgba(0,0,0,0)')
+                strPdfGrad.addColorStop(1, 'rgba(0,0,0,0.4)')
+                ctx.fillStyle = strPdfGrad
+                ctx.fill()
+                
+                ctx.fillStyle = strPdfConeColor
+                ctx.beginPath()
+                ctx.ellipse(0, 0, strPdfBaseW/2 + 0.5, strPdfRimH/2, 0, 0, Math.PI * 2)
+                ctx.fill()
                 break
               case 'palla': case 'ball':
                 ctx.beginPath()
-                ctx.arc(0, 0, 12, 0, Math.PI * 2)
-                ctx.fillStyle = el.colore || '#fff'
+                ctx.arc(0, 0, 10, 0, Math.PI * 2)
+                ctx.fillStyle = '#fff'
                 ctx.fill()
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1
+                ctx.lineWidth = 1.5
                 ctx.stroke()
                 ctx.beginPath()
-                ctx.arc(0, 0, 8, 0, Math.PI * 2)
+                ctx.arc(0, 0, 6, 0, Math.PI * 2)
                 ctx.strokeStyle = '#000'
                 ctx.lineWidth = 1
                 ctx.stroke()
                 break
               case 'goal-large':
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 3
+                ctx.lineWidth = 2
                 ctx.beginPath()
-                ctx.moveTo(-45, -25)
-                ctx.lineTo(-45, 25)
-                ctx.lineTo(45, 25)
-                ctx.lineTo(45, -25)
+                ctx.moveTo(-25, -15)
+                ctx.lineTo(-25, 15)
+                ctx.lineTo(25, 15)
+                ctx.lineTo(25, -15)
                 ctx.stroke()
                 ctx.beginPath()
-                ctx.moveTo(-45, -25)
-                ctx.lineTo(-40, -25)
-                ctx.lineTo(-40, 20)
-                ctx.lineTo(40, 20)
-                ctx.lineTo(40, -25)
-                ctx.lineTo(45, -25)
+                ctx.moveTo(-25, -15)
+                ctx.lineTo(-20, -15)
+                ctx.lineTo(-20, 12)
+                ctx.lineTo(20, 12)
+                ctx.lineTo(20, -15)
+                ctx.lineTo(25, -15)
                 ctx.stroke()
                 ctx.strokeStyle = 'rgba(255,255,255,0.4)'
-                ctx.lineWidth = 1
-                for (let gy = -20; gy <= 15; gy += 7) {
+                ctx.lineWidth = 0.5
+                for (let gy = -12; gy <= 10; gy += 4) {
                   ctx.beginPath()
-                  ctx.moveTo(-40, gy)
-                  ctx.lineTo(40, gy)
+                  ctx.moveTo(-20, gy)
+                  ctx.lineTo(20, gy)
                   ctx.stroke()
                 }
-                for (let gx = -35; gx <= 35; gx += 7) {
+                for (let gx = -18; gx <= 18; gx += 4) {
                   ctx.beginPath()
-                  ctx.moveTo(gx, -20)
-                  ctx.lineTo(gx, 20)
+                  ctx.moveTo(gx, -12)
+                  ctx.lineTo(gx, 12)
                   ctx.stroke()
                 }
                 break
               case 'goal-small':
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 2
+                ctx.lineWidth = 1.5
                 ctx.beginPath()
-                ctx.moveTo(-18, -12)
-                ctx.lineTo(-18, 12)
-                ctx.lineTo(18, 12)
-                ctx.lineTo(18, -12)
+                ctx.moveTo(-12, -8)
+                ctx.lineTo(-12, 8)
+                ctx.lineTo(12, 8)
+                ctx.lineTo(12, -8)
                 ctx.stroke()
                 ctx.strokeStyle = 'rgba(255,255,255,0.4)'
-                ctx.lineWidth = 1
-                for (let gy = -8; gy <= 8; gy += 4) {
+                ctx.lineWidth = 0.5
+                for (let gy = -6; gy <= 6; gy += 3) {
                   ctx.beginPath()
-                  ctx.moveTo(-15, gy)
-                  ctx.lineTo(15, gy)
+                  ctx.moveTo(-10, gy)
+                  ctx.lineTo(10, gy)
                   ctx.stroke()
                 }
-                for (let gx = -12; gx <= 12; gx += 4) {
+                for (let gx = -8; gx <= 8; gx += 3) {
                   ctx.beginPath()
-                  ctx.moveTo(gx, -8)
-                  ctx.lineTo(gx, 8)
+                  ctx.moveTo(gx, -6)
+                  ctx.lineTo(gx, 6)
                   ctx.stroke()
                 }
                 break
               case 'stairs':
                 ctx.fillStyle = el.colore || '#ff6600'
                 for (let s = 0; s < 4; s++) {
-                  ctx.fillRect(-30 + s * 20, -20 + s * 10, 18, 8)
+                  ctx.fillRect(-18 + s * 12, -12 + s * 6, 10, 5)
                 }
                 break
               case 'ladder':
                 ctx.fillStyle = el.colore || '#ff6600'
                 for (let s = 0; s < 4; s++) {
-                  ctx.fillRect(-20 + s * 12, -10, 10, 20)
+                  ctx.fillRect(-12 + s * 8, -6, 6, 12)
+                }
+                break
+              case 'disk-orange': case 'disk-blue': case 'disk-yellow':
+                ctx.fillStyle = el.colore || '#ff6600'
+                ctx.beginPath()
+                ctx.ellipse(0, 0, 14, 5, 0, 0, Math.PI * 2)
+                ctx.fill()
+                ctx.strokeStyle = '#fff'
+                ctx.lineWidth = 1.5
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.ellipse(0, 0, 6, 2, 0, 0, Math.PI * 2)
+                ctx.fillStyle = el.colore === '#3b82f6' ? '#1d4ed8' : el.colore === '#eab308' ? '#a16207' : '#cc5200'
+                ctx.fill()
+                break
+              case 'pole-red': case 'pole-yellow': case 'pole-white':
+                ctx.fillStyle = el.colore || '#ff6600'
+                ctx.fillRect(-3, -20, 6, 40)
+                ctx.strokeStyle = '#000'
+                ctx.lineWidth = 1
+                ctx.strokeRect(-3, -20, 6, 40)
+                ctx.beginPath()
+                ctx.arc(0, -20, 5, 0, Math.PI * 2)
+                ctx.fill()
+                ctx.stroke()
+                break
+              case 'flag-red': case 'flag-yellow':
+                ctx.strokeStyle = '#fff'
+                ctx.lineWidth = 2
+                ctx.beginPath()
+                ctx.moveTo(0, 15)
+                ctx.lineTo(0, -20)
+                ctx.stroke()
+                ctx.fillStyle = el.colore || '#ff6600'
+                ctx.beginPath()
+                ctx.moveTo(0, -20)
+                ctx.lineTo(15, -15)
+                ctx.lineTo(0, -10)
+                ctx.closePath()
+                ctx.fill()
+                break
+              case 'ring-red': case 'ring-blue': case 'ring-yellow':
+                ctx.strokeStyle = el.colore || '#ef4444'
+                ctx.lineWidth = 4
+                ctx.beginPath()
+                ctx.arc(0, 0, 12, 0, Math.PI * 2)
+                ctx.stroke()
+                break
+              case 'ball-blue': case 'ball-red': case 'ball-yellow': case 'ball-orange':
+                ctx.beginPath()
+                ctx.arc(0, 0, 10, 0, Math.PI * 2)
+                ctx.fillStyle = el.colore || '#fff'
+                ctx.fill()
+                ctx.strokeStyle = '#000'
+                ctx.lineWidth = 1.5
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.arc(0, 0, 6, 0, Math.PI * 2)
+                ctx.strokeStyle = '#000'
+                ctx.lineWidth = 1
+                ctx.stroke()
+                break
+              case 'coin-yellow': case 'coin-brown': case 'coin-gold':
+                ctx.fillStyle = el.colore || '#ffd700'
+                ctx.beginPath()
+                ctx.arc(0, 0, 10, 0, Math.PI * 2)
+                ctx.fill()
+                ctx.strokeStyle = '#000'
+                ctx.lineWidth = 1.5
+                ctx.stroke()
+                ctx.fillStyle = '#000'
+                ctx.font = 'bold 10px Arial'
+                ctx.textAlign = 'center'
+                ctx.textBaseline = 'middle'
+                ctx.fillText('$', 0, 1)
+                break
+              case 'ladder-gray': case 'ladder-yellow': case 'ladder-red':
+                ctx.fillStyle = el.colore || '#ff6600'
+                for (let s = 0; s < 4; s++) {
+                  ctx.fillRect(-12 + s * 8, -6, 6, 12)
                 }
                 break
             }
@@ -924,7 +1090,6 @@ function saveEsercizio(ex) {
   
   saveAllenamenti(categoriaId, data).then(() => {
     console.log('Allenamenti salvati!')
-    loadEsercizi(selectedDay.value.data)
   }).catch(err => {
     console.error('Errore nel salvataggio:', err)
   })
@@ -1010,9 +1175,9 @@ function pasteElement() {
 
 function handleBoardClick(event, ex) {
   event.preventDefault()
+  event.stopPropagation()
   if (!ex) ex = getCurrentExercise()
   if (!ex) return
-  if (isDragging.value) return
   const rect = event.target.getBoundingClientRect()
   const x = (event.clientX - rect.left) / rect.width * 100
   const y = (event.clientY - rect.top) / rect.height * 100
@@ -1024,9 +1189,12 @@ function handleBoardClick(event, ex) {
     return dist < 25
   })
   
+  if (isDragging.value) return
+  
   if (clickedEl) {
     selectedElement.value = clickedEl
     selectedElementExercise.value = ex
+    elementControlsOpen.value = true
     drawBoard(ex)
     return
   }
@@ -1074,6 +1242,7 @@ function handleMouseDown(event, ex) {
     event.stopPropagation()
     selectedElement.value = clickedEl
     selectedElementExercise.value = ex
+    elementControlsOpen.value = true
     isDragging.value = true
     dragOffset.value = { x: event.clientX - clickedEl.x * rect.width / 100, y: event.clientY - clickedEl.y * rect.height / 100 }
     drawBoard(ex)
@@ -1295,46 +1464,112 @@ function drawBoard(ex) {
         }
         break
       case 'cone':
-        ctx.fillStyle = el.colore || '#ff6600'
+        const baseW = 20
+        const topW = 2.5
+        const height = 34
+        const rimH = 3
+        const coneColor = el.colore || '#ff6600'
+        
+        ctx.fillStyle = coneColor
         ctx.beginPath()
-        ctx.ellipse(0, 0, 8, 14, 0, 0, Math.PI * 2)
+        ctx.moveTo(-baseW/2, 0)
+        ctx.quadraticCurveTo(-baseW/2 - 2.5, -height/3, -topW, -height)
+        ctx.quadraticCurveTo(0, -height + 1.5, topW, -height)
+        ctx.quadraticCurveTo(baseW/2 + 2.5, -height/3, baseW/2, 0)
+        ctx.closePath()
         ctx.fill()
-        ctx.strokeStyle = '#000'
-        ctx.lineWidth = 1
-        ctx.stroke()
+        
+        const grad = ctx.createLinearGradient(-baseW/2, 0, baseW/2, 0)
+        grad.addColorStop(0, 'rgba(0,0,0,0.3)')
+        grad.addColorStop(0.3, 'rgba(0,0,0,0)')
+        grad.addColorStop(0.7, 'rgba(0,0,0,0)')
+        grad.addColorStop(1, 'rgba(0,0,0,0.4)')
+        ctx.fillStyle = grad
+        ctx.fill()
+        
+        ctx.fillStyle = coneColor
         ctx.beginPath()
-        ctx.moveTo(0, -12)
-        ctx.lineTo(0, 12)
-        ctx.strokeStyle = '#fff'
+        ctx.ellipse(0, 0, baseW/2 + 1, rimH/2, 0, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'
         ctx.lineWidth = 1
         ctx.stroke()
         break
       case 'cone-small':
-        ctx.fillStyle = el.colore || '#eab308'
+        const smBaseW = 12
+        const smTopW = 1.5
+        const smHeight = 20
+        const smRimH = 2
+        const smConeColor = el.colore || '#eab308'
+        
+        ctx.fillStyle = smConeColor
         ctx.beginPath()
-        ctx.ellipse(0, 0, 5, 10, 0, 0, Math.PI * 2)
+        ctx.moveTo(-smBaseW/2, 0)
+        ctx.quadraticCurveTo(-smBaseW/2 - 1.5, -smHeight/3, -smTopW, -smHeight)
+        ctx.quadraticCurveTo(0, -smHeight + 1, smTopW, -smHeight)
+        ctx.quadraticCurveTo(smBaseW/2 + 1.5, -smHeight/3, smBaseW/2, 0)
+        ctx.closePath()
         ctx.fill()
-        ctx.strokeStyle = '#000'
-        ctx.lineWidth = 1
+        
+        const smGrad = ctx.createLinearGradient(-smBaseW/2, 0, smBaseW/2, 0)
+        smGrad.addColorStop(0, 'rgba(0,0,0,0.3)')
+        smGrad.addColorStop(0.3, 'rgba(0,0,0,0)')
+        smGrad.addColorStop(0.7, 'rgba(0,0,0,0)')
+        smGrad.addColorStop(1, 'rgba(0,0,0,0.4)')
+        ctx.fillStyle = smGrad
+        ctx.fill()
+        
+        ctx.fillStyle = smConeColor
+        ctx.beginPath()
+        ctx.ellipse(0, 0, smBaseW/2 + 0.5, smRimH/2, 0, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'
+        ctx.lineWidth = 0.5
         ctx.stroke()
         break
       case 'cone-striped':
-        ctx.fillStyle = el.colore || '#ffffff'
+        const strBaseW = 20
+        const strTopW = 2.5
+        const strHeight = 34
+        const strRimH = 3
+        const strConeColor = el.colore || '#ffffff'
+        
+        ctx.fillStyle = strConeColor
         ctx.beginPath()
-        ctx.ellipse(0, 0, 8, 14, 0, 0, Math.PI * 2)
+        ctx.moveTo(-strBaseW/2, 0)
+        ctx.quadraticCurveTo(-strBaseW/2 - 2.5, -strHeight/3, -strTopW, -strHeight)
+        ctx.quadraticCurveTo(0, -strHeight + 1.5, strTopW, -strHeight)
+        ctx.quadraticCurveTo(strBaseW/2 + 2.5, -strHeight/3, strBaseW/2, 0)
+        ctx.closePath()
         ctx.fill()
-        ctx.strokeStyle = '#000'
-        ctx.lineWidth = 1
-        ctx.stroke()
+        
+        ctx.save()
+        ctx.clip()
         ctx.strokeStyle = '#ef4444'
-        ctx.lineWidth = 2
+        ctx.lineWidth = 3
+        const stripeOffset = ((Date.now() / 100) % 20) - 10
+        for (let i = -20; i < 40; i += 8) {
+          ctx.beginPath()
+          ctx.moveTo(-strBaseW + i + stripeOffset, 0)
+          ctx.lineTo(i + stripeOffset, -strHeight)
+          ctx.stroke()
+        }
+        ctx.restore()
+        
+        const strGrad = ctx.createLinearGradient(-strBaseW/2, 0, strBaseW/2, 0)
+        strGrad.addColorStop(0, 'rgba(0,0,0,0.3)')
+        strGrad.addColorStop(0.3, 'rgba(0,0,0,0)')
+        strGrad.addColorStop(0.7, 'rgba(0,0,0,0)')
+        strGrad.addColorStop(1, 'rgba(0,0,0,0.4)')
+        ctx.fillStyle = strGrad
+        ctx.fill()
+        
+        ctx.fillStyle = strConeColor
         ctx.beginPath()
-        ctx.moveTo(-6, -4)
-        ctx.lineTo(6, -4)
-        ctx.moveTo(-7, 2)
-        ctx.lineTo(7, 2)
-        ctx.moveTo(-6, 8)
-        ctx.lineTo(6, 8)
+        ctx.ellipse(0, 0, strBaseW/2 + 1, strRimH/2, 0, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'
+        ctx.lineWidth = 1
         ctx.stroke()
         break
       case 'pole-red': case 'pole-yellow': case 'pole-white':
