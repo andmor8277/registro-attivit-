@@ -456,6 +456,7 @@ watch([anno, mese], loadRegistro)
 
 .table-wrapper {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .gruppo-block {

@@ -73,6 +73,7 @@
         </svg>
         <h3>Società esistenti</h3>
       </div>
+        <div class="table-scroll">
         <table class="data-table">
         <thead>
           <tr>
@@ -113,6 +114,7 @@
           </tr>
         </tbody>
       </table>
+        </div>
     </div>
   </div>
 </template>
@@ -443,6 +445,12 @@ onMounted(async () => {
 .data-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 400px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .data-table th, .data-table td {
