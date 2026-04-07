@@ -616,7 +616,7 @@ onMounted(async () => {
 .actions { display: flex; gap: 0.5rem; margin-left: auto; }
 .btn-salva { padding: 6px 18px; background: var(--color-primary); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
 .btn-del { padding: 6px 14px; background: var(--color-primary); color: white; border: none; border-radius: 4px; cursor: pointer; }
-.gare-scroll { overflow-x: auto; width: 100%; }
+.gare-scroll { overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch; }
 .gare-grid { display: grid; gap: 1rem; min-width: max-content; width: 100%; }
 .gara-col { background: white; border: 1px solid #ddd; border-radius: 8px; min-width: 320px; }
 .gara-header { background: var(--color-primary); color: white; font-weight: bold; padding: 10px 14px; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 50px; }
