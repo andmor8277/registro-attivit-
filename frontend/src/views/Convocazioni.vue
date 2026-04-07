@@ -548,9 +548,17 @@ async function esportaPDF() {
     return
   }
   
+  const originalDisplay = gareGridEl.style.display
+  const originalColumns = gareGridEl.style.gridTemplateColumns
+  
+  gareGridEl.style.display = 'grid'
+  gareGridEl.style.gridTemplateColumns = `repeat(${convocazione.value.gare.length}, minmax(220px, 1fr))`
+  
   try {
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
     const canvas = await html2canvas(gareGridEl, {
-      scale: 1.5,
+      scale: 2,
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff',
@@ -591,6 +599,9 @@ async function esportaPDF() {
   } catch (e) {
     console.error('Errore PDF:', e)
     alert('Errore nella generazione del PDF')
+  } finally {
+    gareGridEl.style.display = originalDisplay
+    gareGridEl.style.gridTemplateColumns = originalColumns
   }
 }
 
