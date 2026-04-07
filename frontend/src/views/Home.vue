@@ -990,6 +990,7 @@ onMounted(() => {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
+  color: #333;
 }
 
 .planning-cat:hover {
@@ -1001,16 +1002,18 @@ onMounted(() => {
 .planning-cat .cat-name {
   font-size: 0.75rem;
   font-weight: 500;
+  color: #333;
 }
 
 .planning-cat .cat-time {
   font-size: 0.625rem;
   font-weight: 700;
-  color: var(--color-text-muted);
+  color: #666;
 }
 
+.planning-cat:hover .cat-name,
 .planning-cat:hover .cat-time {
-  color: rgba(255,255,255,0.8);
+  color: white;
 }
 
 .day-empty {
