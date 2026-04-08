@@ -802,6 +802,10 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   .page-header { flex-direction: column; align-items: stretch; }
   .mese-selector { justify-content: center; }
   
+  .legenda {
+    display: none;
+  }
+  
   .table-wrapper {
     overflow-x: auto !important;
     overflow-y: visible !important;
@@ -813,23 +817,16 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   }
   
   .gruppo-header {
-    position: sticky;
-    position: -webkit-sticky;
+    position: fixed;
     top: 0;
-    z-index: 25;
+    left: 0;
+    right: 0;
+    z-index: 100;
   }
   
   table {
     min-width: 700px;
-    position: relative;
-  }
-  
-  thead th {
-    position: sticky;
-    position: -webkit-sticky;
-    top: 50px;
-    z-index: 15;
-    background: #f9fafb;
+    margin-top: 50px;
   }
   
   .th-num, .td-num {
@@ -861,26 +858,19 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
     border-left: 2px solid #d1d5db;
   }
   
-  tfoot td {
-    position: sticky;
-    position: -webkit-sticky;
+  tfoot .td-num,
+  tfoot .td-nome,
+  tfoot .td-tot {
+    position: sticky !important;
+    position: -webkit-sticky !important;
     bottom: 0;
     background: #f9fafb;
-    z-index: 18;
-  }
-  
-  tfoot .td-num {
-    z-index: 23;
+    z-index: 30;
+    border-top: 2px solid #d1d5db;
   }
   
   tfoot .td-nome {
-    background: #f9fafb;
     font-weight: 600;
-    z-index: 24;
-  }
-  
-  tfoot .td-tot {
-    z-index: 23;
   }
   
   tbody tr:hover .td-nome {
@@ -893,28 +883,23 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   
   .totale-generale {
     position: relative;
+    margin-top: 60px;
   }
   
   .totale-header {
-    position: sticky;
-    position: -webkit-sticky;
-    top: 0;
-    z-index: 25;
+    position: fixed;
+    top: 50px;
+    left: 0;
+    right: 0;
+    z-index: 99;
   }
   
   .totale-table {
     min-width: 700px;
+    margin-top: 0;
   }
   
-  .totale-table thead th {
-    position: sticky;
-    position: -webkit-sticky;
-    top: 100px;
-    background: #f9fafb;
-    z-index: 15;
-  }
-  
-  .totale-table .th-label {
+  .totale-table .tot-label {
     position: sticky !important;
     position: -webkit-sticky !important;
     left: 0;
@@ -924,18 +909,12 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
     font-weight: 600;
   }
   
-  .totale-table tbody .tot-label {
-    position: sticky !important;
-    position: -webkit-sticky !important;
-    left: 0;
-    min-width: 100px;
-    background: #ffffff;
-    z-index: 19;
-    font-weight: 600;
-  }
-  
-  .totale-table tbody tr:hover .tot-label {
-    background: #f5f5f5;
+  .totale-table thead th {
+    position: sticky;
+    position: -webkit-sticky;
+    top: 100px;
+    background: #f9fafb;
+    z-index: 15;
   }
 }
 </style>
