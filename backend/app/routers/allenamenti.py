@@ -21,6 +21,7 @@ class EsercizioCreate(BaseModel):
     ordine: int
     titolo: Optional[str] = None
     descrizione: Optional[str] = None
+    focus: Optional[str] = None
     campo_con_righe: bool = True
     elementi: List[EsercizioElemento] = []
 

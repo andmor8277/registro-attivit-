@@ -46,6 +46,27 @@
               <button class="btn-delete" @click="deleteEsercizio(ex)">×</button>
             </div>
 
+            <div class="esercizio-meta">
+              <div class="focus-field">
+                <label>Focus:</label>
+                <select v-model="ex.focus" @change="saveEsercizio(ex)">
+                  <option value="">Nessuno</option>
+                  <option value="tecnica">Tecnica</option>
+                  <option value="tattica">Tattica</option>
+                  <option value="fisico">Fisico</option>
+                  <option value="capacita-coordinativa">Capacità Coordinativa</option>
+                  <option value="palleggio">Palleggio</option>
+                  <option value="passaggio">Passaggio</option>
+                  <option value="conclusione">Conclusione</option>
+                  <option value="difesa">Difesa</option>
+                  <option value="attacco">Attacco</option>
+                  <option value="possessione">Possesso</option>
+                  <option value="set-piece">Set Piece</option>
+                </select>
+              </div>
+              <textarea v-model="ex.descrizione" placeholder="Descrizione dell'esercizio..." @change="saveEsercizio(ex)"></textarea>
+            </div>
+
             <div class="board-area">
               <div class="board-main">
                 <div class="tools-panel">
@@ -396,10 +417,6 @@
                     </div>
                   </div>
                 </div>
-
-                <div class="esercizio-description">
-                  <textarea v-model="ex.descrizione" placeholder="Descrizione dell'esercizio..." @change="saveEsercizio(ex)"></textarea>
-                </div>
               </div>
             </div>
           </div>
@@ -571,7 +588,7 @@ function loadEsercizi(data) {
     }
     
     if (loadedEsercizi.length === 0) {
-      loadedEsercizi = [{ id: Date.now(), ordine: 1, titolo: '', descrizione: '', campo_con_righe: true, elementi: [] }]
+      loadedEsercizi = [{ id: Date.now(), ordine: 1, titolo: '', descrizione: '', focus: '', campo_con_righe: true, elementi: [] }]
     }
     
     esercizi.value = loadedEsercizi
@@ -581,7 +598,7 @@ function loadEsercizi(data) {
     })
   }).catch(() => {
     esercizi.value = [
-      { id: Date.now(), ordine: 1, titolo: '', descrizione: '', campo_con_righe: true, elementi: [] }
+      { id: Date.now(), ordine: 1, titolo: '', descrizione: '', focus: '', campo_con_righe: true, elementi: [] }
     ]
     selectedExercise.value = esercizi.value[0]
     nextTick(() => {
@@ -592,7 +609,7 @@ function loadEsercizi(data) {
 
 function addEsercizio() {
   const newId = Date.now()
-  esercizi.value.push({ id: newId, ordine: esercizi.value.length + 1, titolo: '', descrizione: '', campo_con_righe: true, elementi: [] })
+  esercizi.value.push({ id: newId, ordine: esercizi.value.length + 1, titolo: '', descrizione: '', focus: '', campo_con_righe: true, elementi: [] })
   selectedExercise.value = esercizi.value[esercizi.value.length - 1]
   nextTick(() => {
     drawBoard(selectedExercise.value)
@@ -1077,6 +1094,7 @@ function saveEsercizio(ex) {
           ordine: idx + 1,
           titolo: e.titolo,
           descrizione: e.descrizione,
+          focus: e.focus || '',
           campo_con_righe: e.campo_con_righe,
           elementi: e.elementi.map(el => ({
             tipo: el.tipo,
@@ -2493,8 +2511,16 @@ onMounted(async () => {
 .tactical-board-wrapper canvas.dragging { cursor: grabbing; }
 .tactical-board-container.no-lines .tactical-board-wrapper canvas { background: #2d5a27; }
 
+.esercizio-meta { padding: 0 1rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.esercizio-meta textarea { width: 100%; min-height: 100px; background: #252525; border: 1px solid #333; border-radius: 8px; padding: 0.75rem; color: #ddd; font-size: 0.9rem; resize: vertical; font-family: inherit; }
 .esercizio-description { flex: 1; display: flex; flex-direction: column; }
 .esercizio-description textarea { width: 100%; flex: 1; min-height: 150px; background: #252525; border: 1px solid #333; border-radius: 8px; padding: 0.75rem; color: #ddd; font-size: 0.9rem; resize: vertical; }
+
+.focus-field { display: flex; align-items: center; gap: 0.75rem; }
+.focus-field label { font-size: 0.85rem; color: #888; font-weight: 500; white-space: nowrap; }
+.focus-field select { flex: 1; max-width: 250px; padding: 0.4rem 0.75rem; background: #252525; border: 1px solid #333; border-radius: 6px; color: #ddd; font-size: 0.85rem; cursor: pointer; }
+.focus-field select:focus { outline: none; border-color: var(--color-primary); }
+.focus-field select option { background: #1a1a1a; color: #ddd; }
 
 .no-esercizi { text-align: center; padding: 2rem; color: #666; }
 </style>
