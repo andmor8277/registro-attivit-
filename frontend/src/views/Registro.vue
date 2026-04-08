@@ -492,7 +492,7 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   background: #ffffff;
   border-radius: var(--radius-lg);
   border: 1px solid #e5e5e5;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .gruppo-header {
