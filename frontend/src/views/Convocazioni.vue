@@ -588,24 +588,19 @@ async function esportaPDF() {
         </div>
         <img src="${societaAttiva.value?.logo ? '/uploads/' + societaAttiva.value.logo : '/logo.jpg'}" style="height:70px;width:70px;object-fit:contain;border-radius:50%;background:#fff;padding:3px;" />
       </div>
-      <div style="padding:15px;background:#f5f5f5;border-bottom:1px solid #ddd;text-align:center;">
-        <span style="font-size:14px;"><strong>Data:</strong> ${convocazione.value.data_inizio || ''} ${convocazione.value.data_fine ? ' - ' + convocazione.value.data_fine : ''}</span>
-      </div>
       <div style="display:grid;grid-template-columns:repeat(${numGare},1fr);gap:15px;padding:15px;box-sizing:border-box;">
         ${convocazione.value.gare.map((gara, idx) => `
           <div style="background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;">
-            <div style="background:#dc2626;color:#fff;padding:10px;font-weight:bold;text-align:center;font-size:13px;">${idx + 1}. ${gara.gara || 'Gara'}</div>
-            <div style="padding:10px;font-size:12px;">
-              <div style="margin-bottom:4px;"><strong>Data:</strong> ${gara.data || '-'}</div>
-              <div style="margin-bottom:4px;"><strong>Campo:</strong> ${gara.campo || '-'}</div>
-              <div style="margin-bottom:4px;"><strong>Indirizzo:</strong> ${gara.indirizzo || '-'}</div>
-              <div style="margin-bottom:4px;"><strong>Appuntamento:</strong> ${gara.appuntamento || '-'}</div>
-              <div style="margin-bottom:4px;"><strong>Inizio:</strong> ${gara.inizio_gara || '-'}</div>
-              <div style="margin-bottom:4px;"><strong>Mister:</strong> ${gara.allenatore || '-'}</div>
-              <div style="margin-top:8px;"><strong>Giocatori:</strong></div>
-              <div style="font-size:11px;">
+            <div style="background:#dc2626;color:#fff;padding:10px;font-weight:bold;text-align:center;font-size:14px;">${idx + 1}. ${gara.gara || 'Gara'}</div>
+            <div style="padding:10px;font-size:12px;color:#000;">
+              <div style="margin-bottom:5px;"><span style="font-weight:bold;">Data:</span> ${gara.data || '-'}</div>
+              <div style="margin-bottom:5px;"><span style="font-weight:bold;">Campo:</span> ${gara.campo || '-'}</div>
+              <div style="margin-bottom:5px;"><span style="font-weight:bold;">Indirizzo:</span> ${gara.indirizzo || '-'}</div>
+              <div style="margin-bottom:5px;"><span style="font-weight:bold;">Appuntamento:</span> ${gara.appuntamento || '-'}</div>
+              <div style="margin-bottom:5px;"><span style="font-weight:bold;">Inizio:</span> ${gara.inizio_gara || '-'}</div>
+              <div style="margin-bottom:8px;"><span style="font-weight:bold;">Mister:</span> ${gara.allenatore || '-'}</div>
+              <div style="margin-top:8px;border-top:1px solid #ddd;padding-top:8px;"><span style="font-weight:bold;">Giocatori:</span></div>
               ${(gara.giocatori || []).slice(0, 14).map((p, i) => `<div>${i+1}. ${getGiocatoreNome(p)}</div>`).join('')}
-              </div>
             </div>
           </div>
         `).join('')}
