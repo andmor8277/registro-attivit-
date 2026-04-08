@@ -492,8 +492,8 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
 .gruppo-block {
   margin-bottom: 1.5rem;
   background: #ffffff;
+  border: 2px solid var(--color-primary);
   border-radius: var(--radius-lg);
-  border: 1px solid #e5e5e5;
   overflow: visible;
 }
 
