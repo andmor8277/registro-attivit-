@@ -110,18 +110,20 @@
             </tbody>
             <tfoot>
               <tr class="riga-totale pres">
-                <td colspan="2">Presenti</td>
+                <td class="td-num"></td>
+                <td class="td-nome tot-label">Presenti</td>
                 <td v-for="g in giorniMese" :key="g.num" class="tot-cell">
                   {{ totGiornoGruppo(gruppo, g.num).pres || '' }}
                 </td>
-                <td colspan="2"></td>
+                <td class="td-tot"></td>
               </tr>
               <tr class="riga-totale ass">
-                <td colspan="2">Assenti</td>
+                <td class="td-num"></td>
+                <td class="td-nome tot-label">Assenti</td>
                 <td v-for="g in giorniMese" :key="g.num" class="tot-cell">
                   {{ totGiornoGruppo(gruppo, g.num).ass || '' }}
                 </td>
-                <td colspan="2"></td>
+                <td class="td-tot"></td>
               </tr>
           </tfoot>
         </table>
@@ -137,10 +139,10 @@
           </svg>
           TOTALE GENERALE
         </div>
-        <table>
+        <table class="totale-table">
           <thead>
             <tr>
-              <th></th>
+              <th class="th-label"></th>
               <th v-for="g in giorniMese" :key="g.num" :class="{ 'th-weekend': g.weekend }">
                 <div class="giorno-num">{{ g.num }}</div>
                 <div class="giorno-nome">{{ g.gg }}</div>
@@ -149,13 +151,13 @@
           </thead>
           <tbody>
             <tr>
-              <td class="tot-label">Presenti</td>
+              <td class="tot-label th-label">Presenti</td>
               <td v-for="g in giorniMese" :key="g.num" class="tot-cell tot-pres">
                 {{ totGiornoTutti(g.num).pres || '' }}
               </td>
             </tr>
             <tr>
-              <td class="tot-label">Assenti</td>
+              <td class="tot-label th-label">Assenti</td>
               <td v-for="g in giorniMese" :key="g.num" class="tot-cell tot-ass">
                 {{ totGiornoTutti(g.num).ass || '' }}
               </td>
@@ -801,56 +803,84 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   .mese-selector { justify-content: center; }
   
   .table-wrapper {
-    overflow-x: auto;
-    overflow-y: visible;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    position: relative;
+  }
+  
+  .gruppo-block {
+    position: relative;
   }
   
   .gruppo-header {
     position: sticky;
     position: -webkit-sticky;
     top: 0;
-    z-index: 20;
+    z-index: 25;
   }
   
   table {
-    min-width: 600px;
+    min-width: 700px;
+    position: relative;
   }
   
-  .th-num, .td-num,
-  .th-nome, .td-nome,
-  .th-tot, .td-tot {
+  thead th {
     position: sticky;
     position: -webkit-sticky;
-    z-index: 10;
+    top: 50px;
+    z-index: 15;
+    background: #f9fafb;
   }
   
   .th-num, .td-num {
+    position: sticky !important;
+    position: -webkit-sticky !important;
     left: 0;
     min-width: 35px;
     width: 35px;
     background: #f9fafb;
-    z-index: 11;
+    z-index: 20;
   }
   
   .th-nome, .td-nome {
+    position: sticky !important;
+    position: -webkit-sticky !important;
     left: 35px;
-    min-width: 120px;
+    min-width: 130px;
     background: #ffffff;
-    z-index: 12;
+    z-index: 21;
   }
   
   .th-tot, .td-tot {
+    position: sticky !important;
+    position: -webkit-sticky !important;
     right: 0;
     min-width: 60px;
     background: #f9fafb;
-    z-index: 13;
+    z-index: 22;
     border-left: 2px solid #d1d5db;
   }
   
-  th { background: #f9fafb; }
+  tfoot td {
+    position: sticky;
+    position: -webkit-sticky;
+    bottom: 0;
+    background: #f9fafb;
+    z-index: 18;
+  }
   
-  .td-nome {
-    background: #ffffff;
+  tfoot .td-num {
+    z-index: 23;
+  }
+  
+  tfoot .td-nome {
+    background: #f9fafb;
+    font-weight: 600;
+    z-index: 24;
+  }
+  
+  tfoot .td-tot {
+    z-index: 23;
   }
   
   tbody tr:hover .td-nome {
@@ -859,6 +889,53 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   
   .td-pres {
     background: #f9fafb;
+  }
+  
+  .totale-generale {
+    position: relative;
+  }
+  
+  .totale-header {
+    position: sticky;
+    position: -webkit-sticky;
+    top: 0;
+    z-index: 25;
+  }
+  
+  .totale-table {
+    min-width: 700px;
+  }
+  
+  .totale-table thead th {
+    position: sticky;
+    position: -webkit-sticky;
+    top: 100px;
+    background: #f9fafb;
+    z-index: 15;
+  }
+  
+  .totale-table .th-label {
+    position: sticky !important;
+    position: -webkit-sticky !important;
+    left: 0;
+    min-width: 100px;
+    background: #f9fafb;
+    z-index: 20;
+    font-weight: 600;
+  }
+  
+  .totale-table tbody .tot-label {
+    position: sticky !important;
+    position: -webkit-sticky !important;
+    left: 0;
+    min-width: 100px;
+    background: #ffffff;
+    z-index: 19;
+    font-weight: 600;
+  }
+  
+  .totale-table tbody tr:hover .tot-label {
+    background: #f5f5f5;
   }
 }
 </style>
