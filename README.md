@@ -62,9 +62,16 @@ registro_presenze/
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v1.1.0**.
+La versione attuale è **v2.0.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
+
+### Novità v2.0.0
+
+- **Mobile Optimizations**: Menu hamburger responsive, scroll automatico, messaggio rotazione dispositivo
+- **PDF Export**: Nuovo sistema con header due loghi, categoria in oro, ottimizzato per smartphone
+- **Security**: Rimozione file sensibili (.env) dal repository Git
+- **Bug Fixes**: Grafica coni aggiornata, elementi mancanti nell'export PDF
 
 ---
 
