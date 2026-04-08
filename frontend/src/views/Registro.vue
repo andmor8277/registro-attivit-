@@ -214,8 +214,6 @@ const { categoriaAttiva, utenteAttivo } = useCategoria()
 const isDirigente = computed(() => utenteAttivo.value?.ruolo === 'dirigente')
 const showRotateMessage = ref(false)
 
-let savedViewport = ''
-
 const checkOrientation = () => {
   const isMobile = window.innerWidth <= 768
   const isPortrait = window.innerHeight > window.innerWidth
@@ -223,28 +221,12 @@ const checkOrientation = () => {
 }
 
 onMounted(() => {
-  const isMobile = window.innerWidth <= 768
-  if (isMobile) {
-    savedViewport = document.querySelector('meta[name="viewport"]')?.content || ''
-    const meta = document.querySelector('meta[name="viewport"]') || document.createElement('meta')
-    meta.name = 'viewport'
-    meta.content = 'width=1024, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
-    if (!meta.parentNode) document.head.appendChild(meta)
-    document.body.style.minWidth = '1024px'
-    document.body.style.overflowX = 'auto'
-  }
   checkOrientation()
   window.addEventListener('resize', checkOrientation)
   window.addEventListener('orientationchange', checkOrientation)
 })
 
 onUnmounted(() => {
-  if (savedViewport) {
-    const meta = document.querySelector('meta[name="viewport"]')
-    if (meta) meta.content = savedViewport
-    document.body.style.minWidth = ''
-    document.body.style.overflowX = ''
-  }
   window.removeEventListener('resize', checkOrientation)
   window.removeEventListener('orientationchange', checkOrientation)
 })
@@ -846,12 +828,6 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   .registro-container { padding: 1rem; }
   .page-header { flex-direction: column; align-items: stretch; }
   .mese-selector { justify-content: center; }
-  
-  html, body {
-    min-width: 1024px !important;
-    overflow-x: auto !important;
-    overflow-y: auto !important;
-  }
 }
 
 .rotate-device-overlay {
