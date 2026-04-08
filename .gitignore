@@ -35,3 +35,9 @@ mock-data.json
 
 # Release archives (do not commit these)
 releases/
+
+# Environment files with secrets
+.env
+.env.production
+.env.local
+*.local.env
