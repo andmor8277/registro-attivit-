@@ -494,7 +494,7 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   background: #ffffff;
   border: 2px solid var(--color-primary);
   border-radius: var(--radius-lg);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .gruppo-header {
@@ -801,5 +801,11 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   .registro-container { padding: 1rem; }
   .page-header { flex-direction: column; align-items: stretch; }
   .mese-selector { justify-content: center; }
+  
+  html, body {
+    min-width: 1024px !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+  }
 }
 </style>
