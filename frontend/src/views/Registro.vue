@@ -193,7 +193,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue"
+import { ref, computed, onMounted, onUnmounted, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { getPersone, getCodici, getRegistroMese, upsertRegistro, getCategorie } from "../api/index.js"
 import { useStore as useCategoria } from "../store.js"
@@ -203,6 +203,30 @@ const router = useRouter()
 const categoriaId = computed(() => parseInt(route.params.id))
 const { categoriaAttiva, utenteAttivo } = useCategoria()
 const isDirigente = computed(() => utenteAttivo.value?.ruolo === 'dirigente')
+
+let savedViewport = ''
+
+onMounted(() => {
+  const isMobile = window.innerWidth <= 768
+  if (isMobile) {
+    savedViewport = document.querySelector('meta[name="viewport"]')?.content || ''
+    const meta = document.querySelector('meta[name="viewport"]') || document.createElement('meta')
+    meta.name = 'viewport'
+    meta.content = 'width=1024, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'
+    if (!meta.parentNode) document.head.appendChild(meta)
+    document.body.style.minWidth = '1024px'
+    document.body.style.overflowX = 'auto'
+  }
+})
+
+onUnmounted(() => {
+  if (savedViewport) {
+    const meta = document.querySelector('meta[name="viewport"]')
+    if (meta) meta.content = savedViewport
+    document.body.style.minWidth = ''
+    document.body.style.overflowX = ''
+  }
+})
 
 const oggi = new Date()
 const anno = ref(oggi.getFullYear())
