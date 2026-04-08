@@ -459,31 +459,6 @@ watch([anno, mese], loadRegistro)
   -webkit-overflow-scrolling: touch;
 }
 
-.gruppo-block {
-  margin-bottom: 1.5rem;
-  background: #ffffff;
-  border-radius: var(--radius-lg);
-  border: 1px solid #e5e5e5;
-  overflow: hidden;
-}
-
-.gruppo-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.875rem 1.25rem;
-  background: var(--color-primary);
-  color: white;
-  font-weight: 600;
-  font-size: 0.9375rem;
-}
-
-.gruppo-header svg {
-  width: 18px;
-  height: 18px;
-  opacity: 0.9;
-}
-
 table {
   width: 100%;
   border-collapse: collapse;
@@ -511,6 +486,31 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
 .giorno-nome { font-size: 0.6875rem; color: #666666; }
 
 .persona-name { font-weight: 500; color: #111827; }
+
+.gruppo-block {
+  margin-bottom: 1.5rem;
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1px solid #e5e5e5;
+  overflow: hidden;
+}
+
+.gruppo-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem;
+  background: var(--color-primary);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.gruppo-header svg {
+  width: 18px;
+  height: 18px;
+  opacity: 0.9;
+}
 
 .cella {
   cursor: pointer;
@@ -799,5 +799,46 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   .registro-container { padding: 1rem; }
   .page-header { flex-direction: column; align-items: stretch; }
   .mese-selector { justify-content: center; }
+  
+  .table-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+  
+  table {
+    min-width: 600px;
+  }
+  
+  .th-num, .td-num,
+  .th-nome, .td-nome {
+    position: sticky;
+    position: -webkit-sticky;
+    z-index: 10;
+  }
+  
+  .th-num, .td-num {
+    left: 0;
+    min-width: 35px;
+    width: 35px;
+    background: #f9fafb;
+    z-index: 11;
+  }
+  
+  .th-nome, .td-nome {
+    left: 35px;
+    min-width: 120px;
+    background: #ffffff;
+    z-index: 12;
+  }
+  
+  th { background: #f9fafb; }
+  
+  .td-nome {
+    background: #ffffff;
+  }
+  
+  tbody tr:hover .td-nome {
+    background: #f5f5f5;
+  }
 }
 </style>
