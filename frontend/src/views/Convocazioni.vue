@@ -543,8 +543,7 @@ async function esportaPDF() {
   if (!convocazione.value) return
   
   const numGare = convocazione.value.gare.length
-  const containerWidth = Math.max(800, numGare * 250)
-  const containerHeight = 600
+  const containerWidth = Math.max(800, numGare * 260) + 40
   
   let exportContainer = document.getElementById('pdf-export-container')
   if (!exportContainer) {
@@ -558,51 +557,54 @@ async function esportaPDF() {
     left: -9999px !important;
     top: 0px !important;
     width: ${containerWidth}px !important;
-    min-height: ${containerHeight}px !important;
     background: #fff !important;
     padding: 0px !important;
     z-index: 9999 !important;
     overflow: visible !important;
+    display: block !important;
   `
   
   exportContainer.innerHTML = `
-    <div style="background:#fff;font-family:Arial,sans-serif;width:100%;">
-      <div style="background:#dc2626;color:#fff;padding:15px;display:flex;align-items:center;gap:15px;">
-        <img src="${societaAttiva.value?.logosponsor ? '/uploads/' + societaAttiva.value.logosponsor : '/logosponsor.png'}" style="height:50px;" />
+    <div style="background:#fff;font-family:Arial,sans-serif;width:100%;box-sizing:border-box;">
+      <div style="background:#dc2626;color:#fff;padding:20px;display:flex;align-items:center;gap:20px;">
+        <img src="${societaAttiva.value?.logosponsor ? '/uploads/' + societaAttiva.value.logosponsor : '/logosponsor.png'}" style="height:60px;" />
         <div>
-          <div style="font-size:20px;font-weight:bold;">${societaAttiva.value?.nome || 'SQUADRA'}</div>
-          <div style="font-size:12px;">Convocazioni ${categoriaAttiva.value?.nome || ''} ${categoriaAttiva.value?.anno || ''}</div>
+          <div style="font-size:22px;font-weight:bold;">${societaAttiva.value?.nome || 'SQUADRA'}</div>
+          <div style="font-size:14px;">Convocazioni ${categoriaAttiva.value?.nome || ''} ${categoriaAttiva.value?.anno || ''}</div>
         </div>
       </div>
-      <div style="padding:15px;background:#f5f5f5;border-bottom:1px solid #ddd;">
-        <div style="display:flex;gap:15px;align-items:center;font-size:14px;">
+      <div style="padding:20px;background:#f5f5f5;border-bottom:1px solid #ddd;">
+        <div style="display:flex;gap:20px;align-items:center;font-size:14px;">
           <span><strong>Data:</strong> ${convocazione.value.data_inizio || ''}</span>
           <span><strong>Num. Partite:</strong> ${numGare}</span>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(${numGare},250px);gap:15px;padding:15px;width:fit-content;">
+      <div style="display:grid;grid-template-columns:repeat(${numGare},1fr);gap:20px;padding:20px;box-sizing:border-box;">
         ${convocazione.value.gare.map((gara, idx) => `
-          <div style="background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;min-width:230px;">
-            <div style="background:#dc2626;color:#fff;padding:10px;font-weight:bold;text-align:center;">${idx + 1}. ${gara.gara || 'Gara'}</div>
-            <div style="padding:10px;font-size:12px;">
-              <div style="margin-bottom:5px;"><strong>Data:</strong> ${gara.data || '-'}</div>
-              <div style="margin-bottom:5px;"><strong>Campo:</strong> ${gara.campo || '-'}</div>
-              <div style="margin-bottom:5px;"><strong>Indirizzo:</strong> ${gara.indirizzo || '-'}</div>
-              <div style="margin-bottom:5px;"><strong>Appuntamento:</strong> ${gara.appuntamento || '-'}</div>
-              <div style="margin-bottom:5px;"><strong>Inizio:</strong> ${gara.inizio_gara || '-'}</div>
-              <div style="margin-bottom:5px;"><strong>Mister:</strong> ${gara.allenatore || '-'}</div>
-              <div style="margin-top:10px;"><strong>Giocatori:</strong></div>
+          <div style="background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;">
+            <div style="background:#dc2626;color:#fff;padding:12px;font-weight:bold;text-align:center;font-size:14px;">${idx + 1}. ${gara.gara || 'Gara'}</div>
+            <div style="padding:12px;font-size:13px;">
+              <div style="margin-bottom:6px;"><strong>Data:</strong> ${gara.data || '-'}</div>
+              <div style="margin-bottom:6px;"><strong>Campo:</strong> ${gara.campo || '-'}</div>
+              <div style="margin-bottom:6px;"><strong>Indirizzo:</strong> ${gara.indirizzo || '-'}</div>
+              <div style="margin-bottom:6px;"><strong>Appuntamento:</strong> ${gara.appuntamento || '-'}</div>
+              <div style="margin-bottom:6px;"><strong>Inizio:</strong> ${gara.inizio_gara || '-'}</div>
+              <div style="margin-bottom:6px;"><strong>Mister:</strong> ${gara.allenatore || '-'}</div>
+              <div style="margin-top:12px;"><strong>Giocatori:</strong></div>
               ${(gara.giocatori || []).slice(0, 14).map((p, i) => p ? `<div>${i+1}. ${persone.value.find(x => x.id === p)?.cognome || '-'}</div>` : `<div>${i+1}. -</div>`).join('')}
             </div>
           </div>
         `).join('')}
       </div>
-      ${convocazione.value.note ? `<div style="background:#dc2626;color:#fff;padding:10px;margin:15px;border-radius:4px;white-space:pre-wrap;">${convocazione.value.note}</div>` : ''}
+      ${convocazione.value.note ? `<div style="background:#dc2626;color:#fff;padding:15px;margin:20px;border-radius:4px;white-space:pre-wrap;">${convocazione.value.note}</div>` : ''}
     </div>
   `
   
   try {
-    await new Promise(resolve => setTimeout(resolve, 300))
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    const actualHeight = exportContainer.scrollHeight
+    const captureHeight = Math.max(actualHeight + 100, 800)
     
     const canvas = await html2canvas(exportContainer, {
       scale: 1.5,
@@ -610,7 +612,7 @@ async function esportaPDF() {
       logging: false,
       backgroundColor: '#ffffff',
       width: containerWidth,
-      height: containerHeight + 200,
+      height: captureHeight,
       windowWidth: containerWidth,
       scrollX: 0,
       scrollY: 0,
