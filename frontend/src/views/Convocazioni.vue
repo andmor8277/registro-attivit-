@@ -545,6 +545,9 @@ async function esportaPDF() {
   const numGare = convocazione.value.gare.length
   const containerWidth = Math.max(800, numGare * 260) + 40
   
+  const personeMap = {}
+  persone.value.forEach(p => { personeMap[p.id] = p })
+  
   let exportContainer = document.getElementById('pdf-export-container')
   if (!exportContainer) {
     exportContainer = document.createElement('div')
@@ -563,6 +566,12 @@ async function esportaPDF() {
     overflow: visible !important;
     display: block !important;
   `
+  
+  const getGiocatoreNome = (id) => {
+    if (!id) return '-'
+    const p = personeMap[id] || personeMap[Number(id)] || persone.value.find(x => x.id === id || x.id === Number(id))
+    return p ? p.cognome : `(${id})`
+  }
   
   exportContainer.innerHTML = `
     <div style="background:#fff;font-family:Arial,sans-serif;width:100%;box-sizing:border-box;">
@@ -591,7 +600,7 @@ async function esportaPDF() {
               <div style="margin-bottom:6px;"><strong>Inizio:</strong> ${gara.inizio_gara || '-'}</div>
               <div style="margin-bottom:6px;"><strong>Mister:</strong> ${gara.allenatore || '-'}</div>
               <div style="margin-top:12px;"><strong>Giocatori:</strong></div>
-              ${(gara.giocatori || []).slice(0, 14).map((p, i) => p ? `<div>${i+1}. ${persone.value.find(x => x.id === p)?.cognome || '-'}</div>` : `<div>${i+1}. -</div>`).join('')}
+              ${(gara.giocatori || []).slice(0, 14).map((p, i) => `<div>${i+1}. ${getGiocatoreNome(p)}</div>`).join('')}
             </div>
           </div>
         `).join('')}
