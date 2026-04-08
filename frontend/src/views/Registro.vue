@@ -798,7 +798,7 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
 }
 
 @media (max-width: 768px) {
-  .registro-container { padding: 1rem; }
+  .registro-container { padding: 0.5rem; }
   .page-header { flex-direction: column; align-items: stretch; }
   .mese-selector { justify-content: center; }
   
@@ -807,70 +807,121 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   }
   
   .table-wrapper {
-    overflow-x: auto !important;
+    overflow-x: visible !important;
     overflow-y: visible !important;
-    position: relative;
   }
   
   .gruppo-block {
-    position: relative;
+    margin-bottom: 2rem;
+    overflow: visible;
   }
   
   .gruppo-header {
-    position: fixed;
+    position: sticky;
+    position: -webkit-sticky;
     top: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
+    z-index: 30;
   }
   
   table {
     min-width: 700px;
-    margin-top: 50px;
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
   }
   
-  .th-num, .td-num {
+  thead, tbody, tfoot {
+    display: block;
+  }
+  
+  tbody {
+    display: block;
+    width: 100%;
+  }
+  
+  tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+  }
+  
+  th, td {
+    display: table-cell;
+  }
+  
+  thead th {
+    position: sticky;
+    position: -webkit-sticky;
+    top: 45px;
+    z-index: 20;
+    background: #f9fafb;
+  }
+  
+  .th-num {
     position: sticky !important;
     position: -webkit-sticky !important;
     left: 0;
-    min-width: 35px;
-    width: 35px;
-    background: #f9fafb;
-    z-index: 20;
+    z-index: 25;
   }
   
-  .th-nome, .td-nome {
+  .th-nome {
     position: sticky !important;
     position: -webkit-sticky !important;
-    left: 35px;
-    min-width: 130px;
-    background: #ffffff;
-    z-index: 21;
+    left: 40px;
+    z-index: 25;
   }
   
-  .th-tot, .td-tot {
+  .th-tot {
     position: sticky !important;
     position: -webkit-sticky !important;
     right: 0;
-    min-width: 60px;
-    background: #f9fafb;
-    z-index: 22;
-    border-left: 2px solid #d1d5db;
+    z-index: 25;
   }
   
-  tfoot .td-num,
-  tfoot .td-nome,
-  tfoot .td-tot {
+  .td-num {
     position: sticky !important;
     position: -webkit-sticky !important;
+    left: 0;
+    z-index: 10;
+    background: #ffffff;
+  }
+  
+  .td-nome {
+    position: sticky !important;
+    position: -webkit-sticky !important;
+    left: 40px;
+    z-index: 10;
+    background: #ffffff;
+  }
+  
+  .td-tot {
+    position: sticky !important;
+    position: -webkit-sticky !important;
+    right: 0;
+    z-index: 10;
+    background: #ffffff;
+  }
+  
+  tfoot td {
+    position: sticky;
+    position: -webkit-sticky;
     bottom: 0;
     background: #f9fafb;
     z-index: 30;
+    font-weight: 600;
     border-top: 2px solid #d1d5db;
   }
   
+  tfoot .td-num {
+    z-index: 31;
+  }
+  
   tfoot .td-nome {
-    font-weight: 600;
+    z-index: 31;
+  }
+  
+  tfoot .td-tot {
+    z-index: 31;
   }
   
   tbody tr:hover .td-nome {
@@ -882,39 +933,39 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   }
   
   .totale-generale {
-    position: relative;
-    margin-top: 60px;
+    margin-top: 2rem;
   }
   
   .totale-header {
-    position: fixed;
-    top: 50px;
-    left: 0;
-    right: 0;
-    z-index: 99;
+    position: sticky;
+    position: -webkit-sticky;
+    top: 0;
+    z-index: 30;
   }
   
   .totale-table {
     min-width: 700px;
-    margin-top: 0;
+  }
+  
+  .totale-table th,
+  .totale-table td {
+    display: table-cell;
   }
   
   .totale-table .tot-label {
     position: sticky !important;
     position: -webkit-sticky !important;
     left: 0;
-    min-width: 100px;
-    background: #f9fafb;
     z-index: 20;
-    font-weight: 600;
+    background: #f9fafb;
   }
   
   .totale-table thead th {
     position: sticky;
     position: -webkit-sticky;
-    top: 100px;
-    background: #f9fafb;
+    top: 45px;
     z-index: 15;
+    background: #f9fafb;
   }
 }
 </style>
