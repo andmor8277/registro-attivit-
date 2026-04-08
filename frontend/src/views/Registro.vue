@@ -805,12 +805,20 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
     overflow-y: visible;
   }
   
+  .gruppo-header {
+    position: sticky;
+    position: -webkit-sticky;
+    top: 0;
+    z-index: 20;
+  }
+  
   table {
     min-width: 600px;
   }
   
   .th-num, .td-num,
-  .th-nome, .td-nome {
+  .th-nome, .td-nome,
+  .th-tot, .td-tot {
     position: sticky;
     position: -webkit-sticky;
     z-index: 10;
@@ -831,6 +839,14 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
     z-index: 12;
   }
   
+  .th-tot, .td-tot {
+    right: 0;
+    min-width: 60px;
+    background: #f9fafb;
+    z-index: 13;
+    border-left: 2px solid #d1d5db;
+  }
+  
   th { background: #f9fafb; }
   
   .td-nome {
@@ -839,6 +855,10 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   
   tbody tr:hover .td-nome {
     background: #f5f5f5;
+  }
+  
+  .td-pres {
+    background: #f9fafb;
   }
 }
 </style>
