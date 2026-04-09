@@ -177,6 +177,8 @@ class CatalogoEsercizio(Base):
     id = Column(Integer, primary_key=True)
     titolo = Column(String(200), nullable=False, unique=True)
     focus = Column(String(50), nullable=True)
+    spazio = Column(String(50), nullable=True)
+    tempo = Column(String(50), nullable=True)
     descrizione = Column(Text, nullable=True)
     campo_con_righe = Column(Boolean, default=True)
     elementi = Column(JSONB, default=[])
