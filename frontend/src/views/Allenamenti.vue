@@ -389,8 +389,8 @@
                   <div class="tactical-board-wrapper">
                     <canvas 
                       :ref="el => { if (el) boardCanvasRefs[ex.id] = el }" 
-                      width="800" 
-                      height="500"
+                      width="1200" 
+                      height="750"
                       :class="[currentTool ? 'tool-selected' : '', isDragging ? 'dragging' : '']"
                       @click="handleBoardClick($event, ex)"
                       @mousedown="handleMouseDown($event, ex)"
@@ -1849,8 +1849,9 @@ function handleMouseDown(event, ex) {
   const clickedEl = (ex.elementi || []).find(el => {
     const elX = el.x * rect.width / 100
     const elY = el.y * rect.height / 100
+    const size = (el.size || 1) * 20
     const dist = Math.sqrt((event.clientX - rect.left - elX) ** 2 + (event.clientY - rect.top - elY) ** 2)
-    return dist < 25
+    return dist < size
   })
   
   if (clickedEl) {
@@ -1896,8 +1897,9 @@ function handleTouchStart(event, ex) {
   const clickedEl = (ex.elementi || []).find(el => {
     const elX = el.x * rect.width / 100
     const elY = el.y * rect.height / 100
+    const size = (el.size || 1) * 20
     const dist = Math.sqrt((touch.clientX - rect.left - elX) ** 2 + (touch.clientY - rect.top - elY) ** 2)
-    return dist < 35
+    return dist < size
   })
   
   if (clickedEl) {
@@ -3169,8 +3171,8 @@ onUnmounted(() => {
 .btn-copy-element:disabled, .btn-paste-element:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-copy-element:hover:not(:disabled), .btn-paste-element:hover:not(:disabled) { opacity: 0.9; }
 
-.tactical-board-container { border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); width: 100%; max-width: none; aspect-ratio: 800 / 500; }
-.tactical-board-wrapper { position: relative; width: 100%; max-width: none; height: 100%; }
+.tactical-board-container { border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); width: 100%; max-width: none; min-height: 400px; flex: 1; display: flex; }
+.tactical-board-wrapper { position: relative; width: 100%; max-width: none; height: 100%; flex: 1; display: flex; }
 .tactical-board-wrapper canvas { display: block; width: 100%; height: 100%; max-width: none; cursor: grab; object-fit: contain; }
 .tactical-board-wrapper canvas.tool-selected { cursor: crosshair; }
 .tactical-board-wrapper canvas.dragging { cursor: grabbing; }
@@ -3318,25 +3320,25 @@ onUnmounted(() => {
 
 @media (max-width: 768px) and (orientation: landscape) {
   .board-area { flex-direction: column; min-height: 0; flex: 1; }
-  .board-sidebar { width: 100%; flex-shrink: 0; max-height: none; overflow: visible; flex-direction: row; flex-wrap: wrap; gap: 0.5rem; }
-  .board-main { width: 100%; display: flex; flex-direction: column; }
-  .tools-panel { padding: 0.3rem; gap: 0.3rem; flex: 1; max-height: none; overflow-y: visible; flex-wrap: nowrap; overflow-x: auto; }
-  .element-controls { flex: 1; min-width: 200px; max-height: none; }
-  .element-controls-body { max-height: none; }
-  .tool-btn { width: 22px; height: 22px; }
-  .tools-label { font-size: 0.45rem; }
-  .tool-icon { width: 12px; height: 12px; }
-  .tools-section { gap: 0.15rem; }
-  .page-header { padding: 0.25rem 0.4rem; flex-shrink: 0; }
+  .board-sidebar { width: 100%; flex-shrink: 0; max-height: 60px; overflow: visible; flex-direction: row; flex-wrap: nowrap; gap: 0.5rem; overflow-x: auto; }
+  .board-main { width: 100%; display: flex; flex-direction: column; flex: 1; }
+  .tools-panel { padding: 0.2rem; gap: 0.2rem; flex: 0 0 auto; max-height: 60px; overflow-y: visible; flex-wrap: nowrap; overflow-x: auto; display: flex; flex-direction: row; }
+  .element-controls { flex: 0 0 auto; min-width: 180px; max-height: 60px; overflow-y: auto; }
+  .element-controls-body { max-height: 50px; overflow-y: auto; }
+  .tool-btn { width: 28px; height: 28px; }
+  .tools-label { font-size: 0.5rem; }
+  .tool-icon { width: 16px; height: 16px; }
+  .tools-section { gap: 0.1rem; flex-shrink: 0; }
+  .page-header { padding: 0.2rem 0.3rem; flex-shrink: 0; }
   .btn-back, .btn-home { width: 24px; height: 24px; }
   .btn-back svg, .btn-home svg { width: 14px; height: 14px; }
-  .titolo-toolbar { font-size: 0.7rem; }
-  .allenamenti-body { padding: 0.2rem; display: flex; flex-direction: column; }
-  .tactical-board-container { flex: 1; min-height: 200px; }
-  .tactical-board-wrapper { height: 100%; }
-  .weeks-grid { max-height: 20vh; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
-  .month-nav { margin-bottom: 0.5rem; }
-  .current-month { font-size: 1rem; min-width: 140px; }
+  .titolo-toolbar { font-size: 0.65rem; }
+  .allenamenti-body { padding: 0.15rem; display: flex; flex-direction: column; }
+  .tactical-board-container { flex: 1; min-height: 0; display: flex; }
+  .tactical-board-wrapper { height: 100%; flex: 1; display: flex; }
+  .weeks-grid { max-height: 15vh; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.3rem; }
+  .month-nav { margin-bottom: 0.3rem; }
+  .current-month { font-size: 0.9rem; min-width: 120px; }
 }
 
 @media (max-width: 480px) and (orientation: landscape) {
