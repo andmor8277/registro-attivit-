@@ -86,6 +86,21 @@ with engine.connect() as conn:
         conn.execute(text("UPDATE convocazioni SET societa_id = 1 WHERE societa_id IS NULL"))
         conn.commit()
         print("Migration: Assigned existing data to default society")
+    
+    # Migration: Add spazio and tempo columns to catalogo_esercizi
+    try:
+        result = conn.execute(text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'catalogo_esercizi' AND column_name = 'spazio'
+        """))
+        if result.fetchone() is None:
+            conn.execute(text("ALTER TABLE catalogo_esercizi ADD COLUMN spazio VARCHAR(50)"))
+            conn.execute(text("ALTER TABLE catalogo_esercizi ADD COLUMN tempo VARCHAR(50)"))
+            conn.commit()
+            print("Migration: Added spazio and tempo columns to catalogo_esercizi")
+    except Exception as e:
+        print(f"Migration warning (non-critical): {e}")
+        conn.rollback()
 
 app = FastAPI(title="Registro Presenze API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], expose_headers=["*"])

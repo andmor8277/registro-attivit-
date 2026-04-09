@@ -53,6 +53,7 @@
                 <label>Focus:</label>
                 <select v-model="ex.focus" @change="saveEsercizio(ex)">
                   <option value="">Nessuno</option>
+                  <option value="attivazione">Attivazione</option>
                   <option value="tecnica">Tecnica</option>
                   <option value="tattica">Tattica</option>
                   <option value="fisico">Fisico</option>
@@ -65,6 +66,16 @@
                   <option value="possessione">Possesso</option>
                   <option value="set-piece">Set Piece</option>
                 </select>
+              </div>
+              <div class="meta-row">
+                <div class="meta-field">
+                  <label>Spazio:</label>
+                  <input type="text" v-model="ex.spazio" placeholder="es. 20x30m" @change="saveEsercizio(ex)" />
+                </div>
+                <div class="meta-field">
+                  <label>Tempo:</label>
+                  <input type="text" v-model="ex.tempo" placeholder="es. 3x4'" @change="saveEsercizio(ex)" />
+                </div>
               </div>
               <textarea v-model="ex.descrizione" placeholder="Descrizione dell'esercizio..." @change="saveEsercizio(ex)"></textarea>
             </div>
@@ -404,7 +415,7 @@
                     </div>
                     <div v-if="isArrow(selectedElement)" class="control-row">
                       <label>Lunghezza:</label>
-                      <input type="range" v-model="selectedElement.length" min="20" max="80" step="5" @input="updateSize" />
+                      <input type="range" v-model="selectedElement.length" min="20" max="150" step="5" @input="updateSize" />
                     </div>
                     <div v-if="selectedElement.tipo?.startsWith('tactic-')" class="control-row">
                       <label>Ondulata:</label>
@@ -575,9 +586,9 @@ const weeksInMonth = computed(() => {
   const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab']
   
   let firstMonday = new Date(firstDay)
-  while (firstMonday.getDay() !== 1) {
-    firstMonday.setDate(firstMonday.getDate() - 1)
-  }
+  const dayOfWeek = firstMonday.getDay()
+  const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+  firstMonday.setDate(firstMonday.getDate() - daysToSubtract)
   
   let currentWeekStart = new Date(firstMonday)
   let weekNum = 1
@@ -617,8 +628,9 @@ const weeksInMonth = computed(() => {
       }
       
       if (days.length > 0) {
-        const weekLabel = `Sett ${weekNum} (${dayNames[currentWeekStart.getDay()]}-${dayNames[weekEnd.getDay()]})`
-        weeks.push({ num: weekNum, label: weekLabel, start: currentWeekStart.toISOString().split('T')[0], end: weekEnd.toISOString().split('T')[0], days })
+        const weekLabel = `Sett ${weekNum} (Lun-Ven)`
+        const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        weeks.push({ num: weekNum, label: weekLabel, start: fmt(currentWeekStart), end: fmt(weekEnd), days })
         weekNum++
       }
     }
@@ -629,7 +641,10 @@ const weeksInMonth = computed(() => {
 })
 
 function formatDateRange(start, end) {
-  const s = new Date(start), e = new Date(end)
+  const [sy, sm, sd] = start.split('-').map(Number)
+  const [ey, em, ed] = end.split('-').map(Number)
+  const s = new Date(sy, sm - 1, sd)
+  const e = new Date(ey, em - 1, ed)
   const sMonth = s.toLocaleDateString('it-IT', { month: 'short' })
   const eMonth = e.toLocaleDateString('it-IT', { month: 'short' })
   if (s.getMonth() !== e.getMonth()) {
@@ -676,6 +691,7 @@ function loadEsercizi(data) {
   
   getAllenamentiGiornoByData(categoriaId, data).then(res => {
     const dayData = res.data
+    console.log('Loaded from server:', JSON.stringify(dayData.esercizi, null, 2))
     let loadedEsercizi = []
     
     if (dayData.esercizi && dayData.esercizi.length > 0) {
@@ -808,27 +824,27 @@ function saveCurrentExercise() {
 
 function exportPdf() {
   console.log('Export PDF clicked')
-  getAllenamentiGiornoByData(categoriaId, selectedDay.value.data).then(res => {
-    console.log('Got data:', res.data)
-    const eserciziSalvati = res.data.esercizi || []
-    
-    const doc = new jsPDF('portrait', 'mm', 'a4')
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const pageHeight = doc.internal.pageSize.getHeight()
-    let y = 20
-    
-    doc.setFontSize(18)
-    doc.setTextColor(220, 38, 38)
-    doc.text('Allenamento del ' + formatDate(selectedDay.value?.data || ''), pageWidth / 2, y, { align: 'center' })
-    y += 12
-    
-    if (eserciziSalvati.length === 0) {
-      doc.setFontSize(12)
-      doc.setTextColor(0, 0, 0)
-      doc.text('Nessun esercizio salvato', 15, y)
-    } else {
-      for (let idx = 0; idx < eserciziSalvati.length; idx++) {
-        const ex = eserciziSalvati[idx]
+  
+  const doc = new jsPDF('portrait', 'mm', 'a4')
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  let y = 20
+  
+  doc.setFontSize(18)
+  doc.setTextColor(220, 38, 38)
+  doc.text('Allenamento del ' + formatDate(selectedDay.value?.data || ''), pageWidth / 2, y, { align: 'center' })
+  y += 12
+  
+  const eserciziCorrenti = esercizi.value || []
+  
+  if (eserciziCorrenti.length === 0) {
+    doc.setFontSize(12)
+    doc.setTextColor(0, 0, 0)
+    doc.text('Nessun esercizio', 15, y)
+  } else {
+    for (let idx = 0; idx < eserciziCorrenti.length; idx++) {
+      const ex = eserciziCorrenti[idx]
+      console.log('Esercizio', idx, ':', ex.titolo, '- elementi:', ex.elementi?.length)
         
         if (y > pageHeight - 120) {
           doc.addPage()
@@ -852,13 +868,23 @@ function exportPdf() {
             'difesa': 'Difesa',
             'attacco': 'Attacco',
             'possessione': 'Possesso',
-            'set-piece': 'Set Piece'
+            'set-piece': 'Set Piece',
+            'attivazione': 'Attivazione'
           }
           const focusLabel = focusLabels[ex.focus] || ex.focus
           doc.setFontSize(10)
           doc.setTextColor(100, 100, 100)
           doc.text('Focus: ' + focusLabel, 15, y)
           y += 6
+          
+          if (ex.spazio) {
+            doc.text('Spazio: ' + ex.spazio, 15, y)
+            y += 6
+          }
+          if (ex.tempo) {
+            doc.text('Tempo: ' + ex.tempo, 15, y)
+            y += 6
+          }
         }
         
         if (ex.descrizione) {
@@ -885,14 +911,14 @@ function exportPdf() {
         
         try {
           const tempCanvas = document.createElement('canvas')
-          tempCanvas.width = 400
-          tempCanvas.height = 260
+          tempCanvas.width = 800
+          tempCanvas.height = 500
           const ctx = tempCanvas.getContext('2d')
           
-          const marginX = 400 * 0.03
-          const marginY = 260 * 0.03
-          const fieldW = 400 - marginX * 2
-          const fieldH = 260 - marginY * 2
+          const marginX = 800 * 0.03
+          const marginY = 500 * 0.03
+          const fieldW = 800 - marginX * 2
+          const fieldH = 500 - marginY * 2
           
           const stripeCount = 12
           const stripeWidth = fieldW / stripeCount
@@ -903,21 +929,21 @@ function exportPdf() {
           
           if (ex.campo_con_righe !== false) {
             ctx.strokeStyle = '#fff'
-            ctx.lineWidth = 1
+            ctx.lineWidth = 2
             
             ctx.strokeRect(marginX, marginY, fieldW, fieldH)
             
             ctx.beginPath()
-            ctx.moveTo(400 / 2, marginY)
-            ctx.lineTo(400 / 2, 260 - marginY)
+            ctx.moveTo(800 / 2, marginY)
+            ctx.lineTo(800 / 2, 500 - marginY)
             ctx.stroke()
             
             const centerR = fieldW * 0.15
             ctx.beginPath()
-            ctx.arc(400 / 2, 260 / 2, centerR, 0, Math.PI * 2)
+            ctx.arc(800 / 2, 500 / 2, centerR, 0, Math.PI * 2)
             ctx.stroke()
             ctx.beginPath()
-            ctx.arc(400 / 2, 260 / 2, 3, 0, Math.PI * 2)
+            ctx.arc(800 / 2, 500 / 2, 5, 0, Math.PI * 2)
             ctx.fillStyle = '#fff'
             ctx.fill()
             
@@ -929,328 +955,564 @@ function exportPdf() {
             const goalHeight = fieldH * 0.07
             const goalDepth = fieldW * 0.02
             
-            const smallTop = 260 / 2 - smallHeight / 2
-            const penaltyTop = 260 / 2 - penaltyHeight / 2
+            const smallTop = 500 / 2 - smallHeight / 2
+            const penaltyTop = 500 / 2 - penaltyHeight / 2
             
             ctx.strokeRect(marginX, smallTop, smallDepth, smallHeight)
-            ctx.strokeRect(400 - marginX - smallDepth, smallTop, smallDepth, smallHeight)
+            ctx.strokeRect(800 - marginX - smallDepth, smallTop, smallDepth, smallHeight)
             
             ctx.strokeRect(marginX, penaltyTop, penaltyDepth, penaltyHeight)
-            ctx.strokeRect(400 - marginX - penaltyDepth, penaltyTop, penaltyDepth, penaltyHeight)
+            ctx.strokeRect(800 - marginX - penaltyDepth, penaltyTop, penaltyDepth, penaltyHeight)
             
             const lunetteCenterX = marginX + penaltyDepth
-            const lunetteCenterXRight = 400 - marginX - penaltyDepth
+            const lunetteCenterXRight = 800 - marginX - penaltyDepth
             
             ctx.beginPath()
-            ctx.arc(lunetteCenterX, 260 / 2, arcR, -Math.PI / 2, Math.PI / 2)
+            ctx.arc(lunetteCenterX, 500 / 2, arcR, -Math.PI / 2, Math.PI / 2)
             ctx.strokeStyle = '#fff'
             ctx.stroke()
             ctx.beginPath()
-            ctx.arc(lunetteCenterXRight, 260 / 2, arcR, Math.PI / 2, -Math.PI / 2)
+            ctx.arc(lunetteCenterXRight, 500 / 2, arcR, Math.PI / 2, -Math.PI / 2)
             ctx.stroke()
             
             const penaltySpotX = fieldW * 0.105
             
             ctx.beginPath()
-            ctx.arc(marginX + penaltySpotX, 260 / 2, 3, 0, Math.PI * 2)
+            ctx.arc(marginX + penaltySpotX, 500 / 2, 5, 0, Math.PI * 2)
             ctx.fillStyle = '#fff'
             ctx.fill()
             ctx.beginPath()
-            ctx.arc(400 - marginX - penaltySpotX, 260 / 2, 3, 0, Math.PI * 2)
+            ctx.arc(800 - marginX - penaltySpotX, 500 / 2, 5, 0, Math.PI * 2)
             ctx.fill()
             
-            ctx.strokeRect(marginX - goalDepth, 260 / 2 - goalHeight / 2, goalDepth, goalHeight)
-            ctx.strokeRect(400 - marginX, 260 / 2 - goalHeight / 2, goalDepth, goalHeight)
+            ctx.strokeRect(marginX - goalDepth, 500 / 2 - goalHeight / 2, goalDepth, goalHeight)
+            ctx.strokeRect(800 - marginX, 500 / 2 - goalHeight / 2, goalDepth, goalHeight)
           }
           
           const elementi = ex.elementi || []
           
           for (const el of elementi) {
-            const x = (el.x / 100) * 400
-            const yPos = (el.y / 100) * 260
+            const x = el.x * 800 / 100
+            const yPos = el.y * 500 / 100
+            const size = el.size || 1
             const rot = (el.rotazione || 0) * Math.PI / 180
             
             ctx.save()
             ctx.translate(x, yPos)
             ctx.rotate(rot)
+            ctx.scale(size, size)
             
             switch (el.tipo) {
               case 'player-red': case 'player-blue': case 'player-yellow': case 'player-green': case 'player-white': case 'player-black':
                 ctx.beginPath()
-                ctx.arc(0, 0, 12, 0, Math.PI * 2)
+                ctx.arc(0, 0, 18, 0, Math.PI * 2)
                 ctx.fillStyle = el.colore || '#fff'
                 ctx.fill()
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1.5
+                ctx.lineWidth = 2
                 ctx.stroke()
                 if (el.numero) {
-                  ctx.fillStyle = '#fff'
-                  ctx.font = 'bold 9px Arial'
+                  ctx.fillStyle = '#000'
+                  ctx.font = 'bold 14px Arial'
                   ctx.textAlign = 'center'
                   ctx.textBaseline = 'middle'
                   ctx.fillText(el.numero.toString(), 0, 1)
                 }
                 break
-              case 'cone': case 'cone-yellow':
-                const pdfBaseW = 11
-                const pdfTopW = 1.5
-                const pdfHeight = 18
-                const pdfRimH = 2
+              case 'arrow-pass':
+                ctx.strokeStyle = el.colore || '#ef4444'
+                ctx.fillStyle = el.colore || '#ef4444'
+                ctx.lineWidth = 5
+                ctx.beginPath()
+                ctx.moveTo(-35, 0)
+                ctx.lineTo(25, 0)
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.moveTo(25, 0)
+                ctx.lineTo(10, -10)
+                ctx.lineTo(10, 10)
+                ctx.closePath()
+                ctx.fill()
+                break
+              case 'arrow-dribble':
+                ctx.strokeStyle = el.colore || '#eab308'
+                ctx.lineWidth = 5
+                ctx.setLineDash([10, 8])
+                ctx.beginPath()
+                ctx.moveTo(-35, 0)
+                ctx.lineTo(25, 0)
+                ctx.stroke()
+                ctx.setLineDash([])
+                ctx.fillStyle = el.colore || '#eab308'
+                ctx.beginPath()
+                ctx.moveTo(25, 0)
+                ctx.lineTo(10, -10)
+                ctx.lineTo(10, 10)
+                ctx.closePath()
+                ctx.fill()
+                break
+              case 'arrow-wall':
+                ctx.strokeStyle = el.colore || '#3b82f6'
+                ctx.fillStyle = el.colore || '#3b82f6'
+                ctx.lineWidth = 5
+                ctx.beginPath()
+                ctx.moveTo(-35, 0)
+                ctx.lineTo(25, 0)
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.moveTo(25, 0)
+                ctx.lineTo(10, -10)
+                ctx.lineTo(10, 10)
+                ctx.closePath()
+                ctx.fill()
+                ctx.beginPath()
+                ctx.moveTo(35, 0)
+                ctx.lineTo(-25, 0)
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.moveTo(-25, 0)
+                ctx.lineTo(-10, -10)
+                ctx.lineTo(-10, 10)
+                ctx.closePath()
+                ctx.fill()
+                break
+              case 'arrow-shot':
+                ctx.strokeStyle = el.colore || '#22c55e'
+                ctx.fillStyle = el.colore || '#22c55e'
+                ctx.lineWidth = 7
+                ctx.beginPath()
+                ctx.moveTo(-35, 0)
+                ctx.lineTo(25, 0)
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.moveTo(25, 0)
+                ctx.lineTo(10, -12)
+                ctx.lineTo(10, 12)
+                ctx.closePath()
+                ctx.fill()
+                break
+              case 'arrow-run':
+                ctx.strokeStyle = el.colore || '#a855f7'
+                ctx.fillStyle = el.colore || '#a855f7'
+                ctx.lineWidth = 5
+                ctx.beginPath()
+                ctx.moveTo(-35, 0)
+                ctx.lineTo(25, 0)
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.arc(30, 0, 10, -Math.PI / 2, Math.PI / 2)
+                ctx.fill()
+                break
+              case 'arrow-up': drawArrow(ctx, 0, -1, el.colore || '#ef4444', false, false, el.length || 60); break
+              case 'arrow-down': drawArrow(ctx, 0, 1, el.colore || '#ef4444', false, false, el.length || 60); break
+              case 'arrow-left': drawArrow(ctx, -1, 0, el.colore || '#ef4444', false, false, el.length || 60); break
+              case 'arrow-right': drawArrow(ctx, 1, 0, el.colore || '#ef4444', false, false, el.length || 60); break
+              case 'arrow-dashed-up': drawArrow(ctx, 0, -1, el.colore || '#eab308', true, false, el.length || 60); break
+              case 'arrow-dashed-down': drawArrow(ctx, 0, 1, el.colore || '#eab308', true, false, el.length || 60); break
+              case 'arrow-dashed-left': drawArrow(ctx, -1, 0, el.colore || '#eab308', true, false, el.length || 60); break
+              case 'arrow-dashed-right': drawArrow(ctx, 1, 0, el.colore || '#eab308', true, false, el.length || 60); break
+              case 'arrow-wavy-up': drawArrow(ctx, 0, -1, el.colore || '#a855f7', false, true, el.length || 60); break
+              case 'arrow-wavy-down': drawArrow(ctx, 0, 1, el.colore || '#a855f7', false, true, el.length || 60); break
+              case 'arrow-wavy-left': drawArrow(ctx, -1, 0, el.colore || '#a855f7', false, true, el.length || 60); break
+              case 'arrow-wavy-right': drawArrow(ctx, 1, 0, el.colore || '#a855f7', false, true, el.length || 60); break
+              case 'tactic-pass': case 'tactic-dribble': case 'tactic-wall': case 'tactic-shot': case 'tactic-run':
+                drawTacticalArrow(ctx, el)
+                break
+              case 'cone': case 'cone-yellow': case 'cone-red': case 'cone-blue': case 'cone-green': case 'cone-white':
+                const pdfBaseW = 22
+                const pdfTopW = 3
+                const pdfHeight = 36
+                const pdfRimH = 4
                 const pdfConeColor = el.colore || '#ff6600'
-                
                 ctx.fillStyle = pdfConeColor
                 ctx.beginPath()
                 ctx.moveTo(-pdfBaseW/2, 0)
-                ctx.quadraticCurveTo(-pdfBaseW/2 - 1.5, -pdfHeight/3, -pdfTopW, -pdfHeight)
-                ctx.quadraticCurveTo(0, -pdfHeight + 1, pdfTopW, -pdfHeight)
-                ctx.quadraticCurveTo(pdfBaseW/2 + 1.5, -pdfHeight/3, pdfBaseW/2, 0)
+                ctx.quadraticCurveTo(-pdfBaseW/2 - 3, -pdfHeight/3, -pdfTopW, -pdfHeight)
+                ctx.quadraticCurveTo(0, -pdfHeight + 2, pdfTopW, -pdfHeight)
+                ctx.quadraticCurveTo(pdfBaseW/2 + 3, -pdfHeight/3, pdfBaseW/2, 0)
                 ctx.closePath()
                 ctx.fill()
-                
-                const pdfGrad = ctx.createLinearGradient(-pdfBaseW/2, 0, pdfBaseW/2, 0)
-                pdfGrad.addColorStop(0, 'rgba(0,0,0,0.3)')
-                pdfGrad.addColorStop(0.3, 'rgba(0,0,0,0)')
-                pdfGrad.addColorStop(0.7, 'rgba(0,0,0,0)')
-                pdfGrad.addColorStop(1, 'rgba(0,0,0,0.4)')
-                ctx.fillStyle = pdfGrad
-                ctx.fill()
-                
                 ctx.fillStyle = pdfConeColor
                 ctx.beginPath()
-                ctx.ellipse(0, 0, pdfBaseW/2 + 0.5, pdfRimH/2, 0, 0, Math.PI * 2)
+                ctx.ellipse(0, 0, pdfBaseW/2 + 1, pdfRimH/2, 0, 0, Math.PI * 2)
                 ctx.fill()
                 break
               case 'cone-small':
-                const pdfSmBaseW = 7
-                const pdfSmTopW = 1
-                const pdfSmHeight = 12
-                const pdfSmRimH = 1.5
+                const pdfSmBaseW = 14
+                const pdfSmTopW = 2
+                const pdfSmHeight = 24
+                const pdfSmRimH = 3
                 const pdfSmConeColor = el.colore || '#eab308'
-                
                 ctx.fillStyle = pdfSmConeColor
                 ctx.beginPath()
                 ctx.moveTo(-pdfSmBaseW/2, 0)
-                ctx.quadraticCurveTo(-pdfSmBaseW/2 - 1, -pdfSmHeight/3, -pdfSmTopW, -pdfSmHeight)
-                ctx.quadraticCurveTo(0, -pdfSmHeight + 0.8, pdfSmTopW, -pdfSmHeight)
-                ctx.quadraticCurveTo(pdfSmBaseW/2 + 1, -pdfSmHeight/3, pdfSmBaseW/2, 0)
+                ctx.quadraticCurveTo(-pdfSmBaseW/2 - 2, -pdfSmHeight/3, -pdfSmTopW, -pdfSmHeight)
+                ctx.quadraticCurveTo(0, -pdfSmHeight + 1.5, pdfSmTopW, -pdfSmHeight)
+                ctx.quadraticCurveTo(pdfSmBaseW/2 + 2, -pdfSmHeight/3, pdfSmBaseW/2, 0)
                 ctx.closePath()
                 ctx.fill()
-                
-                const pdfSmGrad = ctx.createLinearGradient(-pdfSmBaseW/2, 0, pdfSmBaseW/2, 0)
-                pdfSmGrad.addColorStop(0, 'rgba(0,0,0,0.3)')
-                pdfSmGrad.addColorStop(0.3, 'rgba(0,0,0,0)')
-                pdfSmGrad.addColorStop(0.7, 'rgba(0,0,0,0)')
-                pdfSmGrad.addColorStop(1, 'rgba(0,0,0,0.4)')
-                ctx.fillStyle = pdfSmGrad
-                ctx.fill()
-                
                 ctx.fillStyle = pdfSmConeColor
                 ctx.beginPath()
-                ctx.ellipse(0, 0, pdfSmBaseW/2 + 0.3, pdfSmRimH/2, 0, 0, Math.PI * 2)
+                ctx.ellipse(0, 0, pdfSmBaseW/2 + 0.5, pdfSmRimH/2, 0, 0, Math.PI * 2)
                 ctx.fill()
                 break
               case 'cone-striped':
-                const strPdfBaseW = 11
-                const strPdfTopW = 1.5
-                const strPdfHeight = 18
-                const strPdfRimH = 2
+                const strPdfBaseW = 22
+                const strPdfTopW = 3
+                const strPdfHeight = 36
+                const strPdfRimH = 4
                 const strPdfConeColor = el.colore || '#ffffff'
-                
                 ctx.fillStyle = strPdfConeColor
                 ctx.beginPath()
                 ctx.moveTo(-strPdfBaseW/2, 0)
-                ctx.quadraticCurveTo(-strPdfBaseW/2 - 1.5, -strPdfHeight/3, -strPdfTopW, -strPdfHeight)
-                ctx.quadraticCurveTo(0, -strPdfHeight + 1, strPdfTopW, -strPdfHeight)
-                ctx.quadraticCurveTo(strPdfBaseW/2 + 1.5, -strPdfHeight/3, strPdfBaseW/2, 0)
+                ctx.quadraticCurveTo(-strPdfBaseW/2 - 3, -strPdfHeight/3, -strPdfTopW, -strPdfHeight)
+                ctx.quadraticCurveTo(0, -strPdfHeight + 2, strPdfTopW, -strPdfHeight)
+                ctx.quadraticCurveTo(strPdfBaseW/2 + 3, -strPdfHeight/3, strPdfBaseW/2, 0)
                 ctx.closePath()
                 ctx.fill()
-                
                 ctx.save()
                 ctx.clip()
                 ctx.strokeStyle = '#ef4444'
-                ctx.lineWidth = 1.5
-                for (let i = -15; i < 30; i += 6) {
+                ctx.lineWidth = 3
+                for (let i = -30; i < 60; i += 12) {
                   ctx.beginPath()
                   ctx.moveTo(-strPdfBaseW + i, 0)
                   ctx.lineTo(i, -strPdfHeight)
                   ctx.stroke()
                 }
                 ctx.restore()
-                
-                const strPdfGrad = ctx.createLinearGradient(-strPdfBaseW/2, 0, strPdfBaseW/2, 0)
-                strPdfGrad.addColorStop(0, 'rgba(0,0,0,0.3)')
-                strPdfGrad.addColorStop(0.3, 'rgba(0,0,0,0)')
-                strPdfGrad.addColorStop(0.7, 'rgba(0,0,0,0)')
-                strPdfGrad.addColorStop(1, 'rgba(0,0,0,0.4)')
-                ctx.fillStyle = strPdfGrad
-                ctx.fill()
-                
                 ctx.fillStyle = strPdfConeColor
                 ctx.beginPath()
-                ctx.ellipse(0, 0, strPdfBaseW/2 + 0.5, strPdfRimH/2, 0, 0, Math.PI * 2)
+                ctx.ellipse(0, 0, strPdfBaseW/2 + 1, strPdfRimH/2, 0, 0, Math.PI * 2)
                 ctx.fill()
                 break
-              case 'palla': case 'ball':
+              case 'ball': case 'ball-blue': case 'ball-red': case 'ball-yellow': case 'ball-orange':
+                const ballP = el.colore || '#111111'
+                const ballS = '#ffffff'
+                const ballO = el.tipo === 'ball-blue' ? '#002277' : el.tipo === 'ball-red' ? '#990000' : el.tipo === 'ball-orange' ? '#cc4400' : el.tipo === 'ball-yellow' ? '#000000' : '#111111'
+                const r = 18 * (el.size || 1)
                 ctx.beginPath()
-                ctx.arc(0, 0, 10, 0, Math.PI * 2)
-                ctx.fillStyle = '#fff'
+                ctx.arc(0, 0, r, 0, Math.PI * 2)
+                ctx.fillStyle = ballS
                 ctx.fill()
-                ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1.5
+                ctx.strokeStyle = ballO
+                ctx.lineWidth = 2.5
                 ctx.stroke()
+                const pentSize = r * 0.22
+                const hexSize = r * 0.35
+                const centerOffset = r * 0.35
+                ctx.lineWidth = 2
+                ctx.strokeStyle = ballO
+                for (let i = 0; i < 5; i++) {
+                  const angle = (i * 72 - 90) * Math.PI / 180
+                  const hx = Math.cos(angle) * centerOffset
+                  const hy = Math.sin(angle) * centerOffset
+                  ctx.beginPath()
+                  for (let j = 0; j < 6; j++) {
+                    const a = (angle + (j * 60 - 30) * Math.PI / 180)
+                    const px = hx + Math.cos(a) * hexSize
+                    const py = hy + Math.sin(a) * hexSize
+                    if (j === 0) ctx.moveTo(px, py)
+                    else ctx.lineTo(px, py)
+                  }
+                  ctx.closePath()
+                  ctx.fillStyle = ballS
+                  ctx.fill()
+                  ctx.stroke()
+                }
                 ctx.beginPath()
-                ctx.arc(0, 0, 6, 0, Math.PI * 2)
-                ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1
+                for (let j = 0; j < 5; j++) {
+                  const a = (j * 72 - 90 + 36) * Math.PI / 180
+                  const px = Math.cos(a) * pentSize
+                  const py = Math.sin(a) * pentSize
+                  if (j === 0) ctx.moveTo(px, py)
+                  else ctx.lineTo(px, py)
+                }
+                ctx.closePath()
+                ctx.fillStyle = ballP
+                ctx.fill()
                 ctx.stroke()
+                for (let i = 0; i < 5; i++) {
+                  const angle = (i * 72 - 90) * Math.PI / 180
+                  const hx = Math.cos(angle) * centerOffset
+                  const hy = Math.sin(angle) * centerOffset
+                  const outerAngle = angle + 30 * Math.PI / 180
+                  const ox = hx + Math.cos(outerAngle) * hexSize * 0.8
+                  const oy = hy + Math.sin(outerAngle) * hexSize * 0.8
+                  ctx.beginPath()
+                  for (let j = 0; j < 5; j++) {
+                    const a = (outerAngle + (j * 72) * Math.PI / 180)
+                    const px = ox + Math.cos(a) * pentSize * 0.7
+                    const py = oy + Math.sin(a) * pentSize * 0.7
+                    if (j === 0) ctx.moveTo(px, py)
+                    else ctx.lineTo(px, py)
+                  }
+                  ctx.closePath()
+                  ctx.fillStyle = ballP
+                  ctx.fill()
+                  ctx.stroke()
+                }
+                break
+              case 'palla':
+                const pallaR = 18 * (el.size || 1)
+                const pallaP = el.colore || '#111111'
+                const pallaS = '#ffffff'
+                const pallaO = '#111111'
+                ctx.beginPath()
+                ctx.arc(0, 0, pallaR, 0, Math.PI * 2)
+                ctx.fillStyle = pallaS
+                ctx.fill()
+                ctx.strokeStyle = pallaO
+                ctx.lineWidth = 2.5
+                ctx.stroke()
+                const pPentSize = pallaR * 0.22
+                const pHexSize = pallaR * 0.35
+                const pCenterOffset = pallaR * 0.35
+                ctx.lineWidth = 2
+                ctx.strokeStyle = pallaO
+                for (let i = 0; i < 5; i++) {
+                  const angle = (i * 72 - 90) * Math.PI / 180
+                  const hx = Math.cos(angle) * pCenterOffset
+                  const hy = Math.sin(angle) * pCenterOffset
+                  ctx.beginPath()
+                  for (let j = 0; j < 6; j++) {
+                    const a = (angle + (j * 60 - 30) * Math.PI / 180)
+                    const px = hx + Math.cos(a) * pHexSize
+                    const py = hy + Math.sin(a) * pHexSize
+                    if (j === 0) ctx.moveTo(px, py)
+                    else ctx.lineTo(px, py)
+                  }
+                  ctx.closePath()
+                  ctx.fillStyle = pallaS
+                  ctx.fill()
+                  ctx.stroke()
+                }
+                ctx.beginPath()
+                for (let j = 0; j < 5; j++) {
+                  const a = (j * 72 - 90 + 36) * Math.PI / 180
+                  const px = Math.cos(a) * pPentSize
+                  const py = Math.sin(a) * pPentSize
+                  if (j === 0) ctx.moveTo(px, py)
+                  else ctx.lineTo(px, py)
+                }
+                ctx.closePath()
+                ctx.fillStyle = pallaP
+                ctx.fill()
+                ctx.stroke()
+                for (let i = 0; i < 5; i++) {
+                  const angle = (i * 72 - 90) * Math.PI / 180
+                  const hx = Math.cos(angle) * pCenterOffset
+                  const hy = Math.sin(angle) * pCenterOffset
+                  const outerAngle = angle + 30 * Math.PI / 180
+                  const ox = hx + Math.cos(outerAngle) * pHexSize * 0.8
+                  const oy = hy + Math.sin(outerAngle) * pHexSize * 0.8
+                  ctx.beginPath()
+                  for (let j = 0; j < 5; j++) {
+                    const a = (outerAngle + (j * 72) * Math.PI / 180)
+                    const px = ox + Math.cos(a) * pPentSize * 0.7
+                    const py = oy + Math.sin(a) * pPentSize * 0.7
+                    if (j === 0) ctx.moveTo(px, py)
+                    else ctx.lineTo(px, py)
+                  }
+                  ctx.closePath()
+                  ctx.fillStyle = pallaP
+                  ctx.fill()
+                  ctx.stroke()
+                }
                 break
               case 'goal-large':
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 2
+                ctx.lineWidth = 3
                 ctx.beginPath()
-                ctx.moveTo(-25, -15)
-                ctx.lineTo(-25, 15)
-                ctx.lineTo(25, 15)
-                ctx.lineTo(25, -15)
+                ctx.moveTo(-45, -25)
+                ctx.lineTo(-45, 25)
+                ctx.lineTo(45, 25)
+                ctx.lineTo(45, -25)
                 ctx.stroke()
                 ctx.beginPath()
-                ctx.moveTo(-25, -15)
-                ctx.lineTo(-20, -15)
-                ctx.lineTo(-20, 12)
-                ctx.lineTo(20, 12)
-                ctx.lineTo(20, -15)
-                ctx.lineTo(25, -15)
+                ctx.moveTo(-45, -25)
+                ctx.lineTo(-40, -25)
+                ctx.lineTo(-40, 20)
+                ctx.lineTo(40, 20)
+                ctx.lineTo(40, -25)
+                ctx.lineTo(45, -25)
                 ctx.stroke()
                 ctx.strokeStyle = 'rgba(255,255,255,0.4)'
-                ctx.lineWidth = 0.5
-                for (let gy = -12; gy <= 10; gy += 4) {
+                ctx.lineWidth = 1
+                for (let gy = -20; gy <= 15; gy += 7) {
                   ctx.beginPath()
-                  ctx.moveTo(-20, gy)
-                  ctx.lineTo(20, gy)
+                  ctx.moveTo(-40, gy)
+                  ctx.lineTo(40, gy)
                   ctx.stroke()
                 }
-                for (let gx = -18; gx <= 18; gx += 4) {
+                for (let gx = -35; gx <= 35; gx += 7) {
                   ctx.beginPath()
-                  ctx.moveTo(gx, -12)
-                  ctx.lineTo(gx, 12)
+                  ctx.moveTo(gx, -20)
+                  ctx.lineTo(gx, 20)
                   ctx.stroke()
                 }
                 break
               case 'goal-small':
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 1.5
+                ctx.lineWidth = 2
                 ctx.beginPath()
-                ctx.moveTo(-12, -8)
-                ctx.lineTo(-12, 8)
-                ctx.lineTo(12, 8)
-                ctx.lineTo(12, -8)
+                ctx.moveTo(-18, -12)
+                ctx.lineTo(-18, 12)
+                ctx.lineTo(18, 12)
+                ctx.lineTo(18, -12)
                 ctx.stroke()
                 ctx.strokeStyle = 'rgba(255,255,255,0.4)'
-                ctx.lineWidth = 0.5
-                for (let gy = -6; gy <= 6; gy += 3) {
+                ctx.lineWidth = 1
+                for (let gy = -9; gy <= 9; gy += 4) {
                   ctx.beginPath()
-                  ctx.moveTo(-10, gy)
-                  ctx.lineTo(10, gy)
+                  ctx.moveTo(-15, gy)
+                  ctx.lineTo(15, gy)
                   ctx.stroke()
                 }
-                for (let gx = -8; gx <= 8; gx += 3) {
+                for (let gx = -12; gx <= 12; gx += 4) {
                   ctx.beginPath()
-                  ctx.moveTo(gx, -6)
-                  ctx.lineTo(gx, 6)
+                  ctx.moveTo(gx, -9)
+                  ctx.lineTo(gx, 9)
                   ctx.stroke()
                 }
                 break
               case 'stairs':
                 ctx.fillStyle = el.colore || '#ff6600'
                 for (let s = 0; s < 4; s++) {
-                  ctx.fillRect(-18 + s * 12, -12 + s * 6, 10, 5)
+                  ctx.fillRect(-36 + s * 24, -24 + s * 12, 20, 10)
                 }
                 break
               case 'ladder':
                 ctx.fillStyle = el.colore || '#ff6600'
                 for (let s = 0; s < 4; s++) {
-                  ctx.fillRect(-12 + s * 8, -6, 6, 12)
+                  ctx.fillRect(-24 + s * 16, -12, 12, 24)
                 }
                 break
-              case 'disk-orange': case 'disk-blue': case 'disk-yellow':
+              case 'disk-orange': case 'disk-blue': case 'disk-yellow': case 'disk':
                 ctx.fillStyle = el.colore || '#ff6600'
                 ctx.beginPath()
-                ctx.ellipse(0, 0, 14, 5, 0, 0, Math.PI * 2)
+                ctx.ellipse(0, 0, 28, 10, 0, 0, Math.PI * 2)
                 ctx.fill()
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 1.5
+                ctx.lineWidth = 2
                 ctx.stroke()
                 ctx.beginPath()
-                ctx.ellipse(0, 0, 6, 2, 0, 0, Math.PI * 2)
+                ctx.ellipse(0, 0, 12, 4, 0, 0, Math.PI * 2)
                 ctx.fillStyle = el.colore === '#3b82f6' ? '#1d4ed8' : el.colore === '#eab308' ? '#a16207' : '#cc5200'
                 ctx.fill()
                 break
-              case 'pole-red': case 'pole-yellow': case 'pole-white':
+              case 'pole-red': case 'pole-yellow': case 'pole-white': case 'pole':
                 ctx.fillStyle = el.colore || '#ff6600'
-                ctx.fillRect(-3, -20, 6, 40)
+                ctx.fillRect(-6, -40, 12, 80)
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1
-                ctx.strokeRect(-3, -20, 6, 40)
+                ctx.lineWidth = 2
+                ctx.strokeRect(-6, -40, 12, 80)
                 ctx.beginPath()
-                ctx.arc(0, -20, 5, 0, Math.PI * 2)
+                ctx.arc(0, -40, 10, 0, Math.PI * 2)
                 ctx.fill()
                 ctx.stroke()
                 break
-              case 'flag-red': case 'flag-yellow':
+              case 'flag-red': case 'flag-yellow': case 'flag':
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 2
+                ctx.lineWidth = 3
                 ctx.beginPath()
-                ctx.moveTo(0, 15)
-                ctx.lineTo(0, -20)
+                ctx.moveTo(0, 30)
+                ctx.lineTo(0, -40)
                 ctx.stroke()
                 ctx.fillStyle = el.colore || '#ff6600'
                 ctx.beginPath()
-                ctx.moveTo(0, -20)
-                ctx.lineTo(15, -15)
-                ctx.lineTo(0, -10)
+                ctx.moveTo(0, -40)
+                ctx.lineTo(30, -30)
+                ctx.lineTo(0, -20)
                 ctx.closePath()
                 ctx.fill()
                 break
-              case 'ring-red': case 'ring-blue': case 'ring-yellow':
+              case 'ring-red': case 'ring-blue': case 'ring-yellow': case 'ring':
                 ctx.strokeStyle = el.colore || '#ef4444'
-                ctx.lineWidth = 4
+                ctx.lineWidth = 6
                 ctx.beginPath()
-                ctx.arc(0, 0, 12, 0, Math.PI * 2)
+                ctx.arc(0, 0, 24, 0, Math.PI * 2)
                 ctx.stroke()
-                break
-              case 'ball-blue': case 'ball-red': case 'ball-yellow': case 'ball-orange':
+                ctx.fillStyle = el.colore || '#ef4444'
                 ctx.beginPath()
-                ctx.arc(0, 0, 10, 0, Math.PI * 2)
-                ctx.fillStyle = el.colore || '#fff'
+                ctx.arc(0, 0, 8, 0, Math.PI * 2)
                 ctx.fill()
-                ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1.5
-                ctx.stroke()
-                ctx.beginPath()
-                ctx.arc(0, 0, 6, 0, Math.PI * 2)
-                ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1
-                ctx.stroke()
                 break
-              case 'coin-yellow': case 'coin-brown': case 'coin-gold':
+              case 'coin-yellow': case 'coin-brown': case 'coin-gold': case 'coin':
                 ctx.fillStyle = el.colore || '#ffd700'
                 ctx.beginPath()
-                ctx.arc(0, 0, 10, 0, Math.PI * 2)
+                ctx.arc(0, 0, 20, 0, Math.PI * 2)
                 ctx.fill()
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 1.5
+                ctx.lineWidth = 2
                 ctx.stroke()
                 ctx.fillStyle = '#000'
-                ctx.font = 'bold 10px Arial'
+                ctx.font = 'bold 16px Arial'
                 ctx.textAlign = 'center'
                 ctx.textBaseline = 'middle'
                 ctx.fillText('$', 0, 1)
                 break
               case 'ladder-gray': case 'ladder-yellow': case 'ladder-red':
+                ctx.strokeStyle = el.colore || '#888'
+                ctx.lineWidth = 4
+                ctx.beginPath()
+                ctx.roundRect(-80, -6, 160, 12, 4)
+                ctx.stroke()
+                ctx.strokeStyle = '#666'
+                ctx.lineWidth = 3
+                ctx.beginPath()
+                ctx.moveTo(-56, -14)
+                ctx.lineTo(-56, 14)
+                ctx.moveTo(0, -14)
+                ctx.lineTo(0, 14)
+                ctx.moveTo(56, -14)
+                ctx.lineTo(56, 14)
+                ctx.stroke()
+                break
+              case 'barre': case 'griglia': case 'piattaforma':
+                ctx.strokeStyle = el.colore || '#888'
+                ctx.lineWidth = 4
+                ctx.beginPath()
+                ctx.moveTo(-40, -10)
+                ctx.lineTo(40, -10)
+                ctx.moveTo(-40, 10)
+                ctx.lineTo(40, 10)
+                ctx.stroke()
+                break
+              case 'ostacolo': case 'telaio': case 'attrezzo':
                 ctx.fillStyle = el.colore || '#ff6600'
-                for (let s = 0; s < 4; s++) {
-                  ctx.fillRect(-12 + s * 8, -6, 6, 12)
-                }
+                ctx.fillRect(-30, -16, 60, 32)
+                ctx.strokeStyle = '#000'
+                ctx.lineWidth = 2
+                ctx.strokeRect(-30, -16, 60, 32)
+                break
+              case 'fitness': case 'pallone-sport':
+                ctx.beginPath()
+                ctx.arc(0, 0, 24, 0, Math.PI * 2)
+                ctx.fillStyle = el.colore || '#333'
+                ctx.fill()
+                ctx.strokeStyle = '#000'
+                ctx.lineWidth = 2
+                ctx.stroke()
+                break
+              case 'hurdle':
+                ctx.fillStyle = '#eab308'
+                ctx.fillRect(-70, -12, 140, 16)
+                ctx.strokeStyle = '#000'
+                ctx.lineWidth = 2
+                ctx.strokeRect(-70, -12, 140, 16)
+                ctx.fillStyle = '#333'
+                ctx.fillRect(-56, 8, 12, 32)
+                ctx.fillRect(44, 8, 12, 32)
+                break
+              case 'disc':
+                ctx.fillStyle = el.colore || '#ff6600'
+                ctx.beginPath()
+                ctx.ellipse(0, 0, 36, 12, 0, 0, Math.PI * 2)
+                ctx.fill()
+                ctx.strokeStyle = '#000'
+                ctx.lineWidth = 2
+                ctx.stroke()
                 break
             }
             
@@ -1270,8 +1532,7 @@ function exportPdf() {
     const dataSelezionata = selectedDay.value?.data || 'data'
     const dataFormattata = dataSelezionata.split('-').reverse().join('/')
     doc.save('Scheda ' + categoriaNome + ' del ' + dataFormattata + '.pdf')
-  })
-}
+  }
 
 function saveEsercizio(ex) {
   if (!selectedDay.value) return
@@ -1300,6 +1561,8 @@ function saveDataToServer() {
           titolo: e.titolo,
           descrizione: e.descrizione,
           focus: e.focus || '',
+          spazio: e.spazio || '',
+          tempo: e.tempo || '',
           campo_con_righe: e.campo_con_righe,
           elementi: e.elementi.map(el => ({
             tipo: el.tipo,
@@ -1307,12 +1570,17 @@ function saveDataToServer() {
             y: el.y,
             rotazione: el.rotazione,
             colore: el.colore,
-            numero: el.numero
+            numero: el.numero,
+            length: el.length ?? 60,
+            wavy: el.wavy ?? false,
+            size: el.size ?? 1
           }))
         }))
       }]
     }]
   }
+  
+  console.log('Saving data:', JSON.stringify(data.settimane[0].giorni[0].esercizi[0]?.elementi, null, 2))
   
   saveAllenamenti(categoriaId, data).then(() => {
     console.log('Allenamenti salvati!')
@@ -1358,6 +1626,8 @@ function confirmSaveSelectedToCatalogo() {
     return saveEsercizioToCatalogo({
       titolo: ex.titolo,
       focus: ex.focus || '',
+      spazio: ex.spazio || '',
+      tempo: ex.tempo || '',
       descrizione: ex.descrizione || '',
       campo_con_righe: ex.campo_con_righe,
       elementi: ex.elementi || []
@@ -1397,6 +1667,8 @@ function confirmSaveEsercizio(tipo) {
     saveEsercizioToCatalogo({
       titolo: saveDialogTitolo.value.trim() || ex.titolo,
       focus: ex.focus || '',
+      spazio: ex.spazio || '',
+      tempo: ex.tempo || '',
       descrizione: ex.descrizione || '',
       campo_con_righe: ex.campo_con_righe,
       elementi: ex.elementi || []
@@ -1619,7 +1891,10 @@ function getToolColor(tool) {
     'ball-futsal': '#ffffff', 'ball-hockey': '#1f2937', 'ball-football-us': '#78350f',
     'ball-rugby': '#ffffff', 'ball-golf': '#ffffff',
     'ladder-gray': '#6b7280', 'ladder-yellow': '#eab308', 'ladder-red': '#ef4444',
-    'tactic-pass': '#000000', 'tactic-dribble': '#000000', 'tactic-wall': '#000000', 'tactic-shot': '#000000', 'tactic-run': '#000000'
+    'arrow-up': '#ef4444', 'arrow-down': '#ef4444', 'arrow-left': '#ef4444', 'arrow-right': '#ef4444',
+    'arrow-dashed-up': '#eab308', 'arrow-dashed-down': '#eab308', 'arrow-dashed-left': '#eab308', 'arrow-dashed-right': '#eab308',
+    'arrow-wavy-up': '#a855f7', 'arrow-wavy-down': '#a855f7', 'arrow-wavy-left': '#a855f7', 'arrow-wavy-right': '#a855f7',
+    'tactic-pass': '#ef4444', 'tactic-dribble': '#eab308', 'tactic-wall': '#3b82f6', 'tactic-shot': '#22c55e', 'tactic-run': '#a855f7'
   }
   return colors[tool] || '#ffffff'
 }
@@ -1688,14 +1963,6 @@ function drawBoard(ex) {
     const lunetteCenterX = marginX + penaltyDepth
     const lunetteCenterXRight = w - marginX - penaltyDepth
     
-    ctx.strokeRect(marginX, smallTop, smallDepth, smallHeight)
-    ctx.strokeRect(w - marginX - smallDepth, smallTop, smallDepth, smallHeight)
-    
-    ctx.strokeRect(marginX, penaltyTop, penaltyDepth, penaltyHeight)
-    ctx.strokeRect(w - marginX - penaltyDepth, penaltyTop, penaltyDepth, penaltyHeight)
-    
-    const penaltySpotX = fieldW * 0.105
-    
     ctx.beginPath()
     ctx.arc(lunetteCenterX, h / 2, arcR, -Math.PI / 2, Math.PI / 2)
     ctx.strokeStyle = '#fff'
@@ -1703,6 +1970,8 @@ function drawBoard(ex) {
     ctx.beginPath()
     ctx.arc(lunetteCenterXRight, h / 2, arcR, Math.PI / 2, -Math.PI / 2)
     ctx.stroke()
+    
+    const penaltySpotX = fieldW * 0.105
     
     ctx.beginPath()
     ctx.arc(marginX + penaltySpotX, h / 2, 3, 0, Math.PI * 2)
@@ -2561,14 +2830,18 @@ function drawBoard(ex) {
       case 'tactic-pass': case 'tactic-dribble': case 'tactic-wall': case 'tactic-shot': case 'tactic-run':
         drawTacticalArrow(ctx, el)
         break
-      case 'arrow-up': drawArrow(ctx, 0, -1, el.colore, false, false, el.length || 60); break
-      case 'arrow-down': drawArrow(ctx, 0, 1, el.colore, false, false, el.length || 60); break
-      case 'arrow-left': drawArrow(ctx, -1, 0, el.colore, false, false, el.length || 60); break
-      case 'arrow-right': drawArrow(ctx, 1, 0, el.colore, false, false, el.length || 60); break
-      case 'arrow-dashed-up': drawArrow(ctx, 0, -1, el.colore, true, false, el.length || 60); break
-      case 'arrow-dashed-right': drawArrow(ctx, 1, 0, el.colore, true, false, el.length || 60); break
-      case 'arrow-wavy-up': drawArrow(ctx, 0, -1, el.colore, false, true, el.length || 60); break
-      case 'arrow-wavy-right': drawArrow(ctx, 1, 0, el.colore, false, true, el.length || 60); break
+      case 'arrow-up': drawArrow(ctx, 0, -1, el.colore || '#ef4444', false, false, el.length || 60); break
+      case 'arrow-down': drawArrow(ctx, 0, 1, el.colore || '#ef4444', false, false, el.length || 60); break
+      case 'arrow-left': drawArrow(ctx, -1, 0, el.colore || '#ef4444', false, false, el.length || 60); break
+      case 'arrow-right': drawArrow(ctx, 1, 0, el.colore || '#ef4444', false, false, el.length || 60); break
+      case 'arrow-dashed-up': drawArrow(ctx, 0, -1, el.colore || '#eab308', true, false, el.length || 60); break
+      case 'arrow-dashed-down': drawArrow(ctx, 0, 1, el.colore || '#eab308', true, false, el.length || 60); break
+      case 'arrow-dashed-left': drawArrow(ctx, -1, 0, el.colore || '#eab308', true, false, el.length || 60); break
+      case 'arrow-dashed-right': drawArrow(ctx, 1, 0, el.colore || '#eab308', true, false, el.length || 60); break
+      case 'arrow-wavy-up': drawArrow(ctx, 0, -1, el.colore || '#a855f7', false, true, el.length || 60); break
+      case 'arrow-wavy-down': drawArrow(ctx, 0, 1, el.colore || '#a855f7', false, true, el.length || 60); break
+      case 'arrow-wavy-left': drawArrow(ctx, -1, 0, el.colore || '#a855f7', false, true, el.length || 60); break
+      case 'arrow-wavy-right': drawArrow(ctx, 1, 0, el.colore || '#a855f7', false, true, el.length || 60); break
     }
     
     if (selectedElement.value === el) {
@@ -2620,9 +2893,10 @@ function drawArrow(ctx, dx, dy, color = '#ffff00', dashed = false, wavy = false,
 }
 
 function drawTacticalArrow(ctx, el) {
-  const color = el.colore || '#000000'
-  const startX = -el.length / 2
-  const endX = el.length / 2
+  const color = el.colore || '#000'
+  const length = el.length || 60
+  const startX = -length / 2
+  const endX = length / 2
   const y = 0
   const rot = (el.rotazione || 0) * Math.PI / 180
   const isWavy = el.wavy
@@ -2703,6 +2977,8 @@ function drawTacticalArrow(ctx, el) {
     }
   }
   
+  ctx.shadowColor = 'transparent'
+  ctx.shadowBlur = 0
   ctx.restore()
 }
 
@@ -2834,6 +3110,12 @@ onMounted(async () => {
 .focus-field select { max-width: 160px; padding: 0.3rem 0.5rem; background: #252525; border: 1px solid #333; border-radius: 6px; color: #ddd; font-size: 0.8rem; cursor: pointer; }
 .focus-field select:focus { outline: none; border-color: var(--color-primary); }
 .focus-field select option { background: #1a1a1a; color: #ddd; }
+.meta-row { display: flex; gap: 1rem; margin: 0.5rem 0; }
+.meta-field { display: flex; align-items: center; gap: 0.5rem; }
+.meta-field label { font-size: 0.75rem; color: #888; font-weight: 500; white-space: nowrap; }
+.meta-field input { padding: 0.3rem 0.5rem; background: #252525; border: 1px solid #333; border-radius: 6px; color: #ddd; font-size: 0.8rem; width: 80px; }
+.meta-field input:focus { outline: none; border-color: var(--color-primary); }
+.meta-field input::placeholder { color: #555; }
 
 .no-esercizi { text-align: center; padding: 2rem; color: #666; }
 

@@ -50,6 +50,13 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24
               }
             }
+          },
+          {
+            urlPattern: /\/api\/.*/i,
+            handler: 'NetworkOnly',
+            options: {
+              cacheName: 'skip-api-cache'
+            }
           }
         ]
       }
