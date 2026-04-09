@@ -1,4 +1,13 @@
 <template>
+  <div class="rotate-device-overlay" v-if="showRotateMessage">
+    <div class="rotate-device-message">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
+        <line x1="12" y1="18" x2="12" y2="18"/>
+      </svg>
+      <span>Ruota il dispositivo in orizzontale</span>
+    </div>
+  </div>
   <div class="allenamenti-page">
     <header class="page-header">
       <div class="header-left">
@@ -554,6 +563,7 @@ const dragOffset = ref({ x: 0, y: 0 })
 const elementControlsOpen = ref(false)
 const selectedElementExercise = ref(null)
 const copiedElement = ref(null)
+const showRotateMessage = ref(false)
 const showCatalogo = ref(false)
 const catalogoFocus = ref('')
 const catalogoEsercizi = ref([])
@@ -2993,6 +3003,14 @@ onMounted(async () => {
     const cat = cats.find(c => c.id === categoriaId)
     if (cat) setCategoria(cat)
   }
+  
+  const checkRotate = () => {
+    const isMobile = window.innerWidth <= 768
+    const isPortrait = window.innerHeight > window.innerWidth
+    showRotateMessage.value = isMobile && isPortrait
+  }
+  checkRotate()
+  window.addEventListener('resize', checkRotate)
 })
 </script>
 
@@ -3184,4 +3202,46 @@ onMounted(async () => {
 .checkbox-titolo { color: #ccc; font-size: 0.95rem; }
 .no-esercizi-selezione { color: #666; text-align: center; padding: 1rem; }
 .checkbox-titolo.no-titolo { color: #666; font-style: italic; }
+
+.rotate-device-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rotate-device-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: white;
+  text-align: center;
+  padding: 2rem;
+}
+
+.rotate-device-message svg {
+  width: 80px;
+  height: 80px;
+  animation: rotate-hint 1.5s ease-in-out infinite;
+}
+
+.rotate-device-message span {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+@keyframes rotate-hint {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-20deg); }
+  75% { transform: rotate(20deg); }
+}
 </style>
