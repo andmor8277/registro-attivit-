@@ -62,9 +62,16 @@ registro_presenze/
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v2.0.0**.
+La versione attuale è **v2.1.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
+
+### Novità v2.1.0
+
+- **Catalogo Esercizi**: Nuovo sistema per salvare e riutilizzare esercizi
+- **Dialog Selezione Multipla**: Possibilità di scegliere quali esercizi salvare nel catalogo
+- **Permessi**: SuperAdmin può eliminare tutti gli esercizi, utenti normali solo i propri
+- **Pulsante "Salva nel Catalogo"**: Nuovo pulsante nella toolbar per salvare esercizi
 
 ### Novità v2.0.0
 
@@ -130,6 +137,8 @@ Le credenziali sono configurate nel database. Contattare l'amministratore per l'
   - Movimento senza palla (termina con pallino)
 - ✅ Frecce ruotabili, allungabili, ondolabili
 - ✅ Personalizzazione colore frecce
+- ✅ **Catalogo Esercizi**: Salva, riutilizza e condividi esercizi tra allenatori
+- ✅ **Filtro Focus**: Filtra esercizi per tipo (tecnica, tattica, fisico, ecc.)
 
 ### Convocazioni
 - ✅ Creazione e gestione convocazioni multiple per evento
@@ -229,6 +238,10 @@ persone (
 | GET | `/allenamenti/` | Lista allenamenti |
 | GET | `/allenamenti/giorno/:catId/:data` | Dettagli giorno |
 | POST | `/allenamenti/` | Salva allenamenti |
+| GET | `/allenamenti/catalogo-new` | Lista esercizi dal catalogo |
+| POST | `/allenamenti/catalogo-new` | Salva esercizio nel catalogo |
+| DELETE | `/allenamenti/catalogo-new/:id` | Elimina esercizio (con permessi) |
+| GET | `/allenamenti/focus-list` | Lista focus disponibili |
 
 ### Convocazioni
 | Metodo | Endpoint | Descrizione |
