@@ -3020,19 +3020,18 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.allenamenti-page { display: flex; flex-direction: column; height: 100vh; background: #0a0a0a; min-width: 100%; }
-.allenamenti-body { flex: 1; overflow-y: auto; padding: 1rem; width: 100%; box-sizing: border-box; }
-.page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--color-primary); }
+.allenamenti-page { display: flex; flex-direction: column; height: 100vh; background: #0a0a0a; min-width: 100%; overflow: hidden; }
+.allenamenti-body { flex: 1; overflow-y: auto; padding: 1rem; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+.page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--color-primary); flex-shrink: 0; }
 .header-left { display: flex; gap: 0.25rem; }
 .btn-back, .btn-home { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer; }
 .btn-back svg, .btn-home svg { width: 18px; height: 18px; }
 .titolo-toolbar { flex: 1; font-weight: bold; font-size: 1rem; color: white; }
-.allenamenti-body { flex: 1; overflow-y: auto; padding: 1rem; }
 .month-nav { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1.5rem; }
 .nav-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; color: white; cursor: pointer; }
 .nav-btn svg { width: 20px; height: 20px; }
 .current-month { font-size: 1.25rem; font-weight: bold; color: white; min-width: 180px; text-align: center; }
-.weeks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.weeks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem; max-height: 40vh; overflow-y: auto; }
 .week-card { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 1rem; cursor: pointer; transition: all 0.2s; }
 .week-card:hover { border-color: var(--color-primary); }
 .week-card.active { border-color: var(--color-primary); background: rgba(16, 185, 129, 0.1); }
@@ -3258,23 +3257,30 @@ onUnmounted(() => {
   .page-header { padding: 0.5rem 0.75rem; flex-shrink: 0; }
   .titolo-toolbar { font-size: 0.85rem; }
   .tactical-board-container { min-height: 300px; }
+  .weeks-grid { max-height: 30vh; }
+  .month-nav { margin-bottom: 0.75rem; }
+  .weeks-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
 }
 
 @media (max-width: 768px) and (orientation: landscape) {
   .board-area { flex-direction: row; min-height: 0; flex: 1; }
-  .board-sidebar { width: 150px; flex-shrink: 0; max-height: 100%; overflow-y: auto; }
-  .board-main { width: calc(100% - 160px); display: flex; flex-direction: column; }
-  .tools-panel { padding: 0.4rem; gap: 0.4rem; flex: 0 0 auto; max-height: 200px; overflow-y: auto; }
-  .tool-btn { width: 26px; height: 26px; }
-  .tools-label { font-size: 0.5rem; }
-  .tool-icon { width: 14px; height: 14px; }
-  .tools-section { gap: 0.2rem; }
-  .page-header { padding: 0.3rem 0.5rem; flex-shrink: 0; }
-  .btn-back, .btn-home { width: 28px; height: 28px; }
-  .titolo-toolbar { font-size: 0.75rem; }
-  .allenamenti-body { padding: 0.3rem; display: flex; flex-direction: column; }
-  .tactical-board-container { flex: 1; min-height: 200px; }
+  .board-sidebar { width: 120px; flex-shrink: 0; max-height: 100%; overflow-y: auto; }
+  .board-main { width: calc(100% - 130px); display: flex; flex-direction: column; }
+  .tools-panel { padding: 0.3rem; gap: 0.3rem; flex: 0 0 auto; max-height: 150px; overflow-y: auto; }
+  .tool-btn { width: 22px; height: 22px; }
+  .tools-label { font-size: 0.45rem; }
+  .tool-icon { width: 12px; height: 12px; }
+  .tools-section { gap: 0.15rem; }
+  .page-header { padding: 0.25rem 0.4rem; flex-shrink: 0; }
+  .btn-back, .btn-home { width: 24px; height: 24px; }
+  .btn-back svg, .btn-home svg { width: 14px; height: 14px; }
+  .titolo-toolbar { font-size: 0.7rem; }
+  .allenamenti-body { padding: 0.2rem; display: flex; flex-direction: column; }
+  .tactical-board-container { flex: 1; min-height: 150px; }
   .tactical-board-wrapper { height: 100%; }
+  .weeks-grid { max-height: 20vh; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
+  .month-nav { margin-bottom: 0.5rem; }
+  .current-month { font-size: 1rem; min-width: 140px; }
 }
 
 @media (max-width: 480px) and (orientation: landscape) {
