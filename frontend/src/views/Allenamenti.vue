@@ -3254,26 +3254,27 @@ onUnmounted(() => {
   .board-area { flex-direction: column; }
   .board-sidebar { width: 100%; }
   .board-main { width: 100%; }
-  .allenamenti-body { padding: 0.5rem; }
-  .page-header { padding: 0.5rem 0.75rem; }
+  .allenamenti-body { padding: 0.5rem; display: flex; flex-direction: column; }
+  .page-header { padding: 0.5rem 0.75rem; flex-shrink: 0; }
   .titolo-toolbar { font-size: 0.85rem; }
+  .tactical-board-container { min-height: 300px; }
 }
 
 @media (max-width: 768px) and (orientation: landscape) {
-  .board-area { flex-direction: row; height: calc(100vh - 50px); }
-  .board-sidebar { width: 180px; flex-shrink: 0; }
-  .board-main { width: calc(100% - 190px); }
-  .tools-panel { padding: 0.4rem; gap: 0.4rem; }
+  .board-area { flex-direction: row; min-height: 0; flex: 1; }
+  .board-sidebar { width: 150px; flex-shrink: 0; max-height: 100%; overflow-y: auto; }
+  .board-main { width: calc(100% - 160px); display: flex; flex-direction: column; }
+  .tools-panel { padding: 0.4rem; gap: 0.4rem; flex: 0 0 auto; max-height: 200px; overflow-y: auto; }
   .tool-btn { width: 26px; height: 26px; }
   .tools-label { font-size: 0.5rem; }
   .tool-icon { width: 14px; height: 14px; }
   .tools-section { gap: 0.2rem; }
-  .page-header { padding: 0.3rem 0.5rem; }
+  .page-header { padding: 0.3rem 0.5rem; flex-shrink: 0; }
   .btn-back, .btn-home { width: 28px; height: 28px; }
   .titolo-toolbar { font-size: 0.75rem; }
-  .allenamenti-body { padding: 0.3rem; overflow-y: hidden; }
-  .tactical-board-container { flex: 1; min-height: 0; }
-  .tools-panel { flex: 0 0 auto; max-height: calc(100vh - 60px); overflow-y: auto; }
+  .allenamenti-body { padding: 0.3rem; display: flex; flex-direction: column; }
+  .tactical-board-container { flex: 1; min-height: 200px; }
+  .tactical-board-wrapper { height: 100%; }
 }
 
 @media (max-width: 480px) and (orientation: landscape) {
