@@ -1,6 +1,6 @@
 <template>
   <div class="app-layout">
-    <nav v-if="token" class="topbar">
+    <nav v-if="token && !hideTopbar" class="topbar">
       <button class="hamburger" @click="mobileMenuOpen = true; window.scrollTo(0, 0)" aria-label="Menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="3" y1="6" x2="21" y2="6"/>
@@ -190,7 +190,7 @@ import { useStore } from './store.js'
 import { useRouter } from 'vue-router'
 import { getMe, getStagioni, changePassword } from './api/index.js'
 
-const { token, utenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva } = useStore()
+const { token, utenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva, hideTopbar } = useStore()
 const router = useRouter()
 
 const showPasswordModal = ref(false)

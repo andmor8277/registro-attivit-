@@ -6,6 +6,7 @@ const utenteAttivo = ref(null)
 const stagioneCorrente = ref(null)
 const societaAttiva = ref(null)
 const listaSocieta = ref([])
+const hideTopbar = ref(false)
 
 function applySocietaColors(societa) {
   if (societa && societa.colore_primario) {
@@ -75,6 +76,7 @@ export function useStore() {
     stagioneCorrente, 
     societaAttiva,
     listaSocieta,
+    hideTopbar,
     setCategoria, 
     setToken, 
     setStagioneCorrente, 
