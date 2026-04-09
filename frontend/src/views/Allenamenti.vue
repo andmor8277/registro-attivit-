@@ -90,6 +90,45 @@
             </div>
 
             <div class="board-area">
+              <div v-if="selectedElement && selectedElementExercise?.id === ex.id" class="element-controls-top" @click.stop>
+                <div class="element-controls-header" @click.stop="elementControlsOpen = !elementControlsOpen">
+                  <span>MODIFICA OGGETTO</span>
+                  <span class="toggle-icon">{{ elementControlsOpen ? '▲' : '▼' }}</span>
+                </div>
+                <div v-if="elementControlsOpen" class="element-controls-body">
+                  <div class="controls-row">
+                    <div class="control-group">
+                      <label>Colore:</label>
+                      <div class="color-picker">
+                        <button v-for="c in colors" :key="c" class="color-btn" :class="{ active: selectedElement.colore === c }" :style="{ background: c }" @click.stop="changeColor(c)"></button>
+                      </div>
+                    </div>
+                    <div class="control-group">
+                      <label>Grandezza:</label>
+                      <input type="range" v-model="selectedElement.size" min="0.5" max="2" step="0.1" @input="updateSize" />
+                    </div>
+                    <div class="control-group">
+                      <label>Rotazione:</label>
+                      <input type="range" v-model="selectedElement.rotazione" min="0" max="360" step="15" @input="updateRotation" />
+                    </div>
+                    <div v-if="isArrow(selectedElement)" class="control-group">
+                      <label>Lunghezza:</label>
+                      <input type="range" v-model="selectedElement.length" min="20" max="150" step="5" @input="updateSize" />
+                    </div>
+                    <div v-if="selectedElement.tipo?.startsWith('tactic-')" class="control-group">
+                      <label>Ondulata:</label>
+                      <button class="toggle-btn" :class="{ active: selectedElement.wavy }" @click.stop="toggleWavy">
+                        {{ selectedElement.wavy ? 'Sì' : 'No' }}
+                      </button>
+                    </div>
+                    <div class="control-group actions">
+                      <button class="action-btn" @click.stop="copySelected">📋 Copia</button>
+                      <button class="action-btn" @click.stop="pasteElement" :disabled="!copiedElement">📄 Incolla</button>
+                      <button class="action-btn btn-delete-element" @click.stop="deleteSelected">🗑️</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div class="board-main">
                 <div class="tools-panel">
                   <div class="tools-section">
@@ -404,45 +443,6 @@
                 </div>
               </div>
 
-              <div class="board-sidebar">
-                <div v-if="selectedElement && selectedElementExercise?.id === ex.id" class="element-controls" @click.stop>
-                  <div class="element-controls-header" @click.stop="elementControlsOpen = !elementControlsOpen">
-                    <span>MODIFICA OGGETTO</span>
-                    <span class="toggle-icon">{{ elementControlsOpen ? '▼' : '▶' }}</span>
-                  </div>
-                  <div v-if="elementControlsOpen" class="element-controls-body">
-                    <div class="control-row">
-                      <label>Colore:</label>
-                      <div class="color-picker">
-                        <button v-for="c in colors" :key="c" class="color-btn" :class="{ active: selectedElement.colore === c }" :style="{ background: c }" @click.stop="changeColor(c)"></button>
-                      </div>
-                    </div>
-                    <div class="control-row">
-                      <label>Grandezza:</label>
-                      <input type="range" v-model="selectedElement.size" min="0.5" max="2" step="0.1" @input="updateSize" />
-                    </div>
-                    <div class="control-row">
-                      <label>Rotazione:</label>
-                      <input type="range" v-model="selectedElement.rotazione" min="0" max="360" step="15" @input="updateRotation" />
-                    </div>
-                    <div v-if="isArrow(selectedElement)" class="control-row">
-                      <label>Lunghezza:</label>
-                      <input type="range" v-model="selectedElement.length" min="20" max="150" step="5" @input="updateSize" />
-                    </div>
-                    <div v-if="selectedElement.tipo?.startsWith('tactic-')" class="control-row">
-                      <label>Ondulata:</label>
-                      <button class="toggle-btn" :class="{ active: selectedElement.wavy }" @click.stop="toggleWavy">
-                        {{ selectedElement.wavy ? 'Sì' : 'No' }}
-                      </button>
-                    </div>
-                    <div class="element-actions">
-                      <button class="action-btn btn-copy-element" @click.stop="copySelected" :disabled="!selectedElement">📋 Copia</button>
-                      <button class="action-btn btn-paste-element" @click.stop="pasteElement" :disabled="!copiedElement">📄 Incolla</button>
-                      <button class="action-btn btn-delete-element" @click.stop="deleteSelected">🗑️ Elimina</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -3090,15 +3090,15 @@ onUnmounted(() => {
 .weeks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem; max-height: 40vh; overflow-y: auto; }
 .week-card { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 1rem; cursor: pointer; transition: all 0.2s; }
 .week-card:hover { border-color: var(--color-primary); }
-.week-card.active { border-color: var(--color-primary); background: rgba(16, 185, 129, 0.1); }
-.week-header { font-weight: bold; color: #fff; margin-bottom: 0.25rem; }
-.week-dates { font-size: 0.85rem; color: #666; margin-bottom: 0.75rem; }
-.week-days { display: flex; gap: 0.25rem; flex-wrap: wrap; }
-.day-chip { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: #1a1a1a; border-radius: 6px; font-size: 0.8rem; color: #444; cursor: not-allowed; opacity: 0.4; }
-.day-chip.has-training { background: var(--color-primary); color: white; cursor: pointer; opacity: 1; }
-.day-chip.has-training:hover { transform: scale(1.1); }
-.day-chip.today { border: 2px solid #fff; }
-.day-chip.other-month { opacity: 0.6; }
+.week-card.active { border-color: var(--color-primary); background: rgba(16, 185, 129, 0.15); }
+.week-header { font-weight: bold; color: #fff; margin-bottom: 0.25rem; font-size: 0.95rem; }
+.week-dates { font-size: 0.8rem; color: #888; margin-bottom: 0.75rem; font-weight: 500; }
+.week-days { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.day-chip { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: #252525; border-radius: 8px; font-size: 0.85rem; color: #666; cursor: not-allowed; border: 1px solid #333; }
+.day-chip.has-training { background: var(--color-primary); color: white; cursor: pointer; border: 1px solid var(--color-primary); font-weight: 600; }
+.day-chip.has-training:hover { transform: scale(1.1); background: #059669; }
+.day-chip.today { border: 2px solid #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.3); }
+.day-chip.other-month { opacity: 0.4; }
 .day-detail { background: #141414; border-radius: 12px; padding: 1rem; width: 100%; box-sizing: border-box; }
 .day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 .day-header h3 { color: #fff; margin: 0; }
@@ -3116,9 +3116,8 @@ onUnmounted(() => {
 .btn-toggle-lines.active { background: var(--color-primary); border-color: var(--color-primary); }
 .btn-delete { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #dc2626; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 1.25rem; flex-shrink: 0; }
 
-.board-area { display: flex; gap: 1rem; width: 100%; box-sizing: border-box; min-width: 0; }
-.board-main { flex: 1 1 0; display: flex; flex-direction: column; gap: 1rem; min-width: 0; overflow: visible; }
-.board-sidebar { width: 280px; display: flex; flex-direction: column; gap: 1rem; flex-shrink: 0; overflow: visible; position: relative; z-index: 10; }
+.board-area { display: flex; flex-direction: column; gap: 0.75rem; width: 100%; box-sizing: border-box; min-width: 0; }
+.board-main { flex: 1 1 0; display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; overflow: visible; }
 .tools-panel { background: #0f0f0f; border-radius: 12px; padding: 0.75rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; width: 100%; box-sizing: border-box; flex-shrink: 0; }
 .esercizi-list { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; overflow: visible; }
 .tools-section { display: flex; flex-direction: column; gap: 0.35rem; }
@@ -3170,6 +3169,20 @@ onUnmounted(() => {
 .btn-paste-element { flex: 1; padding: 0.4rem 0.8rem; background: #22c55e; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 0.8rem; }
 .btn-copy-element:disabled, .btn-paste-element:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-copy-element:hover:not(:disabled), .btn-paste-element:hover:not(:disabled) { opacity: 0.9; }
+
+.element-controls-top { background: #1a1a1a; border-radius: 8px; overflow: visible; width: 100%; flex-shrink: 0; }
+.element-controls-top .element-controls-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; cursor: pointer; background: #252525; border-radius: 8px; }
+.element-controls-top .element-controls-header:hover { background: #333; }
+.element-controls-top .element-controls-header span { color: #fff; font-size: 0.85rem; font-weight: 600; }
+.element-controls-top .element-controls-body { padding: 0.75rem; background: #1a1a1a; }
+.element-controls-top .controls-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+.element-controls-top .control-group { display: flex; align-items: center; gap: 0.5rem; }
+.element-controls-top .control-group label { font-size: 0.75rem; color: #888; white-space: nowrap; }
+.element-controls-top .control-group input[type="range"] { width: 100px; accent-color: var(--color-primary); }
+.element-controls-top .control-group.actions { margin-left: auto; gap: 0.5rem; }
+.element-controls-top .action-btn { padding: 0.4rem 0.6rem; background: #333; border: 1px solid #444; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.8rem; }
+.element-controls-top .action-btn:hover { background: #444; }
+.element-controls-top .action-btn.btn-delete-element { background: #dc2626; border-color: #dc2626; }
 
 .tactical-board-container { border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); width: 100%; max-width: none; min-height: 400px; flex: 1; display: flex; }
 .tactical-board-wrapper { position: relative; width: 100%; max-width: none; height: 100%; flex: 1; display: flex; }
@@ -3307,7 +3320,6 @@ onUnmounted(() => {
 
 @media (max-width: 900px) {
   .board-area { flex-direction: column; }
-  .board-sidebar { width: 100%; }
   .board-main { width: 100%; }
   .allenamenti-body { padding: 0.5rem; display: flex; flex-direction: column; }
   .page-header { padding: 0.5rem 0.75rem; flex-shrink: 0; }
@@ -3316,15 +3328,22 @@ onUnmounted(() => {
   .weeks-grid { max-height: 30vh; }
   .month-nav { margin-bottom: 0.75rem; }
   .weeks-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .element-controls-top .element-controls-body { padding: 0.5rem; }
+  .element-controls-top .controls-row { gap: 0.75rem; }
+  .element-controls-top .control-group input[type="range"] { width: 80px; }
 }
 
 @media (max-width: 768px) and (orientation: landscape) {
   .board-area { flex-direction: column; min-height: 0; flex: 1; }
-  .board-sidebar { width: 100%; flex-shrink: 0; max-height: 60px; overflow: visible; flex-direction: row; flex-wrap: nowrap; gap: 0.5rem; overflow-x: auto; }
   .board-main { width: 100%; display: flex; flex-direction: column; flex: 1; }
-  .tools-panel { padding: 0.2rem; gap: 0.2rem; flex: 0 0 auto; max-height: 60px; overflow-y: visible; flex-wrap: nowrap; overflow-x: auto; display: flex; flex-direction: row; }
-  .element-controls { flex: 0 0 auto; min-width: 180px; max-height: 60px; overflow-y: auto; }
-  .element-controls-body { max-height: 50px; overflow-y: auto; }
+  .tools-panel { padding: 0.2rem; gap: 0.2rem; flex: 0 0 auto; max-height: 50px; overflow-y: visible; flex-wrap: nowrap; overflow-x: auto; display: flex; flex-direction: row; }
+  .element-controls-top { flex-shrink: 0; }
+  .element-controls-top .element-controls-header { padding: 0.3rem 0.5rem; }
+  .element-controls-top .element-controls-header span { font-size: 0.75rem; }
+  .element-controls-top .element-controls-body { padding: 0.4rem; }
+  .element-controls-top .controls-row { gap: 0.5rem; }
+  .element-controls-top .control-group label { font-size: 0.65rem; }
+  .element-controls-top .control-group input[type="range"] { width: 60px; }
   .tool-btn { width: 28px; height: 28px; }
   .tools-label { font-size: 0.5rem; }
   .tool-icon { width: 16px; height: 16px; }
