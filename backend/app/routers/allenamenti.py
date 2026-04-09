@@ -17,12 +17,17 @@ class EsercizioElemento(BaseModel):
     rotazione: float = 0
     colore: Optional[str] = None
     numero: Optional[int] = None
+    length: Optional[float] = None
+    wavy: Optional[bool] = None
+    size: Optional[float] = None
 
 class EsercizioCreate(BaseModel):
     ordine: int
     titolo: Optional[str] = None
     descrizione: Optional[str] = None
     focus: Optional[str] = None
+    spazio: Optional[str] = None
+    tempo: Optional[str] = None
     campo_con_righe: bool = True
     elementi: List[EsercizioElemento] = []
 
@@ -76,9 +81,21 @@ def save_allenamento(data: AllenamentoJson, db: Session = Depends(get_db)):
             "titolo": e.titolo,
             "descrizione": e.descrizione,
             "focus": e.focus,
+            "spazio": e.spazio,
+            "tempo": e.tempo,
             "campo_con_righe": e.campo_con_righe,
             "elementi": [
-                {"tipo": el.tipo, "x": el.x, "y": el.y, "rotazione": el.rotazione, "colore": el.colore, "numero": el.numero}
+                {
+                    "tipo": el.tipo, 
+                    "x": el.x, 
+                    "y": el.y, 
+                    "rotazione": el.rotazione, 
+                    "colore": el.colore, 
+                    "numero": el.numero,
+                    "length": el.length,
+                    "wavy": el.wavy,
+                    "size": el.size
+                }
                 for el in e.elementi
             ]
         }
@@ -110,6 +127,7 @@ def get_catalogo(focus: Optional[str] = None, db: Session = Depends(get_db)):
     
     catalogo_dict = {}
     focus_nomi = {
+        'attivazione': 'Attivazione',
         'tecnica': 'Tecnica',
         'tattica': 'Tattica',
         'fisico': 'Fisico',
@@ -185,6 +203,7 @@ def get_focus_list(db: Session = Depends(get_db)):
     return {
         "focus_options": [
             {"value": "", "label": "Tutti"},
+            {"value": "attivazione", "label": "Attivazione"},
             {"value": "tecnica", "label": "Tecnica"},
             {"value": "tattica", "label": "Tattica"},
             {"value": "fisico", "label": "Fisico"},
@@ -208,7 +227,7 @@ def get_catalogo_new(focus: Optional[str] = None, db: Session = Depends(get_db),
     esercizi = query.order_by(models.CatalogoEsercizio.titolo).all()
     
     focus_nomi = {
-        'tecnica': 'Tecnica', 'tattica': 'Tattica', 'fisico': 'Fisico',
+        'attivazione': 'Attivazione', 'tecnica': 'Tecnica', 'tattica': 'Tattica', 'fisico': 'Fisico',
         'capacita-coordinativa': 'Cap. Coordinativa', 'palleggio': 'Palleggio',
         'passaggio': 'Passaggio', 'conclusione': 'Conclusione', 'difesa': 'Difesa',
         'attacco': 'Attacco', 'possessione': 'Possesso', 'set-piece': 'Set Piece'
@@ -220,6 +239,8 @@ def get_catalogo_new(focus: Optional[str] = None, db: Session = Depends(get_db),
                 "id": e.id,
                 "titolo": e.titolo,
                 "focus": e.focus or '',
+                "spazio": e.spazio or '',
+                "tempo": e.tempo or '',
                 "focus_label": focus_nomi.get(e.focus, 'Nessuno'),
                 "descrizione": e.descrizione or '',
                 "campo_con_righe": e.campo_con_righe,
@@ -249,6 +270,8 @@ def save_to_catalogo(data: dict, db: Session = Depends(get_db), current_user: mo
     
     if existing:
         existing.focus = data.get('focus', '')
+        existing.spazio = data.get('spazio', '')
+        existing.tempo = data.get('tempo', '')
         existing.descrizione = data.get('descrizione', '')
         existing.campo_con_righe = data.get('campo_con_righe', True)
         existing.elementi = data.get('elementi', [])
@@ -257,6 +280,8 @@ def save_to_catalogo(data: dict, db: Session = Depends(get_db), current_user: mo
         new_ex = models.CatalogoEsercizio(
             titolo=titolo,
             focus=data.get('focus', ''),
+            spazio=data.get('spazio', ''),
+            tempo=data.get('tempo', ''),
             descrizione=data.get('descrizione', ''),
             campo_con_righe=data.get('campo_con_righe', True),
             elementi=data.get('elementi', []),
