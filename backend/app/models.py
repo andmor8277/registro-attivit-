@@ -171,3 +171,15 @@ class AllenamentoElemento(Base):
     rotazione = Column(Float, default=0)
     colore = Column(String(20), nullable=True)
     numero = Column(Integer, nullable=True)
+
+class CatalogoEsercizio(Base):
+    __tablename__ = "catalogo_esercizi"
+    id = Column(Integer, primary_key=True)
+    titolo = Column(String(200), nullable=False, unique=True)
+    focus = Column(String(50), nullable=True)
+    descrizione = Column(Text, nullable=True)
+    campo_con_righe = Column(Boolean, default=True)
+    elementi = Column(JSONB, default=[])
+    creato_da = Column(Integer, nullable=True)
+    creato_il = Column(DateTime, nullable=True)
+    aggiornato_il = Column(DateTime, nullable=True)
