@@ -33,7 +33,9 @@
         <div class="day-header">
           <h3>Allenamento del {{ formatDate(selectedDay.data) }}</h3>
           <button class="btn-add-exercise" @click="addEsercizio">+ Esercizio</button>
+          <button class="btn-catalogo" @click="openCatalogo">📚 Catalogo</button>
           <button class="btn-save-exercise" @click="saveCurrentExercise" title="Salva">💾 Salva</button>
+          <button class="btn-save-catalogo-explicit" @click="openSaveToCatalogoDialog" title="Salva nel Catalogo">💾 Salva nel Catalogo</button>
           <button class="btn-save-exercise" @click="exportPdf" title="Esporta PDF">📄 PDF</button>
         </div>
 
@@ -427,6 +429,84 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showCatalogo" class="catalogo-overlay" @click.self="closeCatalogo">
+      <div class="catalogo-modal">
+        <div class="catalogo-header">
+          <h2>📚 Catalogo Esercizi</h2>
+          <button class="catalogo-close" @click="closeCatalogo">×</button>
+        </div>
+        <div class="catalogo-filters">
+          <select v-model="catalogoFocus" @change="loadCatalogo">
+            <option v-for="opt in focusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+          <span class="catalogo-count">{{ catalogoEsercizi.length }} esercizi unici</span>
+        </div>
+        <div class="catalogo-list">
+          <div v-for="(ex, idx) in catalogoEsercizi" :key="idx" class="catalogo-item" :class="{ 'already-added': titoloGiaPresente(ex.titolo) }" @click="selezionaDaCatalogo(ex)">
+            <div class="catalogo-item-header">
+              <span class="catalogo-item-title">{{ ex.titolo }}</span>
+              <span class="catalogo-item-focus" :class="'focus-' + ex.focus">{{ ex.focus_label }}</span>
+            </div>
+            <div v-if="ex.descrizione" class="catalogo-item-desc">{{ ex.descrizione }}</div>
+            <div class="catalogo-item-footer">
+              <span class="catalogo-item-count">Creato {{ formatDateShort(ex.creato_il) }}</span>
+              <span v-if="titoloGiaPresente(ex.titolo)" class="catalogo-item-already">✓ Già nell'allenamento</span>
+              <button v-if="ex.can_delete" class="catalogo-delete-btn" @click.stop="deleteFromCatalogo(ex)" title="Elimina dal catalogo">🗑️</button>
+            </div>
+          </div>
+          <div v-if="catalogoEsercizi.length === 0" class="catalogo-empty">
+            Nessun esercizio trovato per questo focus
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showSaveDialog" class="catalogo-overlay" @click.self="closeSaveDialog">
+      <div class="save-dialog">
+        <div class="save-dialog-header">
+          <h3>💾 Salva nel Catalogo</h3>
+        </div>
+        <div class="save-dialog-body">
+          <p>Salva questo esercizio nel catalogo condiviso. Gli altri allenatori potranno usarlo.</p>
+          <div class="save-dialog-titolo">
+            <label>Titolo:</label>
+            <input v-model="saveDialogTitolo" @input="onSaveDialogTitoloChange" class="save-dialog-input" placeholder="Titolo esercizio..." />
+          </div>
+          <div v-if="saveDialogTitoloEsistente" class="save-dialog-warning">
+            ⚠️ Esiste già un esercizio con questo titolo - verrà aggiornato
+          </div>
+        </div>
+        <div class="save-dialog-actions">
+          <button class="btn-save-catalogo" @click="confirmSaveEsercizio('catalogo')">💾 Salva</button>
+          <button class="btn-cancel" @click="closeSaveDialog">Annulla</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showCatalogoSelectDialog" class="catalogo-overlay" @click.self="closeCatalogoSelectDialog">
+      <div class="save-dialog">
+        <div class="save-dialog-header">
+          <h3>💾 Salva nel Catalogo</h3>
+        </div>
+        <div class="save-dialog-body">
+          <p>Seleziona gli esercizi da salvare nel catalogo:</p>
+          <div class="esercizi-selezione">
+            <label class="esercizio-checkbox" v-for="ex in eserciziSenzaTitolo" :key="ex.id">
+              <input type="checkbox" v-model="selectedForCatalogo[ex.id]" :disabled="!ex.titolo || !ex.titolo.trim()" />
+              <span class="checkbox-titolo" :class="{ 'no-titolo': !ex.titolo || !ex.titolo.trim() }">{{ ex.titolo || 'Esercizio senza titolo' }}</span>
+            </label>
+            <div v-if="eserciziSenzaTitolo.length === 0" class="no-esercizi-selezione">
+              Non ci sono esercizi in questo allenamento
+            </div>
+          </div>
+        </div>
+        <div class="save-dialog-actions">
+          <button class="btn-save-catalogo" @click="confirmSaveSelectedToCatalogo" :disabled="!hasSelectedForCatalogo">💾 Salva selezionati</button>
+          <button class="btn-cancel" @click="closeCatalogoSelectDialog">Annulla</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -434,7 +514,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../store.js'
-import { getAllCategorie, getAllenamentiGiornoByData, saveAllenamenti } from '../api/index.js'
+import { getAllCategorie, getAllenamentiGiornoByData, saveAllenamenti, getCatalogoEsercizi, getCatalogoEserciziNew, saveEsercizioToCatalogo, deleteEsercizioFromCatalogo, getFocusList } from '../api/index.js'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -463,6 +543,24 @@ const dragOffset = ref({ x: 0, y: 0 })
 const elementControlsOpen = ref(false)
 const selectedElementExercise = ref(null)
 const copiedElement = ref(null)
+const showCatalogo = ref(false)
+const catalogoFocus = ref('')
+const catalogoEsercizi = ref([])
+const focusOptions = ref([])
+const showSaveDialog = ref(false)
+const saveDialogTitolo = ref('')
+const saveDialogExercising = ref(null)
+const saveDialogTitoloEsistente = ref(false)
+const currentUserId = ref(null)
+const isSuperAdmin = ref(false)
+const showCatalogoSelectDialog = ref(false)
+const selectedForCatalogo = ref({})
+const eserciziSenzaTitolo = computed(() => {
+  return esercizi.value
+})
+const hasSelectedForCatalogo = computed(() => {
+  return esercizi.value.some(ex => selectedForCatalogo.value[ex.id] && ex.titolo && ex.titolo.trim())
+})
 
 
 const colors = ['#ef4444', '#3b82f6', '#eab308', '#22c55e', '#ffffff', '#000000', '#a855f7', '#f97316']
@@ -583,27 +681,99 @@ function loadEsercizi(data) {
     if (dayData.esercizi && dayData.esercizi.length > 0) {
       loadedEsercizi = dayData.esercizi.map((e, idx) => ({
         ...e,
-        id: e.id || ('loaded_' + idx + '_' + Date.now())
+        id: e.id || ('loaded_' + idx + '_' + Date.now()),
+        fromCatalogo: false
       }))
     }
     
-    if (loadedEsercizi.length === 0) {
-      loadedEsercizi = [{ id: Date.now(), ordine: 1, titolo: '', descrizione: '', focus: '', campo_con_righe: true, elementi: [] }]
-    }
-    
     esercizi.value = loadedEsercizi
-    selectedExercise.value = esercizi.value[0]
+    selectedExercise.value = loadedEsercizi.length > 0 ? loadedEsercizi[0] : null
     nextTick(() => {
       esercizi.value.forEach(ex => drawBoard(ex))
     })
   }).catch(() => {
-    esercizi.value = [
-      { id: Date.now(), ordine: 1, titolo: '', descrizione: '', focus: '', campo_con_righe: true, elementi: [] }
-    ]
-    selectedExercise.value = esercizi.value[0]
+    esercizi.value = []
+    selectedExercise.value = null
     nextTick(() => {
       esercizi.value.forEach(ex => drawBoard(ex))
     })
+  })
+}
+
+async function openCatalogo() {
+  showCatalogo.value = true
+  try {
+    const res = await getFocusList()
+    focusOptions.value = res.data.focus_options
+  } catch (e) {
+    console.error('Errore caricamento focus:', e)
+  }
+  await loadCatalogo()
+}
+
+async function loadCatalogo() {
+  try {
+    const res = await getCatalogoEserciziNew(catalogoFocus.value)
+    catalogoEsercizi.value = res.data.esercizi || []
+    currentUserId.value = res.data.current_user_id
+    isSuperAdmin.value = res.data.is_super_admin
+  } catch (e) {
+    console.error('Errore caricamento catalogo:', e)
+    catalogoEsercizi.value = []
+  }
+}
+
+function closeCatalogo() {
+  showCatalogo.value = false
+}
+
+function titoloGiaPresente(titolo) {
+  if (!titolo) return false
+  const titoloNorm = titolo.trim().toLowerCase()
+  return esercizi.value.some(e => e.titolo && e.titolo.trim().toLowerCase() === titoloNorm)
+}
+
+function formatDateShort(dateStr) {
+  if (!dateStr) return '?'
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+}
+
+async function deleteFromCatalogo(ex) {
+  if (!confirm(`Eliminare "${ex.titolo}" dal catalogo?`)) return
+  try {
+    await deleteEsercizioFromCatalogo(ex.id)
+    await loadCatalogo()
+  } catch (e) {
+    console.error('Errore eliminazione:', e)
+    alert('Errore durante l\'eliminazione')
+  }
+}
+
+function selezionaDaCatalogo(ex) {
+  if (titoloGiaPresente(ex.titolo)) {
+    return
+  }
+  
+  const newId = Date.now()
+  esercizi.value.push({
+    id: newId,
+    ordine: esercizi.value.length + 1,
+    titolo: ex.titolo,
+    descrizione: ex.descrizione || '',
+    focus: ex.focus || '',
+    campo_con_righe: ex.campo_con_righe !== false,
+    elementi: (ex.elementi || []).map(el => ({
+      ...el,
+      id: Date.now() + Math.random()
+    })),
+    fromCatalogo: true,
+    catalogoTitolo: ex.titolo
+  })
+  selectedExercise.value = esercizi.value[esercizi.value.length - 1]
+  closeCatalogo()
+  nextTick(() => {
+    drawBoard(selectedExercise.value)
   })
 }
 
@@ -648,17 +818,19 @@ function exportPdf() {
     let y = 20
     
     doc.setFontSize(18)
+    doc.setTextColor(220, 38, 38)
     doc.text('Allenamento del ' + formatDate(selectedDay.value?.data || ''), pageWidth / 2, y, { align: 'center' })
-    y += 15
+    y += 12
     
     if (eserciziSalvati.length === 0) {
       doc.setFontSize(12)
+      doc.setTextColor(0, 0, 0)
       doc.text('Nessun esercizio salvato', 15, y)
     } else {
       for (let idx = 0; idx < eserciziSalvati.length; idx++) {
         const ex = eserciziSalvati[idx]
         
-        if (y > pageHeight - 80) {
+        if (y > pageHeight - 120) {
           doc.addPage()
           y = 20
         }
@@ -668,10 +840,41 @@ function exportPdf() {
         doc.text('Esercizio ' + (idx + 1) + ': ' + (ex.titolo || 'Senza titolo'), 15, y)
         y += 8
         
+        if (ex.focus) {
+          const focusLabels = {
+            'tecnica': 'Tecnica',
+            'tattica': 'Tattica',
+            'fisico': 'Fisico',
+            'capacita-coordinativa': 'Cap. Coordinativa',
+            'palleggio': 'Palleggio',
+            'passaggio': 'Passaggio',
+            'conclusione': 'Conclusione',
+            'difesa': 'Difesa',
+            'attacco': 'Attacco',
+            'possessione': 'Possesso',
+            'set-piece': 'Set Piece'
+          }
+          const focusLabel = focusLabels[ex.focus] || ex.focus
+          doc.setFontSize(10)
+          doc.setTextColor(100, 100, 100)
+          doc.text('Focus: ' + focusLabel, 15, y)
+          y += 6
+        }
+        
+        if (ex.descrizione) {
+          doc.setFontSize(10)
+          doc.setTextColor(50, 50, 50)
+          const descLines = doc.splitTextToSize(ex.descrizione, pageWidth - 30)
+          doc.text(descLines, 15, y)
+          y += descLines.length * 5 + 5
+        }
+        
+        y += 5
+        
         const canvasWidth = 400
         const canvasHeight = 260
         
-        const fieldWidth = (pageWidth - 30) * 0.75
+        const fieldWidth = pageWidth - 30
         const fieldX = 15
         const fieldHeight = fieldWidth * (canvasHeight / canvasWidth)
         
@@ -1059,17 +1262,7 @@ function exportPdf() {
           console.error('Errore disegno campo PDF:', e)
         }
         
-        const descX = fieldX + fieldWidth + 10
-        const descWidth = pageWidth - descX - 15
-        
-        doc.setFontSize(11)
-        doc.setTextColor(0, 0, 0)
-        if (ex.descrizione) {
-          const descLines = doc.splitTextToSize(ex.descrizione, descWidth)
-          doc.text(descLines, descX, y + 5)
-        }
-        
-        y += Math.max(fieldHeight, 30) + 10
+        y += fieldHeight + 15
       }
     }
     
@@ -1083,6 +1276,18 @@ function exportPdf() {
 function saveEsercizio(ex) {
   if (!selectedDay.value) return
   
+  if (ex && ex.fromCatalogo && ex.titolo === ex.catalogoTitolo) {
+    saveDialogExercising.value = ex
+    saveDialogTitolo.value = ex.titolo
+    saveDialogTitoloEsistente.value = false
+    showSaveDialog.value = true
+    return
+  }
+  
+  saveDataToServer()
+}
+
+function saveDataToServer() {
   const data = {
     nome_mese: `${currentYear.value}-${String(currentMonth.value).padStart(2, '0')}`,
     settimane: [{
@@ -1114,6 +1319,110 @@ function saveEsercizio(ex) {
   }).catch(err => {
     console.error('Errore nel salvataggio:', err)
   })
+}
+
+function openSaveToCatalogoDialog() {
+  if (esercizi.value.length === 0) {
+    alert('Non ci sono esercizi da salvare nel catalogo')
+    return
+  }
+  esercizi.value.forEach(ex => {
+    if (selectedForCatalogo.value[ex.id] === undefined) {
+      selectedForCatalogo.value[ex.id] = true
+    }
+  })
+  showCatalogoSelectDialog.value = true
+}
+
+function closeCatalogoSelectDialog() {
+  showCatalogoSelectDialog.value = false
+  selectedForCatalogo.value = {}
+}
+
+function confirmSaveSelectedToCatalogo() {
+  const selectedExercises = esercizi.value.filter(ex => selectedForCatalogo.value[ex.id])
+  if (selectedExercises.length === 0) {
+    alert('Seleziona almeno un esercizio')
+    return
+  }
+  
+  closeCatalogoSelectDialog()
+  
+  let savedCount = 0
+  let skippedCount = 0
+  const promises = selectedExercises.map(ex => {
+    if (!ex.titolo || !ex.titolo.trim()) {
+      skippedCount++
+      return Promise.resolve()
+    }
+    return saveEsercizioToCatalogo({
+      titolo: ex.titolo,
+      focus: ex.focus || '',
+      descrizione: ex.descrizione || '',
+      campo_con_righe: ex.campo_con_righe,
+      elementi: ex.elementi || []
+    }).then(() => {
+      savedCount++
+    }).catch(e => {
+      console.error('Errore salvataggio:', e)
+    })
+  })
+  
+  Promise.all(promises).then(() => {
+    if (savedCount > 0) {
+      alert(`Salvati ${savedCount} esercizi nel catalogo!`)
+    } else {
+      alert('Nessun esercizio con titolo è stato salvato')
+    }
+  })
+}
+
+function closeSaveDialog() {
+  showSaveDialog.value = false
+  saveDialogExercising.value = null
+  saveDialogTitolo.value = ''
+}
+
+function confirmSaveEsercizio(tipo) {
+  if (!saveDialogExercising.value) return
+  
+  if (tipo === 'catalogo' && !saveDialogTitolo.value.trim()) {
+    alert('Inserisci un titolo per salvare nel catalogo')
+    return
+  }
+  
+  const ex = saveDialogExercising.value
+  
+  if (tipo === 'catalogo') {
+    saveEsercizioToCatalogo({
+      titolo: saveDialogTitolo.value.trim() || ex.titolo,
+      focus: ex.focus || '',
+      descrizione: ex.descrizione || '',
+      campo_con_righe: ex.campo_con_righe,
+      elementi: ex.elementi || []
+    }).then(() => {
+      ex.fromCatalogo = false
+      ex.titolo = saveDialogTitolo.value.trim() || ex.titolo
+      closeSaveDialog()
+      saveDataToServer()
+    }).catch(e => {
+      console.error('Errore salvataggio catalogo:', e)
+      alert('Errore durante il salvataggio nel catalogo')
+    })
+  } else {
+    ex.fromCatalogo = false
+    ex.titolo = saveDialogTitolo.value.trim() || ex.titolo
+    closeSaveDialog()
+    saveDataToServer()
+  }
+}
+
+function onSaveDialogTitoloChange() {
+  if (!saveDialogTitolo.value.trim()) {
+    saveDialogTitoloEsistente.value = false
+    return
+  }
+  saveDialogTitoloEsistente.value = titoloGiaPresente(saveDialogTitolo.value) && saveDialogTitolo.value !== saveDialogExercising.value?.catalogoTitolo
 }
 
 function toggleFieldLines(ex) { ex.campo_con_righe = !ex.campo_con_righe; drawBoard(ex); saveEsercizio(ex) }
@@ -2412,7 +2721,8 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.allenamenti-page { display: flex; flex-direction: column; height: 100vh; background: #0a0a0a; }
+.allenamenti-page { display: flex; flex-direction: column; height: 100vh; background: #0a0a0a; min-width: 100%; }
+.allenamenti-body { flex: 1; overflow-y: auto; padding: 1rem; width: 100%; box-sizing: border-box; }
 .page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--color-primary); }
 .header-left { display: flex; gap: 0.25rem; }
 .btn-back, .btn-home { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer; }
@@ -2435,50 +2745,53 @@ onMounted(async () => {
 .day-chip.has-training:hover { transform: scale(1.1); }
 .day-chip.today { border: 2px solid #fff; }
 .day-chip.other-month { opacity: 0.6; }
-.day-detail { background: #141414; border-radius: 12px; padding: 1.5rem; }
+.day-detail { background: #141414; border-radius: 12px; padding: 1rem; width: 100%; box-sizing: border-box; }
 .day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 .day-header h3 { color: #fff; margin: 0; }
 .btn-add-exercise { padding: 0.5rem 1rem; background: var(--color-primary); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; }
 .btn-save-exercise { padding: 0.5rem 1rem; background: #22c55e; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; margin-left: 0.5rem; }
 .btn-save-exercise:hover { background: #16a34a; }
+.btn-save-catalogo-explicit { padding: 0.5rem 1rem; background: #8b5cf6; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; margin-left: 0.5rem; }
+.btn-save-catalogo-explicit:hover { background: #7c3aed; }
 .esercizi-list { display: flex; flex-direction: column; gap: 2rem; }
-.esercizio-card { background: #1a1a1a; border-radius: 12px; padding: 1.25rem; }
-.esercizio-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
-.esercizio-num { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--color-primary); border-radius: 50%; color: white; font-weight: bold; font-size: 1rem; }
-.esercizio-titolo { flex: 1; background: #252525; border: 1px solid #333; border-radius: 8px; padding: 0.6rem 0.8rem; color: #fff; font-size: 1rem; }
-.btn-toggle-lines { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: #252525; border: 1px solid #333; border-radius: 8px; color: white; cursor: pointer; font-size: 1.1rem; }
+.esercizio-card { background: #1a1a1a; border-radius: 12px; padding: 1rem; width: 100%; box-sizing: border-box; }
+.esercizio-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; flex-shrink: 0; }
+.esercizio-num { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--color-primary); border-radius: 50%; color: white; font-weight: bold; font-size: 1rem; flex-shrink: 0; }
+.esercizio-titolo { flex: 1; min-width: 200px; background: #252525; border: 1px solid #333; border-radius: 8px; padding: 0.6rem 0.8rem; color: #fff; font-size: 1rem; }
+.btn-toggle-lines { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: #252525; border: 1px solid #333; border-radius: 8px; color: white; cursor: pointer; font-size: 1.1rem; flex-shrink: 0; }
 .btn-toggle-lines.active { background: var(--color-primary); border-color: var(--color-primary); }
-.btn-delete { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #dc2626; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 1.25rem; }
+.btn-delete { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #dc2626; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 1.25rem; flex-shrink: 0; }
 
-.board-area { display: flex; gap: 1rem; }
-.board-main { flex: 1; display: flex; flex-direction: column; gap: 1rem; }
+.board-area { display: flex; gap: 1rem; width: 100%; box-sizing: border-box; }
+.board-main { flex: 1; display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
 .board-sidebar { width: 280px; display: flex; flex-direction: column; gap: 1rem; flex-shrink: 0; }
-.tools-panel { background: #0f0f0f; border-radius: 12px; padding: 1rem; display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-start; }
-.tools-section { display: flex; flex-direction: column; gap: 0.5rem; }
-.tools-label { font-size: 0.7rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
-.tools-grid { display: flex; gap: 0.35rem; flex-wrap: wrap; }
-.tool-btn { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; color: white; cursor: pointer; transition: all 0.15s; }
+.tools-panel { background: #0f0f0f; border-radius: 12px; padding: 0.75rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; width: 100%; box-sizing: border-box; }
+.esercizi-list { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; }
+.tools-section { display: flex; flex-direction: column; gap: 0.35rem; }
+.tools-label { font-size: 0.65rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
+.tools-grid { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+.tool-btn { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; color: white; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
 .tool-btn:hover { background: #252525; border-color: #444; }
 .tool-btn.active { background: var(--color-primary); border-color: var(--color-primary); }
-.tool-icon { width: 20px; height: 20px; }
+.tool-icon { width: 18px; height: 18px; }
 .tool-btn.active { background: var(--color-primary); border-color: var(--color-primary); }
-.tool-shape { width: 18px; height: 18px; display: inline-block; border-radius: 50%; }
+.tool-shape { width: 16px; height: 16px; display: inline-block; border-radius: 50%; }
 .tool-shape.player-red { background: #ef4444; }
 .tool-shape.player-blue { background: #3b82f6; }
 .tool-shape.player-yellow { background: #eab308; }
 .tool-shape.player-green { background: #22c55e; }
 .tool-shape.player-white { background: #fff; border: 1px solid #333; }
 .tool-shape.player-black { background: #000; border: 1px solid #333; }
-.tool-shape.goal-large { width: 30px; height: 18px; background: #8B4513; border-radius: 2px; }
-.tool-shape.goal-small { width: 18px; height: 12px; background: #666; border-radius: 2px; }
-.tool-shape.cone { width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 16px solid #ff6600; background: transparent; }
-.tool-shape.disc { width: 14px; height: 14px; background: #ff6600; border-radius: 50%; }
-.tool-shape.barrier { width: 28px; height: 10px; background: #ff6600; border-radius: 2px; }
-.tool-shape.ladder { width: 24px; height: 10px; background: linear-gradient(90deg, #aaa 1px, transparent 1px); }
-.tool-shape.ball { font-size: 14px; }
-.tool-shape.zone { width: 16px; height: 16px; background: rgba(255,255,0,0.5); border-radius: 50%; border: 2px solid #eab308; }
-.tools-actions { display: flex; gap: 0.5rem; margin-left: auto; }
-.action-btn { padding: 0.5rem 0.75rem; background: #252525; border: 1px solid #333; border-radius: 8px; color: #fff; cursor: pointer; font-size: 0.85rem; }
+.tool-shape.goal-large { width: 28px; height: 16px; background: #8B4513; border-radius: 2px; }
+.tool-shape.goal-small { width: 16px; height: 10px; background: #666; border-radius: 2px; }
+.tool-shape.cone { width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 14px solid #ff6600; background: transparent; }
+.tool-shape.disc { width: 12px; height: 12px; background: #ff6600; border-radius: 50%; }
+.tool-shape.barrier { width: 24px; height: 8px; background: #ff6600; border-radius: 2px; }
+.tool-shape.ladder { width: 20px; height: 8px; background: linear-gradient(90deg, #aaa 1px, transparent 1px); }
+.tool-shape.ball { font-size: 12px; }
+.tool-shape.zone { width: 14px; height: 14px; background: rgba(255,255,0,0.5); border-radius: 50%; border: 2px solid #eab308; }
+.tools-actions { display: flex; gap: 0.5rem; margin-left: auto; flex-shrink: 0; }
+.action-btn { padding: 0.4rem 0.6rem; background: #252525; border: 1px solid #333; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.8rem; flex-shrink: 0; }
 .action-btn:hover { background: #333; }
 .btn-clear { background: #dc2626; border-color: #dc2626; }
 .btn-undo { }
@@ -2504,23 +2817,89 @@ onMounted(async () => {
 .btn-copy-element:disabled, .btn-paste-element:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-copy-element:hover:not(:disabled), .btn-paste-element:hover:not(:disabled) { opacity: 0.9; }
 
-.tactical-board-container { border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-.tactical-board-wrapper { position: relative; width: 100%; }
-.tactical-board-wrapper canvas { display: block; width: 100%; height: auto; cursor: grab; }
+.tactical-board-container { border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); width: 100%; max-width: none; }
+.tactical-board-wrapper { position: relative; width: 100%; max-width: none; }
+.tactical-board-wrapper canvas { display: block; width: 100%; max-width: none; height: auto; cursor: grab; }
 .tactical-board-wrapper canvas.tool-selected { cursor: crosshair; }
 .tactical-board-wrapper canvas.dragging { cursor: grabbing; }
 .tactical-board-container.no-lines .tactical-board-wrapper canvas { background: #2d5a27; }
 
-.esercizio-meta { padding: 0 1rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
-.esercizio-meta textarea { width: 100%; min-height: 100px; background: #252525; border: 1px solid #333; border-radius: 8px; padding: 0.75rem; color: #ddd; font-size: 0.9rem; resize: vertical; font-family: inherit; }
+.esercizio-meta { padding: 0 0 0.75rem 0; display: flex; flex-direction: row; align-items: flex-start; gap: 1rem; }
+.esercizio-meta textarea { flex: 1; min-height: 60px; background: #252525; border: 1px solid #333; border-radius: 6px; padding: 0.5rem 0.75rem; color: #ddd; font-size: 0.85rem; resize: vertical; font-family: inherit; }
 .esercizio-description { flex: 1; display: flex; flex-direction: column; }
 .esercizio-description textarea { width: 100%; flex: 1; min-height: 150px; background: #252525; border: 1px solid #333; border-radius: 8px; padding: 0.75rem; color: #ddd; font-size: 0.9rem; resize: vertical; }
 
-.focus-field { display: flex; align-items: center; gap: 0.75rem; }
-.focus-field label { font-size: 0.85rem; color: #888; font-weight: 500; white-space: nowrap; }
-.focus-field select { flex: 1; max-width: 250px; padding: 0.4rem 0.75rem; background: #252525; border: 1px solid #333; border-radius: 6px; color: #ddd; font-size: 0.85rem; cursor: pointer; }
+.focus-field { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+.focus-field label { font-size: 0.75rem; color: #888; font-weight: 500; white-space: nowrap; }
+.focus-field select { max-width: 160px; padding: 0.3rem 0.5rem; background: #252525; border: 1px solid #333; border-radius: 6px; color: #ddd; font-size: 0.8rem; cursor: pointer; }
 .focus-field select:focus { outline: none; border-color: var(--color-primary); }
 .focus-field select option { background: #1a1a1a; color: #ddd; }
 
 .no-esercizi { text-align: center; padding: 2rem; color: #666; }
+
+.catalogo-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.catalogo-modal { background: #1a1a1a; border-radius: 12px; width: 90%; max-width: 800px; max-height: 80vh; display: flex; flex-direction: column; }
+.catalogo-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #333; }
+.catalogo-header h2 { margin: 0; color: #fff; font-size: 1.25rem; }
+.catalogo-close { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: #dc2626; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 1.5rem; }
+.catalogo-close:hover { background: #b91c1c; }
+.catalogo-filters { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; border-bottom: 1px solid #333; }
+.catalogo-filters select { flex: 1; max-width: 300px; padding: 0.5rem 0.75rem; background: #252525; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 0.9rem; }
+.catalogo-filters select:focus { outline: none; border-color: var(--color-primary); }
+.catalogo-count { color: #888; font-size: 0.85rem; }
+.catalogo-list { flex: 1; overflow-y: auto; padding: 1rem 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.catalogo-item { background: #252525; border: 1px solid #333; border-radius: 8px; padding: 1rem; cursor: pointer; transition: all 0.2s; }
+.catalogo-item:hover { border-color: var(--color-primary); background: #2a2a2a; }
+.catalogo-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.catalogo-item-title { color: #fff; font-weight: 600; font-size: 1rem; }
+.catalogo-item-focus { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; background: #374151; color: #fff; }
+.catalogo-item-focus.focus-tecnica { background: #3b82f6; }
+.catalogo-item-focus.focus-tattica { background: #8b5cf6; }
+.catalogo-item-focus.focus-fisico { background: #ef4444; }
+.catalogo-item-focus.focus-capacita-coordinativa { background: #f59e0b; }
+.catalogo-item-focus.focus-palleggio { background: #10b981; }
+.catalogo-item-focus.focus-passaggio { background: #06b6d4; }
+.catalogo-item-focus.focus-conclusione { background: #f97316; }
+.catalogo-item-focus.focus-difesa { background: #6366f1; }
+.catalogo-item-focus.focus-attacco { background: #ec4899; }
+.catalogo-item-focus.focus-possessione { background: #84cc16; }
+.catalogo-item-focus.focus-set-piece { background: #a855f7; }
+.catalogo-item-desc { color: #888; font-size: 0.85rem; margin-bottom: 0.5rem; }
+.catalogo-item-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; gap: 0.5rem; }
+.catalogo-item-count { color: #666; font-size: 0.75rem; flex: 1; }
+.catalogo-item-already { color: #22c55e; font-size: 0.75rem; font-weight: 500; }
+.catalogo-delete-btn { background: none; border: none; cursor: pointer; padding: 4px 8px; font-size: 0.9rem; opacity: 0.6; transition: opacity 0.2s; }
+.catalogo-delete-btn:hover { opacity: 1; }
+.catalogo-empty { text-align: center; padding: 2rem; color: #666; }
+.catalogo-item.already-added { opacity: 0.6; cursor: not-allowed; }
+.catalogo-item.already-added:hover { border-color: #333; background: #252525; }
+
+.btn-catalogo { padding: 0.5rem 1rem; background: #8b5cf6; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; margin-left: 0.5rem; }
+.btn-catalogo:hover { background: #7c3aed; }
+
+.save-dialog { background: #1a1a1a; border-radius: 12px; width: 90%; max-width: 450px; }
+.save-dialog-header { padding: 1rem 1.5rem; border-bottom: 1px solid #333; }
+.save-dialog-header h3 { margin: 0; color: #fff; font-size: 1.1rem; }
+.save-dialog-body { padding: 1.5rem; }
+.save-dialog-body p { color: #ccc; margin-bottom: 1rem; line-height: 1.5; }
+.save-dialog-titolo { display: flex; flex-direction: column; gap: 0.5rem; }
+.save-dialog-titolo label { color: #888; font-size: 0.85rem; }
+.save-dialog-input { width: 100%; padding: 0.75rem; background: #252525; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 0.95rem; box-sizing: border-box; }
+.save-dialog-input:focus { outline: none; border-color: var(--color-primary); }
+.save-dialog-warning { margin-top: 0.75rem; padding: 0.5rem; background: rgba(234, 179, 8, 0.2); border: 1px solid #eab308; border-radius: 6px; color: #eab308; font-size: 0.85rem; }
+.save-dialog-actions { padding: 1rem 1.5rem; border-top: 1px solid #333; display: flex; gap: 0.75rem; justify-content: flex-end; }
+.btn-save-private { padding: 0.5rem 1rem; background: #374151; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 500; }
+.btn-save-private:hover { background: #4b5563; }
+.btn-save-catalogo { padding: 0.5rem 1rem; background: var(--color-primary); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 500; }
+.btn-save-catalogo:hover { background: #059669; }
+.btn-save-catalogo:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-cancel { padding: 0.5rem 1rem; background: transparent; border: 1px solid #444; border-radius: 8px; color: #888; cursor: pointer; }
+.btn-cancel:hover { background: #252525; }
+.esercizi-selezione { max-height: 300px; overflow-y: auto; margin-top: 1rem; }
+.esercizio-checkbox { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem; border-radius: 6px; cursor: pointer; }
+.esercizio-checkbox:hover { background: #252525; }
+.esercizio-checkbox input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+.checkbox-titolo { color: #ccc; font-size: 0.95rem; }
+.no-esercizi-selezione { color: #666; text-align: center; padding: 1rem; }
+.checkbox-titolo.no-titolo { color: #666; font-style: italic; }
 </style>
