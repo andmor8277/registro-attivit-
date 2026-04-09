@@ -3056,10 +3056,10 @@ onMounted(async () => {
 .btn-toggle-lines.active { background: var(--color-primary); border-color: var(--color-primary); }
 .btn-delete { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #dc2626; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 1.25rem; flex-shrink: 0; }
 
-.board-area { display: flex; gap: 1rem; width: 100%; box-sizing: border-box; }
-.board-main { flex: 1; display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.board-area { display: flex; gap: 1rem; width: 100%; box-sizing: border-box; min-width: 0; }
+.board-main { flex: 1 1 0; display: flex; flex-direction: column; gap: 1rem; min-width: 0; overflow: hidden; }
 .board-sidebar { width: 280px; display: flex; flex-direction: column; gap: 1rem; flex-shrink: 0; }
-.tools-panel { background: #0f0f0f; border-radius: 12px; padding: 0.75rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; width: 100%; box-sizing: border-box; }
+.tools-panel { background: #0f0f0f; border-radius: 12px; padding: 0.75rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; width: 100%; box-sizing: border-box; flex-shrink: 0; }
 .esercizi-list { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; }
 .tools-section { display: flex; flex-direction: column; gap: 0.35rem; }
 .tools-label { font-size: 0.65rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -3111,9 +3111,9 @@ onMounted(async () => {
 .btn-copy-element:disabled, .btn-paste-element:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-copy-element:hover:not(:disabled), .btn-paste-element:hover:not(:disabled) { opacity: 0.9; }
 
-.tactical-board-container { border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); width: 100%; max-width: none; }
-.tactical-board-wrapper { position: relative; width: 100%; max-width: none; }
-.tactical-board-wrapper canvas { display: block; width: 100%; max-width: none; height: auto; cursor: grab; }
+.tactical-board-container { border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); width: 100%; max-width: none; aspect-ratio: 800 / 500; }
+.tactical-board-wrapper { position: relative; width: 100%; max-width: none; height: 100%; }
+.tactical-board-wrapper canvas { display: block; width: 100%; height: 100%; max-width: none; cursor: grab; object-fit: contain; }
 .tactical-board-wrapper canvas.tool-selected { cursor: crosshair; }
 .tactical-board-wrapper canvas.dragging { cursor: grabbing; }
 .tactical-board-container.no-lines .tactical-board-wrapper canvas { background: #2d5a27; }
@@ -3243,5 +3243,19 @@ onMounted(async () => {
   0%, 100% { transform: rotate(0deg); }
   25% { transform: rotate(-20deg); }
   75% { transform: rotate(20deg); }
+}
+
+@media (max-width: 900px) {
+  .board-area { flex-direction: column; }
+  .board-sidebar { width: 100%; }
+  .board-main { width: 100%; }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+  .board-area { flex-direction: row; }
+  .board-sidebar { width: 200px; }
+  .tools-panel { padding: 0.5rem; gap: 0.5rem; }
+  .tool-btn { width: 28px; height: 28px; }
+  .tools-label { font-size: 0.55rem; }
 }
 </style>
