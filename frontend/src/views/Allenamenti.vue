@@ -3099,13 +3099,13 @@ onUnmounted(() => {
 .day-chip.has-training:hover { transform: scale(1.1); background: #059669; }
 .day-chip.today { border: 2px solid #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.3); }
 .day-chip.other-month { opacity: 0.4; }
-.day-detail { background: #141414; border-radius: 12px; padding: 1rem; width: 100%; box-sizing: border-box; }
-.day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-.day-header h3 { color: #fff; margin: 0; }
-.btn-add-exercise { padding: 0.5rem 1rem; background: var(--color-primary); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; }
-.btn-save-exercise { padding: 0.5rem 1rem; background: #22c55e; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; margin-left: 0.5rem; }
+.day-detail { background: #141414; border-radius: 12px; padding: 1rem; width: 100%; box-sizing: border-box; margin-top: 1rem; }
+.day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+.day-header h3 { color: #fff; margin: 0; font-size: 1rem; }
+.btn-add-exercise { padding: 0.5rem 1rem; background: var(--color-primary); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; white-space: nowrap; }
+.btn-save-exercise { padding: 0.5rem 1rem; background: #22c55e; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; white-space: nowrap; }
 .btn-save-exercise:hover { background: #16a34a; }
-.btn-save-catalogo-explicit { padding: 0.5rem 1rem; background: #8b5cf6; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; margin-left: 0.5rem; }
+.btn-save-catalogo-explicit { padding: 0.5rem 1rem; background: #8b5cf6; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; white-space: nowrap; }
 .btn-save-catalogo-explicit:hover { background: #7c3aed; }
 .esercizi-list { display: flex; flex-direction: column; gap: 2rem; }
 .esercizio-card { background: #1a1a1a; border-radius: 12px; padding: 1rem; width: 100%; box-sizing: border-box; }
@@ -3325,9 +3325,13 @@ onUnmounted(() => {
   .page-header { padding: 0.5rem 0.75rem; flex-shrink: 0; }
   .titolo-toolbar { font-size: 0.85rem; }
   .tactical-board-container { min-height: 300px; }
-  .weeks-grid { max-height: 30vh; }
-  .month-nav { margin-bottom: 0.75rem; }
-  .weeks-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .weeks-grid { max-height: none; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+  .month-nav { margin-bottom: 0.5rem; }
+  .week-card { padding: 0.75rem; }
+  .day-chip { width: 32px; height: 32px; font-size: 0.8rem; }
+  .day-header { flex-wrap: wrap; gap: 0.5rem; }
+  .day-header h3 { width: 100%; font-size: 0.9rem; }
+  .day-header button { font-size: 0.75rem; padding: 0.4rem 0.6rem; }
   .element-controls-top .element-controls-body { padding: 0.5rem; }
   .element-controls-top .controls-row { gap: 0.75rem; }
   .element-controls-top .control-group input[type="range"] { width: 80px; }
@@ -3352,6 +3356,13 @@ onUnmounted(() => {
   .btn-back, .btn-home { width: 24px; height: 24px; }
   .btn-back svg, .btn-home svg { width: 14px; height: 14px; }
   .titolo-toolbar { font-size: 0.65rem; }
+  .weeks-grid { max-height: none; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
+  .week-card { padding: 0.5rem; }
+  .week-header { font-size: 0.8rem; }
+  .week-dates { font-size: 0.7rem; margin-bottom: 0.5rem; }
+  .day-chip { width: 28px; height: 28px; font-size: 0.75rem; gap: 0.2rem; }
+  .month-nav { margin-bottom: 0.3rem; }
+  .current-month { font-size: 0.9rem; min-width: 120px; }
   .allenamenti-body { padding: 0.15rem; display: flex; flex-direction: column; }
   .tactical-board-container { flex: 1; min-height: 0; display: flex; }
   .tactical-board-wrapper { height: 100%; flex: 1; display: flex; }
