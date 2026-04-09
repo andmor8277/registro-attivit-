@@ -531,7 +531,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../store.js'
 import { getAllCategorie, getAllenamentiGiornoByData, saveAllenamenti, getCatalogoEsercizi, getCatalogoEserciziNew, saveEsercizioToCatalogo, deleteEsercizioFromCatalogo, getFocusList } from '../api/index.js'
@@ -540,7 +540,7 @@ import html2canvas from 'html2canvas'
 
 const router = useRouter()
 const route = useRoute()
-const { categoriaAttiva, setCategoria } = useStore()
+const { categoriaAttiva, setCategoria, hideTopbar } = useStore()
 const categoriaId = parseInt(route.params.id)
 
 const trainingDays = computed(() => {
@@ -2993,6 +2993,7 @@ function drawTacticalArrow(ctx, el) {
 }
 
 onMounted(async () => {
+  hideTopbar.value = true
   currentMonth.value = currentDate.getMonth() + 1
   currentYear.value = currentDate.getFullYear()
   
@@ -3011,6 +3012,10 @@ onMounted(async () => {
   }
   checkRotate()
   window.addEventListener('resize', checkRotate)
+})
+
+onUnmounted(() => {
+  hideTopbar.value = false
 })
 </script>
 
@@ -3249,13 +3254,33 @@ onMounted(async () => {
   .board-area { flex-direction: column; }
   .board-sidebar { width: 100%; }
   .board-main { width: 100%; }
+  .allenamenti-body { padding: 0.5rem; }
+  .page-header { padding: 0.5rem 0.75rem; }
+  .titolo-toolbar { font-size: 0.85rem; }
 }
 
 @media (max-width: 768px) and (orientation: landscape) {
-  .board-area { flex-direction: row; }
-  .board-sidebar { width: 200px; }
-  .tools-panel { padding: 0.5rem; gap: 0.5rem; }
-  .tool-btn { width: 28px; height: 28px; }
-  .tools-label { font-size: 0.55rem; }
+  .board-area { flex-direction: row; height: calc(100vh - 50px); }
+  .board-sidebar { width: 180px; flex-shrink: 0; }
+  .board-main { width: calc(100% - 190px); }
+  .tools-panel { padding: 0.4rem; gap: 0.4rem; }
+  .tool-btn { width: 26px; height: 26px; }
+  .tools-label { font-size: 0.5rem; }
+  .tool-icon { width: 14px; height: 14px; }
+  .tools-section { gap: 0.2rem; }
+  .page-header { padding: 0.3rem 0.5rem; }
+  .btn-back, .btn-home { width: 28px; height: 28px; }
+  .titolo-toolbar { font-size: 0.75rem; }
+  .allenamenti-body { padding: 0.3rem; overflow-y: hidden; }
+  .tactical-board-container { flex: 1; min-height: 0; }
+  .tools-panel { flex: 0 0 auto; max-height: calc(100vh - 60px); overflow-y: auto; }
+}
+
+@media (max-width: 480px) and (orientation: landscape) {
+  .board-sidebar { width: 140px; }
+  .board-main { width: calc(100% - 150px); }
+  .tool-btn { width: 22px; height: 22px; }
+  .tools-label { font-size: 0.45rem; }
+  .tool-icon { width: 12px; height: 12px; }
 }
 </style>
