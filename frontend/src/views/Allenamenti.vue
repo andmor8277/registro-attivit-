@@ -396,6 +396,9 @@
                       @mousedown="handleMouseDown($event, ex)"
                       @mousemove="handleMouseMove($event, ex)"
                       @mouseup="handleMouseUp($event, ex)"
+                      @touchstart="handleTouchStart($event, ex)"
+                      @touchmove="handleTouchMove($event, ex)"
+                      @touchend="handleTouchEnd($event, ex)"
                     ></canvas>
                   </div>
                 </div>
@@ -1881,6 +1884,57 @@ function handleMouseUp(event, ex) {
   isDragging.value = false 
 }
 
+function handleTouchStart(event, ex) {
+  event.preventDefault()
+  if (!ex) ex = getCurrentExercise()
+  if (!ex) return
+  
+  const touch = event.touches[0]
+  const target = event.target
+  const rect = target.getBoundingClientRect()
+  
+  const clickedEl = (ex.elementi || []).find(el => {
+    const elX = el.x * rect.width / 100
+    const elY = el.y * rect.height / 100
+    const dist = Math.sqrt((touch.clientX - rect.left - elX) ** 2 + (touch.clientY - rect.top - elY) ** 2)
+    return dist < 35
+  })
+  
+  if (clickedEl) {
+    event.stopPropagation()
+    selectedElement.value = clickedEl
+    selectedElementExercise.value = ex
+    elementControlsOpen.value = true
+    isDragging.value = true
+    dragOffset.value = { x: touch.clientX - clickedEl.x * rect.width / 100, y: touch.clientY - clickedEl.y * rect.height / 100 }
+    drawBoard(ex)
+  } else {
+    handleBoardClick({ clientX: touch.clientX, clientY: touch.clientY, target, preventDefault: () => {} }, ex)
+  }
+}
+
+function handleTouchMove(event, ex) {
+  event.preventDefault()
+  if (!isDragging.value || !selectedElement.value) return
+  if (!ex) ex = getCurrentExercise()
+  if (!ex) return
+  
+  const touch = event.touches[0]
+  const rect = event.target.getBoundingClientRect()
+  selectedElement.value.x = (touch.clientX - dragOffset.value.x) / rect.width * 100
+  selectedElement.value.y = (touch.clientY - dragOffset.value.y) / rect.height * 100
+  drawBoard(ex)
+}
+
+function handleTouchEnd(event, ex) {
+  event.preventDefault()
+  if (isDragging.value && selectedElement.value) {
+    const foundEx = ex || esercizi.value.find(e => e.elementi.includes(selectedElement.value))
+    if (foundEx) saveEsercizio(foundEx)
+  }
+  isDragging.value = false
+}
+
 function getToolColor(tool) {
   const colors = { 
     'player-red': '#ef4444', 'player-blue': '#3b82f6', 'player-yellow': '#eab308', 'player-green': '#22c55e', 'player-white': '#ffffff', 'player-black': '#000000',
@@ -3061,10 +3115,10 @@ onUnmounted(() => {
 .btn-delete { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #dc2626; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 1.25rem; flex-shrink: 0; }
 
 .board-area { display: flex; gap: 1rem; width: 100%; box-sizing: border-box; min-width: 0; }
-.board-main { flex: 1 1 0; display: flex; flex-direction: column; gap: 1rem; min-width: 0; overflow: hidden; }
-.board-sidebar { width: 280px; display: flex; flex-direction: column; gap: 1rem; flex-shrink: 0; }
+.board-main { flex: 1 1 0; display: flex; flex-direction: column; gap: 1rem; min-width: 0; overflow: visible; }
+.board-sidebar { width: 280px; display: flex; flex-direction: column; gap: 1rem; flex-shrink: 0; overflow: visible; position: relative; z-index: 10; }
 .tools-panel { background: #0f0f0f; border-radius: 12px; padding: 0.75rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; width: 100%; box-sizing: border-box; flex-shrink: 0; }
-.esercizi-list { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; }
+.esercizi-list { display: flex; flex-direction: column; gap: 1.5rem; width: 100%; overflow: visible; }
 .tools-section { display: flex; flex-direction: column; gap: 0.35rem; }
 .tools-label { font-size: 0.65rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
 .tools-grid { display: flex; gap: 0.25rem; flex-wrap: wrap; }
@@ -3094,12 +3148,12 @@ onUnmounted(() => {
 .btn-clear { background: #dc2626; border-color: #dc2626; }
 .btn-undo { }
 
-.element-controls { background: #0f0f0f; border-radius: 8px; overflow: hidden; min-width: 200px; }
+.element-controls { background: #0f0f0f; border-radius: 8px; overflow: visible; min-width: 200px; max-height: 100%; }
 .element-controls-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem; cursor: pointer; background: #1a1a1a; }
 .element-controls-header:hover { background: #252525; }
 .element-controls-header .tools-label { font-size: 0.7rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.05em; margin: 0; }
 .toggle-icon { font-size: 0.7rem; color: #666; }
-.element-controls-body { padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.element-controls-body { padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; max-height: 300px; overflow-y: auto; }
 .control-row { display: flex; align-items: center; gap: 0.5rem; }
 .control-row label { font-size: 0.8rem; color: #888; min-width: 60px; }
 .color-picker { display: flex; gap: 0.25rem; }
@@ -3263,10 +3317,12 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) and (orientation: landscape) {
-  .board-area { flex-direction: row; min-height: 0; flex: 1; }
-  .board-sidebar { width: 120px; flex-shrink: 0; max-height: 100%; overflow-y: auto; }
-  .board-main { width: calc(100% - 130px); display: flex; flex-direction: column; }
-  .tools-panel { padding: 0.3rem; gap: 0.3rem; flex: 0 0 auto; max-height: 150px; overflow-y: auto; }
+  .board-area { flex-direction: column; min-height: 0; flex: 1; }
+  .board-sidebar { width: 100%; flex-shrink: 0; max-height: none; overflow: visible; flex-direction: row; flex-wrap: wrap; gap: 0.5rem; }
+  .board-main { width: 100%; display: flex; flex-direction: column; }
+  .tools-panel { padding: 0.3rem; gap: 0.3rem; flex: 1; max-height: none; overflow-y: visible; flex-wrap: nowrap; overflow-x: auto; }
+  .element-controls { flex: 1; min-width: 200px; max-height: none; }
+  .element-controls-body { max-height: none; }
   .tool-btn { width: 22px; height: 22px; }
   .tools-label { font-size: 0.45rem; }
   .tool-icon { width: 12px; height: 12px; }
@@ -3276,7 +3332,7 @@ onUnmounted(() => {
   .btn-back svg, .btn-home svg { width: 14px; height: 14px; }
   .titolo-toolbar { font-size: 0.7rem; }
   .allenamenti-body { padding: 0.2rem; display: flex; flex-direction: column; }
-  .tactical-board-container { flex: 1; min-height: 150px; }
+  .tactical-board-container { flex: 1; min-height: 200px; }
   .tactical-board-wrapper { height: 100%; }
   .weeks-grid { max-height: 20vh; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
   .month-nav { margin-bottom: 0.5rem; }
