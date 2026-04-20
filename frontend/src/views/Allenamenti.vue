@@ -1024,11 +1024,11 @@ for (const el of elementi) {
             const yPos = el.y * 500 / 100
             const size = Number(el.size) || 1
             const rot = (el.rotazione || 0) * Math.PI / 180
-            const finalSize = size
             
             ctx.save()
             ctx.translate(x, yPos)
             ctx.rotate(rot)
+            ctx.scale(size, size)
             
             switch (el.tipo) {
               case 'player-red': case 'player-blue': case 'player-yellow': case 'player-green': case 'player-white': case 'player-black':
@@ -1417,36 +1417,29 @@ for (const el of elementi) {
                 }
                 break
               case 'disk-orange': case 'disk-blue': case 'disk-yellow': case 'disk':
-                const diskW = 28 * finalSize
-                const diskH = 10 * finalSize
                 ctx.fillStyle = el.colore || '#ff6600'
                 ctx.beginPath()
-                ctx.ellipse(0, 0, diskW, diskH, 0, 0, Math.PI * 2)
+                ctx.arc(0, 0, 18, 0, Math.PI * 2)
                 ctx.fill()
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = Math.max(1, 2 * finalSize)
+                ctx.lineWidth = 2
                 ctx.stroke()
                 ctx.beginPath()
-                ctx.ellipse(0, 0, diskW * 0.43, diskH * 0.4, 0, 0, Math.PI * 2)
+                ctx.arc(0, 0, 8, 0, Math.PI * 2)
                 ctx.fillStyle = el.colore === '#3b82f6' ? '#1d4ed8' : el.colore === '#eab308' ? '#a16207' : '#cc5200'
                 ctx.fill()
                 break
               case 'cone': case 'cone-yellow': case 'cone-red': case 'cone-blue': case 'cone-green': case 'cone-white':
-                const coneBaseW = 20 * finalSize
-                const coneTopW = 2.5 * finalSize
-                const coneHeight = 34 * finalSize
-                const coneRimH = 3 * finalSize
-                const coneColor = el.colore || '#ff6600'
-                ctx.fillStyle = coneColor
+                ctx.fillStyle = el.colore || '#ff6600'
                 ctx.beginPath()
-                ctx.moveTo(-coneBaseW/2, 0)
-                ctx.quadraticCurveTo(-coneBaseW/2 - 2.5*finalSize, -coneHeight/3, -coneTopW, -coneHeight)
-                ctx.quadraticCurveTo(0, -coneHeight + 1.5*finalSize, coneTopW, -coneHeight)
-                ctx.quadraticCurveTo(coneBaseW/2 + 2.5*finalSize, -coneHeight/3, coneBaseW/2, 0)
+                ctx.moveTo(-10, 0)
+                ctx.quadraticCurveTo(-12.5, -11.3, -2.5, -34)
+                ctx.quadraticCurveTo(0, -32.5, 2.5, -34)
+                ctx.quadraticCurveTo(12.5, -11.3, 10, 0)
                 ctx.closePath()
                 ctx.fill()
                 ctx.beginPath()
-                ctx.ellipse(0, 0, coneBaseW/2 + 0.5*finalSize, coneRimH/2, 0, 0, Math.PI * 2)
+                ctx.ellipse(0, 0, 10.5, 1.5, 0, 0, Math.PI * 2)
                 ctx.fill()
                 break
               case 'pole-red': case 'pole-yellow': case 'pole-white': case 'pole':
