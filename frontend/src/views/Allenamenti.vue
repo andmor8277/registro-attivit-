@@ -1417,12 +1417,14 @@ for (const el of elementi) {
                 }
                 break
 case 'disk-orange': case 'disk-blue': case 'disk-yellow': case 'disk':
+                const diskRadius = 18 * size
+                const diskStroke = Math.max(1, 2 * size)
                 ctx.fillStyle = el.colore || '#ff6600'
                 ctx.beginPath()
-                ctx.arc(0, 0, 18, 0, Math.PI * 2)
+                ctx.arc(0, 0, diskRadius, 0, Math.PI * 2)
                 ctx.fill()
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 2
+                ctx.lineWidth = diskStroke
                 ctx.stroke()
                 break
               case 'cone': case 'cone-yellow': case 'cone-red': case 'cone-blue': case 'cone-green': case 'cone-white':
