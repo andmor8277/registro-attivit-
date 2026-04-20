@@ -718,7 +718,11 @@ function loadEsercizi(data) {
       loadedEsercizi = dayData.esercizi.map((e, idx) => ({
         ...e,
         id: e.id || ('loaded_' + idx + '_' + Date.now()),
-        fromCatalogo: false
+        fromCatalogo: false,
+        elementi: (e.elementi || []).map(el => ({
+          ...el,
+          size: el.size ?? 1
+        }))
       }))
     }
     
