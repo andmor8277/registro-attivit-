@@ -85,7 +85,7 @@
         </div>
         <div v-for="gruppo in gruppi" :key="gruppo" class="gruppo-block">
           <div class="gruppo-header">
-            <button v-if="gruppo !== 'Portieri' && gruppo !== 'Senza gruppo'" class="btn-delete" @click="openEditGruppo(gruppo)" title="Modifica gruppo">✎</button>
+            <button v-if="gruppo?.toLowerCase() !== 'portieri' && gruppo !== 'Senza gruppo'" class="btn-delete" @click="openEditGruppo(gruppo)" title="Modifica gruppo">✎</button>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
@@ -279,12 +279,16 @@ const giorniMese = computed(() => {
   return tutti.filter(g => giorniAllenamento.value.includes(g.dow))
 })
 
+const allGruppiNames = computed(() => {
+  const fromPersone = persone.value.map(p => p.gruppo_nome).filter(Boolean)
+  const fromDb = gruppiList.value.map(g => g.nome)
+  return [...new Set([...fromPersone, ...fromDb, "Senza gruppo"])]
+})
+
 const gruppi = computed(() => {
-  const allGruppi = [...new Set(persone.value.map(p => p.gruppo_nome || "Senza gruppo"))]
-  const dbGruppi = gruppiList.value.map(g => g.nome)
-  const all = [...new Set([...allGruppi, ...dbGruppi])]
-  const normali = all.filter(g => g !== "Portieri").sort()
-  const portieri = all.filter(g => g === "Portieri")
+  const all = allGruppiNames.value
+  const normali = all.filter(g => g?.toLowerCase() !== "portieri").sort()
+  const portieri = all.filter(g => g?.toLowerCase() === "portieri")
   return [...normali, ...portieri]
 })
 const personeAlfabetiche = computed(() => [...persone.value].sort((a, b) => a.cognome.localeCompare(b.cognome)))
