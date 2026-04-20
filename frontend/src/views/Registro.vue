@@ -85,7 +85,7 @@
         </div>
         <div v-for="gruppo in gruppi" :key="gruppo" class="gruppo-block">
           <div class="gruppo-header">
-            <button v-if="gruppo !== 'Portieri' && gruppo !== 'Senza gruppo'" class="btn-delete" @click="rimuoviGruppo(gruppo)" title="Elimina gruppo">×</button>
+            <button v-if="gruppo !== 'Portieri' && gruppo !== 'Senza gruppo'" class="btn-delete" @click="openEditGruppo(gruppo)" title="Modifica gruppo">✎</button>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
@@ -206,10 +206,11 @@
     <Teleport to="body">
       <div v-if="groupModal.show" class="modal-overlay" @click.self="groupModal.show = false">
         <div class="modal-content">
-          <h3>Nuovo Gruppo</h3>
+          <h3>{{ groupModal.editing ? 'Modifica Gruppo' : 'Nuovo Gruppo' }}</h3>
           <input v-model="groupModal.nome" placeholder="Nome gruppo" @keyup.enter="salvaGruppo" />
           <div class="modal-actions">
-            <button class="action-btn" @click="salvaGruppo">Crea</button>
+            <button v-if="groupModal.editing" class="action-btn" style="background: #ef4444;" @click="rimuoviGruppo(groupModal.nome)">Elimina</button>
+            <button class="action-btn" @click="salvaGruppo">{{ groupModal.editing ? 'Salva' : 'Crea' }}</button>
             <button class="btn-close-modal" @click="groupModal.show = false">Annulla</button>
           </div>
         </div>
@@ -256,7 +257,7 @@ const codici = ref([])
 const registro = ref([])
 const giorniAllenamento = ref([])
 const editModal = ref({ show: false, persona: null, giorno: null })
-const groupModal = ref({ show: false, nome: '' })
+const groupModal = ref({ show: false, nome: '', editing: null })
 
 const mesiNomi = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"]
 const giorniNomi = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"]
@@ -319,12 +320,20 @@ async function salvaGruppo() {
   await createGruppo({ nome: groupModal.value.nome.trim(), categoria_id: categoriaId.value })
   groupModal.value.show = false
   groupModal.value.nome = ''
+  groupModal.value.editing = null
   await loadPersone()
+}
+
+function openEditGruppo(nome) {
+  const g = gruppiList.value.find(x => x.nome === nome)
+  if (g) {
+    groupModal.value = { show: true, nome: g.nome, editing: g }
+  }
 }
 
 async function rimuoviGruppo(nome) {
   if (!confirm('Eliminare il gruppo "' + nome + '"?')) return
-  const g = gruppi.value.find(x => x.nome === nome)
+  const g = gruppiList.value.find(x => x.nome === nome)
   if (g?.id) {
     await deleteGruppo(g.id)
     await loadPersone()
