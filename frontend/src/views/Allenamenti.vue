@@ -1416,7 +1416,7 @@ for (const el of elementi) {
                   ctx.fillRect(-24 + s * 16, -12, 12, 24)
                 }
                 break
-              case 'disk-orange': case 'disk-blue': case 'disk-yellow': case 'disk':
+case 'disk-orange': case 'disk-blue': case 'disk-yellow': case 'disk':
                 ctx.fillStyle = el.colore || '#ff6600'
                 ctx.beginPath()
                 ctx.arc(0, 0, 18, 0, Math.PI * 2)
@@ -1424,10 +1424,6 @@ for (const el of elementi) {
                 ctx.strokeStyle = '#fff'
                 ctx.lineWidth = 2
                 ctx.stroke()
-                ctx.beginPath()
-                ctx.arc(0, 0, 8, 0, Math.PI * 2)
-                ctx.fillStyle = el.colore === '#3b82f6' ? '#1d4ed8' : el.colore === '#eab308' ? '#a16207' : '#cc5200'
-                ctx.fill()
                 break
               case 'cone': case 'cone-yellow': case 'cone-red': case 'cone-blue': case 'cone-green': case 'cone-white':
                 ctx.fillStyle = el.colore || '#ff6600'
@@ -2491,15 +2487,11 @@ function drawBoard(ex) {
       case 'disk-orange': case 'disk-blue': case 'disk-yellow':
         ctx.fillStyle = el.colore || '#ff6600'
         ctx.beginPath()
-        ctx.ellipse(0, 0, 18, 6, 0, 0, Math.PI * 2)
+        ctx.arc(0, 0, 18, 0, Math.PI * 2)
         ctx.fill()
         ctx.strokeStyle = '#000'
         ctx.lineWidth = 1
         ctx.stroke()
-        ctx.beginPath()
-        ctx.ellipse(0, 0, 8, 3, 0, 0, Math.PI * 2)
-        ctx.fillStyle = el.colore === '#3b82f6' ? '#1d4ed8' : el.colore === '#eab308' ? '#a16207' : '#cc5200'
-        ctx.fill()
         break
       case 'ring-red': case 'ring-blue': case 'ring-yellow':
         ctx.strokeStyle = el.colore || '#ef4444'
