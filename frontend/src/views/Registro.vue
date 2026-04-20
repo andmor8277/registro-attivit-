@@ -361,10 +361,8 @@ async function loadPersone() {
     const p = await getPersone(categoriaId.value)
     persone.value = p.data
   } catch(e) { console.error('Error loading persone:', e) }
-  try {
-    const g = await getGruppi(categoriaId.value)
-    gruppiList.value = g.data || []
-  } catch(e) { console.error('Error loading gruppi:', e) }
+  // Skip gruppi for now - using persone table directly
+  gruppiList.value = []
 }
 async function loadCategoria() {
   if (categoriaAttiva.value && categoriaAttiva.value.giorni) {
