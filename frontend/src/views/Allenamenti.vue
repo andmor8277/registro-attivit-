@@ -721,7 +721,11 @@ function loadEsercizi(data) {
         fromCatalogo: false,
         elementi: (e.elementi || []).map(el => ({
           ...el,
-          size: el.size ?? 1
+          size: el.size ?? 1,
+          rotazione: el.rotazione ?? 0,
+          colore: el.colore ?? null,
+          length: el.length ?? 60,
+          wavy: el.wavy ?? false
         }))
       }))
     }
@@ -1019,6 +1023,7 @@ function exportPdf() {
             const x = el.x * 800 / 100
             const yPos = el.y * 500 / 100
             const size = el.size != null ? Number(el.size) : 1
+            console.log('PDF render - tipo:', el.tipo, 'size:', size)
             const rot = (el.rotazione || 0) * Math.PI / 180
             
             ctx.save()
