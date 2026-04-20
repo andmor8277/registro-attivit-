@@ -1031,6 +1031,7 @@ function exportPdf() {
             ctx.rotate(rot)
             const finalSize = size
             ctx.scale(finalSize, finalSize)
+            console.log('Element loop - tipo:', el.tipo, 'finalSize:', finalSize, 'size:', size)
             
             switch (el.tipo) {
               case 'player-red': case 'player-blue': case 'player-yellow': case 'player-green': case 'player-white': case 'player-black':
@@ -1419,6 +1420,7 @@ function exportPdf() {
                 }
                 break
               case 'disk-orange': case 'disk-blue': case 'disk-yellow': case 'disk':
+                console.log('Drawing DISK with finalSize:', finalSize, 'el.size:', el.size)
                 ctx.fillStyle = el.colore || '#ff6600'
                 ctx.beginPath()
                 ctx.ellipse(0, 0, 28, 10, 0, 0, Math.PI * 2)
