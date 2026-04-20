@@ -29,7 +29,8 @@ class Categoria(Base):
 class Gruppo(Base):
     __tablename__ = "gruppi"
     id = Column(Integer, primary_key=True)
-    nome = Column(String(100), unique=True, nullable=False)
+    nome = Column(String(100), nullable=False)
+    categoria_id = Column(Integer, ForeignKey("categorie.id"))
 
 class Persona(Base):
     __tablename__ = "persone"

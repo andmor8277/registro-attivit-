@@ -125,7 +125,7 @@ app.include_router(categorie.router, dependencies=[Depends(get_current_user)])
 app.include_router(convocazioni.router, dependencies=[Depends(get_current_user)])
 app.include_router(allenatori.router, dependencies=[Depends(get_current_user)])
 app.include_router(allenamenti.router)
-app.include_router(gruppi_router, dependencies=[Depends(get_current_user)])
+app.include_router(gruppi_router)
 
 @app.get("/")
 def root():
