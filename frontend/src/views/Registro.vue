@@ -357,9 +357,14 @@ async function loadRegistro() {
 const gruppiList = ref([])
 async function loadPersone() {
   if (!categoriaId.value || isNaN(categoriaId.value)) return
-  const [p, g] = await Promise.all([getPersone(categoriaId.value), getGruppi(categoriaId.value)])
-  persone.value = p.data
-  gruppiList.value = g.data || []
+  try {
+    const p = await getPersone(categoriaId.value)
+    persone.value = p.data
+  } catch(e) { console.error('Error loading persone:', e) }
+  try {
+    const g = await getGruppi(categoriaId.value)
+    gruppiList.value = g.data || []
+  } catch(e) { console.error('Error loading gruppi:', e) }
 }
 async function loadCategoria() {
   if (categoriaAttiva.value && categoriaAttiva.value.giorni) {
