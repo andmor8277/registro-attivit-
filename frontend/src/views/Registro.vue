@@ -360,6 +360,7 @@ function totGiornoTutti(giorno) {
 function prevMese() { if (mese.value === 1) { mese.value = 12; anno.value-- } else mese.value-- }
 function nextMese() { if (mese.value === 12) { mese.value = 1; anno.value++ } else mese.value++ }
 async function loadRegistro() {
+  if (!categoriaId.value || isNaN(categoriaId.value)) return
   const res = await getRegistroMese(categoriaId.value, anno.value, mese.value)
   registro.value = res.data
 }
