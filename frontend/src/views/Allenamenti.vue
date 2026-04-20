@@ -1526,6 +1526,198 @@ function exportPdf() {
                 ctx.strokeStyle = '#000'
                 ctx.lineWidth = 2
                 ctx.stroke()
+                break;
+              case 'pole-single':
+                ctx.fillStyle = '#888'
+                ctx.beginPath()
+                ctx.roundRect(-2, -20, 4, 40, 1)
+                ctx.fill()
+                ctx.strokeStyle = '#444'
+                ctx.lineWidth = 1
+                ctx.stroke()
+                ctx.fillStyle = '#555'
+                ctx.beginPath()
+                ctx.roundRect(-5, 16, 10, 5, 1)
+                ctx.fill()
+                break
+              case 'pole-variant':
+                ctx.fillStyle = '#ef4444'
+                ctx.beginPath()
+                ctx.roundRect(-3, -25, 6, 50, 1)
+                ctx.fill()
+                ctx.strokeStyle = '#991b1b'
+                ctx.lineWidth = 1
+                ctx.stroke()
+                break
+              case 'arch-small':
+                ctx.strokeStyle = el.colore || '#eab308'
+                ctx.lineWidth = 3
+                ctx.beginPath()
+                ctx.moveTo(-12, 20)
+                ctx.lineTo(-12, 8)
+                ctx.quadraticCurveTo(-12, -8, 0, -8)
+                ctx.quadraticCurveTo(12, -8, 12, 8)
+                ctx.lineTo(12, 20)
+                ctx.stroke()
+                ctx.fillStyle = '#666'
+                ctx.fillRect(-12, 16, 4, 6)
+                ctx.fillRect(8, 16, 4, 6)
+                break
+              case 'rock-dark': case 'rock-dark-2':
+                ctx.fillStyle = el.colore || '#4a4a4a'
+                ctx.beginPath()
+                ctx.moveTo(-15, 15)
+                ctx.lineTo(-18, 0)
+                ctx.lineTo(-10, -15)
+                ctx.lineTo(5, -18)
+                ctx.lineTo(15, -5)
+                ctx.lineTo(18, 10)
+                ctx.closePath()
+                ctx.fill()
+                break
+              case 'mini-goal':
+                ctx.strokeStyle = '#fff'
+                ctx.lineWidth = 3
+                ctx.beginPath()
+                ctx.moveTo(-35, -20)
+                ctx.lineTo(-35, 25)
+                ctx.lineTo(35, 25)
+                ctx.lineTo(35, -20)
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.moveTo(-35, -20)
+                ctx.lineTo(35, -20)
+                ctx.lineTo(35, 25)
+                ctx.lineTo(-35, 25)
+                ctx.strokeStyle = '#888'
+                ctx.lineWidth = 1
+                ctx.stroke()
+                break
+              case 'coin-yellow': case 'coin-brown': case 'coin-gold':
+                ctx.fillStyle = el.colore || '#eab308'
+                ctx.beginPath()
+                ctx.arc(0, 0, 15, 0, Math.PI * 2)
+                ctx.fill()
+                ctx.strokeStyle = el.colore === '#78350f' ? '#5c2d0a' : '#b45309'
+                ctx.lineWidth = 2
+                ctx.stroke()
+                break
+              case 'fence-wood': case 'fence-large':
+                ctx.fillStyle = el.colore || '#a16207'
+                ctx.fillRect(-30, -8, 60, 16)
+                ctx.strokeStyle = '#713f12'
+                ctx.lineWidth = 2
+                for (let i = -25; i <= 25; i += 10) {
+                  ctx.beginPath()
+                  ctx.moveTo(i, -8)
+                  ctx.lineTo(i, 8)
+                  ctx.stroke()
+                }
+                break
+              case 'barrier-low':
+                ctx.fillStyle = '#78350f'
+                ctx.fillRect(-40, -10, 80, 20)
+                ctx.strokeStyle = '#451a03'
+                ctx.lineWidth = 2
+                ctx.strokeRect(-40, -10, 80, 20)
+                break
+              case 'hurdle-wood':
+                ctx.fillStyle = '#a16207'
+                ctx.fillRect(-30, -8, 60, 16)
+                ctx.strokeStyle = '#713f12'
+                ctx.lineWidth = 2
+                ctx.beginPath()
+                ctx.moveTo(-30, -8)
+                ctx.lineTo(30, -8)
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.moveTo(-30, 8)
+                ctx.lineTo(30, 8)
+                ctx.stroke()
+                ctx.fillStyle = '#78350f'
+                ctx.fillRect(-24, 8, 6, 12)
+                ctx.fillRect(18, 8, 6, 12)
+                break
+              case 'platform-gray': case 'bar-gray':
+                ctx.fillStyle = el.colore || '#6b7280'
+                ctx.fillRect(-30, -8, 60, 16)
+                ctx.strokeStyle = '#4b5563'
+                ctx.lineWidth = 2
+                ctx.strokeRect(-30, -8, 60, 16)
+                break
+              case 'dumbbell':
+                ctx.fillStyle = '#9ca3af'
+                ctx.beginPath()
+                ctx.roundRect(-25, -8, 8, 16, 2)
+                ctx.fill()
+                ctx.beginPath()
+                ctx.roundRect(17, -8, 8, 16, 2)
+                ctx.fill()
+                ctx.beginPath()
+                ctx.rect(-17, -4, 34, 8)
+                ctx.fill()
+                break
+              case 'trampoline':
+                ctx.strokeStyle = '#22c55e'
+                ctx.lineWidth = 3
+                ctx.beginPath()
+                ctx.ellipse(0, 0, 40, 12, 0, 0, Math.PI * 2)
+                ctx.stroke()
+                ctx.fillStyle = '#166534'
+                ctx.beginPath()
+                ctx.ellipse(0, 0, 35, 8, 0, 0, Math.PI * 2)
+                ctx.fill()
+                break
+              case 'mat-gray':
+                ctx.fillStyle = '#475569'
+                ctx.fillRect(-35, -20, 70, 40)
+                ctx.strokeStyle = '#334155'
+                ctx.lineWidth = 2
+                ctx.strokeRect(-35, -20, 70, 40)
+                break
+              case 'ball-tennis': case 'ball-volleyball': case 'ball-basket': case 'ball-futsal': case 'ball-hockey': case 'ball-football-us': case 'ball-rugby': case 'ball-golf':
+                const pdfBallColors = {
+                  'ball-tennis': '#ccff00', 'ball-volleyball': '#fef08a', 'ball-basket': '#f97316',
+                  'ball-futsal': '#ffffff', 'ball-hockey': '#1f2937', 'ball-football-us': '#78350f',
+                  'ball-rugby': '#ffffff', 'ball-golf': '#ffffff'
+                }
+                ctx.fillStyle = pdfBallColors[el.tipo] || '#111'
+                ctx.beginPath()
+                ctx.arc(0, 0, 15, 0, Math.PI * 2)
+                ctx.fill()
+                ctx.strokeStyle = '#000'
+                ctx.lineWidth = 1
+                ctx.stroke()
+                break
+              case 'ladder-gray': case 'ladder-yellow': case 'ladder-red':
+                ctx.strokeStyle = el.colore || '#888'
+                ctx.lineWidth = 4
+                ctx.beginPath()
+                ctx.roundRect(-80, -6, 160, 12, 4)
+                ctx.stroke()
+                ctx.strokeStyle = '#666'
+                ctx.lineWidth = 3
+                ctx.beginPath()
+                ctx.moveTo(-56, -14)
+                ctx.lineTo(-56, 14)
+                ctx.moveTo(0, -14)
+                ctx.lineTo(0, 14)
+                ctx.moveTo(56, -14)
+                ctx.lineTo(56, 14)
+                ctx.stroke()
+                break
+              case 'grid-square':
+                ctx.strokeStyle = '#6b7280'
+                ctx.lineWidth = 2
+                ctx.beginPath()
+                ctx.rect(-25, -25, 50, 50)
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.moveTo(-25, 0)
+                ctx.lineTo(25, 0)
+                ctx.moveTo(0, -25)
+                ctx.lineTo(0, 25)
+                ctx.stroke()
                 break
             }
             

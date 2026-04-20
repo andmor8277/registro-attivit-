@@ -8,8 +8,7 @@ from .routers import persone, registro, codici, categorie, convocazioni, allenat
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
 
-# Skip auto-create to avoid permission issues
-# Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 with engine.connect() as conn:
     # Migration: Create societa table
@@ -33,59 +32,66 @@ with engine.connect() as conn:
         conn.commit()
         print("Migration: Created societa table")
     
-    # Migration: Add societa_id to existing tables
+    # Migration: Add societa_id to existing tables (only if table exists)
     for table in ['utenti', 'categorie', 'persone', 'registro', 'convocazioni']:
-        result = conn.execute(text(f"""
-            SELECT column_name FROM information_schema.columns 
-            WHERE table_name = '{table}' AND column_name = 'societa_id'
-        """))
-        if result.fetchone() is None:
-            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN societa_id INTEGER REFERENCES societa(id)"))
-            conn.commit()
-            print(f"Migration: Added societa_id to {table}")
+        try:
+            result = conn.execute(text(f"""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = '{table}' AND column_name = 'societa_id'
+            """))
+            if result.fetchone() is None:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN societa_id INTEGER REFERENCES societa(id)"))
+                conn.commit()
+                print(f"Migration: Added societa_id to {table}")
+        except:
+            pass
     
     # Migration: Add is_super_admin to utenti
-    result = conn.execute(text("""
-        SELECT column_name FROM information_schema.columns 
-        WHERE table_name = 'utenti' AND column_name = 'is_super_admin'
-    """))
-    if result.fetchone() is None:
-        conn.execute(text("ALTER TABLE utenti ADD COLUMN is_super_admin INTEGER DEFAULT 0"))
-        conn.commit()
-        print("Migration: Added is_super_admin to utenti")
+    try:
+        result = conn.execute(text("""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name = 'utenti' AND column_name = 'is_super_admin'
+        """))
+        if result.fetchone() is None:
+            conn.execute(text("ALTER TABLE utenti ADD COLUMN is_super_admin INTEGER DEFAULT 0"))
+            conn.commit()
+            print("Migration: Added is_super_admin to utenti")
+    except:
+        pass
     
     # Migration: Ensure admin user is super_admin
-    result = conn.execute(text("""
-        SELECT id FROM utenti WHERE username = 'admin' LIMIT 1
-    """))
-    admin_user = result.fetchone()
-    if admin_user:
-        conn.execute(text("UPDATE utenti SET is_super_admin = 1, is_admin = 1 WHERE username = 'admin'"))
-        conn.commit()
-        print("Migration: Set admin user as super_admin")
+    try:
+        result = conn.execute(text("""
+            SELECT id FROM utenti WHERE username = 'admin' LIMIT 1
+        """))
+        admin_user = result.fetchone()
+        if admin_user:
+            conn.execute(text("UPDATE utenti SET is_super_admin = 1, is_admin = 1 WHERE username = 'admin'"))
+            conn.commit()
+            print("Migration: Set admin user as super_admin")
+    except:
+        pass
     
     # Ensure all other users have is_super_admin = 0
-    conn.execute(text("UPDATE utenti SET is_super_admin = 0 WHERE username != 'admin' AND is_super_admin IS NULL"))
-    conn.commit()
+    try:
+        conn.execute(text("UPDATE utenti SET is_super_admin = 0 WHERE username != 'admin' AND is_super_admin IS NULL"))
+        conn.commit()
+    except:
+        pass
     
     # Migration: Create default society if none exists
-    result = conn.execute(text("SELECT COUNT(*) FROM societa"))
-    if result.fetchone()[0] == 0:
-        conn.execute(text("""
-            INSERT INTO societa (nome, nome_breve, colore_primario, colore_secondario)
-            VALUES ('RedTigers 1957', 'RedTigers', '#dc2626', '#1f2937')
-        """))
-        conn.commit()
-        print("Migration: Created default society")
-        
-        # Assign all existing data to society id 1
-        conn.execute(text("UPDATE utenti SET societa_id = 1 WHERE societa_id IS NULL"))
-        conn.execute(text("UPDATE categorie SET societa_id = 1 WHERE societa_id IS NULL"))
-        conn.execute(text("UPDATE persone SET societa_id = 1 WHERE societa_id IS NULL"))
-        conn.execute(text("UPDATE registro SET societa_id = 1 WHERE societa_id IS NULL"))
-        conn.execute(text("UPDATE convocazioni SET societa_id = 1 WHERE societa_id IS NULL"))
-        conn.commit()
-        print("Migration: Assigned existing data to default society")
+    try:
+        result = conn.execute(text("SELECT COUNT(*) FROM societa"))
+        count = result.fetchone()
+        if count and count[0] == 0:
+            conn.execute(text("""
+                INSERT INTO societa (nome, nome_breve, colore_primario, colore_secondario)
+                VALUES ('RedTigers 1957', 'RedTigers', '#dc2626', '#1f2937')
+            """))
+            conn.commit()
+            print("Migration: Created default society")
+    except:
+        pass
     
     # Migration: Add spazio and tempo columns to catalogo_esercizi
     try:
