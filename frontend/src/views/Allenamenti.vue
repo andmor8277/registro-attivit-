@@ -1019,19 +1019,16 @@ function exportPdf() {
           
           const elementi = ex.elementi || []
           
-          for (const el of elementi) {
+for (const el of elementi) {
             const x = el.x * 800 / 100
             const yPos = el.y * 500 / 100
-            const size = el.size != null ? Number(el.size) : 1
-            console.log('PDF render - tipo:', el.tipo, 'size:', size)
+            const size = Number(el.size) || 1
             const rot = (el.rotazione || 0) * Math.PI / 180
             
             ctx.save()
             ctx.translate(x, yPos)
             ctx.rotate(rot)
-            const finalSize = size
             ctx.scale(finalSize, finalSize)
-            console.log('Element loop - tipo:', el.tipo, 'finalSize:', finalSize, 'size:', size)
             
             switch (el.tipo) {
               case 'player-red': case 'player-blue': case 'player-yellow': case 'player-green': case 'player-white': case 'player-black':
@@ -1420,16 +1417,17 @@ function exportPdf() {
                 }
                 break
               case 'disk-orange': case 'disk-blue': case 'disk-yellow': case 'disk':
-                console.log('Drawing DISK with finalSize:', finalSize, 'el.size:', el.size)
+                const diskW = 28 * finalSize
+                const diskH = 10 * finalSize
                 ctx.fillStyle = el.colore || '#ff6600'
                 ctx.beginPath()
-                ctx.ellipse(0, 0, 28, 10, 0, 0, Math.PI * 2)
+                ctx.ellipse(0, 0, diskW, diskH, 0, 0, Math.PI * 2)
                 ctx.fill()
                 ctx.strokeStyle = '#fff'
-                ctx.lineWidth = 2
+                ctx.lineWidth = Math.max(1, 2 * finalSize)
                 ctx.stroke()
                 ctx.beginPath()
-                ctx.ellipse(0, 0, 12, 4, 0, 0, Math.PI * 2)
+                ctx.ellipse(0, 0, diskW * 0.43, diskH * 0.4, 0, 0, Math.PI * 2)
                 ctx.fillStyle = el.colore === '#3b82f6' ? '#1d4ed8' : el.colore === '#eab308' ? '#a16207' : '#cc5200'
                 ctx.fill()
                 break
