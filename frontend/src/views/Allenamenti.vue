@@ -26,10 +26,10 @@
         <button class="nav-btn" @click="prevMonth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
         <div class="current-month">{{ currentMonthName }} {{ currentYear }}</div>
         <button class="nav-btn" @click="nextMonth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
-        <button v-if="selectedDay" class="nav-btn toggle-calendar" @click="clearSelectedDay" title="Torna al calendario">📅</button>
+        <button v-if="selectedDay" class="nav-btn toggle-calendar" @click="calendarVisible = !calendarVisible" :title="calendarVisible ? 'Nascondi calendario' : 'Mostra calendario'">{{ calendarVisible ? '📅' : '📆' }}</button>
       </div>
 
-      <div class="weeks-grid">
+      <div v-if="calendarVisible" class="weeks-grid">
         <div v-for="week in weeksInMonth" :key="week.num" class="week-card" :class="{ active: selectedWeek?.num === week.num }" @click="selectWeek(week)">
           <div class="week-header">Settimana {{ week.num }}</div>
           <div class="week-dates">{{ formatDateRange(week.start, week.end) }}</div>
@@ -39,7 +39,7 @@
         </div>
       </div>
 
-      <div class="weeks-grid">
+      <div v-if="calendarVisible" class="weeks-grid">
         <div v-for="week in weeksInMonth" :key="week.num" class="week-card" :class="{ active: selectedWeek?.num === week.num }" @click="selectWeek(week)">
           <div class="week-header">Settimana {{ week.num }}</div>
           <div class="week-dates">{{ formatDateRange(week.start, week.end) }}</div>
@@ -590,6 +590,7 @@ const currentUserId = ref(null)
 const isSuperAdmin = ref(false)
 const showCatalogoSelectDialog = ref(false)
 const selectedForCatalogo = ref({})
+const calendarVisible = ref(true)
 const eserciziSenzaTitolo = computed(() => {
   return esercizi.value
 })
@@ -2263,7 +2264,7 @@ function drawBoard(ex) {
   for (const el of ex.elementi) {
     const x = el.x * w / 100
     const y = el.y * h / 100
-    const size = el.size || 1
+    const size = el.size != null ? Number(el.size) : 1
     const rot = (el.rotazione || 0) * Math.PI / 180
     
     ctx.save()
