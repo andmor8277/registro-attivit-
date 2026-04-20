@@ -26,7 +26,6 @@
         <button class="nav-btn" @click="prevMonth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
         <div class="current-month">{{ currentMonthName }} {{ currentYear }}</div>
         <button class="nav-btn" @click="nextMonth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
-        <button v-if="selectedDay" class="nav-btn toggle-calendar" @click="clearSelectedDay" title="Torna al calendario">📅</button>
       </div>
 
       <div class="weeks-grid">
@@ -41,6 +40,7 @@
 
       <div v-if="selectedDay" class="day-detail">
         <div class="day-header">
+          <button class="nav-btn" @click="clearSelectedDay" title="Torna al calendario">←</button>
           <h3>Allenamento del {{ formatDate(selectedDay.data) }}</h3>
           <button class="btn-add-exercise" @click="addEsercizio">+ Esercizio</button>
           <button class="btn-catalogo" @click="openCatalogo">📚 Catalogo</button>
