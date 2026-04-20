@@ -34,16 +34,6 @@
           <div class="week-header">Settimana {{ week.num }}</div>
           <div class="week-dates">{{ formatDateRange(week.start, week.end) }}</div>
           <div class="week-days">
-            <span v-for="day in week.days" :key="day.date" class="day_chip" :class="{ 'has-training': day.isSelectable, 'today': day.isToday, 'other-month': day.month !== currentMonth }" @click.stop="selectDay(day)">{{ day.dayNum }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="weeks-grid">
-        <div v-for="week in weeksInMonth" :key="week.num" class="week-card" :class="{ active: selectedWeek?.num === week.num }" @click="selectWeek(week)">
-          <div class="week-header">Settimana {{ week.num }}</div>
-          <div class="week-dates">{{ formatDateRange(week.start, week.end) }}</div>
-          <div class="week-days">
             <span v-for="day in week.days" :key="day.date" class="day-chip" :class="{ 'has-training': day.isSelectable, 'today': day.isToday, 'other-month': day.month !== currentMonth }" @click.stop="selectDay(day)">{{ day.dayNum }}</span>
           </div>
         </div>
@@ -3297,7 +3287,7 @@ onUnmounted(() => {
 .nav-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; color: white; cursor: pointer; }
 .nav-btn svg { width: 20px; height: 20px; }
 .current-month { font-size: 1.25rem; font-weight: bold; color: white; min-width: 180px; text-align: center; }
-.weeks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem; max-height: 40vh; overflow-y: auto; }
+.weeks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
 .week-card { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 1rem; cursor: pointer; transition: all 0.2s; }
 .week-card:hover { border-color: var(--color-primary); }
 .week-card.active { border-color: var(--color-primary); background: rgba(16, 185, 129, 0.15); }
@@ -3535,7 +3525,7 @@ onUnmounted(() => {
   .page-header { padding: 0.5rem 0.75rem; flex-shrink: 0; }
   .titolo-toolbar { font-size: 0.85rem; }
   .tactical-board-container { min-height: 300px; }
-  .weeks-grid { max-height: none; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+  .weeks-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
   .month-nav { margin-bottom: 0.5rem; }
   .week-card { padding: 0.75rem; }
   .day-chip { width: 32px; height: 32px; font-size: 0.8rem; }
@@ -3566,7 +3556,7 @@ onUnmounted(() => {
   .btn-back, .btn-home { width: 24px; height: 24px; }
   .btn-back svg, .btn-home svg { width: 14px; height: 14px; }
   .titolo-toolbar { font-size: 0.65rem; }
-  .weeks-grid { max-height: none; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
+  .weeks-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
   .week-card { padding: 0.5rem; }
   .week-header { font-size: 0.8rem; }
   .week-dates { font-size: 0.7rem; margin-bottom: 0.5rem; }
@@ -3576,7 +3566,7 @@ onUnmounted(() => {
   .allenamenti-body { padding: 0.15rem; display: flex; flex-direction: column; }
   .tactical-board-container { flex: 1; min-height: 0; display: flex; }
   .tactical-board-wrapper { height: 100%; flex: 1; display: flex; }
-  .weeks-grid { max-height: 15vh; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.3rem; }
+  .weeks-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.3rem; }
   .month-nav { margin-bottom: 0.3rem; }
   .current-month { font-size: 0.9rem; min-width: 120px; }
 }
