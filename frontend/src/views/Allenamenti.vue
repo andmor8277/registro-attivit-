@@ -1428,26 +1428,31 @@ case 'disk-orange': case 'disk-blue': case 'disk-yellow': case 'disk':
                 ctx.stroke()
                 break
               case 'cone': case 'cone-yellow': case 'cone-red': case 'cone-blue': case 'cone-green': case 'cone-white':
+                const coneSize = size
+                const coneBase = 10 * coneSize
+                const coneTop = 2.5 * coneSize
+                const coneHeight = 34 * coneSize
                 ctx.fillStyle = el.colore || '#ff6600'
                 ctx.beginPath()
-                ctx.moveTo(-10, 0)
-                ctx.quadraticCurveTo(-12.5, -11.3, -2.5, -34)
-                ctx.quadraticCurveTo(0, -32.5, 2.5, -34)
-                ctx.quadraticCurveTo(12.5, -11.3, 10, 0)
+                ctx.moveTo(-coneBase, 0)
+                ctx.quadraticCurveTo(-coneBase - 2.5*coneSize, -coneHeight/3, -coneTop, -coneHeight)
+                ctx.quadraticCurveTo(0, -coneHeight + 1.5*coneSize, coneTop, -coneHeight)
+                ctx.quadraticCurveTo(coneBase + 2.5*coneSize, -coneHeight/3, coneBase, 0)
                 ctx.closePath()
                 ctx.fill()
                 ctx.beginPath()
-                ctx.ellipse(0, 0, 10.5, 1.5, 0, 0, Math.PI * 2)
+                ctx.ellipse(0, 0, coneBase + 0.5*coneSize, 1.5*coneSize, 0, 0, Math.PI * 2)
                 ctx.fill()
                 break
               case 'pole-red': case 'pole-yellow': case 'pole-white': case 'pole':
+                const poleSize = size
                 ctx.fillStyle = el.colore || '#ff6600'
-                ctx.fillRect(-6, -40, 12, 80)
+                ctx.fillRect(-6 * poleSize, -40 * poleSize, 12 * poleSize, 80 * poleSize)
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 2
-                ctx.strokeRect(-6, -40, 12, 80)
+                ctx.lineWidth = 2 * poleSize
+                ctx.strokeRect(-6 * poleSize, -40 * poleSize, 12 * poleSize, 80 * poleSize)
                 ctx.beginPath()
-                ctx.arc(0, -40, 10, 0, Math.PI * 2)
+                ctx.arc(0, -40 * poleSize, 10 * poleSize, 0, Math.PI * 2)
                 ctx.fill()
                 ctx.stroke()
                 break
