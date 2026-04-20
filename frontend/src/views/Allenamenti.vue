@@ -1032,19 +1032,21 @@ for (const el of elementi) {
             
             switch (el.tipo) {
               case 'player-red': case 'player-blue': case 'player-yellow': case 'player-green': case 'player-white': case 'player-black':
+                const playerRadius = 18 * size
+                const playerStroke = Math.max(1, 2 * size)
                 ctx.beginPath()
-                ctx.arc(0, 0, 18, 0, Math.PI * 2)
+                ctx.arc(0, 0, playerRadius, 0, Math.PI * 2)
                 ctx.fillStyle = el.colore || '#fff'
                 ctx.fill()
                 ctx.strokeStyle = '#000'
-                ctx.lineWidth = 2
+                ctx.lineWidth = playerStroke
                 ctx.stroke()
                 if (el.numero) {
                   ctx.fillStyle = '#000'
-                  ctx.font = 'bold 14px Arial'
+                  ctx.font = `bold ${14 * size}px Arial`
                   ctx.textAlign = 'center'
                   ctx.textBaseline = 'middle'
-                  ctx.fillText(el.numero.toString(), 0, 1)
+                  ctx.fillText(el.numero.toString(), 0, 1 * size)
                 }
                 break
               case 'arrow-pass':
