@@ -26,6 +26,17 @@
         <button class="nav-btn" @click="prevMonth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
         <div class="current-month">{{ currentMonthName }} {{ currentYear }}</div>
         <button class="nav-btn" @click="nextMonth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+        <button v-if="selectedDay" class="nav-btn toggle-calendar" @click="clearSelectedDay" title="Torna al calendario">📅</button>
+      </div>
+
+      <div class="weeks-grid">
+        <div v-for="week in weeksInMonth" :key="week.num" class="week-card" :class="{ active: selectedWeek?.num === week.num }" @click="selectWeek(week)">
+          <div class="week-header">Settimana {{ week.num }}</div>
+          <div class="week-dates">{{ formatDateRange(week.start, week.end) }}</div>
+          <div class="week-days">
+            <span v-for="day in week.days" :key="day.date" class="day_chip" :class="{ 'has-training': day.isSelectable, 'today': day.isToday, 'other-month': day.month !== currentMonth }" @click.stop="selectDay(day)">{{ day.dayNum }}</span>
+          </div>
+        </div>
       </div>
 
       <div class="weeks-grid">
@@ -691,6 +702,11 @@ function selectDay(day) {
   loadEsercizi(day.data)
 }
 
+function clearSelectedDay() {
+  selectedDay.value = null
+  esercizi.value = []
+}
+
 function selectTool(tool) { currentTool.value = tool }
 
 function getCurrentExercise() {
@@ -1007,13 +1023,14 @@ function exportPdf() {
           for (const el of elementi) {
             const x = el.x * 800 / 100
             const yPos = el.y * 500 / 100
-            const size = el.size || 1
+            const size = el.size != null ? Number(el.size) : 1
             const rot = (el.rotazione || 0) * Math.PI / 180
             
             ctx.save()
             ctx.translate(x, yPos)
             ctx.rotate(rot)
-            ctx.scale(size, size)
+            const finalSize = size
+            ctx.scale(finalSize, finalSize)
             
             switch (el.tipo) {
               case 'player-red': case 'player-blue': case 'player-yellow': case 'player-green': case 'player-white': case 'player-black':
