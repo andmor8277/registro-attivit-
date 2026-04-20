@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 import os
 from .database import Base, engine
 from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti
+from .routers.gruppi import router as gruppi_router
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
 
@@ -124,6 +125,7 @@ app.include_router(categorie.router, dependencies=[Depends(get_current_user)])
 app.include_router(convocazioni.router, dependencies=[Depends(get_current_user)])
 app.include_router(allenatori.router, dependencies=[Depends(get_current_user)])
 app.include_router(allenamenti.router)
+app.include_router(gruppi_router)
 
 @app.get("/")
 def root():
