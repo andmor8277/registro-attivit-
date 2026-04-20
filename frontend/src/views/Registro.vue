@@ -80,8 +80,12 @@
         </table>
       </template>
       <template v-else>
+        <div class="gruppi-actions" style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
+          <button class="action-btn" @click="groupModal.show = true" style="background: var(--color-primary);">+ Gruppo</button>
+        </div>
         <div v-for="gruppo in gruppi" :key="gruppo" class="gruppo-block">
           <div class="gruppo-header">
+            <button v-if="gruppo !== 'Portieri' && gruppo !== 'Senza gruppo'" class="btn-delete" @click="rimuoviGruppo(gruppo)" title="Elimina gruppo">×</button>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
@@ -198,13 +202,26 @@
         </div>
       </div>
     </Teleport>
+
+    <Teleport to="body">
+      <div v-if="groupModal.show" class="modal-overlay" @click.self="groupModal.show = false">
+        <div class="modal-content">
+          <h3>Nuovo Gruppo</h3>
+          <input v-model="groupModal.nome" placeholder="Nome gruppo" @keyup.enter="salvaGruppo" />
+          <div class="modal-actions">
+            <button class="action-btn" @click="salvaGruppo">Crea</button>
+            <button class="btn-close-modal" @click="groupModal.show = false">Annulla</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { getPersone, getCodici, getRegistroMese, upsertRegistro, getCategorie } from "../api/index.js"
+import { getPersone, getCodici, getRegistroMese, upsertRegistro, getCategorie, getGruppi, createGruppo, deleteGruppo } from "../api/index.js"
 import { useStore as useCategoria } from "../store.js"
 
 const route = useRoute()
@@ -239,6 +256,7 @@ const codici = ref([])
 const registro = ref([])
 const giorniAllenamento = ref([])
 const editModal = ref({ show: false, persona: null, giorno: null })
+const groupModal = ref({ show: false, nome: '' })
 
 const mesiNomi = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"]
 const giorniNomi = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"]
@@ -260,7 +278,14 @@ const giorniMese = computed(() => {
   return tutti.filter(g => giorniAllenamento.value.includes(g.dow))
 })
 
-const gruppi = computed(() => [...new Set(persone.value.map(p => p.gruppo_nome || "Senza gruppo"))])
+const gruppi = computed(() => {
+  const allGruppi = [...new Set(persone.value.map(p => p.gruppo_nome || "Senza gruppo"))]
+  const dbGruppi = gruppiList.value.map(g => g.nome)
+  const all = [...new Set([...allGruppi, ...dbGruppi])]
+  const normali = all.filter(g => g !== "Portieri").sort()
+  const portieri = all.filter(g => g === "Portieri")
+  return [...normali, ...portieri]
+})
 const personeAlfabetiche = computed(() => [...persone.value].sort((a, b) => a.cognome.localeCompare(b.cognome)))
 function personePerGruppo(g) { return persone.value.filter(p => (p.gruppo_nome || "Senza gruppo") === g) }
 function getCodice(personaId, giorno) {
@@ -289,6 +314,23 @@ async function salvaPresenza(codice) {
   editModal.value.show = false
 }
 
+async function salvaGruppo() {
+  if (!groupModal.value.nome.trim()) return
+  await createGruppo({ nome: groupModal.value.nome.trim(), categoria_id: categoriaId.value })
+  groupModal.value.show = false
+  groupModal.value.nome = ''
+  await loadPersone()
+}
+
+async function rimuoviGruppo(nome) {
+  if (!confirm('Eliminare il gruppo "' + nome + '"?')) return
+  const g = gruppi.value.find(x => x.nome === nome)
+  if (g?.id) {
+    await deleteGruppo(g.id)
+    await loadPersone()
+  }
+}
+
 function totGiornoGruppo(gruppo, giorno) {
   const ids = personePerGruppo(gruppo).map(p => p.id)
   const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
@@ -312,9 +354,11 @@ async function loadRegistro() {
   const res = await getRegistroMese(categoriaId.value, anno.value, mese.value)
   registro.value = res.data
 }
+const gruppiList = ref([])
 async function loadPersone() {
-  const res = await getPersone(categoriaId.value)
-  persone.value = res.data
+  const [p, g] = await Promise.all([getPersone(categoriaId.value), getGruppi(categoriaId.value)])
+  persone.value = p.data
+  gruppiList.value = g.data || []
 }
 async function loadCategoria() {
   if (categoriaAttiva.value && categoriaAttiva.value.giorni) {
