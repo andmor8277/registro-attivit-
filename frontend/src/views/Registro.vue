@@ -80,12 +80,22 @@
         </table>
       </template>
       <template v-else>
-        <div class="gruppi-actions" style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
-          <button class="action-btn" @click="groupModal.show = true" style="background: var(--color-primary);">+ Gruppo</button>
+        <div class="gruppi-actions">
+          <button class="btn-gruppo-add" @click="groupModal.show = true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            <span>Nuovo Gruppo</span>
+          </button>
         </div>
         <div v-for="gruppo in gruppi" :key="gruppo" class="gruppo-block">
           <div class="gruppo-header">
-            <button v-if="gruppo?.toLowerCase() !== 'portieri' && gruppo !== 'Senza gruppo'" class="btn-delete" @click="openEditGruppo(gruppo)" title="Modifica gruppo">✎</button>
+            <button v-if="gruppo?.toLowerCase() !== 'portieri' && gruppo !== 'Senza gruppo'" class="btn-edit-gruppo" @click="openEditGruppo(gruppo)" title="Modifica gruppo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
@@ -279,17 +289,24 @@ const giorniMese = computed(() => {
   return tutti.filter(g => giorniAllenamento.value.includes(g.dow))
 })
 
+const hasSenzaGruppo = computed(() => {
+  return persone.value.some(p => !p.gruppo_nome && !p.gruppo_id)
+})
+
 const allGruppiNames = computed(() => {
   const fromPersone = persone.value.map(p => p.gruppo_nome).filter(Boolean)
   const fromDb = gruppiList.value.map(g => g.nome)
-  return [...new Set([...fromPersone, ...fromDb, "Senza gruppo"])]
+  const result = [...new Set([...fromPersone, ...fromDb])]
+  if (hasSenzaGruppo.value) result.push("Senza gruppo")
+  return result
 })
 
 const gruppi = computed(() => {
   const all = allGruppiNames.value
-  const normali = all.filter(g => g?.toLowerCase() !== "portieri").sort()
+  const normali = all.filter(g => g && g?.toLowerCase() !== "senza gruppo" && g?.toLowerCase() !== "portieri").sort()
   const portieri = all.filter(g => g?.toLowerCase() === "portieri")
-  return [...normali, ...portieri]
+  const senza = all.filter(g => g?.toLowerCase() === "senza gruppo")
+  return [...normali, ...portieri, ...senza]
 })
 const personeAlfabetiche = computed(() => [...persone.value].sort((a, b) => a.cognome.localeCompare(b.cognome)))
 function personePerGruppo(g) { return persone.value.filter(p => (p.gruppo_nome || "Senza gruppo") === g) }
@@ -603,6 +620,61 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   width: 18px;
   height: 18px;
   opacity: 0.9;
+}
+
+.gruppi-actions {
+  margin-bottom: 1rem;
+}
+
+.btn-gruppo-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-lg);
+  color: white;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+}
+
+.btn-gruppo-add:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+.btn-gruppo-add svg {
+  width: 20px;
+  height: 20px;
+}
+
+.btn-edit-gruppo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-edit-gruppo:hover {
+  background: var(--color-primary-dark);
+  transform: scale(1.1);
+}
+
+.btn-edit-gruppo svg {
+  width: 16px;
+  height: 16px;
 }
 
 .cella {
