@@ -217,7 +217,8 @@
       <div v-if="groupModal.show" class="modal-overlay" @click.self="groupModal.show = false">
         <div class="modal-content">
           <h3>{{ groupModal.editing ? 'Modifica Gruppo' : 'Nuovo Gruppo' }}</h3>
-          <input v-model="groupModal.nome" placeholder="Nome gruppo" @keyup.enter="salvaGruppo" />
+          <label for="gruppo-nome" class="sr-only">Nome gruppo</label>
+          <input id="gruppo-nome" v-model="groupModal.nome" name="gruppo_nome" placeholder="Nome gruppo" @keyup.enter="salvaGruppo" />
           <div class="modal-actions">
             <button v-if="groupModal.editing" class="action-btn" style="background: #ef4444;" @click="rimuoviGruppo(groupModal.nome)">Elimina</button>
             <button class="action-btn" @click="salvaGruppo">{{ groupModal.editing ? 'Salva' : 'Crea' }}</button>
