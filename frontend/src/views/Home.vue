@@ -166,6 +166,75 @@
       </div>
     </div>
 
+    <div class="segreteria-section" v-if="utenteAttivo?.ruolo === 'segreteria' || utenteAttivo?.is_admin">
+      <h2 class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 7H2a1 1 0 000 2h20a1 1 0 000-2z"/>
+          <path d="M22 17H2a1 1 0 000 2h20a1 1 0 000-2z"/>
+          <path d="M12 2v20"/>
+          <path d="M7 2v20"/>
+          <path d="M17 2v20"/>
+        </svg>
+        Segreteria
+      </h2>
+      <div class="segreteria-card" @click="router.push('/segreteria')">
+        <div class="segreteria-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V4a2 2 0 00-2-2z"/>
+            <path d="M12 6v4"/>
+            <path d="M12 14h.01"/>
+          </svg>
+        </div>
+        <div class="segreteria-content">
+          <span class="segreteria-label">Gestione Tesseramenti</span>
+          <span class="segreteria-desc">Gestisci iscrizioni e documenti dei giocatori</span>
+        </div>
+        <div class="segreteria-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="infermeria-section" v-if="utenteAttivo?.ruolo === 'infermeria' || utenteAttivo?.is_admin">
+      <h2 class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2a5 5 0 015 5c0 2.1-1.3 3.9-3 4.6V13a1 1 0 01-1 1H9a1 1 0 01-1-1v-.4c-1.7-.7-3-2.5-3-4.6a5 5 0 015-5z"/>
+          <path d="M12 22v-6"/>
+          <path d="M8 22h8"/>
+        </svg>
+        Infermeria
+      </h2>
+      <div class="infermeria-card" @click="router.push('/infermeria')">
+        <div class="infermeria-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <path d="M8 14h.01"/>
+            <path d="M12 14h.01"/>
+            <path d="M16 14h.01"/>
+            <path d="M8 18h.01"/>
+            <path d="M12 18h.01"/>
+            <path d="M16 18h.01"/>
+          </svg>
+        </div>
+        <div class="infermeria-content">
+          <span class="infermeria-label">Gestione Infortuni</span>
+          <span class="infermeria-desc">Visualizza e gestisci gli infortuni dei giocatori</span>
+        </div>
+        <div class="infermeria-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
     <Teleport to="body">
       <div v-if="modal.show" class="modal-overlay" @click.self="chiudiModal">
         <div class="modal" :class="{ 'animate-in': modal.show }">
@@ -1110,6 +1179,188 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.25rem;
+}
+
+.infermeria-section {
+  margin-top: 2.5rem;
+}
+
+.segreteria-section {
+  margin-top: 2.5rem;
+}
+
+.segreteria-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  color: #7c3aed;
+}
+
+.segreteria-section .section-title svg {
+  width: 24px;
+  height: 24px;
+}
+
+.segreteria-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.segreteria-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.4);
+}
+
+.segreteria-icon {
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.segreteria-icon svg {
+  width: 28px;
+  height: 28px;
+  color: white;
+}
+
+.segreteria-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.segreteria-label {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: white;
+}
+
+.segreteria-desc {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.segreteria-arrow {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+}
+
+.segreteria-card:hover .segreteria-arrow {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateX(4px);
+}
+
+.segreteria-arrow svg {
+  width: 20px;
+  height: 20px;
+  color: white;
+}
+
+.infermeria-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  color: #10b981;
+}
+
+.infermeria-section .section-title svg {
+  width: 24px;
+  height: 24px;
+}
+
+.infermeria-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.infermeria-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+.infermeria-icon {
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.infermeria-icon svg {
+  width: 28px;
+  height: 28px;
+  color: white;
+}
+
+.infermeria-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.infermeria-label {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: white;
+}
+
+.infermeria-desc {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.infermeria-arrow {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+}
+
+.infermeria-card:hover .infermeria-arrow {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateX(4px);
+}
+
+.infermeria-arrow svg {
+  width: 20px;
+  height: 20px;
+  color: white;
 }
 
 .categoria-card {

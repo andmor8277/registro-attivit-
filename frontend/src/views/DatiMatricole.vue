@@ -183,7 +183,7 @@ const persone = ref([])
 const search = ref('')
 const gruppoFilter = ref('')
 
-const isDirigente = computed(() => utenteAttivo.value?.ruolo === 'dirigente')
+const isDirigente = computed(() => ['dirigente', 'segreteria', 'infermeria'].includes(utenteAttivo.value?.ruolo))
 
 // GDPR state
 const gdprSbloccato = ref(false)
