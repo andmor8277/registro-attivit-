@@ -50,7 +50,7 @@ export const getCategoriaResponsabili = (categoriaId) => api.get('/categorie/' +
 export const assegnaCategoriaUtenti = (categoriaId, utenteIds) => api.put('/categorie/' + categoriaId + '/utenti', { utente_ids: utenteIds })
 export const importaGiocatori = (nuovaCategoriaId) => api.post('/categorie/importa-giocatori/' + nuovaCategoriaId)
 export const getPersone = (categoriaId) => api.get('/persone/?categoria_id=' + categoriaId)
-export const getGruppi = (categoriaId) => api.get('/gruppi/?categoria_id=' + categoriaId)
+export const getGruppi = (categoriaId) => categoriaId ? api.get('/gruppi/?categoria_id=' + categoriaId) : api.get('/gruppi/')
 export const createGruppo = (data) => api.post('/gruppi/', data)
 export const deleteGruppo = (id) => api.delete('/gruppi/' + id)
 export const getCodici = () => api.get('/codici/')
