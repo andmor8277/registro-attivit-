@@ -143,7 +143,7 @@ import { getCategorieByStagione } from '../api/index.js'
 const router = useRouter()
 const { categoriaAttiva, setCategoria, utenteAttivo } = useStore()
 const categoria = categoriaAttiva
-const isDirigente = computed(() => utenteAttivo.value?.ruolo === 'dirigente')
+const isDirigente = computed(() => ['dirigente', 'segreteria', 'infermeria'].includes(utenteAttivo.value?.ruolo))
 const categorieStagione = ref([])
 const loading = ref(false)
 

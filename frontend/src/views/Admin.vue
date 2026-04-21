@@ -50,6 +50,8 @@
             <option value="admin">Admin Locale</option>
             <option value="mister">Mister</option>
             <option value="dirigente">Dirigente</option>
+            <option value="segreteria">Segreteria</option>
+            <option value="infermeria">Infermeria</option>
           </select>
         </div>
         <div class="input-group">
@@ -119,6 +121,8 @@
               <span class="badge-role badge-admin" v-if="u.ruolo === 'admin'">ADMIN LOCALE</span>
               <span class="badge-role badge-mister" v-if="u.ruolo === 'mister'">MISTER</span>
               <span class="badge-role badge-dirigente" v-if="u.ruolo === 'dirigente'">DIRIGENTE</span>
+              <span class="badge-role badge-segreteria" v-if="u.ruolo === 'segreteria'">SEGRETERIA</span>
+              <span class="badge-role badge-infermeria" v-if="u.ruolo === 'infermeria'">INFERMERIA</span>
               <span class="badge-societa">{{ getSocietaNome(u.societa_id) }}</span>
             </div>
           </div>
@@ -714,6 +718,16 @@ onMounted(load)
 
 .badge-dirigente {
   background: #2563eb;
+  color: white;
+}
+
+.badge-segreteria {
+  background: #7c3aed;
+  color: white;
+}
+
+.badge-infermeria {
+  background: #059669;
   color: white;
 }
 
