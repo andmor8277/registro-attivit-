@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 0V3sexBBcjBoEa1wwYjHJwKiIwJbVeUkTJRdKNhG6hc9GtL1nampntJfAw0hsSS
+\restrict vvsjf8K1tBGXCWiSfs8v4IOqfjvZisk9w8Je10EaG0BNUKawFOm02tK8aAhg2p0
 
 -- Dumped from database version 16.13
 -- Dumped by pg_dump version 16.13
@@ -954,5 +954,5 @@ SELECT pg_catalog.setval('public.utenti_id_seq', 5, true);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 0V3sexBBcjBoEa1wwYjHJwKiIwJbVeUkTJRdKNhG6hc9GtL1nampntJfAw0hsSS
+\unrestrict vvsjf8K1tBGXCWiSfs8v4IOqfjvZisk9w8Je10EaG0BNUKawFOm02tK8aAhg2p0
 
