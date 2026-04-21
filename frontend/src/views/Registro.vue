@@ -273,7 +273,7 @@ const route = useRoute()
 const router = useRouter()
 const categoriaId = computed(() => parseInt(route.params.id))
 const { categoriaAttiva, utenteAttivo } = useCategoria()
-const isDirigente = computed(() => utenteAttivo.value?.ruolo === 'dirigente')
+const isDirigente = computed(() => ['dirigente', 'segreteria', 'infermeria'].includes(utenteAttivo.value?.ruolo))
 const showRotateMessage = ref(false)
 
 const checkOrientation = () => {
