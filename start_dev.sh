@@ -23,12 +23,13 @@ if ! psql -h /tmp/pgsocket -p 5433 -d postgres -c "SELECT 1 FROM pg_database WHE
     psql -h /tmp/pgsocket -p 5433 -d postgres -c "CREATE DATABASE registro OWNER registro_user;" 2>/dev/null || true
 fi
 
-# Verifica se il DB è vuoto e carica i dati se necessario
-if [ -f "/home/andrea/registro_presenze/db_backup/dev_data.sql" ]; then
-    ROWS=$(psql -h /tmp/pgsocket -p 5433 -d registro -t -c "SELECT COUNT(*) FROM persone" 2>/dev/null || echo "0")
-    if [ "$ROWS" = "0" ] || [ -z "$ROWS" ]; then
-        echo "   Carico dati dal backup..."
-        psql -h /tmp/pgsocket -p 5433 -d registro -f /home/andrea/registro_presenze/db_backup/dev_data.sql 2>/dev/null || true
+# Carica dati da production se il DB è vuoto
+ROWS=$(psql -h /tmp/pgsocket -p 5433 -d registro -t -c "SELECT COUNT(*) FROM persone" 2>/dev/null || echo "0")
+if [ "$ROWS" = "0" ] || [ -z "$ROWS" ]; then
+    echo "   Carico dati da production..."
+    if ssh -o ConnectTimeout=5 root@192.168.178.132 "docker exec registro_presenze-db-1 psql -U registro_user -d registro -c 'SELECT 1'" > /dev/null 2>&1; then
+        echo "      Caricando tabelle..."
+        ssh root@192.168.178.132 "docker exec registro_presenze-db-1 pg_dump -U registro_user -d registro -t categorie -t societa -t utenti -t codici -t gruppi -t persone -t registro --data-only" 2>/dev/null | psql -h /tmp/pgsocket -p 5433 -d registro 2>/dev/null || true
     fi
 fi
 
