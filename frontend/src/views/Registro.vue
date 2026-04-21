@@ -215,15 +215,48 @@
 
     <Teleport to="body">
       <div v-if="groupModal.show" class="modal-overlay" @click.self="groupModal.show = false">
-        <div class="modal-content">
-          <h3>{{ groupModal.editing ? 'Modifica Gruppo' : 'Nuovo Gruppo' }}</h3>
-          <label for="gruppo-nome" class="sr-only">Nome gruppo</label>
-          <input id="gruppo-nome" v-model="groupModal.nome" name="gruppo_nome" placeholder="Nome gruppo" @keyup.enter="salvaGruppo" />
-          <div class="modal-actions">
-            <button v-if="groupModal.editing" class="action-btn" style="background: #ef4444;" @click="rimuoviGruppo(groupModal.nome)">Elimina</button>
-            <button class="action-btn" @click="salvaGruppo">{{ groupModal.editing ? 'Salva' : 'Crea' }}</button>
-            <button class="btn-close-modal" @click="groupModal.show = false">Annulla</button>
+        <div class="gruppo-modal">
+          <div class="gruppo-modal-header">
+            <svg class="gruppo-modal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+              <path d="M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+            <h3>{{ groupModal.editing ? 'Modifica Gruppo' : 'Nuovo Gruppo' }}</h3>
           </div>
+          <div class="gruppo-modal-body">
+            <label for="gruppo-nome" class="sr-only">Nome gruppo</label>
+            <input 
+              id="gruppo-nome" 
+              v-model="groupModal.nome" 
+              name="gruppo_nome" 
+              class="gruppo-input"
+              placeholder="Inserisci nome gruppo..." 
+              @keyup.enter="salvaGruppo" 
+            />
+          </div>
+          <div class="gruppo-modal-actions">
+            <button v-if="groupModal.editing" class="btn-rimuovi" @click="rimuoviGruppo(groupModal.nome)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+              Elimina
+            </button>
+            <button class="btn-save" @click="salvaGruppo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              {{ groupModal.editing ? 'Salva' : 'Crea' }}
+            </button>
+          </div>
+          <button class="btn-close-gruppo" @click="groupModal.show = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </div>
       </div>
     </Teleport>
@@ -394,7 +427,7 @@ async function loadPersone() {
     persone.value = p.data
   } catch(e) { console.error('Error loading persone:', e) }
   try {
-    const g = await getGruppi(categoriaId.value)
+    const g = await getGruppi()
     gruppiList.value = g.data || []
   } catch(e) { console.error('Error loading gruppi:', e) }
 }
@@ -764,6 +797,127 @@ th { background: #f9fafb; font-weight: 600; color: #374151; }
   padding: 1rem;
   animation: fadeIn 0.2s ease-out;
   backdrop-filter: blur(4px);
+}
+
+.gruppo-modal {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+  padding: 2rem;
+  position: relative;
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.gruppo-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.gruppo-modal-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--color-primary);
+}
+
+.gruppo-modal-header h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.gruppo-modal-body {
+  margin-bottom: 1.5rem;
+}
+
+.gruppo-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e5e5e5;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  transition: all var(--transition-fast);
+}
+
+.gruppo-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.gruppo-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-rimuovi, .btn-save {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-rimuovi {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.btn-rimuovi:hover {
+  background: #fecaca;
+  transform: translateY(-1px);
+}
+
+.btn-save {
+  flex: 1;
+  background: var(--color-primary);
+  color: white;
+}
+
+.btn-save:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.btn-rimuovi svg, .btn-save svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-close-gruppo {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-close-gruppo:hover {
+  background: #f3f4f6;
+}
+
+.btn-close-gruppo svg {
+  width: 20px;
+  height: 20px;
+  color: #6b7280;
 }
 
 .modal {
