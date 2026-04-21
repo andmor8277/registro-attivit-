@@ -81,7 +81,7 @@
       </template>
       <template v-else>
         <div class="gruppi-actions">
-          <button class="btn-gruppo-add" @click="groupModal.show = true">
+          <button class="btn-gruppo-add" @click="groupModal = { show: true, nome: '', editing: null }">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 5v14M5 12h14"/>
             </svg>
