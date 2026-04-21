@@ -12,6 +12,7 @@ import DatiMatricole from './views/DatiMatricole.vue'
 import Allenamenti from './views/Allenamenti.vue'
 import Societa from './views/Societa.vue'
 import Reportistica from './views/Reportistica.vue'
+import Segreteria from './views/Segreteria.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -25,7 +26,8 @@ const router = createRouter({
     { path: '/allenamenti/:id', component: Allenamenti, name: 'allenamenti', meta: { requiresAuth: true } },
     { path: '/admin', component: Admin, name: 'admin', meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/societa', component: Societa, name: 'societa', meta: { requiresAuth: true } },
-    { path: '/reportistica/:id', component: Reportistica, name: 'reportistica', meta: { requiresAuth: true } }
+    { path: '/reportistica/:id', component: Reportistica, name: 'reportistica', meta: { requiresAuth: true } },
+    { path: '/segreteria', component: Segreteria, name: 'segreteria', meta: { requiresAuth: true } }
   ]
 })
 
