@@ -33,19 +33,28 @@
           <h3>Chiave di Crittografia</h3>
         </div>
         <div class="section-body">
-          <p class="section-desc">La chiave usata per crittografare i dati sensibili dei giocatori (CF, telefono). <strong>Attenzione:</strong> se cambi la chiave, i dati già salvati diventano illeggibili!</p>
+          <p class="section-desc">La chiave usata per crittografare i dati sensibili dei giocatori (CF, telefono). Per cambiare la chiave e mantenere i dati, usa "Salva e ricifra" inserendo prima la chiave vecchia.</p>
           <div class="input-row">
             <input 
+              v-model="oldKey" 
+              placeholder="Chiave vecchia..." 
+              class="key-input"
+              style="max-width: 200px;"
+            />
+            <input 
               v-model="encryptionKey" 
-              placeholder="Inserisci nuova chiave..." 
+              placeholder="Nuova chiave..." 
               class="key-input"
               @keyup.enter="salvaChiave"
             />
-            <button class="btn-salva-chiave" @click="salvaChiave" :disabled="!encryptionKey">
+            <button class="btn-salva-chiave" @click="salvaChiave(false)" :disabled="!encryptionKey">
+              Solo salva
+            </button>
+            <button class="btn-salva-chiave reencrypt" @click="salvaChiave(true)" :disabled="!encryptionKey || !oldKey">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
-              Salva
+              Salva e ricifra
             </button>
           </div>
           <p v-if="chiaveMsg" class="chiave-msg" :class="{'error': chiaveError, 'success': !chiaveError}">
@@ -231,16 +240,23 @@ const societaIdSelezionata = ref(null)
 const errore = ref('')
 const loading = ref(false)
 const encryptionKey = ref('')
+const oldKey = ref('')
 const chiaveMsg = ref('')
 const chiaveError = ref(false)
 
-async function salvaChiave() {
+async function salvaChiave(reencrypt = false) {
   chiaveMsg.value = ''
   chiaveError.value = false
   try {
-    await api.put('/persone/encryption-key', { key: encryptionKey.value })
-    chiaveMsg.value = 'Chiave aggiornata correttamente'
+    const payload = { key: encryptionKey.value, old_key: oldKey.value || undefined }
+    if (reencrypt) {
+      await api.put('/persone/encryption-key?reencrypt=true', payload)
+    } else {
+      await api.put('/persone/encryption-key', payload)
+    }
+    chiaveMsg.value = reencrypt ? 'Chiave aggiornata e dati ricifrati!' : 'Chiave aggiornata correttamente'
     encryptionKey.value = ''
+    oldKey.value = ''
   } catch(e) {
     chiaveError.value = true
     chiaveMsg.value = 'Errore: ' + (e.detail || 'impossibile aggiornare')
@@ -566,6 +582,14 @@ onMounted(load)
 .encryption-section .btn-salva-chiave:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.encryption-section .btn-salva-chiave.reencrypt {
+  background: #059669;
+}
+
+.encryption-section .btn-salva-chiave.reencrypt:hover:not(:disabled) {
+  background: #047857;
 }
 
 .encryption-section .btn-salva-chiave svg {
