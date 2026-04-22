@@ -147,3 +147,21 @@ def delete_persona(persona_id: int, db: Session = Depends(get_db), current_user:
     db.delete(persona)
     db.commit()
     return {"ok": True}
+
+@router.put("/encryption-key")
+def update_encryption_key(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: Utente = Depends(get_current_user)
+):
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Solo super admin può modificare la chiave")
+    
+    new_key = data.get("key")
+    if not new_key:
+        raise HTTPException(status_code=400, detail="Chiave non fornita")
+    
+    os.environ["ENCRYPTION_KEY"] = new_key
+    globals()["ENCRYPTION_KEY"] = new_key
+    
+    return {"ok": True, "message": "Chiave aggiornata"}
