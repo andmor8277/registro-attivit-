@@ -107,14 +107,18 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { getPersone, getCategorie } from "../api/index.js"
+import { useStore } from "../store.js"
 
 const router = useRouter()
+const { utenteAttivo } = useStore()
 
 const categorie = ref([])
 const persone = ref([])
 const search = ref("")
 const gdprSbloccato = ref(false)
 const gdprModal = ref({ show: false, password: '', error: '' })
+
+const societaId = computed(() => utenteAttivo.value?.societa_id)
 
 onMounted(async () => {
   await loadDati()
@@ -126,7 +130,8 @@ onMounted(async () => {
 async function loadDati() {
   try {
     const catRes = await getCategorie()
-    categorie.value = catRes.data || []
+    const cats = (catRes.data || []).filter(c => c.societa_id === societaId.value)
+    categorie.value = cats
   } catch(e) { console.error('Error loading categorie:', e) }
   
   try {
