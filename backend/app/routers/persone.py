@@ -152,15 +152,96 @@ def delete_persona(persona_id: int, db: Session = Depends(get_db), current_user:
 def update_encryption_key(
     data: dict,
     db: Session = Depends(get_db),
-    current_user: Utente = Depends(get_current_user)
+    current_user: Utente = Depends(get_current_user),
+    reencrypt: bool = False
 ):
     if not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="Solo super admin può modificare la chiave")
     
     new_key = data.get("key")
+    old_key = data.get("old_key", ENCRYPTION_KEY)
     if not new_key:
         raise HTTPException(status_code=400, detail="Chiave non fornita")
     
+    if reencrypt:
+        # Re-encrypt all sensitive data with the new key
+        rows = db.execute(text("SELECT id, codice_fiscale, telefono FROM persone")).fetchall()
+        updated = 0
+        for row in rows:
+            persona_id = row.id
+            old_cf = row.codice_fiscale
+            old_tel = row.telefono
+            
+            decrypted_cf = None
+            decrypted_tel = None
+            
+            # Try to decrypt with old key first
+            if old_cf and len(old_cf) >= 32:
+                try:
+                    db.rollback()
+                    decrypted_cf = db.execute(text(
+                        f"SELECT convert_from(decrypt(decode('{old_cf}', 'hex'), '{old_key}', 'aes'), 'UTF8')"
+                    )).scalar()
+                except:
+                    pass
+            
+            if old_tel and len(old_tel) >= 32:
+                try:
+                    db.rollback()
+                    decrypted_tel = db.execute(text(
+                        f"SELECT convert_from(decrypt(decode('{old_tel}', 'hex'), '{old_key}', 'aes'), 'UTF8')"
+                    )).scalar()
+                except:
+                    pass
+            
+            # If still encrypted with current key, also try that
+            if not decrypted_cf and old_cf and len(old_cf) >= 32:
+                try:
+                    db.rollback()
+                    decrypted_cf = db.execute(text(
+                        f"SELECT convert_from(decrypt(decode('{old_cf}', 'hex'), '{ENCRYPTION_KEY}', 'aes'), 'UTF8')"
+                    )).scalar()
+                except:
+                    pass
+            
+            if not decrypted_tel and old_tel and len(old_tel) >= 32:
+                try:
+                    db.rollback()
+                    decrypted_tel = db.execute(text(
+                        f"SELECT convert_from(decrypt(decode('{old_tel}', 'hex'), '{ENCRYPTION_KEY}', 'aes'), 'UTF8')"
+                    )).scalar()
+                except:
+                    pass
+            
+            # Now re-encrypt with new key and save
+            if decrypted_cf or decrypted_tel:
+                new_cf = None
+                new_tel = None
+                
+                if decrypted_cf:
+                    new_cf = db.execute(text(
+                        f"SELECT encode(encrypt('{decrypted_cf}'::bytea, '{new_key}', 'aes'), 'hex')"
+                    )).scalar()
+                
+                if decrypted_tel:
+                    new_tel = db.execute(text(
+                        f"SELECT encode(encrypt('{decrypted_tel}'::bytea, '{new_key}', 'aes'), 'hex')"
+                    )).scalar()
+                
+                db.execute(text(
+                    "UPDATE persone SET codice_fiscale = :cf, telefono = :tel WHERE id = :id"
+                ).bindparams(cf=new_cf, tel=new_tel, id=persona_id))
+                updated += 1
+        
+        db.commit()
+        
+        # Update the key
+        os.environ["ENCRYPTION_KEY"] = new_key
+        globals()["ENCRYPTION_KEY"] = new_key
+        
+        return {"ok": True, "message": f"Chiave aggiornata e {updated} record ricifrati"}
+    
+    # Just update the key without re-encrypting
     os.environ["ENCRYPTION_KEY"] = new_key
     globals()["ENCRYPTION_KEY"] = new_key
     
