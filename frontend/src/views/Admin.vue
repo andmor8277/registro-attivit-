@@ -23,6 +23,38 @@
       </div>
     </header>
 
+    <div v-if="isSuperAdmin" class="encryption-section">
+      <div class="section-card">
+        <div class="section-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <h3>Chiave di Crittografia</h3>
+        </div>
+        <div class="section-body">
+          <p class="section-desc">La chiave usata per crittografare i dati sensibili dei giocatori (CF, telefono). Solo super admin può modificarla.</p>
+          <div class="input-row">
+            <input 
+              v-model="encryptionKey" 
+              placeholder="Inserisci nuova chiave..." 
+              class="key-input"
+              @keyup.enter="salvaChiave"
+            />
+            <button class="btn-salva-chiave" @click="salvaChiave" :disabled="!encryptionKey">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Salva
+            </button>
+          </div>
+          <p v-if="chiaveMsg" class="chiave-msg" :class="{'error': chiaveError, 'success': !chiaveError}">
+            {{ chiaveMsg }}
+          </p>
+        </div>
+      </div>
+    </div>
+
     <div class="card card-create">
       <div class="card-header">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -185,7 +217,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '../store.js'
-import { getUtenti, createUtente, deleteUtente, updateUtente, resetPassword, assegnaCategorie, getCategorie, getCategoriaUtenti, getSocieta } from '../api/index.js'
+import { getUtenti, createUtente, deleteUtente, updateUtente, resetPassword, assegnaCategorie, getCategorie, getCategoriaUtenti, getSocieta, api } from '../api/index.js'
 
 const router = useRouter()
 const { societaAttiva } = useStore()
@@ -198,6 +230,22 @@ const societaIdSelezionata = ref(null)
 
 const errore = ref('')
 const loading = ref(false)
+const encryptionKey = ref('')
+const chiaveMsg = ref('')
+const chiaveError = ref(false)
+
+async function salvaChiave() {
+  chiaveMsg.value = ''
+  chiaveError.value = false
+  try {
+    await api.put('/persone/encryption-key', { key: encryptionKey.value })
+    chiaveMsg.value = 'Chiave aggiornata correttamente'
+    encryptionKey.value = ''
+  } catch(e) {
+    chiaveError.value = true
+    chiaveMsg.value = 'Errore: ' + (e.detail || 'impossibile aggiornare')
+  }
+}
 const editingUtente = ref(null)
 const nuovo = ref({ username: '', password: '', nome: '', cognome: '', data_nascita: null, codice_fiscale: null, cellulare: null, tesserino: '', ruolo: '', societa_id: '' })
 
@@ -438,6 +486,104 @@ onMounted(load)
   padding: 2rem;
   max-width: 1000px;
   margin: 0 auto;
+}
+
+.encryption-section {
+  margin-bottom: 2rem;
+  animation: slideUp 0.4s ease-out;
+}
+
+.encryption-section .section-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+.encryption-section .section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.encryption-section .section-header svg {
+  width: 24px;
+  height: 24px;
+  color: #f59e0b;
+}
+
+.encryption-section .section-header h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.encryption-section .section-desc {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-bottom: 1rem;
+}
+
+.encryption-section .input-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.encryption-section .key-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: 0.9375rem;
+}
+
+.encryption-section .key-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.encryption-section .btn-salva-chiave {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: #f59e0b;
+  border: none;
+  border-radius: var(--radius-md);
+  color: black;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.encryption-section .btn-salva-chiave:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.encryption-section .btn-salva-chiave:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.encryption-section .btn-salva-chiave svg {
+  width: 18px;
+  height: 18px;
+}
+
+.encryption-section .chiave-msg {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.encryption-section .chiave-msg.error {
+  color: #ef4444;
+}
+
+.encryption-section .chiave-msg.success {
+  color: #10b981;
 }
 
 .page-header {
