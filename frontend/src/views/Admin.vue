@@ -33,7 +33,7 @@
           <h3>Chiave di Crittografia</h3>
         </div>
         <div class="section-body">
-          <p class="section-desc">La chiave usata per crittografare i dati sensibili dei giocatori (CF, telefono). Solo super admin può modificarla.</p>
+          <p class="section-desc">La chiave usata per crittografare i dati sensibili dei giocatori (CF, telefono). <strong>Attenzione:</strong> se cambi la chiave, i dati già salvati diventano illeggibili!</p>
           <div class="input-row">
             <input 
               v-model="encryptionKey" 
