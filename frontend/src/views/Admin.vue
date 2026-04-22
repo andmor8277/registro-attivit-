@@ -47,10 +47,7 @@
               class="key-input"
               @keyup.enter="salvaChiave"
             />
-            <button class="btn-salva-chiave" @click="salvaChiave(false)" :disabled="!encryptionKey">
-              Solo salva
-            </button>
-            <button class="btn-salva-chiave reencrypt" @click="salvaChiave(true)" :disabled="!encryptionKey || !oldKey">
+            <button class="btn-salva-chiave reencrypt" @click="salvaChiave" :disabled="!encryptionKey || !oldKey">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
@@ -244,17 +241,16 @@ const oldKey = ref('')
 const chiaveMsg = ref('')
 const chiaveError = ref(false)
 
-async function salvaChiave(reencrypt = false) {
+async function salvaChiave() {
+  if (!oldKey.value || !encryptionKey.value) return
   chiaveMsg.value = ''
   chiaveError.value = false
   try {
-    const payload = { key: encryptionKey.value, old_key: oldKey.value || undefined }
-    if (reencrypt) {
-      await api.put('/persone/encryption-key?reencrypt=true', payload)
-    } else {
-      await api.put('/persone/encryption-key', payload)
-    }
-    chiaveMsg.value = reencrypt ? 'Chiave aggiornata e dati ricifrati!' : 'Chiave aggiornata correttamente'
+    await api.put('/persone/encryption-key?reencrypt=true', { 
+      key: encryptionKey.value, 
+      old_key: oldKey.value 
+    })
+    chiaveMsg.value = 'Chiave aggiornata e dati ricifrati!'
     encryptionKey.value = ''
     oldKey.value = ''
   } catch(e) {
