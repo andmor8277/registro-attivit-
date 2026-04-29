@@ -3,8 +3,8 @@ from datetime import date
 from typing import Optional
 
 class PersonaCreate(BaseModel):
-    nome: str
-    cognome: str
+    nome: Optional[str] = None
+    cognome: Optional[str] = None
     gruppo_id: Optional[int] = None
     categoria_id: Optional[int] = None
     data_nascita: Optional[date] = None
@@ -14,6 +14,28 @@ class PersonaCreate(BaseModel):
     numero_maglia: Optional[int] = None
     scadenza_certificato: Optional[date] = None
     societa_id: Optional[int] = None
+    residenza: Optional[str] = None
+    indirizzo: Optional[str] = None
+    cittadinanza: Optional[str] = None
+    tel_papa: Optional[str] = None
+    tel_mamma: Optional[str] = None
+    email1: Optional[str] = None
+    email2: Optional[str] = None
+    prof_papa: Optional[str] = None
+    prof_mamma: Optional[str] = None
+    nome_papa: Optional[str] = None
+    nome_mamma: Optional[str] = None
+    comune_nato: Optional[str] = None
+    anamnesi: Optional[str] = None
+    taglia: Optional[str] = None
+    note: Optional[str] = None
+    totale_da_pagare: Optional[float] = None
+    rata_iscrizione: Optional[float] = None
+    rata1: Optional[float] = None
+    rata2: Optional[float] = None
+    rata3: Optional[float] = None
+    rata4: Optional[float] = None
+    rata_saldo: Optional[float] = None
 
 class PersonaOut(BaseModel):
     id: int
@@ -28,6 +50,21 @@ class PersonaOut(BaseModel):
     numero_maglia: Optional[int]
     scadenza_certificato: Optional[date]
     societa_id: Optional[int]
+    residenza: Optional[str] = None
+    indirizzo: Optional[str] = None
+    cittadinanza: Optional[str] = None
+    tel_papa: Optional[str] = None
+    tel_mamma: Optional[str] = None
+    email1: Optional[str] = None
+    email2: Optional[str] = None
+    prof_papa: Optional[str] = None
+    prof_mamma: Optional[str] = None
+    nome_papa: Optional[str] = None
+    nome_mamma: Optional[str] = None
+    comune_nato: Optional[str] = None
+    anamnesi: Optional[str] = None
+    taglia: Optional[str] = None
+    note: Optional[str] = None
     class Config: from_attributes = True
 
 class CodiceOut(BaseModel):

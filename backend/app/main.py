@@ -118,7 +118,7 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 app.include_router(auth_router)
 app.include_router(societa.router)
-app.include_router(persone.router, dependencies=[Depends(get_current_user)])
+app.include_router(persone.router)
 app.include_router(registro.router, dependencies=[Depends(get_current_user)])
 app.include_router(codici.router, dependencies=[Depends(get_current_user)])
 app.include_router(categorie.router, dependencies=[Depends(get_current_user)])

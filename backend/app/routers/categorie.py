@@ -22,9 +22,11 @@ class CategoriaCreate(BaseModel):
     data_fine_stagione: Optional[date] = None
 
 def get_societa_filter(current_user: Utente):
-    """Restituisce il filter per societa_id - solo super_admin vede tutto"""
+    """Restituisce il filter per societa_id - super_admin e segreteria vedono tutto"""
     if current_user.is_super_admin:
         return None  # Nessun filtro
+    if current_user.ruolo == 'segreteria':
+        return None  # Segreteria vede tutte le categorie della sua società
     return current_user.societa_id
 
 @router.get("/")
@@ -44,7 +46,8 @@ def get_categorie(
         query = query.filter(models.Categoria.societa_id == filter_societa_id)
     tutte = query.order_by(models.Categoria.anno.desc()).all()
     
-    if current_user.is_super_admin or current_user.is_admin:
+    # Super admin, admin e segreteria vedono tutte le categorie della loro società
+    if current_user.is_super_admin or current_user.is_admin or current_user.ruolo == 'segreteria':
         return tutte
     assegnate = db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == current_user.id).all()
     ids = {r.categoria_id for r in assegnate}
