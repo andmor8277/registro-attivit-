@@ -9,7 +9,6 @@ class PersonaCreate(BaseModel):
     categoria_id: Optional[int] = None
     data_nascita: Optional[date] = None
     codice_fiscale: Optional[str] = None
-    telefono: Optional[str] = None
     matricola: Optional[str] = None
     numero_maglia: Optional[int] = None
     scadenza_certificato: Optional[date] = None
@@ -45,7 +44,6 @@ class PersonaOut(BaseModel):
     categoria_id: Optional[int]
     data_nascita: Optional[date]
     codice_fiscale: Optional[str]
-    telefono: Optional[str]
     matricola: Optional[str]
     numero_maglia: Optional[int]
     scadenza_certificato: Optional[date]
