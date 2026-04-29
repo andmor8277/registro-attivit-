@@ -13,6 +13,8 @@ import Allenamenti from './views/Allenamenti.vue'
 import Societa from './views/Societa.vue'
 import Reportistica from './views/Reportistica.vue'
 import Segreteria from './views/Segreteria.vue'
+import SchedaGiocatore from './views/SchedaGiocatore.vue'
+import FormOnlineIscrizione from './views/FormOnlineIscrizione.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -27,7 +29,9 @@ const router = createRouter({
     { path: '/admin', component: Admin, name: 'admin', meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/societa', component: Societa, name: 'societa', meta: { requiresAuth: true } },
     { path: '/reportistica/:id', component: Reportistica, name: 'reportistica', meta: { requiresAuth: true } },
-    { path: '/segreteria', component: Segreteria, name: 'segreteria', meta: { requiresAuth: true } }
+    { path: '/segreteria', component: Segreteria, name: 'segreteria', meta: { requiresAuth: true } },
+    { path: '/segreteria/scheda/:id', component: SchedaGiocatore, name: 'scheda-giocatore', meta: { requiresAuth: true } },
+    { path: '/form-iscrizione', component: FormOnlineIscrizione, name: 'form-iscrizione' }
   ]
 })
 

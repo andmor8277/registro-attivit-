@@ -38,7 +38,7 @@ class SocietaOut(BaseModel):
     logosponsor: Optional[str]
     colore_primario: str
     colore_secondario: str
-    is_attiva: int
+    is_attiva: Optional[int] = None
 
     class Config:
         from_attributes = True

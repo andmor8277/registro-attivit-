@@ -21,7 +21,7 @@ class GruppoIn(BaseModel):
 @router.get("/", response_model=list[GruppoOut])
 def get_gruppi(categoria_id: Optional[int] = None, db: Session = Depends(get_db)):
     if categoria_id:
-        return db.query(Gruppo).filter(Gruppo.categoria_id == categoria_id).order_by(Gruppo.nome).all()
+        return db.query(Gruppo).filter((Gruppo.categoria_id == categoria_id) | (Gruppo.categoria_id.is_(None))).order_by(Gruppo.nome).all()
     return db.query(Gruppo).order_by(Gruppo.nome).all()
 
 @router.post("/", response_model=GruppoOut)
