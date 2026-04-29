@@ -11,10 +11,10 @@ ssh root@192.168.178.132 "cd /opt/registro_presenze"
 # Fetch and reset to ensure we have latest
 ssh root@192.168.178.132 "cd /opt/registro_presenze && git fetch origin && git reset --hard origin/master"
 
-# Run database migrations
+# Run database migrations (copy SQL into container first, then execute)
 echo "Running database migrations..."
-ssh root@192.168.178.132 'cd /opt/registro_presenze && docker compose exec -T db sh -c "psql -U \$POSTGRES_USER -d \$POSTGRES_DB -f /opt/registro_presenze/migrations/add_stagione_fields.sql"' 2>/dev/null || true
-ssh root@192.168.178.132 'cd /opt/registro_presenze && docker compose exec -T db sh -c "psql -U \$POSTGRES_USER -d \$POSTGRES_DB -f /opt/registro_presenze/migrations/add_payment_fields.sql"' 2>/dev/null || true
+ssh root@192.168.178.132 'cd /opt/registro_presenze && docker compose cp migrations/add_stagione_fields.sql db:/tmp/add_stagione_fields.sql && docker compose exec -T db sh -c "psql -U \$POSTGRES_USER -d \$POSTGRES_DB -f /tmp/add_stagione_fields.sql"' 2>/dev/null || true
+ssh root@192.168.178.132 'cd /opt/registro_presenze && docker compose cp migrations/add_payment_fields.sql db:/tmp/add_payment_fields.sql && docker compose exec -T db sh -c "psql -U \$POSTGRES_USER -d \$POSTGRES_DB -f /tmp/add_payment_fields.sql"' 2>/dev/null || true
 
 # Stop existing containers
 echo "Stopping containers..."
