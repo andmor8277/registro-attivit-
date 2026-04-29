@@ -15,6 +15,7 @@ ssh root@192.168.178.132 "cd /opt/registro_presenze && git fetch origin && git r
 echo "Running database migrations..."
 ssh root@192.168.178.132 'cd /opt/registro_presenze && docker compose cp migrations/add_stagione_fields.sql db:/tmp/add_stagione_fields.sql && docker compose exec -T db sh -c "psql -U \$POSTGRES_USER -d \$POSTGRES_DB -f /tmp/add_stagione_fields.sql"' 2>/dev/null || true
 ssh root@192.168.178.132 'cd /opt/registro_presenze && docker compose cp migrations/add_payment_fields.sql db:/tmp/add_payment_fields.sql && docker compose exec -T db sh -c "psql -U \$POSTGRES_USER -d \$POSTGRES_DB -f /tmp/add_payment_fields.sql"' 2>/dev/null || true
+ssh root@192.168.178.132 'cd /opt/registro_presenze && docker compose cp migrations/drop_telefono_column.sql db:/tmp/drop_telefono_column.sql && docker compose exec -T db sh -c "psql -U \$POSTGRES_USER -d \$POSTGRES_DB -f /tmp/drop_telefono_column.sql"' 2>/dev/null || true
 
 # Stop existing containers
 echo "Stopping containers..."

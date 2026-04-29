@@ -83,8 +83,12 @@
               <input v-model="modal.codice_fiscale" maxlength="16" />
             </div>
             <div class="form-field">
-              <label>Telefono</label>
-              <input v-model="modal.telefono" />
+              <label>Tel. Papà</label>
+              <input v-model="modal.tel_papa" />
+            </div>
+            <div class="form-field">
+              <label>Tel. Mamma</label>
+              <input v-model="modal.tel_mamma" />
             </div>
             <div class="form-field">
               <label>Matricola</label>
@@ -294,7 +298,8 @@ const modal = ref({
   numero_maglia: '', 
   data_nascita: '', 
   codice_fiscale: '', 
-  telefono: '', 
+  tel_papa: '',
+  tel_mamma: '',
   matricola: '', 
   scadenza_certificato: '', 
   gruppo_id: 1 
