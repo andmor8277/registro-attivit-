@@ -54,7 +54,8 @@
               <th>Nr.</th>
               <th v-if="gdprSbloccato">Data Nascita</th>
               <th v-if="gdprSbloccato">Codice Fiscale</th>
-              <th v-if="gdprSbloccato">Telefono</th>
+              <th v-if="gdprSbloccato">Tel. Papà</th>
+              <th v-if="gdprSbloccato">Tel. Mamma</th>
               <th v-if="gdprSbloccato">Matricola</th>
               <th v-if="gdprSbloccato">Scad. Cert.</th>
               <th v-if="!isDirigente">Gruppo</th>
@@ -70,7 +71,8 @@
               <template v-if="gdprSbloccato">
                 <td>{{ formatData(p.data_nascita) }}</td>
                 <td class="cell-cf">{{ gdprSbloccato ? (p.codice_fiscale || '-') : '••••••••••••' }}</td>
-                <td>{{ gdprSbloccato ? (p.telefono || '-') : '••••' }}</td>
+                <td>{{ gdprSbloccato ? (p.tel_papa || '-') : '••••' }}</td>
+                <td>{{ gdprSbloccato ? (p.tel_mamma || '-') : '••••' }}</td>
                 <td class="cell-matricola">{{ p.matricola || '-' }}</td>
                 <td class="cell-scadenza" :class="{ 'scad-rossa': isScaduta(p.scadenza_certificato) }">
                   {{ formatData(p.scadenza_certificato) }}
@@ -86,7 +88,7 @@
               </td>
             </tr>
             <tr v-if="filteredPersone.length === 0">
-              <td :colspan="isDirigente ? (gdprSbloccato ? 9 : 5) : (gdprSbloccato ? 11 : 7)" class="no-data">Nessun giocatore trovato</td>
+              <td :colspan="isDirigente ? (gdprSbloccato ? 10 : 5) : (gdprSbloccato ? 12 : 7)" class="no-data">Nessun giocatore trovato</td>
             </tr>
           </tbody>
         </table>
@@ -97,7 +99,7 @@
     <div v-if="gdprModal.show" class="modal-overlay" @click.self="gdprModal.show = false">
       <div class="modal modal-small">
         <h3>🔒 Sblocco Dati Sensibili</h3>
-        <p class="gdpr-info">Inserisci la password per visualizzare i dati personali dei giocatori (CF, telefono, data nascita)</p>
+        <p class="gdpr-info">Inserisci la password per visualizzare i dati personali dei giocatori (CF, tel. Papà/Mamma, data nascita)</p>
         <div class="form-field">
           <label>Password</label>
           <input v-model="gdprModal.password" type="password" @keyup.enter="verificaPasswordGdpr" />
@@ -135,8 +137,12 @@
             <input v-model="modal.codice_fiscale" maxlength="16" />
           </div>
           <div class="form-field">
-            <label>Telefono</label>
-            <input v-model="modal.telefono" />
+            <label>Tel. Papà</label>
+            <input v-model="modal.tel_papa" />
+          </div>
+          <div class="form-field">
+            <label>Tel. Mamma</label>
+            <input v-model="modal.tel_mamma" />
           </div>
           <div class="form-field">
             <label>Matricola</label>
@@ -189,7 +195,7 @@ const isDirigente = computed(() => ['dirigente', 'segreteria', 'infermeria'].inc
 const gdprSbloccato = ref(false)
 const gdprModal = ref({ show: false, password: '', errore: '' })
 
-const modal = ref({ show: false, isNuovo: false, id: null, cognome: '', nome: '', numero_maglia: '', data_nascita: '', codice_fiscale: '', telefono: '', matricola: '', scadenza_certificato: '', gruppo_id: 1 })
+const modal = ref({ show: false, isNuovo: false, id: null, cognome: '', nome: '', numero_maglia: '', data_nascita: '', codice_fiscale: '', tel_papa: '', tel_mamma: '', matricola: '', scadenza_certificato: '', gruppo_id: 1 })
 
 function apriSbloccoGdpr() {
   gdprModal.value = { show: true, password: '', errore: '' }
@@ -257,7 +263,8 @@ function apriModifica(p) {
     numero_maglia: p.numero_maglia || '',
     data_nascita: p.data_nascita || '',
     codice_fiscale: mascheraDato(p.codice_fiscale),
-    telefono: mascheraDato(p.telefono),
+    tel_papa: mascheraDato(p.tel_papa),
+    tel_mamma: mascheraDato(p.tel_mamma),
     matricola: p.matricola || '',
     scadenza_certificato: p.scadenza_certificato || '',
     gruppo_id: p.gruppo_id || 1
@@ -274,7 +281,8 @@ function apriNuovo() {
     numero_maglia: '',
     data_nascita: '',
     codice_fiscale: '',
-    telefono: '',
+    tel_papa: '',
+    tel_mamma: '',
     matricola: '',
     scadenza_certificato: '',
     gruppo_id: 1
@@ -287,8 +295,8 @@ async function salva() {
     return
   }
   
-  if (!gdprSbloccato.value && (modal.value.codice_fiscale || modal.value.telefono)) {
-    alert('Sblocca i dati GDPR prima di modificare CF o telefono')
+  if (!gdprSbloccato.value && (modal.value.codice_fiscale || modal.value.tel_papa || modal.value.tel_mamma)) {
+    alert('Sblocca i dati GDPR prima di modificare CF o telefoni')
     return
   }
   
@@ -300,7 +308,8 @@ async function salva() {
       categoria_id: categoriaId,
       data_nascita: modal.value.data_nascita || null,
       codice_fiscale: modal.value.codice_fiscale?.startsWith('••') ? null : (modal.value.codice_fiscale || null),
-      telefono: modal.value.telefono?.startsWith('••') ? null : (modal.value.telefono || null),
+      tel_papa: modal.value.tel_papa?.startsWith('••') ? null : (modal.value.tel_papa || null),
+      tel_mamma: modal.value.tel_mamma?.startsWith('••') ? null : (modal.value.tel_mamma || null),
       matricola: modal.value.matricola || null,
       numero_maglia: modal.value.numero_maglia ? parseInt(modal.value.numero_maglia) : null,
       scadenza_certificato: modal.value.scadenza_certificato || null

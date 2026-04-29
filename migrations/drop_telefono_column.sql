@@ -1,0 +1,1 @@
+ALTER TABLE persone DROP COLUMN IF EXISTS telefono;

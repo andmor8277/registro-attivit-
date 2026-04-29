@@ -456,7 +456,6 @@ async function salvaDati() {
       if (result?.id) router.push('/segreteria/scheda/' + result.id)
       else router.push('/segreteria')
     } else {
-      data.telefono = giocatore.value.telefono
       await updatePersona(giocatore.value.id, data)
       editMode.value = false
       const res = await getPersone()
