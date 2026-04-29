@@ -14,6 +14,7 @@ ssh root@192.168.178.132 "cd /opt/registro_presenze && git fetch origin && git r
 # Run database migrations
 echo "Checking database migrations..."
 ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose exec -T db psql -U postgres -d registro_presenze -c \"SELECT column_name FROM information_schema.columns WHERE table_name = 'categorie' AND column_name = 'stagione'\" | grep -q stagione || docker compose exec -T db psql -U postgres -d registro_presenze -f /opt/registro_presenze/migrations/add_stagione_fields.sql"
+ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose exec -T db psql -U postgres -d registro_presenze -c \"SELECT column_name FROM information_schema.columns WHERE table_name = 'persone' AND column_name = 'totale_da_pagare'\" | grep -q totale_da_pagare || docker compose exec -T db psql -U postgres -d registro_presenze -f /opt/registro_presenze/migrations/add_payment_fields.sql"
 
 # Stop existing containers
 echo "Stopping containers..."

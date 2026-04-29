@@ -427,9 +427,13 @@ async function loadPersone() {
     persone.value = p.data
   } catch(e) { console.error('Error loading persone:', e) }
   try {
-    const g = await getGruppi()
-    gruppiList.value = g.data || []
+    const g = await getGruppi(categoriaId.value)
+    gruppiList.value = (g.data || []).map(item =>
+      typeof item === 'string' ? { id: null, nome: item } : { id: item.id, nome: item.nome }
+    )
   } catch(e) { console.error('Error loading gruppi:', e) }
+  const idToNome = Object.fromEntries(gruppiList.value.map(g => [g.id, g.nome]).filter(([id]) => id != null))
+  persone.value.forEach(p => { if (p.gruppo_id && idToNome[p.gruppo_id]) p.gruppo_nome = idToNome[p.gruppo_id] })
 }
 async function loadCategoria() {
   if (categoriaAttiva.value && categoriaAttiva.value.giorni) {
