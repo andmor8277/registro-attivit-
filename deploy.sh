@@ -12,9 +12,9 @@ ssh root@192.168.178.132 "cd /opt/registro_presenze"
 ssh root@192.168.178.132 "cd /opt/registro_presenze && git fetch origin && git reset --hard origin/master"
 
 # Run database migrations
-echo "Checking database migrations..."
-ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose exec -T db psql -U \${DB_USER} -d \${DB_NAME} -c \"SELECT column_name FROM information_schema.columns WHERE table_name = 'categorie' AND column_name = 'stagione'\" | grep -q stagione || docker compose exec -T db psql -U \${DB_USER} -d \${DB_NAME} -f /opt/registro_presenze/migrations/add_stagione_fields.sql"
-ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose exec -T db psql -U \${DB_USER} -d \${DB_NAME} -c \"SELECT column_name FROM information_schema.columns WHERE table_name = 'persone' AND column_name = 'totale_da_pagare'\" | grep -q totale_da_pagare || docker compose exec -T db psql -U \${DB_USER} -d \${DB_NAME} -f /opt/registro_presenze/migrations/add_payment_fields.sql"
+echo "Running database migrations..."
+ssh root@192.168.178.132 'cd /opt/registro_presenze && docker compose exec -T db sh -c "psql -U \$POSTGRES_USER -d \$POSTGRES_DB -f /opt/registro_presenze/migrations/add_stagione_fields.sql"' 2>/dev/null || true
+ssh root@192.168.178.132 'cd /opt/registro_presenze && docker compose exec -T db sh -c "psql -U \$POSTGRES_USER -d \$POSTGRES_DB -f /opt/registro_presenze/migrations/add_payment_fields.sql"' 2>/dev/null || true
 
 # Stop existing containers
 echo "Stopping containers..."
