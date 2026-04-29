@@ -66,3 +66,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Hide Reportistica from dirigenti
+
+## [2.1.0] - 2026-04-29
+
+### Added
+- Funzionalità minori
+
+## [3.0.0] - 2026-04-29
+
+### Added
+- **Sistema Pagamenti Completo**
+  - Tabella pagamenti in Segreteria: Totale, Iscrizione, Rata 1-4, Saldo, Rimane
+  - Campi editabili inline con salvataggio immediato
+  - Calcolo automatico "Rimane da pagare" (verde se saldo <= 0)
+- **Scheda Giocatore**
+  - Vista completa con tutti i dati personali, contatti, genitori, anamnesi, equipaggiamento
+  - Sezione pagamenti con totale da pagare e quote
+  - Stampa PDF ottimizzata
+- **Form Preiscrizione Online**
+  - Segretario crea preiscrizione (nome + cognome) → genera link
+  - Genitore apre link e compila form completo con dati precompilati
+  - Sezione dati genitori (nome, professione, tel papà/mamma)
+  - Nome e cognome non modificabili nel form online
+- **Eliminazione Giocatori**
+  - Bottone cestino in tabella Segreteria con conferma
+- **Miglioramenti Backend**
+  - Aggiornamento parziale: solo i campi inviati vengono modificati
+  - Campi vuoti gestiti correttamente come NULL
+
+### Fixed
+- Salvataggio scheda giocatore con campi rate
+- Form online che non salvava con campi vuoti
