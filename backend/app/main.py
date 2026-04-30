@@ -31,7 +31,8 @@ async def security_headers(request: Request, call_next):
     response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    response.headers.pop("Server", None)
+    if "Server" in response.headers:
+        del response.headers["Server"]
     return response
 
 app.add_middleware(
