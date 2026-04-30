@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from slowapi.errors import RateLimitExceeded
@@ -43,10 +43,7 @@ app.add_middleware(
     expose_headers=["Content-Disposition"]
 )
 
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=["thof.crickethouse.mywire.org", "localhost", "127.0.0.1"]
-)
+
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
