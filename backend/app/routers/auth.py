@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
@@ -111,7 +111,7 @@ class PasswordChange(BaseModel):
 
 @limiter.limit("10/minute")
 @router.post("/token")
-def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(Utente).filter(Utente.username == form.username).first()
     if not user or not verify_password(form.password, user.password_hash):
         if not user:
@@ -281,7 +281,7 @@ def elimina_utente(uid: int, current_user: Utente = Depends(get_admin), db: Sess
 
 @limiter.limit("5/minute")
 @router.put("/utenti/{uid}/reset-password")
-def reset_password(uid: int, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
+def reset_password(request: Request, uid: int, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
     utente = db.query(Utente).filter(Utente.id == uid).first()
     if not utente:
         raise HTTPException(status_code=404, detail="Utente non trovato")
