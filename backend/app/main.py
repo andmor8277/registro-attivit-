@@ -1,10 +1,10 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from fastapi.responses import JSONResponse
 import os
 from .rate_limit import limiter
 from .database import Base, engine
@@ -21,12 +21,30 @@ app.add_middleware(SlowAPIMiddleware)
 async def rate_limit_exceeded_handler(request, exc):
     return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
 
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers.pop("Server", None)
+    return response
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://thof.crickethouse.mywire.org", "http://localhost:5173", "http://localhost:3000"],
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
     expose_headers=["Content-Disposition"]
+)
+
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["thof.crickethouse.mywire.org", "localhost", "127.0.0.1"]
 )
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
