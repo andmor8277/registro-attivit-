@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from .. import models, schemas
@@ -96,7 +96,7 @@ SENSITIVE_FIELDS = frozenset(['codice_fiscale', 'tel_papa', 'tel_mamma', 'anamne
 
 @router.get("/")
 @limiter.limit("60/minute")
-def get_persone(categoria_id: Optional[int] = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def get_persone(request: Request, categoria_id: Optional[int] = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     societa_id = get_societa_filter(current_user)
     is_admin = current_user.is_admin or current_user.is_super_admin
 
@@ -203,7 +203,7 @@ def decrypt_row(db: Session, row) -> dict:
 
 @router.get("/public/{persona_id}")
 @limiter.limit("10/minute")
-def get_public_persona(persona_id: int, db: Session = Depends(get_db)):
+def get_public_persona(request: Request, persona_id: int, db: Session = Depends(get_db)):
     query = """
         SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id,
                 p.data_nascita, p.matricola,
@@ -224,7 +224,7 @@ def get_public_persona(persona_id: int, db: Session = Depends(get_db)):
 
 @router.put("/public/{persona_id}")
 @limiter.limit("10/minute")
-def update_public_persona(persona_id: int, p: schemas.PersonaCreate, db: Session = Depends(get_db)):
+def update_public_persona(request: Request, persona_id: int, p: schemas.PersonaCreate, db: Session = Depends(get_db)):
     persona = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
     if not persona:
         raise HTTPException(status_code=404, detail="Persona non trovata")
@@ -241,7 +241,7 @@ def update_public_persona(persona_id: int, p: schemas.PersonaCreate, db: Session
 
 @router.post("/public/")
 @limiter.limit("10/minute")
-def create_public_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db)):
+def create_public_persona(request: Request, p: schemas.PersonaCreate, db: Session = Depends(get_db)):
     allowed_fields = {"nome", "cognome", "categoria_id", "residenza", "indirizzo", "cittadinanza", "email1", "email2", "tel_papa", "tel_mamma", "anamnesi", "taglia", "note", "data_nascita", "matricola", "numero_maglia", "scadenza_certificato"}
     data = {k: v for k, v in p.dict(exclude_none=True).items() if k in allowed_fields}
     if not data.get("nome") or not data.get("cognome"):
