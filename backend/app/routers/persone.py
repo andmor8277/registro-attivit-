@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from .. import models, schemas
 from ..database import get_db
-from ..routers.auth import get_current_user
+from ..routers.auth import get_current_user, get_super_admin
 from ..models import Utente
 from ..rate_limit import limiter
 from typing import Optional
@@ -202,7 +202,7 @@ def decrypt_row(db: Session, row) -> dict:
     return r
 
 @router.get("/public/{persona_id}")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 def get_public_persona(request: Request, persona_id: int, db: Session = Depends(get_db)):
     query = """
         SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id,
@@ -223,7 +223,7 @@ def get_public_persona(request: Request, persona_id: int, db: Session = Depends(
     return result
 
 @router.put("/public/{persona_id}")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 def update_public_persona(request: Request, persona_id: int, p: schemas.PersonaCreate, db: Session = Depends(get_db)):
     persona = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
     if not persona:
@@ -240,7 +240,7 @@ def update_public_persona(request: Request, persona_id: int, p: schemas.PersonaC
     return {"ok": True}
 
 @router.post("/public/")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 def create_public_persona(request: Request, p: schemas.PersonaCreate, db: Session = Depends(get_db)):
     allowed_fields = {"nome", "cognome", "categoria_id", "residenza", "indirizzo", "cittadinanza", "email1", "email2", "tel_papa", "tel_mamma", "anamnesi", "taglia", "note", "data_nascita", "matricola", "numero_maglia", "scadenza_certificato"}
     data = {k: v for k, v in p.dict(exclude_none=True).items() if k in allowed_fields}
@@ -264,16 +264,13 @@ def create_public_persona(request: Request, p: schemas.PersonaCreate, db: Sessio
 def update_encryption_key(
     data: dict,
     db: Session = Depends(get_db),
-    current_user: Utente = Depends(get_current_user),
+    current_user: Utente = Depends(get_super_admin),
     reencrypt: bool = False
 ):
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Solo super admin può modificare la chiave")
-    
     new_key = data.get("key")
     old_key = data.get("old_key", ENCRYPTION_KEY)
-    if not new_key:
-        raise HTTPException(status_code=400, detail="Chiave non fornita")
+    if not new_key or not isinstance(new_key, str) or len(new_key) < 16:
+        raise HTTPException(status_code=400, detail="Chiave non valida (min 16 caratteri)")
     
     if reencrypt:
         rows = db.execute(text("SELECT id, codice_fiscale, tel_papa, tel_mamma FROM persone")).fetchall()
