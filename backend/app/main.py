@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from fastapi.responses import JSONResponse
 import os
 from .rate_limit import limiter
@@ -13,7 +14,8 @@ from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
 
 app = FastAPI(title="Registro Presenze API")
-limiter.init_app(app)
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_exceeded_handler(request, exc):
