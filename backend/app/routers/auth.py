@@ -4,12 +4,14 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 from pydantic import BaseModel
 from typing import Optional, List
 from ..database import SessionLocal
 from ..models import Utente, UtenteCategoria, Categoria
+from ..rate_limit import limiter
 import os
+import re
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 if not SECRET_KEY:
@@ -37,9 +39,19 @@ def verify_password(plain, hashed):
 def hash_password(password):
     return pwd_context.hash(password)
 
+def validate_password(password: str):
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="La password deve avere almeno 8 caratteri")
+    if not re.search(r'[A-Z]', password):
+        raise HTTPException(status_code=400, detail="La password deve contenere almeno un carattere maiuscolo")
+    if not re.search(r'[a-z]', password):
+        raise HTTPException(status_code=400, detail="La password deve contenere almeno un carattere minuscolo")
+    if not re.search(r'\d', password):
+        raise HTTPException(status_code=400, detail="La password deve contenere almeno un numero")
+
 def create_token(data: dict):
     to_encode = data.copy()
-    to_encode["exp"] = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode["exp"] = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -97,10 +109,13 @@ class PasswordChange(BaseModel):
     vecchia: Optional[str] = None
     nuova: str
 
+@limiter.limit("10/minute")
 @router.post("/token")
 def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(Utente).filter(Utente.username == form.username).first()
     if not user or not verify_password(form.password, user.password_hash):
+        if not user:
+            verify_password(form.password, "$2b$12$dummy_hash_for_timing_attack_prevention_000000000000")
         raise HTTPException(status_code=401, detail="Credenziali errate")
     token = create_token({"sub": user.username, "is_admin": user.is_admin, "societa_id": user.societa_id, "is_super_admin": user.is_super_admin})
     return {"access_token": token, "token_type": "bearer"}
@@ -133,6 +148,7 @@ def me(current_user: Utente = Depends(get_current_user), db: Session = Depends(g
 
 @router.post("/utenti")
 def crea_utente(data: UtenteCreate, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
+    validate_password(data.password)
     if db.query(Utente).filter(Utente.username == data.username).first():
         raise HTTPException(status_code=400, detail="Username già esistente")
     
@@ -263,6 +279,7 @@ def elimina_utente(uid: int, current_user: Utente = Depends(get_admin), db: Sess
     db.commit()
     return {"ok": True}
 
+@limiter.limit("5/minute")
 @router.put("/utenti/{uid}/reset-password")
 def reset_password(uid: int, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
     utente = db.query(Utente).filter(Utente.id == uid).first()
@@ -274,6 +291,7 @@ def reset_password(uid: int, current_user: Utente = Depends(get_admin), db: Sess
 
 @router.put("/utenti/{uid}/password")
 def cambia_password(uid: int, data: PasswordChange, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
+    validate_password(data.nuova)
     if not current_user.is_admin and current_user.id != uid:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     utente = db.query(Utente).filter(Utente.id == uid).first()

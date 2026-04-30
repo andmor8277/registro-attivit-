@@ -6,6 +6,7 @@ from .. import models, schemas
 from ..database import get_db
 from ..routers.auth import get_current_user
 from ..models import Utente
+from ..rate_limit import limiter
 from typing import Optional
 import logging
 
@@ -89,20 +90,36 @@ def get_societa_filter(current_user: Utente):
         return None
     return current_user.societa_id
 
+SENSITIVE_FIELDS = frozenset(['codice_fiscale', 'tel_papa', 'tel_mamma', 'anamnesi',
+                               'prof_papa', 'prof_mamma', 'nome_papa', 'nome_mamma', 'comune_nato',
+                               'totale_da_pagare', 'rata_iscrizione', 'rata1', 'rata2', 'rata3', 'rata4', 'rata_saldo'])
+
 @router.get("/")
+@limiter.limit("60/minute")
 def get_persone(categoria_id: Optional[int] = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     societa_id = get_societa_filter(current_user)
-    
-    query = """
-        SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id,
-                p.data_nascita, p.codice_fiscale, p.matricola,
-                p.numero_maglia, p.scadenza_certificato, p.societa_id,
-                p.residenza, p.indirizzo, p.cittadinanza, p.tel_papa, p.tel_mamma,
-                p.email1, p.email2, p.prof_papa, p.prof_mamma, p.nome_papa, p.nome_mamma, p.comune_nato,
-                p.anamnesi, p.taglia, p.note,
-                p.totale_da_pagare, p.rata_iscrizione, p.rata1, p.rata2, p.rata3, p.rata4, p.rata_saldo
-        FROM persone p
-    """
+    is_admin = current_user.is_admin or current_user.is_super_admin
+
+    if is_admin:
+        query = """
+            SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id,
+                    p.data_nascita, p.codice_fiscale, p.matricola,
+                    p.numero_maglia, p.scadenza_certificato, p.societa_id,
+                    p.residenza, p.indirizzo, p.cittadinanza, p.tel_papa, p.tel_mamma,
+                    p.email1, p.email2, p.prof_papa, p.prof_mamma, p.nome_papa, p.nome_mamma, p.comune_nato,
+                    p.anamnesi, p.taglia, p.note,
+                    p.totale_da_pagare, p.rata_iscrizione, p.rata1, p.rata2, p.rata3, p.rata4, p.rata_saldo
+            FROM persone p
+        """
+    else:
+        query = """
+            SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id,
+                    p.data_nascita, p.matricola,
+                    p.numero_maglia, p.scadenza_certificato, p.societa_id,
+                    p.residenza, p.indirizzo, p.cittadinanza,
+                    p.email1, p.email2, p.taglia, p.note
+            FROM persone p
+        """
 
     conditions = []
     params = {}
@@ -121,7 +138,10 @@ def get_persone(categoria_id: Optional[int] = None, db: Session = Depends(get_db
 
     results = []
     for row in rows:
-        r = decrypt_row(db, row)
+        if is_admin:
+            r = decrypt_row(db, row)
+        else:
+            r = dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
         results.append(r)
 
     return results
@@ -182,33 +202,34 @@ def decrypt_row(db: Session, row) -> dict:
     return r
 
 @router.get("/public/{persona_id}")
+@limiter.limit("10/minute")
 def get_public_persona(persona_id: int, db: Session = Depends(get_db)):
     query = """
         SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id,
-                p.data_nascita, p.codice_fiscale, p.matricola,
-                p.numero_maglia, p.scadenza_certificato, p.societa_id,
-                p.residenza, p.indirizzo, p.cittadinanza, p.tel_papa,
-                p.tel_mamma, p.email1, p.email2, p.anamnesi, p.taglia,
-                p.note, p.totale_da_pagare, p.rata_iscrizione, p.rata1, p.rata2, p.rata3, p.rata4, p.rata_saldo
+                p.data_nascita, p.matricola,
+                p.numero_maglia, p.scadenza_certificato,
+                p.residenza, p.indirizzo, p.cittadinanza,
+                p.email1, p.email2, p.taglia,
+                p.note
         FROM persone p
         WHERE p.id = :id
     """
     row = db.execute(text(query), {"id": persona_id}).first()
     if not row:
         raise HTTPException(status_code=404, detail="Persona non trovata")
-    result = decrypt_row(db, row)
+    result = dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
     gruppo = db.execute(text("SELECT nome FROM gruppi WHERE id = :id"), {"id": result.get("gruppo_id")}).first()
     result["gruppo_nome"] = gruppo.nome if gruppo else None
     return result
 
 @router.put("/public/{persona_id}")
+@limiter.limit("10/minute")
 def update_public_persona(persona_id: int, p: schemas.PersonaCreate, db: Session = Depends(get_db)):
     persona = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
     if not persona:
         raise HTTPException(status_code=404, detail="Persona non trovata")
-    data = p.dict(exclude_none=True)
-    if data.get("codice_fiscale"):
-        data["codice_fiscale"] = safe_encrypt(db, data["codice_fiscale"])
+    allowed_fields = {"nome", "cognome", "residenza", "indirizzo", "cittadinanza", "email1", "email2", "tel_papa", "tel_mamma", "anamnesi", "taglia", "note"}
+    data = {k: v for k, v in p.dict(exclude_none=True).items() if k in allowed_fields}
     if data.get("tel_papa"):
         data["tel_papa"] = safe_encrypt(db, data["tel_papa"])
     if data.get("tel_mamma"):
@@ -219,20 +240,18 @@ def update_public_persona(persona_id: int, p: schemas.PersonaCreate, db: Session
     return {"ok": True}
 
 @router.post("/public/")
+@limiter.limit("10/minute")
 def create_public_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db)):
-    data = p.dict(exclude_none=True)
+    allowed_fields = {"nome", "cognome", "categoria_id", "residenza", "indirizzo", "cittadinanza", "email1", "email2", "tel_papa", "tel_mamma", "anamnesi", "taglia", "note", "data_nascita", "matricola", "numero_maglia", "scadenza_certificato"}
+    data = {k: v for k, v in p.dict(exclude_none=True).items() if k in allowed_fields}
     if not data.get("nome") or not data.get("cognome"):
         raise HTTPException(status_code=400, detail="Nome e cognome sono obbligatori")
-    if data.get("categoria_id"):
-        cat = db.execute(text("SELECT societa_id FROM categorie WHERE id = :id"), {"id": data["categoria_id"]}).first()
-        if cat:
-            data["societa_id"] = cat.societa_id
-        else:
-            raise HTTPException(status_code=400, detail="Categoria non trovata")
-    else:
+    if not data.get("categoria_id"):
         raise HTTPException(status_code=400, detail="Categoria_id è richiesto")
-    if data.get("codice_fiscale"):
-        data["codice_fiscale"] = safe_encrypt(db, data["codice_fiscale"])
+    cat = db.execute(text("SELECT societa_id FROM categorie WHERE id = :id"), {"id": data["categoria_id"]}).first()
+    if not cat:
+        raise HTTPException(status_code=400, detail="Categoria non trovata")
+    data["societa_id"] = cat.societa_id
     if data.get("tel_papa"):
         data["tel_papa"] = safe_encrypt(db, data["tel_papa"])
     if data.get("tel_mamma"):
