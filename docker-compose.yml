@@ -20,7 +20,7 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-5DSqiSp+zs0pBlg7+vR46AYjJV70DMWnLRuZCUabd0c=}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       PGCRYPTO_AVAILABLE: "true"
     ports:
       - "8000:8000"

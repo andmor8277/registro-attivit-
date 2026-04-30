@@ -11,28 +11,76 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Chiave di crittografia da env o default (cambiare in produzione!)
-ENCRYPTION_KEY = os.environ.get("ENCRYPTION_KEY", "5DSqiSp+zs0pBlg7+vR46AYjJV70DMWnLRuZCUabd0c=")
+ENCRYPTION_KEY = os.environ.get("ENCRYPTION_KEY")
+if not ENCRYPTION_KEY:
+    raise RuntimeError("ENCRYPTION_KEY environment variable is required")
 
 PGCRYPTO_AVAILABLE = os.environ.get("PGCRYPTO_AVAILABLE", "false").lower() == "true"
 
-def encrypt_field(value):
-    if not value:
+def safe_encrypt(db: Session, value: str) -> str:
+    """Safely encrypt a value using parameterized query."""
+    if not value or not PGCRYPTO_AVAILABLE:
         return value
-    if PGCRYPTO_AVAILABLE:
-        return text("SELECT encode(encrypt(:value::bytea, :key, 'aes'), 'hex')").bindparams(
-            value=value, key=ENCRYPTION_KEY
-        )
-    return value
+    try:
+        result = db.execute(
+            text("SELECT encode(encrypt(:value::bytea, :key, 'aes'), 'hex')"),
+            {"value": value, "key": ENCRYPTION_KEY}
+        ).scalar()
+        return result
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Encryption failed: {e}")
+        raise
 
-def decrypt_field(value):
-    if not value:
+def safe_decrypt(db: Session, value: str) -> str:
+    """Safely decrypt a value using parameterized query."""
+    if not value or not PGCRYPTO_AVAILABLE:
         return value
-    if PGCRYPTO_AVAILABLE and isinstance(value, str) and len(value) == 48 and all(c in '0123456789abcdef' for c in value):
-        return text("SELECT decrypt(decode(:value, 'hex'), :key, 'aes')::text").bindparams(
-            value=value, key=ENCRYPTION_KEY
-        )
-    return value
+    if not isinstance(value, str) or len(value) < 32 or not all(c in '0123456789abcdef' for c in value):
+        return value
+    try:
+        db.rollback()
+        decrypted = db.execute(
+            text("SELECT convert_from(decrypt(decode(:value, 'hex'), :key, 'aes'), 'UTF8')"),
+            {"value": value, "key": ENCRYPTION_KEY}
+        ).scalar()
+        return decrypted if decrypted else value
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"Could not decrypt: {e}")
+        return value
+
+def safe_decrypt_with_key(db: Session, value: str, key: str) -> str:
+    """Safely decrypt a value with a specific key using parameterized query."""
+    if not value or not PGCRYPTO_AVAILABLE:
+        return None
+    if not isinstance(value, str) or len(value) < 32 or not all(c in '0123456789abcdef' for c in value):
+        return None
+    try:
+        db.rollback()
+        decrypted = db.execute(
+            text("SELECT convert_from(decrypt(decode(:value, 'hex'), :key, 'aes'), 'UTF8')"),
+            {"value": value, "key": key}
+        ).scalar()
+        return decrypted
+    except Exception:
+        db.rollback()
+        return None
+
+def safe_encrypt_with_key(db: Session, value: str, key: str) -> str:
+    """Safely encrypt a value with a specific key using parameterized query."""
+    if not value or not PGCRYPTO_AVAILABLE:
+        return value
+    try:
+        result = db.execute(
+            text("SELECT encode(encrypt(:value::bytea, :key, 'aes'), 'hex')"),
+            {"value": value, "key": key}
+        ).scalar()
+        return result
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Encryption failed: {e}")
+        raise
 
 router = APIRouter(prefix="/persone", tags=["persone"])
 
@@ -71,24 +119,9 @@ def get_persone(categoria_id: Optional[int] = None, db: Session = Depends(get_db
 
     rows = db.execute(text(query), params).fetchall()
 
-    # Decodifica i campi sensibili
     results = []
     for row in rows:
-        r = dict(row._mapping)
-        # Decodifica i campi crittografati (solo se pgcrypto disponibile)
-        if PGCRYPTO_AVAILABLE:
-            for field in ['codice_fiscale', 'tel_papa', 'tel_mamma']:
-                val = r.get(field)
-                if val and isinstance(val, str) and len(val) >= 32 and all(c in '0123456789abcdef' for c in val):
-                    try:
-                        db.rollback()
-                        decrypted = db.execute(text(
-                            f"SELECT convert-from(decrypt(decode('{val}', 'hex'), '{ENCRYPTION_KEY}', 'aes'), 'UTF8')"
-                        )).scalar()
-                        r[field] = decrypted if decrypted else val
-                    except Exception as e:
-                        db.rollback()
-                        logger.warning(f"Could not decrypt {field}: {e}")
+        r = decrypt_row(db, row)
         results.append(r)
 
     return results
@@ -99,25 +132,12 @@ def create_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db), curr
     data = p.dict()
     data["societa_id"] = societa_id
     
-    # Crittografa i campi sensibili prima di salvare
-    if PGCRYPTO_AVAILABLE:
-        if data.get("codice_fiscale"):
-            encrypted = db.execute(text(
-                f"SELECT encode(encrypt('{data['codice_fiscale']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
-            )).scalar()
-            data["codice_fiscale"] = encrypted
-
-        if data.get("tel_papa"):
-            encrypted = db.execute(text(
-                f"SELECT encode(encrypt('{data['tel_papa']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
-            )).scalar()
-            data["tel_papa"] = encrypted
-
-        if data.get("tel_mamma"):
-            encrypted = db.execute(text(
-                f"SELECT encode(encrypt('{data['tel_mamma']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
-            )).scalar()
-            data["tel_mamma"] = encrypted
+    if data.get("codice_fiscale"):
+        data["codice_fiscale"] = safe_encrypt(db, data["codice_fiscale"])
+    if data.get("tel_papa"):
+        data["tel_papa"] = safe_encrypt(db, data["tel_papa"])
+    if data.get("tel_mamma"):
+        data["tel_mamma"] = safe_encrypt(db, data["tel_mamma"])
 
     persona = models.Persona(**data)
     db.add(persona); db.commit(); db.refresh(persona)
@@ -131,25 +151,12 @@ def update_persona(persona_id: int, p: schemas.PersonaCreate, db: Session = Depe
         raise HTTPException(status_code=403, detail="Non autorizzato")
     data = p.dict(exclude_none=True)
 
-    # Crittografa i campi sensibili prima di salvare
-    if PGCRYPTO_AVAILABLE:
-        if data.get("codice_fiscale"):
-            encrypted = db.execute(text(
-                f"SELECT encode(encrypt('{data['codice_fiscale']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
-            )).scalar()
-            data["codice_fiscale"] = encrypted
-
-        if data.get("tel_papa"):
-            encrypted = db.execute(text(
-                f"SELECT encode(encrypt('{data['tel_papa']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
-            )).scalar()
-            data["tel_papa"] = encrypted
-
-        if data.get("tel_mamma"):
-            encrypted = db.execute(text(
-                f"SELECT encode(encrypt('{data['tel_mamma']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
-            )).scalar()
-            data["tel_mamma"] = encrypted
+    if data.get("codice_fiscale"):
+        data["codice_fiscale"] = safe_encrypt(db, data["codice_fiscale"])
+    if data.get("tel_papa"):
+        data["tel_papa"] = safe_encrypt(db, data["tel_papa"])
+    if data.get("tel_mamma"):
+        data["tel_mamma"] = safe_encrypt(db, data["tel_mamma"])
 
     for key, value in data.items():
         setattr(persona, key, value)
@@ -168,21 +175,10 @@ def delete_persona(persona_id: int, db: Session = Depends(get_db), current_user:
 
 # --- Public endpoints (no authentication required) ---
 
-def decrypt_row(db: Session, row: dict) -> dict:
+def decrypt_row(db: Session, row) -> dict:
     r = dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
-    if PGCRYPTO_AVAILABLE:
-        for field in ['codice_fiscale', 'tel_papa', 'tel_mamma']:
-            val = r.get(field)
-            if val and isinstance(val, str) and len(val) >= 32 and all(c in '0123456789abcdef' for c in val):
-                try:
-                    db.rollback()
-                    decrypted = db.execute(text(
-                        f"SELECT convert_from(decrypt(decode('{val}', 'hex'), '{ENCRYPTION_KEY}', 'aes'), 'UTF8')"
-                    )).scalar()
-                    r[field] = decrypted if decrypted else val
-                except Exception as e:
-                    db.rollback()
-                    logger.warning(f"Could not decrypt {field}: {e}")
+    for field in ['codice_fiscale', 'tel_papa', 'tel_mamma']:
+        r[field] = safe_decrypt(db, r.get(field))
     return r
 
 @router.get("/public/{persona_id}")
@@ -211,22 +207,12 @@ def update_public_persona(persona_id: int, p: schemas.PersonaCreate, db: Session
     if not persona:
         raise HTTPException(status_code=404, detail="Persona non trovata")
     data = p.dict(exclude_none=True)
-    if PGCRYPTO_AVAILABLE:
-        if data.get("codice_fiscale"):
-            encrypted = db.execute(text(
-                f"SELECT encode(encrypt('{data['codice_fiscale']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
-            )).scalar()
-            data["codice_fiscale"] = encrypted
-        if data.get("tel_papa"):
-            encrypted = db.execute(text(
-                f"SELECT encode(encrypt('{data['tel_papa']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
-            )).scalar()
-            data["tel_papa"] = encrypted
-        if data.get("tel_mamma"):
-            encrypted = db.execute(text(
-                f"SELECT encode(encrypt('{data['tel_mamma']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
-            )).scalar()
-            data["tel_mamma"] = encrypted
+    if data.get("codice_fiscale"):
+        data["codice_fiscale"] = safe_encrypt(db, data["codice_fiscale"])
+    if data.get("tel_papa"):
+        data["tel_papa"] = safe_encrypt(db, data["tel_papa"])
+    if data.get("tel_mamma"):
+        data["tel_mamma"] = safe_encrypt(db, data["tel_mamma"])
     for key, value in data.items():
         setattr(persona, key, value)
     db.commit(); db.refresh(persona)
@@ -245,22 +231,12 @@ def create_public_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db
             raise HTTPException(status_code=400, detail="Categoria non trovata")
     else:
         raise HTTPException(status_code=400, detail="Categoria_id è richiesto")
-    if PGCRYPTO_AVAILABLE:
-        if data.get("codice_fiscale"):
-            encrypted = db.execute(text(
-                f"SELECT encode(encrypt('{data['codice_fiscale']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
-            )).scalar()
-            data["codice_fiscale"] = encrypted
-        if data.get("tel_papa"):
-            encrypted = db.execute(text(
-                f"SELECT encode(encrypt('{data['tel_papa']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
-            )).scalar()
-            data["tel_papa"] = encrypted
-        if data.get("tel_mamma"):
-            encrypted = db.execute(text(
-                f"SELECT encode(encrypt('{data['tel_mamma']}'::bytea, '{ENCRYPTION_KEY}', 'aes'), 'hex')"
-            )).scalar()
-            data["tel_mamma"] = encrypted
+    if data.get("codice_fiscale"):
+        data["codice_fiscale"] = safe_encrypt(db, data["codice_fiscale"])
+    if data.get("tel_papa"):
+        data["tel_papa"] = safe_encrypt(db, data["tel_papa"])
+    if data.get("tel_mamma"):
+        data["tel_mamma"] = safe_encrypt(db, data["tel_mamma"])
     persona = models.Persona(**data)
     db.add(persona); db.commit(); db.refresh(persona)
     return {"id": persona.id, "ok": True}
@@ -281,7 +257,6 @@ def update_encryption_key(
         raise HTTPException(status_code=400, detail="Chiave non fornita")
     
     if reencrypt:
-        # Re-encrypt all sensitive data with the new key
         rows = db.execute(text("SELECT id, codice_fiscale, tel_papa, tel_mamma FROM persone")).fetchall()
         updated = 0
         for row in rows:
@@ -290,102 +265,33 @@ def update_encryption_key(
             old_papa = row.tel_papa
             old_mamma = row.tel_mamma
 
-            decrypted_cf = None
-            decrypted_papa = None
-            decrypted_mamma = None
+            decrypted_cf = safe_decrypt_with_key(db, old_cf, old_key)
+            if not decrypted_cf:
+                decrypted_cf = safe_decrypt_with_key(db, old_cf, ENCRYPTION_KEY)
 
-            # Try to decrypt with old key first
-            if old_cf and len(old_cf) >= 32:
-                try:
-                    db.rollback()
-                    decrypted_cf = db.execute(text(
-                        f"SELECT convert_from(decrypt(decode('{old_cf}', 'hex'), '{old_key}', 'aes'), 'UTF8')"
-                    )).scalar()
-                except:
-                    pass
+            decrypted_papa = safe_decrypt_with_key(db, old_papa, old_key)
+            if not decrypted_papa:
+                decrypted_papa = safe_decrypt_with_key(db, old_papa, ENCRYPTION_KEY)
 
-            if old_papa and len(old_papa) >= 32:
-                try:
-                    db.rollback()
-                    decrypted_papa = db.execute(text(
-                        f"SELECT convert_from(decrypt(decode('{old_papa}', 'hex'), '{old_key}', 'aes'), 'UTF8')"
-                    )).scalar()
-                except:
-                    pass
+            decrypted_mamma = safe_decrypt_with_key(db, old_mamma, old_key)
+            if not decrypted_mamma:
+                decrypted_mamma = safe_decrypt_with_key(db, old_mamma, ENCRYPTION_KEY)
 
-            if old_mamma and len(old_mamma) >= 32:
-                try:
-                    db.rollback()
-                    decrypted_mamma = db.execute(text(
-                        f"SELECT convert_from(decrypt(decode('{old_mamma}', 'hex'), '{old_key}', 'aes'), 'UTF8')"
-                    )).scalar()
-                except:
-                    pass
-
-            # If still encrypted with current key, also try that
-            if not decrypted_cf and old_cf and len(old_cf) >= 32:
-                try:
-                    db.rollback()
-                    decrypted_cf = db.execute(text(
-                        f"SELECT convert_from(decrypt(decode('{old_cf}', 'hex'), '{ENCRYPTION_KEY}', 'aes'), 'UTF8')"
-                    )).scalar()
-                except:
-                    pass
-
-            if not decrypted_papa and old_papa and len(old_papa) >= 32:
-                try:
-                    db.rollback()
-                    decrypted_papa = db.execute(text(
-                        f"SELECT convert_from(decrypt(decode('{old_papa}', 'hex'), '{ENCRYPTION_KEY}', 'aes'), 'UTF8')"
-                    )).scalar()
-                except:
-                    pass
-
-            if not decrypted_mamma and old_mamma and len(old_mamma) >= 32:
-                try:
-                    db.rollback()
-                    decrypted_mamma = db.execute(text(
-                        f"SELECT convert_from(decrypt(decode('{old_mamma}', 'hex'), '{ENCRYPTION_KEY}', 'aes'), 'UTF8')"
-                    )).scalar()
-                except:
-                    pass
-
-            # Now re-encrypt with new key and save
             if decrypted_cf or decrypted_papa or decrypted_mamma:
-                new_cf = None
-                new_papa = None
-                new_mamma = None
-
-                if decrypted_cf:
-                    new_cf = db.execute(text(
-                        f"SELECT encode(encrypt('{decrypted_cf}'::bytea, '{new_key}', 'aes'), 'hex')"
-                    )).scalar()
-
-                if decrypted_papa:
-                    new_papa = db.execute(text(
-                        f"SELECT encode(encrypt('{decrypted_papa}'::bytea, '{new_key}', 'aes'), 'hex')"
-                    )).scalar()
-
-                if decrypted_mamma:
-                    new_mamma = db.execute(text(
-                        f"SELECT encode(encrypt('{decrypted_mamma}'::bytea, '{new_key}', 'aes'), 'hex')"
-                    )).scalar()
+                new_cf = safe_encrypt_with_key(db, decrypted_cf, new_key) if decrypted_cf else None
+                new_papa = safe_encrypt_with_key(db, decrypted_papa, new_key) if decrypted_papa else None
+                new_mamma = safe_encrypt_with_key(db, decrypted_mamma, new_key) if decrypted_mamma else None
 
                 db.execute(text(
                     "UPDATE persone SET codice_fiscale = :cf, tel_papa = :papa, tel_mamma = :mamma WHERE id = :id"
-                ).bindparams(cf=new_cf, papa=new_papa, mamma=new_mamma, id=persona_id))
+                ), {"cf": new_cf, "papa": new_papa, "mamma": new_mamma, "id": persona_id})
                 updated += 1
-        
+
         db.commit()
-        
-        # Update the key
         os.environ["ENCRYPTION_KEY"] = new_key
         globals()["ENCRYPTION_KEY"] = new_key
-        
         return {"ok": True, "message": f"Chiave aggiornata e {updated} record ricifrati"}
-    
-    # Just update the key without re-encrypting
+
     os.environ["ENCRYPTION_KEY"] = new_key
     globals()["ENCRYPTION_KEY"] = new_key
-    
     return {"ok": True, "message": "Chiave aggiornata"}
