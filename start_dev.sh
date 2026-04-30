@@ -19,7 +19,7 @@ fi
 echo "2. Verifico database..."
 if ! psql -h /tmp/pgsocket -p 5433 -d postgres -c "SELECT 1 FROM pg_database WHERE datname='registro'" | grep -q 1; then
     echo "   Creo database e utente..."
-    psql -h /tmp/pgsocket -p 5433 -d postgres -c "CREATE USER registro_user WITH PASSWORD 'REMOVED' CREATEDB SUPERUSER;" 2>/dev/null || true
+    psql -h /tmp/pgsocket -p 5433 -d postgres -c "CREATE USER registro_user WITH PASSWORD '${DB_PASSWORD:-postgres}' CREATEDB SUPERUSER;" 2>/dev/null || true
     psql -h /tmp/pgsocket -p 5433 -d postgres -c "CREATE DATABASE registro OWNER registro_user;" 2>/dev/null || true
 fi
 
@@ -36,7 +36,7 @@ fi
 # 3. Avvia backend
 echo "3. Avvio Backend (porta 8000)..."
 cd /home/andrea/registro_presenze/backend
-export DATABASE_URL="postgresql://registro_user:REMOVED@/registro?host=/tmp/pgsocket&port=5433"
+export DATABASE_URL="postgresql://registro_user:${DB_PASSWORD:-postgres}@/registro?host=/tmp/pgsocket&port=5433"
 pkill -f "uvicorn.*8000" 2>/dev/null || true
 python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
