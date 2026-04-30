@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 import os
-import shutil
 from pathlib import Path
+from uuid import uuid4
 from ..database import SessionLocal
 from ..models import Societa
 from .auth import get_admin, get_current_user
@@ -82,15 +82,34 @@ def elimina_societa(sid: int, db: Session = Depends(get_db), current_user=Depend
     db.commit()
     return {"ok": True}
 
+ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
 @router.post("/upload/{tipo}")
 async def upload_file(tipo: str, file: UploadFile = File(...), current_user=Depends(get_admin)):
     if tipo not in ["logo", "logosponsor"]:
         raise HTTPException(status_code=400, detail="Tipo file non valido")
-    
-    filename = f"{tipo}_{file.filename}"
-    filepath = UPLOAD_DIR / filename
-    
-    with open(filepath, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
-    return {"filename": filename}
+
+    # Validate file extension
+    ext = Path(file.filename).suffix.lower().lstrip(".")
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Tipo file non consentito. Sono ammessi solo: jpg, jpeg, png, gif, webp")
+
+    # Read file content in chunks and enforce size limit
+    content = b""
+    while True:
+        chunk = await file.read(1024 * 1024)  # 1 MB chunks
+        if not chunk:
+            break
+        content += chunk
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="File troppo grande. Dimensione massima: 5 MB")
+
+    # Generate safe filename using uuid4
+    safe_filename = f"{tipo}_{uuid4().hex}.{ext}"
+    filepath = UPLOAD_DIR / safe_filename
+
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    return {"filename": safe_filename}

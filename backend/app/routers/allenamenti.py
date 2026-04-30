@@ -256,11 +256,20 @@ def get_catalogo_new(focus: Optional[str] = None, db: Session = Depends(get_db),
         "is_super_admin": current_user.is_super_admin
     }
 
+class CatalogoEsercizioIn(BaseModel):
+    titolo: str
+    focus: Optional[str] = ''
+    spazio: Optional[str] = ''
+    tempo: Optional[str] = ''
+    descrizione: Optional[str] = ''
+    campo_con_righe: bool = True
+    elementi: List[EsercizioElemento] = []
+
 @router.post("/catalogo-new")
-def save_to_catalogo(data: dict, db: Session = Depends(get_db), current_user: models.Utente = Depends(get_current_user)):
+def save_to_catalogo(data: CatalogoEsercizioIn, db: Session = Depends(get_db), current_user: models.Utente = Depends(get_current_user)):
     from datetime import datetime
     
-    titolo = data.get('titolo', '').strip()
+    titolo = data.titolo.strip()
     if not titolo:
         raise HTTPException(status_code=400, detail="Titolo richiesto")
     
@@ -269,22 +278,22 @@ def save_to_catalogo(data: dict, db: Session = Depends(get_db), current_user: mo
     ).first()
     
     if existing:
-        existing.focus = data.get('focus', '')
-        existing.spazio = data.get('spazio', '')
-        existing.tempo = data.get('tempo', '')
-        existing.descrizione = data.get('descrizione', '')
-        existing.campo_con_righe = data.get('campo_con_righe', True)
-        existing.elementi = data.get('elementi', [])
+        existing.focus = data.focus
+        existing.spazio = data.spazio
+        existing.tempo = data.tempo
+        existing.descrizione = data.descrizione
+        existing.campo_con_righe = data.campo_con_righe
+        existing.elementi = [e.model_dump() for e in data.elementi]
         existing.aggiornato_il = datetime.now()
     else:
         new_ex = models.CatalogoEsercizio(
             titolo=titolo,
-            focus=data.get('focus', ''),
-            spazio=data.get('spazio', ''),
-            tempo=data.get('tempo', ''),
-            descrizione=data.get('descrizione', ''),
-            campo_con_righe=data.get('campo_con_righe', True),
-            elementi=data.get('elementi', []),
+            focus=data.focus,
+            spazio=data.spazio,
+            tempo=data.tempo,
+            descrizione=data.descrizione,
+            campo_con_righe=data.campo_con_righe,
+            elementi=[e.model_dump() for e in data.elementi],
             creato_da=current_user.id,
             creato_il=datetime.now()
         )
