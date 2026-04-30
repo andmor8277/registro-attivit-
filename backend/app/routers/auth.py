@@ -11,8 +11,12 @@ from ..database import SessionLocal
 from ..models import Utente, UtenteCategoria, Categoria
 import os
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "REMOVED")
-DEFAULT_PASSWORD = os.environ.get("DEFAULT_PASSWORD", "REMOVED")
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is required")
+DEFAULT_PASSWORD = os.environ.get("DEFAULT_PASSWORD")
+if not DEFAULT_PASSWORD:
+    raise RuntimeError("DEFAULT_PASSWORD environment variable is required")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480
 
@@ -47,9 +51,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         user = db.query(Utente).filter(Utente.username == username).first()
         if not user:
             raise HTTPException(status_code=401, detail="Utente non trovato")
-        # Aggiorna dati da token in caso di modifiche
-        user.societa_id = payload.get("societa_id", user.societa_id)
-        user.is_super_admin = payload.get("is_super_admin", user.is_super_admin)
         return user
     except JWTError:
         raise HTTPException(status_code=401, detail="Token non valido")
