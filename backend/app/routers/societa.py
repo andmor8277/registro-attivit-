@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -83,6 +83,7 @@ def elimina_societa(sid: int, db: Session = Depends(get_db), current_user=Depend
     return {"ok": True}
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 
 @router.post("/upload/{tipo}")
@@ -104,6 +105,22 @@ async def upload_file(tipo: str, file: UploadFile = File(...), current_user=Depe
         content += chunk
         if len(content) > MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail="File troppo grande. Dimensione massima: 5 MB")
+
+    # Validate MIME type by checking magic bytes
+    mime_type = None
+    if content[:2] == b'\xff\xd8':
+        mime_type = "image/jpeg"
+    elif content[:8] == b'\x89PNG\r\n\x1a\n':
+        mime_type = "image/png"
+    elif content[:6] == b'GIF87a' or content[:6] == b'GIF89a':
+        mime_type = "image/gif"
+    elif content[:4] == b'\x00\x00\x01\x00' or content[:12] == b'\x52\x49\x46\x46\x00\x00\x00\x00\x57\x45\x42\x50':
+        mime_type = "image/webp"
+    elif content[:4] in (b'RIFF', b'WEBP'):
+        mime_type = "image/webp"
+
+    if mime_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="File non valido. Il contenuto non corrisponde a un'immagine")
 
     # Generate safe filename using uuid4
     safe_filename = f"{tipo}_{uuid4().hex}.{ext}"
