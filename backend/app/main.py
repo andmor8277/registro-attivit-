@@ -13,8 +13,7 @@ from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
 
 app = FastAPI(title="Registro Presenze API")
-app.state.limiter = limiter
-app.add_middleware(limiter._middleware_class, limiter)
+limiter.init_app(app)
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_exceeded_handler(request, exc):
