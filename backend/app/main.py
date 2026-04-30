@@ -2,12 +2,22 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi.responses import JSONResponse
 import os
 from .database import Base, engine
 from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti
 from .routers.gruppi import router as gruppi_router
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
+
+limiter = Limiter(key_func=get_remote_address)
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(request, exc):
+    return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
 
 Base.metadata.create_all(bind=engine)
 
@@ -110,11 +120,14 @@ with engine.connect() as conn:
         conn.rollback()
 
 app = FastAPI(title="Registro Presenze API")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], expose_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["https://thof.crickethouse.mywire.org", "http://localhost:5173", "http://localhost:3000"], allow_methods=["*"], allow_headers=["*"], expose_headers=["*"])
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+app.state.limiter = limiter
+app.add_middleware(limiter._middleware_class, limiter)
 
 app.include_router(auth_router)
 app.include_router(societa.router)
@@ -124,8 +137,8 @@ app.include_router(codici.router, dependencies=[Depends(get_current_user)])
 app.include_router(categorie.router, dependencies=[Depends(get_current_user)])
 app.include_router(convocazioni.router, dependencies=[Depends(get_current_user)])
 app.include_router(allenatori.router, dependencies=[Depends(get_current_user)])
-app.include_router(allenamenti.router)
-app.include_router(gruppi_router)
+app.include_router(allenamenti.router, dependencies=[Depends(get_current_user)])
+app.include_router(gruppi_router, dependencies=[Depends(get_current_user)])
 
 @app.get("/")
 def root():
