@@ -25,9 +25,10 @@ registro_presenze/
 │       ├── models.py  # Modelli database
 │       └── main.py    # Entry point
 ├── migrations/        # Script migrazione database
+├── db_backup/         # Dump database per ambiente dev
 ├── docker-compose.yml
-├── dev.sh             # Script sviluppo locale
-└── deploy.sh         # Script deploy produzione
+├── start_dev.sh       # Script avvio ambiente dev
+└── deploy.sh          # Script deploy produzione
 ```
 
 ## Setup Locale
@@ -41,8 +42,8 @@ registro_presenze/
 ### Sviluppo Locale
 
 ```bash
-# Avvia il server di sviluppo
-./dev.sh
+# Avvia l'ambiente dev (PostgreSQL + Backend + Frontend)
+./start_dev.sh
 ```
 
 - **Frontend**: http://localhost:5173
@@ -62,9 +63,17 @@ registro_presenze/
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v2.1.0**.
+La versione attuale è **v3.0.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
+
+### Novità v3.0.0
+
+- **Sistema Pagamenti Completo**: Tabella pagamenti in Segreteria (Totale, Iscrizione, Rate 1-4, Saldo, Rimane), campi editabili inline con calcolo automatico
+- **Scheda Giocatore**: Vista completa con dati personali, contatti, genitori, anamnesi, equipaggiamento, pagamenti e stampa PDF
+- **Form Preiscrizione Online**: Il segretario genera un link precompilato che i genitori possono compilare online
+- **Eliminazione Giocatori**: Bottone cestino in Segreteria con conferma
+- **Aggiornamento Parziale Backend**: Solo i campi inviati vengono modificati, campi vuoti gestiti come NULL
 
 ### Novità v2.1.0
 
@@ -191,7 +200,8 @@ persone (
   categoria_id INTEGER,
   data_nascita DATE,
   codice_fiscale VARCHAR(16),
-  telefono VARCHAR(20),
+  tel_papa TEXT,
+  tel_mamma TEXT,
   matricola VARCHAR(50),
   numero_maglia INTEGER,
   scadenza_certificato DATE
