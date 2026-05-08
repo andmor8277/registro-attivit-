@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text, or_
 from .. import models
 from ..database import get_db
 from pydantic import BaseModel
@@ -12,14 +12,21 @@ router = APIRouter(prefix="/allenamenti", tags=["allenamenti"])
 
 class EsercizioElemento(BaseModel):
     tipo: str
-    x: float
-    y: float
+    x: Optional[float] = None
+    y: Optional[float] = None
     rotazione: float = 0
     colore: Optional[str] = None
     numero: Optional[int] = None
     length: Optional[float] = None
     wavy: Optional[bool] = None
     size: Optional[float] = None
+    w: Optional[float] = None
+    x1: Optional[float] = None
+    y1: Optional[float] = None
+    x2: Optional[float] = None
+    y2: Optional[float] = None
+    points: Optional[List] = None
+    text: Optional[str] = None
 
 class EsercizioCreate(BaseModel):
     ordine: int
@@ -67,13 +74,28 @@ def get_giorno_by_data(categoria_id: int, data: str, db: Session = Depends(get_d
     return {"giorno": {"id": row.id, "data": row.data}, "esercizi": esercizi}
 
 @router.post("/")
-def save_allenamento(data: AllenamentoJson, db: Session = Depends(get_db)):
+def save_allenamento(data: AllenamentoJson, db: Session = Depends(get_db), current_user: models.Utente = Depends(get_current_user)):
     from datetime import datetime
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Autorizzazione: admin/super_admin possono modificare, mister/segreteria solo se assegnati alla categoria
+    if not current_user.is_admin and not current_user.is_super_admin:
+        assegnazioni = db.query(models.UtenteCategoria).filter(
+            models.UtenteCategoria.utente_id == current_user.id,
+            models.UtenteCategoria.categoria_id == data.categoria_id
+        ).first()
+        if not assegnazioni:
+            raise HTTPException(status_code=403, detail="Non autorizzato a modificare questa categoria")
+    
+    logger.info(f"save_allenamento: categoria_id={data.categoria_id}, data={data.data}, esercizi={len(data.esercizi)}")
     
     existing = db.query(models.Allenamento).filter(
         models.Allenamento.categoria_id == data.categoria_id,
         models.Allenamento.data == data.data
     ).first()
+    
+    logger.info(f"save_allenamento: existing={existing is not None}")
     
     esercizi_list = [
         {
@@ -94,7 +116,14 @@ def save_allenamento(data: AllenamentoJson, db: Session = Depends(get_db)):
                     "numero": el.numero,
                     "length": el.length,
                     "wavy": el.wavy,
-                    "size": el.size
+                    "size": el.size,
+                    "w": el.w,
+                    "x1": el.x1,
+                    "y1": el.y1,
+                    "x2": el.x2,
+                    "y2": el.y2,
+                    "points": el.points,
+                    "text": el.text
                 }
                 for el in e.elementi
             ]
@@ -102,9 +131,12 @@ def save_allenamento(data: AllenamentoJson, db: Session = Depends(get_db)):
         for e in data.esercizi
     ]
     
+    logger.info(f"save_allenamento: esercizi_list={len(esercizi_list)}, first elementi={len(esercizi_list[0]['elementi']) if esercizi_list else 0}")
+    
     if existing:
         existing.esercizi = esercizi_list
         existing.updated_at = datetime.now()
+        logger.info(f"save_allenamento: updated existing row id={existing.id}")
     else:
         new_row = models.Allenamento(
             categoria_id=data.categoria_id,
@@ -112,91 +144,17 @@ def save_allenamento(data: AllenamentoJson, db: Session = Depends(get_db)):
             esercizi=esercizi_list
         )
         db.add(new_row)
+        logger.info(f"save_allenamento: added new row")
     
-    db.commit()
+    try:
+        db.commit()
+        logger.info(f"save_allenamento: committed successfully")
+    except Exception as e:
+        logger.error(f"save_allenamento: commit failed: {e}")
+        db.rollback()
+        raise
+    
     return {"success": True}
-
-def normalize_titolo(titolo):
-    if not titolo:
-        return ''
-    return titolo.strip().lower()
-
-@router.get("/catalogo")
-def get_catalogo(focus: Optional[str] = None, db: Session = Depends(get_db)):
-    rows = db.query(models.Allenamento).all()
-    
-    catalogo_dict = {}
-    focus_nomi = {
-        'attivazione': 'Attivazione',
-        'tecnica': 'Tecnica',
-        'tattica': 'Tattica',
-        'fisico': 'Fisico',
-        'capacita-coordinativa': 'Cap. Coordinativa',
-        'palleggio': 'Palleggio',
-        'passaggio': 'Passaggio',
-        'conclusione': 'Conclusione',
-        'difesa': 'Difesa',
-        'attacco': 'Attacco',
-        'possessione': 'Possesso',
-        'set-piece': 'Set Piece'
-    }
-    
-    for row in rows:
-        esercizi = row.esercizi or []
-        for ex in esercizi:
-            ex_focus = ex.get('focus', '') if isinstance(ex, dict) else getattr(ex, 'focus', '')
-            
-            if focus and ex_focus != focus:
-                continue
-            
-            titolo = ex.get('titolo', '') if isinstance(ex, dict) else getattr(ex, 'titolo', '')
-            if not titolo or not titolo.strip():
-                continue
-            
-            titolo_key = normalize_titolo(titolo)
-            if not titolo_key:
-                continue
-            
-            titolo_display = titolo.strip()
-            
-            if titolo_key in catalogo_dict:
-                catalogo_dict[titolo_key]['count'] += 1
-            else:
-                catalogo_dict[titolo_key] = {
-                    "titolo": titolo_display,
-                    "focus": ex_focus,
-                    "focus_label": focus_nomi.get(ex_focus, ex_focus) if ex_focus else 'Nessuno',
-                    "descrizione": ex.get('descrizione', '') if isinstance(ex, dict) else '',
-                    "campo_con_righe": ex.get('campo_con_righe', True) if isinstance(ex, dict) else True,
-                    "elementi": ex.get('elementi', []) if isinstance(ex, dict) else [],
-                    "categoria_id": row.categoria_id,
-                    "data": row.data.isoformat() if row.data else None,
-                    "count": 1
-                }
-    
-    catalogo = sorted(catalogo_dict.values(), key=lambda x: x['titolo'].lower())
-    
-    return {"esercizi": list(catalogo), "totale": len(catalogo)}
-
-@router.get("/check-titolo")
-def check_titolo(titolo: str, db: Session = Depends(get_db)):
-    titolo_key = normalize_titolo(titolo)
-    if not titolo_key:
-        return {"exists": False, "message": ""}
-    
-    rows = db.query(models.Allenamento).all()
-    
-    for row in rows:
-        esercizi = row.esercizi or []
-        for ex in esercizi:
-            ex_titolo = ex.get('titolo', '') if isinstance(ex, dict) else getattr(ex, 'titolo', '')
-            if ex_titolo and normalize_titolo(ex_titolo) == titolo_key:
-                return {
-                    "exists": True,
-                    "message": f"Esiste già un esercizio chiamato '{ex_titolo.strip()}'"
-                }
-    
-    return {"exists": False, "message": ""}
 
 @router.get("/focus-list")
 def get_focus_list(db: Session = Depends(get_db)):
@@ -278,6 +236,9 @@ def save_to_catalogo(data: CatalogoEsercizioIn, db: Session = Depends(get_db), c
     ).first()
     
     if existing:
+        # Solo il creatore o super_admin possono aggiornare un esercizio esistente
+        if not (current_user.is_super_admin or existing.creato_da == current_user.id):
+            raise HTTPException(status_code=403, detail="Solo l'autore può modificare questo esercizio")
         existing.focus = data.focus
         existing.spazio = data.spazio
         existing.tempo = data.tempo

@@ -3,6 +3,13 @@ set -e
 
 echo "=== Avvio Ambiente Dev ==="
 
+# Carica variabili d'ambiente
+if [ -f /home/andrea/registro_presenze/.env ]; then
+    set -a
+    source /home/andrea/registro_presenze/.env
+    set +a
+fi
+
 # 1. Avvia PostgreSQL se non è già in esecuzione
 if ! pg_isready -h /tmp/pgsocket -p 5433 > /dev/null 2>&1; then
     echo "1. Avvio PostgreSQL..."

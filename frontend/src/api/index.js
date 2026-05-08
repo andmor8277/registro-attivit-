@@ -105,11 +105,6 @@ export const getPublicPersona = (id) => apiPublic.get(`/persone/public/${id}`)
 export const updatePublicPersona = (id, data) => apiPublic.put(`/persone/public/${id}`, data)
 export const createPublicPersona = (data) => apiPublic.post('/persone/public/', data)
 
-export const saveAllenamenti = (categoriaId, data) => {
-  const payload = {
-    categoria_id: categoriaId,
-    data: data.settimane[0]?.giorni[0]?.data || data.settimane[0]?.data_inizio,
-    esercizi: data.settimane[0]?.giorni[0]?.esercizi || []
-  }
+export function saveAllenamenti(categoriaId, payload) {
   return api.post('/allenamenti/', payload)
 }
