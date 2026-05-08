@@ -128,7 +128,18 @@
               <span class="catalogo-item-title">{{ ex.titolo }}</span>
               <span class="catalogo-item-focus" :class="'focus-' + ex.focus">{{ ex.focus_label }}</span>
             </div>
-            <div v-if="ex.descrizione" class="catalogo-item-desc">{{ ex.descrizione }}</div>
+            <div class="catalogo-item-body">
+              <div class="catalogo-item-info">
+                <div v-if="ex.descrizione" class="catalogo-item-desc">{{ ex.descrizione }}</div>
+                <div v-if="ex.spazio || ex.tempo" class="catalogo-item-details">
+                  <span v-if="ex.spazio" class="detail-item">📐 {{ ex.spazio }}</span>
+                  <span v-if="ex.tempo" class="detail-item">⏱ {{ ex.tempo }}</span>
+                </div>
+              </div>
+              <div class="catalogo-item-preview">
+                <canvas :id="'cat-canvas-' + idx" width="200" height="125" class="catalogo-canvas"></canvas>
+              </div>
+            </div>
             <div class="catalogo-item-footer">
               <span class="catalogo-item-count">Creato {{ formatDateShort(ex.creato_il) }}</span>
               <span v-if="titoloGiaPresente(ex.titolo)" class="catalogo-item-already">✓ Già nell'allenamento</span>
@@ -390,10 +401,186 @@ async function loadCatalogo() {
     catalogoEsercizi.value = res.data.esercizi || []
     currentUserId.value = res.data.current_user_id
     isSuperAdmin.value = res.data.is_super_admin
+    await nextTick()
+    await drawCatalogoPreviews()
   } catch (e) {
     console.error('Errore caricamento catalogo:', e)
     catalogoEsercizi.value = []
   }
+}
+
+function drawCatalogoPreviews() {
+  catalogoEsercizi.value.forEach((ex, idx) => {
+    const canvas = document.getElementById('cat-canvas-' + idx)
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    const W = canvas.width
+    const H = canvas.height
+    const isBlank = !ex.campo_con_righe
+
+    if (isBlank) {
+      ctx.fillStyle = '#1a2535'
+      ctx.fillRect(0, 0, W, H)
+      return
+    }
+
+    ctx.fillStyle = '#1a2535'
+    ctx.fillRect(0, 0, W, H)
+
+    const stripeCount = 11
+    const sw = W / stripeCount
+    for (let i = 0; i < stripeCount; i++) {
+      ctx.fillStyle = i % 2 === 0 ? '#2d5a1b' : '#346b20'
+      ctx.fillRect(i * sw, 0, sw, H)
+    }
+
+    const pad = H * 0.06
+    const fw = W - pad * 2
+    const fh = H - pad * 2
+    const fx = pad
+    const fy = pad
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.88)'
+    ctx.lineWidth = Math.max(1, H * 0.008)
+    ctx.lineCap = 'round'
+    ctx.strokeRect(fx, fy, fw, fh)
+    ctx.beginPath()
+    ctx.moveTo(fx + fw / 2, fy)
+    ctx.lineTo(fx + fw / 2, fy + fh)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(fx + fw / 2, fy + fh / 2, fh * 0.146, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(fx + fw / 2, fy + fh / 2, H * 0.012, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(255,255,255,0.88)'
+    ctx.fill()
+
+    const paH = fh * 0.384
+    const paW = fw * 0.157
+    const paY = fy + (fh - paH) / 2
+    const gaH = fh * 0.27
+    const gaW = fw * 0.052
+    const gaY = fy + (fh - gaH) / 2
+
+    ctx.strokeRect(fx, paY, paW, paH)
+    ctx.strokeRect(fx, gaY, gaW, gaH)
+    ctx.beginPath()
+    ctx.arc(fx + fw * 0.105, fy + fh / 2, H * 0.008, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(fx + fw * 0.105, fy + fh / 2, fh * 0.146, -0.93, 0.93)
+    ctx.stroke()
+    ctx.strokeRect(fx + fw - paW, paY, paW, paH)
+    ctx.strokeRect(fx + fw - gaW, gaY, gaW, gaH)
+    ctx.beginPath()
+    ctx.arc(fx + fw * 0.895, fy + fh / 2, H * 0.008, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(fx + fw * 0.895, fy + fh / 2, fh * 0.146, Math.PI - 0.93, Math.PI + 0.93)
+    ctx.stroke()
+
+    const gH = fh * 0.11
+    const gW = fw * 0.024
+    const gY = fy + (fh - gH) / 2
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'
+    ctx.lineWidth = 2
+    ctx.strokeRect(fx - gW, gY, gW, gH)
+    ctx.strokeRect(fx + fw, gY, gW, gH)
+
+    const elementi = ex.elementi || []
+    if (elementi.length > 0) {
+      elementi.forEach(el => {
+        const ex_ = (el.x / 100) * W
+        const ey = (el.y / 100) * H
+        const ex1 = (el.x1 / 100) * W
+        const ey1 = (el.y1 / 100) * H
+        const ex2 = (el.x2 / 100) * W
+        const ey2 = (el.y2 / 100) * H
+        if (el.tipo === 'player-home' || el.tipo === 'player-away' || el.tipo === 'player-gk') {
+          const cols = { 'player-home': '#3b82f6', 'player-away': '#ef4444', 'player-gk': '#f59e0b' }
+          ctx.beginPath()
+          ctx.arc(ex_, ey, 3, 0, Math.PI * 2)
+          ctx.fillStyle = cols[el.tipo]
+          ctx.fill()
+        } else if (el.tipo === 'ball') {
+          ctx.beginPath()
+          ctx.arc(ex_, ey, 2, 0, Math.PI * 2)
+          ctx.fillStyle = '#fff'
+          ctx.fill()
+        } else if (el.tipo === 'cone') {
+          ctx.beginPath()
+          ctx.moveTo(ex_, ey - 4)
+          ctx.lineTo(ex_ - 3, ey + 3)
+          ctx.lineTo(ex_ + 3, ey + 3)
+          ctx.closePath()
+          ctx.fillStyle = '#f97316'
+          ctx.fill()
+        } else if (el.tipo === 'disc') {
+          ctx.beginPath()
+          ctx.ellipse(ex_, ey, 4, 2, 0, 0, Math.PI * 2)
+          ctx.fillStyle = '#a78bfa'
+          ctx.fill()
+        } else if (el.tipo === 'goal') {
+          ctx.strokeStyle = '#fff'
+          ctx.lineWidth = 1.5
+          ctx.strokeRect(ex_ - 4, ey - 3, 8, 6)
+        } else if (el.tipo === 'mannequin') {
+          ctx.beginPath()
+          ctx.arc(ex_, ey - 4, 2, 0, Math.PI * 2)
+          ctx.fillStyle = '#e2e8f0'
+          ctx.fill()
+        } else if (['arrow', 'arrow-dash', 'arrow-curve', 'arrow-curve-dash'].includes(el.tipo)) {
+          ctx.strokeStyle = el.colore || '#3b82f6'
+          ctx.lineWidth = Math.max(1, (el.w || 2) * 0.7)
+          if (el.tipo === 'arrow-dash' || el.tipo === 'arrow-curve-dash') {
+            ctx.setLineDash([3, 2])
+          } else {
+            ctx.setLineDash([])
+          }
+          ctx.beginPath()
+          ctx.moveTo(ex1, ey1)
+          ctx.lineTo(ex2, ey2)
+          ctx.stroke()
+          ctx.setLineDash([])
+          const dx = ex2 - ex1
+          const dy = ey2 - ey1
+          const len = Math.sqrt(dx * dx + dy * dy)
+          if (len > 1) {
+            const nx = dx / len
+            const ny = dy / len
+            const size = 5
+            ctx.fillStyle = el.colore || '#3b82f6'
+            ctx.beginPath()
+            ctx.moveTo(ex2, ey2)
+            ctx.lineTo(ex2 - size * nx + size * 0.4 * (-ny), ey2 - size * ny + size * 0.4 * nx)
+            ctx.lineTo(ex2 - size * nx - size * 0.4 * (-ny), ey2 - size * ny - size * 0.4 * nx)
+            ctx.closePath()
+            ctx.fill()
+          }
+        } else if (el.tipo === 'zone') {
+          ctx.strokeStyle = el.colore || '#3b82f6'
+          ctx.lineWidth = 1
+          ctx.setLineDash([3, 2])
+          const rx = Math.min(ex1, ex2)
+          const ry = Math.min(ey1, ey2)
+          const rw = Math.abs(ex2 - ex1)
+          const rh = Math.abs(ey2 - ey1)
+          ctx.strokeRect(rx, ry, rw, rh)
+          ctx.setLineDash([])
+        } else if (el.tipo === 'free') {
+          if (el.points && el.points.length > 1) {
+            ctx.strokeStyle = el.colore || '#3b82f6'
+            ctx.lineWidth = Math.max(1, (el.w || 2) * 0.7)
+            ctx.beginPath()
+            ctx.moveTo((el.points[0].x / 100) * W, (el.points[0].y / 100) * H)
+            el.points.forEach(p => ctx.lineTo((p.x / 100) * W, (p.y / 100) * H))
+            ctx.stroke()
+          }
+        }
+      })
+    }
+  })
 }
 
 function closeCatalogo() {
@@ -840,7 +1027,13 @@ onUnmounted(() => {
 .catalogo-item-focus.focus-attacco { background: #ec4899; }
 .catalogo-item-focus.focus-possessione { background: #84cc16; }
 .catalogo-item-focus.focus-set-piece { background: #a855f7; }
-.catalogo-item-desc { color: #888; font-size: 0.85rem; margin-bottom: 0.5rem; }
+.catalogo-item-body { display: flex; gap: 0.75rem; align-items: flex-start; }
+.catalogo-item-info { flex: 1; min-width: 0; }
+.catalogo-item-desc { color: #888; font-size: 0.85rem; line-height: 1.4; margin-bottom: 0.5rem; }
+.catalogo-item-details { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.catalogo-item-details .detail-item { color: #aaa; font-size: 0.8rem; }
+.catalogo-item-preview { flex-shrink: 0; }
+.catalogo-canvas { border-radius: 6px; border: 1px solid #333; }
 .catalogo-item-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; gap: 0.5rem; }
 .catalogo-item-count { color: #666; font-size: 0.75rem; flex: 1; }
 .catalogo-item-already { color: #22c55e; font-size: 0.75rem; font-weight: 500; }
