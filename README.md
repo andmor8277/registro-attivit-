@@ -63,9 +63,16 @@ registro_presenze/
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v3.0.0**.
+La versione attuale è **v3.1.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
+
+### Novità v3.1.0
+
+- **Lavagna Tattica Riscritta**: Componente TacticalBoard.vue con sistema coordinate percentuali, 3 modalità campo (completo, metà campo, vuoto)
+- **Anteprima Campo Catalogo**: Miniatura campo da calcio con elementi negli esercizi del catalogo
+- **Autorizzazione Backend**: Controllo permessi su save_allenamento (admin/super_admin/mister)
+- **Bug Fix**: Corretto posizionamento frecce e sistema coordinate
 
 ### Novità v3.0.0
 
