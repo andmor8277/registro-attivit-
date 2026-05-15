@@ -115,7 +115,7 @@ def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: Ses
     user = db.query(Utente).filter(Utente.username == form.username).first()
     if not user or not verify_password(form.password, user.password_hash):
         if not user:
-            verify_password(form.password, "$2b$12$dummy_hash_for_timing_attack_prevention_000000000000")
+            verify_password(form.password, "$2b$12$260mdxWoPqJ9blHKaB4fKuiJbLr7WbMYw6K78Q3vGHxRRz8xZzqEi")
         raise HTTPException(status_code=401, detail="Credenziali errate")
     token = create_token({"sub": user.username, "is_admin": user.is_admin, "societa_id": user.societa_id, "is_super_admin": user.is_super_admin})
     return {"access_token": token, "token_type": "bearer"}

@@ -61,3 +61,21 @@ frontend/vite.config.js      # Dev proxy to localhost:8000, PWA config
 - UI label "Responsabile" = admin locale.
 - No linting or type-checking configured.
 - `Allenamenti.vue` is ~3000 lines, single-file canvas-based tactical board.
+
+## ⚠️ Production Deploy Checklist
+
+### Critical: External Nginx Proxy
+**Prod has an EXTERNAL nginx on the host that proxies to Docker containers.**
+- Frontend container: `0.0.0.0:3000:80` — **NEVER use `127.0.0.1:3000:80`** (external nginx can't reach it → 502 Bad Gateway)
+- Backend container: `0.0.0.0:8000:8000` — must also be `0.0.0.0` not `127.0.0.1`
+- Always verify: `curl -s -o /dev/null -w '%{http_code}' http://192.168.178.132:3000/` returns 200
+
+### Frontend Changes
+- Frontend changes require **full rebuild** (`docker compose build --no-cache`) — `dist/` is baked into nginx image
+- Always remove images before rebuild: `docker rmi registro_presenze-frontend:latest registro_presenze-backend:latest`
+- Service Worker caches aggressively — users may need hard refresh (Ctrl+Shift+R)
+
+### docker-compose.yml Port Binding
+- **Frontend port MUST be `0.0.0.0:3000:80`** (not `127.0.0.1:3000:80`)
+- **Backend port MUST be `0.0.0.0:8000:8000`** (not `127.0.0.1:8000:8000`)
+- These are bound to ALL interfaces because an external nginx proxies to them
