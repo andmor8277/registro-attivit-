@@ -8,7 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 import os
 from .rate_limit import limiter
 from .database import Base, engine
-from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti
+from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite
 from .routers.gruppi import router as gruppi_router
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
@@ -37,7 +37,7 @@ async def security_headers(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://thof.crickethouse.mywire.org", "http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["https://thof.crickethouse.mywire.org", "http://localhost:5173", "http://localhost:3000", "http://192.168.178.133:3000"],
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
     expose_headers=["Content-Disposition"]
@@ -141,7 +141,7 @@ def run_migrations():
                 pass
 
             try:
-                result = conn.execute(text(
+                conn.execute(text(
                     "SELECT column_name FROM information_schema.columns "
                     "WHERE table_name = 'catalogo_esercizi' AND column_name = 'spazio'"
                 ))
@@ -156,6 +156,32 @@ def run_migrations():
                     print("Migration: Added spazio and tempo columns to catalogo_esercizi")
             except Exception as e:
                 print(f"Migration warning (non-critical): {e}")
+                conn.rollback()
+
+            try:
+                result = conn.execute(text(
+                    "SELECT table_name FROM information_schema.tables WHERE table_name = :tn"
+                ), {"tn": "partite"})
+                if result.fetchone() is None:
+                    conn.execute(text("""
+                        CREATE TABLE partite (
+                            id SERIAL PRIMARY KEY,
+                            categoria_id INTEGER NOT NULL REFERENCES categorie(id),
+                            data_partite DATE NOT NULL,
+                            ora TIME,
+                            avversario VARCHAR(100),
+                            campo VARCHAR(100),
+                            risultato VARCHAR(20),
+                            goal_punti INTEGER DEFAULT 0,
+                            goal_contro INTEGER DEFAULT 0,
+                            note TEXT,
+                            societa_id INTEGER REFERENCES societa(id)
+                        )
+                    """))
+                    conn.commit()
+                    print("Migration: Created partite table")
+            except Exception as e:
+                print(f"Migration warning (partite table): {e}")
                 conn.rollback()
         finally:
             conn.close()
@@ -173,6 +199,7 @@ app.include_router(convocazioni.router, dependencies=[Depends(get_current_user)]
 app.include_router(allenatori.router, dependencies=[Depends(get_current_user)])
 app.include_router(allenamenti.router, dependencies=[Depends(get_current_user)])
 app.include_router(gruppi_router, dependencies=[Depends(get_current_user)])
+app.include_router(partite.router, dependencies=[Depends(get_current_user)])
 
 @app.get("/")
 def root():

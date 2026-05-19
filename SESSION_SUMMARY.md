@@ -50,6 +50,7 @@
 
 ## Critical Context
 - Production server: `root@192.168.178.132`, project path: `/opt/registro_presenze`.
+- Dev server: `root@192.168.178.133`, project path: `/opt/registro_presenze`.
 - Host-level nginx proxies `:3000` for frontend and `:8000` for `/api/` with correct `proxy_set_header` directives.
 - `slowapi` uses in-memory counters; limits are per-container (4 workers share state via process memory).
 - Docker internal network bypasses nginx for `/uploads/` requests, requiring relaxed host validation.
