@@ -10,18 +10,26 @@ import Scelta from './views/Scelta.vue'
 import Convocazioni from './views/Convocazioni.vue'
 import DatiMatricole from './views/DatiMatricole.vue'
 import Allenamenti from './views/Allenamenti.vue'
+import Allenatori from './views/Allenatori.vue'
 import Societa from './views/Societa.vue'
 import Reportistica from './views/Reportistica.vue'
 import Segreteria from './views/Segreteria.vue'
 import SegreteriaCategoria from './views/SegreteriaCategoria.vue'
 import SchedaGiocatore from './views/SchedaGiocatore.vue'
 import FormOnlineIscrizione from './views/FormOnlineIscrizione.vue'
+import Responsabili from './views/Responsabili.vue'
+import ResponsabiliCategoria from './views/ResponsabiliCategoria.vue'
+import ProgrammazionePartite from './views/ProgrammazionePartite.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/login', component: Login, name: 'login' },
     { path: '/', component: Home, name: 'home', meta: { requiresAuth: true } },
+    { path: '/allenatori', component: Allenatori, name: 'allenatori', meta: { requiresAuth: true } },
+    { path: '/responsabili', component: Responsabili, name: 'responsabili', meta: { requiresAuth: true } },
+    { path: '/responsabili/categorie', component: ResponsabiliCategoria, name: 'responsabili-categorie', meta: { requiresAuth: true } },
+    { path: '/responsabili/partite', component: ProgrammazionePartite, name: 'responsabili-partite', meta: { requiresAuth: true } },
     { path: '/scelta/:id', component: Scelta, name: 'scelta', meta: { requiresAuth: true } },
     { path: '/registro/:id', component: Registro, name: 'registro', meta: { requiresAuth: true } },
     { path: '/convocazioni/:id', component: Convocazioni, name: 'convocazioni', meta: { requiresAuth: true } },
