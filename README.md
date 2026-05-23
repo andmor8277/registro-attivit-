@@ -63,18 +63,20 @@ registro_presenze/
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v3.1.0**.
+La versione attuale è **v4.0.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
 
-### Novità v3.1.0
+### Novità v4.0.0
 
-- **Lavagna Tattica Riscritta**: Componente TacticalBoard.vue con sistema coordinate percentuali, 3 modalità campo (completo, metà campo, vuoto)
-- **Anteprima Campo Catalogo**: Miniatura campo da calcio con elementi negli esercizi del catalogo
+- **Lavagna Tattica Riscritta**: TacticalBoard.vue dedicato con coordinate percentuali (0-100), 3 modalità campo (intero, metà, vuoto), undo/redo completo, drag & drop, resize frecce con handle, pannello modifica colore, auto-switch tool dopo piazzamento
+- **Catalogo Esercizi con Anteprima**: Miniatura campo da calcio con elementi visualizzati per ogni esercizio
+- **Segreteria Panoramica**: Nuova pagina panoramica categoria con statistiche e pagina dettagli iscritti
 - **Autorizzazione Backend**: Controllo permessi su save_allenamento (admin/super_admin/mister)
-- **Bug Fix**: Corretto posizionamento frecce e sistema coordinate
+- **Layout Full-Width**: Pagine Allenamenti e Catalogo occupano tutta la larghezza
+- **Bug Fix**: Primo oggetto modificabile, click day chip funzionante, gomma elimina tutti i tipi, frecce resize corretto
 
-### Novità v3.0.0
+### Novità v3.1.0
 
 - **Sistema Pagamenti Completo**: Tabella pagamenti in Segreteria (Totale, Iscrizione, Rate 1-4, Saldo, Rimane), campi editabili inline con calcolo automatico
 - **Scheda Giocatore**: Vista completa con dati personali, contatti, genitori, anamnesi, equipaggiamento, pagamenti e stampa PDF
