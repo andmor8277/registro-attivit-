@@ -61,13 +61,29 @@
           <span class="summary-label">Categorie</span>
           <span class="summary-value">{{ categorieOrdinate.length }}</span>
         </div>
-        <div class="summary-item">
+        <div class="summary-item financial">
           <span class="summary-label">Totale incasso</span>
-          <span class="summary-value">{{ totaleIncasso }} €</span>
+          <span class="summary-value" @click="toggleFinanze" style="cursor:pointer">
+            {{ mostraFinanze ? totaleIncasso + ' €' : '*** €' }}
+            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path v-if="mostraFinanze" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle v-if="mostraFinanze" cx="12" cy="12" r="3"/>
+              <path v-if="!mostraFinanze" d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+              <line v-if="!mostraFinanze" x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+          </span>
         </div>
-        <div class="summary-item">
+        <div class="summary-item financial">
           <span class="summary-label">Da recuperare</span>
-          <span class="summary-value" :class="{ 'debt': daRecuperare > 0 }">{{ daRecuperare }} €</span>
+          <span class="summary-value" :class="{ 'debt': mostraFinanze && daRecuperare > 0 }" @click="toggleFinanze" style="cursor:pointer">
+            {{ mostraFinanze ? daRecuperare + ' €' : '*** €' }}
+            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path v-if="mostraFinanze" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle v-if="mostraFinanze" cx="12" cy="12" r="3"/>
+              <path v-if="!mostraFinanze" d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+              <line v-if="!mostraFinanze" x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+          </span>
         </div>
       </div>
 
@@ -87,12 +103,12 @@
               <span class="cat-stat-value">{{ getGiocatoriCat(cat.id).length }}</span>
               <span class="cat-stat-label">iscritti</span>
             </div>
-            <div class="cat-stat">
-              <span class="cat-stat-value">{{ calcTotalePagato(cat.id) }} €</span>
+            <div class="cat-stat financial" @click.stop="toggleFinanze">
+              <span class="cat-stat-value">{{ mostraFinanze ? calcTotalePagato(cat.id) + ' €' : '***' }}</span>
               <span class="cat-stat-label">incasso</span>
             </div>
-            <div class="cat-stat">
-              <span class="cat-stat-value" :class="{ 'debt': calcRimaneCat(cat.id) > 0 }">{{ calcRimaneCat(cat.id) }} €</span>
+            <div class="cat-stat financial" @click.stop="toggleFinanze">
+              <span class="cat-stat-value" :class="{ 'debt': mostraFinanze && calcRimaneCat(cat.id) > 0 }">{{ mostraFinanze ? calcRimaneCat(cat.id) + ' €' : '***' }}</span>
               <span class="cat-stat-label">da recuperare</span>
             </div>
           </div>
@@ -118,6 +134,11 @@ const categorie = ref([])
 const persone = ref([])
 const gdprSbloccato = ref(false)
 const gdprModal = ref({ show: false, password: '', error: '' })
+const mostraFinanze = ref(false)
+
+function toggleFinanze() {
+  mostraFinanze.value = !mostraFinanze.value
+}
 
 const societaId = computed(() => {
   const u = utenteAttivo.value
@@ -299,6 +320,22 @@ async function sbloccaGdpr() {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.eye-icon {
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.summary-value:hover .eye-icon {
+  opacity: 1;
+}
+
+.summary-item.financial {
+  cursor: pointer;
 }
 
 .summary-value.debt {
@@ -360,6 +397,16 @@ async function sbloccaGdpr() {
   flex-direction: column;
   align-items: center;
   gap: 0.15rem;
+}
+
+.cat-stat.financial {
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.cat-stat.financial:hover {
+  opacity: 1;
 }
 
 .cat-stat-value {

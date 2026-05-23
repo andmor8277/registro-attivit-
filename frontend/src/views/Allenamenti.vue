@@ -1,7 +1,7 @@
 <template>
   <div class="rotate-device-overlay" v-if="showRotateMessage">
     <div class="rotate-device-message">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="80" height="80">
         <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
         <line x1="12" y1="18" x2="12" y2="18"/>
       </svg>
@@ -9,28 +9,60 @@
     </div>
   </div>
   <div class="allenamenti-page">
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
     <header class="page-header">
-      <div class="header-left">
-        <button class="btn-back" @click="router.push('/scelta/' + route.params.id)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      <div class="header-top">
+        <button class="btn-back-pill" @click="router.push('/scelta/' + route.params.id)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+          Indietro
         </button>
-        <button class="btn-home" @click="router.push('/')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <button class="btn-pill" @click="router.push('/')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          Home
         </button>
       </div>
-      <span class="titolo-toolbar">Allenamenti — {{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
+      <div class="header-main">
+        <h1 class="category-name">
+          <span class="name-gradient">{{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
+        </h1>
+        <p class="header-subtitle">Allenamenti</p>
+      </div>
     </header>
 
     <div class="allenamenti-body">
-      <div class="month-nav">
-        <button class="nav-btn" @click="prevMonth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
-        <div class="current-month">{{ currentMonthName }} {{ currentYear }}</div>
-        <button class="nav-btn" @click="nextMonth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+      <div class="month-nav-pill">
+        <button class="btn-nav-mese" @click="prevMonth">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <span class="current-month">{{ currentMonthName }} {{ currentYear }}</span>
+        <button class="btn-nav-mese" @click="nextMonth">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
       </div>
 
       <div class="weeks-grid">
         <div v-for="week in weeksInMonth" :key="week.num" class="week-card" :class="{ active: selectedWeek?.num === week.num }" @click="selectWeek(week)">
-          <div class="week-header">Settimana {{ week.num }}</div>
+          <div class="week-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Settimana {{ week.num }}
+          </div>
           <div class="week-dates">{{ formatDateRange(week.start, week.end) }}</div>
           <div class="week-days">
             <span v-for="day in week.days" :key="day.date" class="day-chip" :class="{ 'has-training': day.isSelectable, 'today': day.isToday, 'other-month': day.month !== currentMonth }" @click.stop="selectDay(day)">{{ day.dayNum }}</span>
@@ -40,13 +72,55 @@
 
       <div v-if="selectedDay" class="day-detail">
         <div class="day-header">
-          <button class="nav-btn" @click="clearSelectedDay" title="Torna al calendario">←</button>
+          <button class="btn-back-pill" @click="clearSelectedDay">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Calendario
+          </button>
           <h3>Allenamento del {{ formatDate(selectedDay.data) }}</h3>
-          <button class="btn-add-exercise" @click="addEsercizio">+ Esercizio</button>
-          <button class="btn-catalogo" @click="openCatalogo">📚 Catalogo</button>
-          <button class="btn-save-exercise" @click="saveCurrentExercise" title="Salva">💾 Salva</button>
-          <button class="btn-save-catalogo-explicit" @click="openSaveToCatalogoDialog" title="Salva nel Catalogo">💾 Salva nel Catalogo</button>
-          <button class="btn-save-exercise" @click="exportPdf" title="Esporta PDF">📄 PDF</button>
+          <div class="day-actions">
+            <button class="btn-action" @click="addEsercizio">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Esercizio
+            </button>
+            <button class="btn-action" @click="openCatalogo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+              </svg>
+              Catalogo
+            </button>
+            <button class="btn-action" @click="saveCurrentExercise">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
+              Salva
+            </button>
+            <button class="btn-action" @click="openSaveToCatalogoDialog">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+              Catalogo
+            </button>
+            <button class="btn-action" @click="exportPdf">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+              PDF
+            </button>
+          </div>
         </div>
 
         <div class="esercizi-list">
@@ -940,37 +1014,361 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.allenamenti-page { display: flex; flex-direction: column; height: 100vh; background: #0a0a0a; min-width: 100%; overflow: hidden; }
-.allenamenti-body { flex: 1; overflow-y: auto; padding: 1rem; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
-.page-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: var(--color-primary); flex-shrink: 0; }
-.header-left { display: flex; gap: 0.25rem; }
-.btn-back, .btn-home { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; cursor: pointer; }
-.btn-back svg, .btn-home svg { width: 18px; height: 18px; }
-.titolo-toolbar { flex: 1; font-weight: bold; font-size: 1rem; color: white; }
-.month-nav { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1.5rem; }
-.nav-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; color: white; cursor: pointer; }
-.nav-btn svg { width: 20px; height: 20px; }
-.current-month { font-size: 1.25rem; font-weight: bold; color: white; min-width: 180px; text-align: center; }
-.weeks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-.week-card { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 1rem; cursor: pointer; transition: all 0.2s; }
-.week-card:hover { border-color: var(--color-primary); }
-.week-card.active { border-color: var(--color-primary); background: rgba(16, 185, 129, 0.15); }
-.week-header { font-weight: bold; color: #fff; margin-bottom: 0.25rem; font-size: 0.95rem; }
-.week-dates { font-size: 0.8rem; color: #888; margin-bottom: 0.75rem; font-weight: 500; }
-.week-days { display: flex; gap: 0.35rem; flex-wrap: wrap; }
-.day-chip { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: #252525; border-radius: 8px; font-size: 0.85rem; color: #666; cursor: not-allowed; border: 1px solid #333; }
-.day-chip.has-training { background: var(--color-primary); color: white; cursor: pointer; border: 1px solid var(--color-primary); font-weight: 600; }
-.day-chip.has-training:hover { transform: scale(1.1); background: #059669; }
-.day-chip.today { border: 2px solid #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.3); }
-.day-chip.other-month { opacity: 0.4; }
-.day-detail { background: #141414; border-radius: 12px; padding: 1rem; width: 100%; box-sizing: border-box; margin-top: 1rem; }
-.day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
-.day-header h3 { color: #fff; margin: 0; font-size: 1rem; }
-.btn-add-exercise { padding: 0.5rem 1rem; background: var(--color-primary); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; white-space: nowrap; }
-.btn-save-exercise { padding: 0.5rem 1rem; background: #22c55e; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; white-space: nowrap; }
-.btn-save-exercise:hover { background: #16a34a; }
-.btn-save-catalogo-explicit { padding: 0.5rem 1rem; background: #8b5cf6; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; white-space: nowrap; }
-.btn-save-catalogo-explicit:hover { background: #7c3aed; }
+.allenamenti-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background: #0a0a0a;
+  overflow: hidden;
+}
+
+.allenamenti-body {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1rem 2rem;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  margin: 0;
+}
+
+/* ── Background Glows ── */
+.bg-glow {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bg-glow-1 {
+  width: 500px;
+  height: 500px;
+  top: -150px;
+  right: -80px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.06) 0%, transparent 70%);
+  animation: glowFloat 8s ease-in-out infinite;
+}
+
+.bg-glow-2 {
+  width: 400px;
+  height: 400px;
+  bottom: -100px;
+  left: -80px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+  animation: glowFloat 10s ease-in-out infinite reverse;
+}
+
+@keyframes glowFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(25px, -18px) scale(1.05); }
+  66% { transform: translate(-18px, 12px) scale(0.95); }
+}
+
+/* ── Header ── */
+.page-header {
+  position: relative;
+  z-index: 1;
+  padding: 1.5rem 2rem 1rem;
+  animation: fadeSlideIn 0.6s ease-out both;
+}
+
+.header-top {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.btn-back-pill,
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.4rem 0.4rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 100px;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-pill {
+  padding: 0.4rem 0.75rem;
+}
+
+.btn-back-pill svg,
+.btn-pill svg {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  padding: 3px;
+}
+
+.btn-back-pill:hover,
+.btn-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.header-main {
+  position: relative;
+}
+
+.category-name {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  margin-bottom: 0.25rem;
+}
+
+.name-gradient {
+  background: linear-gradient(135deg, #ffffff 0%, #ffffff 40%, var(--color-primary, #dc2626) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-subtitle {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 400;
+}
+
+/* ── Month Navigation ── */
+.month-nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.5rem 0.5rem 1.25rem;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 100px;
+  margin-bottom: 1.5rem;
+  align-self: center;
+}
+
+.current-month {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #fff;
+  min-width: 180px;
+  text-align: center;
+}
+
+.btn-nav-mese {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-nav-mese:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+}
+
+/* ── Weeks Grid ── */
+.weeks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.week-card {
+  position: relative;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.25s;
+  overflow: hidden;
+}
+
+.week-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  opacity: 0;
+  transition: opacity 0.25s;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.week-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.week-card:hover::before {
+  opacity: 1;
+}
+
+.week-card.active {
+  border-color: var(--color-primary, #dc2626);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.week-card.active::before {
+  opacity: 1;
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.08) 0%, transparent 60%);
+}
+
+.week-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.25rem;
+  font-size: 0.9375rem;
+  letter-spacing: -0.01em;
+}
+
+.week-header svg {
+  color: var(--color-primary, #dc2626);
+  flex-shrink: 0;
+}
+
+.week-dates {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+.week-days {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.day-chip {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.25);
+  cursor: not-allowed;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.2s;
+}
+
+.day-chip.has-training {
+  background: var(--color-primary, #dc2626);
+  color: white;
+  cursor: pointer;
+  border: 1px solid var(--color-primary, #dc2626);
+  font-weight: 600;
+}
+
+.day-chip.has-training:hover {
+  transform: scale(1.1);
+  filter: brightness(1.15);
+}
+
+.day-chip.today {
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.day-chip.other-month {
+  opacity: 0.3;
+}
+
+/* ── Day Detail ── */
+.day-detail {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 1rem;
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.day-header h3 {
+  color: #fff;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.day-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 100px;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-action:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ── Animations ── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .esercizi-list { display: flex; flex-direction: column; gap: 2rem; }
 .esercizio-card { background: #1a1a1a; border-radius: 12px; padding: 1rem; width: 100%; box-sizing: border-box; }
 .esercizio-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; flex-shrink: 0; }
@@ -994,6 +1392,14 @@ onUnmounted(() => {
 .meta-field input { padding: 0.3rem 0.5rem; background: #252525; border: 1px solid #333; border-radius: 6px; color: #ddd; font-size: 0.8rem; width: 80px; }
 .meta-field input:focus { outline: none; border-color: var(--color-primary); }
 .meta-field input::placeholder { color: #555; }
+
+.board-area {
+  margin-top: 0.75rem;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #333;
+  min-height: 300px;
+}
 
 .no-esercizi { text-align: center; padding: 2rem; color: #666; }
 
@@ -1043,8 +1449,7 @@ onUnmounted(() => {
 .catalogo-item.already-added { opacity: 0.6; cursor: not-allowed; }
 .catalogo-item.already-added:hover { border-color: #333; background: #252525; }
 
-.btn-catalogo { padding: 0.5rem 1rem; background: #8b5cf6; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; margin-left: 0.5rem; }
-.btn-catalogo:hover { background: #7c3aed; }
+
 
 .save-dialog { background: #1a1a1a; border-radius: 12px; width: 90%; max-width: 450px; }
 .save-dialog-header { padding: 1rem 1.5rem; border-bottom: 1px solid #333; }
@@ -1115,32 +1520,31 @@ onUnmounted(() => {
 }
 
 @media (max-width: 900px) {
-  .allenamenti-body { padding: 0.5rem; display: flex; flex-direction: column; }
-  .page-header { padding: 0.5rem 0.75rem; flex-shrink: 0; }
-  .titolo-toolbar { font-size: 0.85rem; }
+  .allenamenti-body { padding: 0.75rem 1rem 2rem; }
+  .page-header { padding: 1rem 1rem 0.75rem; }
   .weeks-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
-  .month-nav { margin-bottom: 0.5rem; }
   .week-card { padding: 0.75rem; }
   .day-chip { width: 32px; height: 32px; font-size: 0.8rem; }
   .day-header { flex-wrap: wrap; gap: 0.5rem; }
   .day-header h3 { width: 100%; font-size: 0.9rem; }
-  .day-header button { font-size: 0.75rem; padding: 0.4rem 0.6rem; }
+  .day-actions { width: 100%; }
 }
 
 @media (max-width: 768px) and (orientation: landscape) {
   .allenamenti-body { padding: 0.15rem; display: flex; flex-direction: column; }
-  .page-header { padding: 0.2rem 0.3rem; flex-shrink: 0; }
-  .btn-back, .btn-home { width: 24px; height: 24px; }
-  .btn-back svg, .btn-home svg { width: 14px; height: 14px; }
-  .titolo-toolbar { font-size: 0.65rem; }
-  .weeks-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
-  .week-card { padding: 0.5rem; }
-  .week-header { font-size: 0.8rem; }
-  .week-dates { font-size: 0.7rem; margin-bottom: 0.5rem; }
-  .day-chip { width: 28px; height: 28px; font-size: 0.75rem; gap: 0.2rem; }
-  .month-nav { margin-bottom: 0.3rem; }
-  .current-month { font-size: 0.9rem; min-width: 120px; }
+  .page-header { padding: 0.5rem 0.75rem; }
+  .category-name { font-size: 1.5rem; }
+  .header-subtitle { font-size: 0.75rem; }
+  .header-top { gap: 0.35rem; margin-bottom: 0.5rem; }
+  .btn-back-pill, .btn-pill { padding: 0.3rem 0.3rem 0.3rem 0.6rem; font-size: 0.7rem; }
+  .btn-back-pill svg, .btn-pill svg { width: 20px; height: 20px; }
   .weeks-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.3rem; }
+  .week-card { padding: 0.5rem; }
+  .week-header { font-size: 0.75rem; }
+  .week-dates { font-size: 0.65rem; margin-bottom: 0.4rem; }
+  .day-chip { width: 26px; height: 26px; font-size: 0.7rem; }
+  .month-nav-pill { margin-bottom: 0.5rem; padding: 0.35rem 0.35rem 0.35rem 0.75rem; gap: 0.5rem; }
+  .current-month { font-size: 0.8rem; min-width: 120px; }
 }
 
 </style>
