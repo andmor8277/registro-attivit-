@@ -108,3 +108,11 @@ export const createPublicPersona = (data) => apiPublic.post('/persone/public/', 
 export function saveAllenamenti(categoriaId, payload) {
   return api.post('/allenamenti/', payload)
 }
+
+export const getPartite = (categoriaId) => {
+  const params = categoriaId ? `?categoria_id=${categoriaId}` : ''
+  return api.get('/partite/' + params)
+}
+export const creaPartita = (data) => api.post('/partite/', data)
+export const aggiornaPartita = (id, data) => api.put(`/partite/${id}`, data)
+export const eliminaPartita = (id) => api.delete(`/partite/${id}`)

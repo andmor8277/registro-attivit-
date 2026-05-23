@@ -85,7 +85,7 @@
           <select v-model="nuovo.ruolo" class="ruolo-select">
             <option value="">Seleziona ruolo...</option>
             <option v-if="isSuperAdmin" value="super_admin">SuperAdmin (tutte le società)</option>
-            <option value="admin">Admin Locale</option>
+            <option value="admin">Responsabile</option>
             <option value="mister">Mister</option>
             <option value="dirigente">Dirigente</option>
             <option value="segreteria">Segreteria</option>
@@ -156,7 +156,7 @@
               <span class="user-name">{{ u.cognome || u.username }}</span>
               <span class="user-fullname">{{ u.nome }} {{ u.cognome }}</span>
               <span class="badge-role badge-superadmin" v-if="u.ruolo === 'super_admin'">SUPERADMIN</span>
-              <span class="badge-role badge-admin" v-if="u.ruolo === 'admin'">ADMIN LOCALE</span>
+              <span class="badge-role badge-admin" v-if="u.ruolo === 'admin'">RESPONSABILE</span>
               <span class="badge-role badge-mister" v-if="u.ruolo === 'mister'">MISTER</span>
               <span class="badge-role badge-dirigente" v-if="u.ruolo === 'dirigente'">DIRIGENTE</span>
               <span class="badge-role badge-segreteria" v-if="u.ruolo === 'segreteria'">SEGRETERIA</span>

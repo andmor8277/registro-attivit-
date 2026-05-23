@@ -261,11 +261,13 @@ function setSyncEnabled(enabled) {
 }
 
 watch(() => props.elements, (newVal) => {
+  const prevSelected = selectedIdx.value
   setSyncEnabled(false)
   elements.value = (newVal || []).map(el => convertToCanvas(el))
   histIdx.value = -1
   history.value = [JSON.parse(JSON.stringify(elements.value))]
   histIdx.value = 0
+  selectedIdx.value = prevSelected >= 0 && prevSelected < elements.value.length ? prevSelected : -1
   draw()
   nextTick(() => { setSyncEnabled(true) })
 }, { deep: false })
@@ -879,19 +881,20 @@ function pointerDown(e) {
   if (tool.value === 'select') {
     let found = -1
     let resizeIdx = -1
+    let hitResult = null
     for (let i = elements.value.length - 1; i >= 0; i--) {
-      const result = hitTest(pos.x, pos.y, elements.value[i], i)
-      if (result) {
-        if (typeof result === 'object' && result.resize) { resizeIdx = result.idx; break }
-        if (typeof result === 'object' && result.move) { found = result.idx; break }
-        if (typeof result === 'number') { found = result; break }
+      const res = hitTest(pos.x, pos.y, elements.value[i], i)
+      if (res) {
+        if (typeof res === 'object' && res.resize) { resizeIdx = res.idx; hitResult = res; break }
+        if (typeof res === 'object' && res.move) { found = res.idx; break }
+        if (typeof res === 'number') { found = res; break }
       }
     }
     selectedIdx.value = found >= 0 ? found : resizeIdx
     if (resizeIdx >= 0) {
       resizingArrow = resizeIdx
       const el = elements.value[resizeIdx]
-      resizingEnd = result?.end || 'x2'
+      resizingEnd = hitResult?.end || 'x2'
       if (el.type === 'one-two' && resizingEnd === 'x1') {
         dragOffset = { x: pos.x - el.x1, y: pos.y - el.y1 }
       } else {
@@ -913,7 +916,7 @@ function pointerDown(e) {
 
   if (tool.value === 'erase') {
     for (let i = elements.value.length - 1; i >= 0; i--) {
-      if (elements.value[i].type === 'free' && hitTest(pos.x, pos.y, elements.value[i], i)) {
+      if (hitTest(pos.x, pos.y, elements.value[i], i)) {
         elements.value.splice(i, 1)
         pushHistory()
         draw()
@@ -952,6 +955,7 @@ function pointerDown(e) {
   elements.value.push(newEl)
   selectedIdx.value = elements.value.length - 1
   pushHistory()
+  selectTool('select')
   draw()
 }
 
@@ -998,7 +1002,7 @@ function pointerMove(e) {
 
   if (tool.value === 'erase' && e.buttons) {
     for (let i = elements.value.length - 1; i >= 0; i--) {
-      if (elements.value[i].type === 'free' && hitTest(pos.x, pos.y, elements.value[i], i)) {
+      if (hitTest(pos.x, pos.y, elements.value[i], i)) {
         elements.value.splice(i, 1)
         draw()
         return
