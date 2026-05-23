@@ -72,6 +72,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Funzionalità minori
 
+## [4.0.0] - 2026-05-23
+
+### Added
+- **Lavagna Tattica Riscritta (TacticalBoard.vue)**
+  - Componente dedicato con sistema coordinate percentuali (0-100) per layout responsive
+  - 3 modalità campo: intero, metà campo, vuoto
+  - Pannello modifica con cambio colore elemento selezionato
+  - Undo/Redo completo con storico
+  - Drag & drop per tutti gli elementi
+  - Resize frecce con handle interattivi
+  - Pulsante eliminazione elemento selezionato
+  - Selezione preservata dopo sync server
+  - Auto-switch a tool "select" dopo piazzamento oggetto
+- **Catalogo Esercizi con Anteprima Campo**
+  - Miniatura campo da calcio con elementi visualizzati negli esercizi del catalogo
+  - Descrizione e dettagli per ogni esercizio
+- **Segreteria Panoramica**
+  - Nuova pagina panoramica per categoria con statistiche
+  - Pagina dettagli iscritti con tutti i dati
+- **Autorizzazione Backend Allenamenti**
+  - Controllo permessi su save_allenamento (admin/super_admin/mister)
+- **Layout Full-Width**
+  - Pagine Allenamenti e Catalogo occupano tutta la larghezza disponibile
+
+### Changed
+- **Frontend Ristrutturato**
+  - Allenamenti.vue: template e CSS completamente riscritti per performance e manutenibilità
+  - Sistema coordinate da pixel a percentuali per compatibilità multi-dispositivo
+  - Pannello laterale strumenti con icone SVG dedicate
+  - Pannello destra con colore, dimensione e modalità campo
+
+### Fixed
+- **TacticalBoard**: primo oggetto piazzabile modificabile (selection preservata dopo sync server)
+- **TacticalBoard**: tool automaticamente resettato a "select" dopo piazzamento
+- **TacticalBoard**: frecce resize con hitResult preservato tra iterazioni loop
+- **TacticalBoard**: gomma elimina tutti i tipi di elemento (non solo free)
+- **Allenamenti.vue**: click su day chip funzionante (pointer-events: none su pseudo-elemento)
+- **Docker**: container frontend esposto su 0.0.0.0 per proxy nginx esterno
+- **Deploy Dev**: script deploy_dev.sh con tar+ssh per server senza internet
+- **CORS**: configurazione corretta per dev server (192.168.178.133:3000)
+- **VITE_API_URL**: configurazione /api per dev server (nginx internal proxy)
+- **bcrypt**: fix dummy hash per autenticazione
+
+### Security
+- Rimozione TrustedHostMiddleware che bloccava richieste Docker interne
+- Fix MutableHeaders (nessun metodo pop)
+- Rate limiting con SlowAPIMiddleware corretto
+
 ## [3.0.0] - 2026-04-29
 
 ### Added
