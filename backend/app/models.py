@@ -21,6 +21,7 @@ class Categoria(Base):
     anno = Column(Integer, nullable=True)  # anno di nascita (es. 2014)
     stagione = Column(Integer, nullable=True)  # anno inizio stagione (es. 2025 per 2025/2026)
     giorni = Column(String(20), nullable=True)  # es. "1,3,5" = Lun,Mer,Ven
+    ora_allenamento = Column(String(10), nullable=True)  # es. "15:15", "17:30", "19:00"
     is_portieri = Column(Integer, default=0)  # 1 = portieri (cross-year)
     is_archiviata = Column(Integer, default=0)  # 1 = categoria archiviata
     data_inizio_stagione = Column(Date, nullable=True)
@@ -31,6 +32,7 @@ class Gruppo(Base):
     id = Column(Integer, primary_key=True)
     nome = Column(String(100), nullable=False)
     categoria_id = Column(Integer, ForeignKey("categorie.id"))
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=True)
 
 class Persona(Base):
     __tablename__ = "persone"
@@ -193,6 +195,14 @@ class AllenamentoElemento(Base):
     rotazione = Column(Float, default=0)
     colore = Column(String(20), nullable=True)
     numero = Column(Integer, nullable=True)
+
+class PresenzaAllenatore(Base):
+    __tablename__ = "presenze_allenatori"
+    id = Column(Integer, primary_key=True)
+    utente_id = Column(Integer, ForeignKey("utenti.id"), nullable=False)
+    data = Column(Date, nullable=False)
+    codice = Column(String(5), ForeignKey("codici.codice"), nullable=True)
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
 
 class CatalogoEsercizio(Base):
     __tablename__ = "catalogo_esercizi"

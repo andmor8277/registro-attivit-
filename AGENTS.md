@@ -14,23 +14,27 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 ## Structure
 ```
 backend/app/main.py          # FastAPI entry, middleware, router mounts, auto-migrations
-backend/app/routers/         # 11 routers: auth, persone, registro, categorie, convocazioni,
-                             #   allenatori, societa, allenamenti, partite, gruppi, codici
+backend/app/routers/         # 13 routers: auth, persone, registro, categorie, convocazioni,
+                             #   allenatori, societa, allenamenti, partite, gruppi, codici,
+                             #   weekend, spogliatoi
 backend/app/database.py      # SessionLocal, reads DATABASE_URL from env
 backend/app/models.py        # SQLAlchemy models (Societa, Categoria, Persona, Utente, etc.)
 backend/app/rate_limit.py    # slowapi limiter (in-memory, per-worker)
 backend/uploads/             # File uploads, served at /uploads/
 
 frontend/src/main.js         # Router, auth guard, all route registrations
-frontend/src/views/          # 18 views (see Route Map)
+frontend/src/views/          # 19 views (see Route Map)
 frontend/src/api/index.js    # Axios instance (api + apiPublic), all API calls
 frontend/src/store.js        # Global state: token, user, societa, categoria (Vue refs)
+frontend/src/composables/useTacticalBoard.js  # Tactical board logic extracted from Allenamenti.vue
+frontend/src/components/TacticalBoard.vue     # Dedicated tactical board canvas component
 frontend/nginx.conf          # Proxies /api/ and /uploads/ to backend:8000
 frontend/vite.config.js      # Dev proxy to localhost:8000, PWA config
 ```
 
 ## Route Map
 ```
+/login              → Login.vue
 /                   → Home.vue (dashboard)
 /allenatori         → Allenatori.vue (planning + categories CRUD)
 /responsabili       → Responsabili.vue (assign mister/dirigente to categories)
@@ -41,7 +45,7 @@ frontend/vite.config.js      # Dev proxy to localhost:8000, PWA config
 /segreteria/:id     → SegreteriaCategoria.vue (per-category player table)
 /scelta/:id         → Scelta.vue (action picker per category)
 /registro/:id       → Registro.vue (attendance)
-/allenamenti/:id    → Allenamenti.vue (~3000 lines, canvas tactical board)
+/allenamenti/:id    → Allenamenti.vue (uses TacticalBoard.vue component)
 /convocazioni/:id   → Convocazioni.vue
 /dati/:id           → DatiMatricole.vue
 /reportistica/:id   → Reportistica.vue
@@ -50,6 +54,8 @@ frontend/vite.config.js      # Dev proxy to localhost:8000, PWA config
 /form-iscrizione    → FormOnlineIscrizione.vue (public, no auth)
 ```
 **Route order matters** — `/segreteria/scheda/:id` MUST come BEFORE `/segreteria/:id` or `:id` captures "scheda".
+
+**Unrouted views:** `Spogliatoi.vue` exists in `views/` but has no route in `main.js` yet.
 
 ## Environment
 - `.env` at root: `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `SECRET_KEY`, `ENCRYPTION_KEY`, `DEFAULT_PASSWORD`
@@ -66,9 +72,9 @@ frontend/vite.config.js      # Dev proxy to localhost:8000, PWA config
 
 ## Migrations
 - **No Alembic.** Auto-migrations in `main.py:run_migrations()` run on every backend startup.
-- SQL files in `backend/migrations/*.sql` are also run by `deploy.sh` (hardcoded).
-- `init.sql` seeds `gruppi` and `codici` tables on first DB init.
-- New migrations: add to BOTH `run_migrations()` in `main.py` AND `backend/migrations/`.
+- `deploy.sh` and `deploy_dev.sh` also attempt to run SQL files from `migrations/` at project root (currently none exist — all migrations are in `run_migrations()`).
+- `init.sql` seeds `gruppi` and `codici` tables on first DB init (mounted to docker-entrypoint-initdb.d).
+- New migrations: add to `run_migrations()` in `main.py`. If you also need a standalone SQL file, place it in `migrations/` at project root and add it to both deploy scripts.
 
 ## Security
 - `slowapi` limits are **per-worker** (4 workers = 4x effective limit).
@@ -87,8 +93,9 @@ frontend/vite.config.js      # Dev proxy to localhost:8000, PWA config
 - Italian language in UI and codebase.
 - Roles: `super_admin` (all società), `admin` (own società), `mister` (assigned categorie), `dirigente` (read-only), `segreteria`, `infermeria`.
 - No linting or type-checking configured.
-- `Allenamenti.vue` is ~3000 lines, single-file canvas-based tactical board.
+- Tactical board logic is in `composables/useTacticalBoard.js` + `components/TacticalBoard.vue`, not inline in `Allenamenti.vue`.
 - `Infermeria.vue` does NOT exist yet — Home.vue card is commented out.
+- `release.sh` references `dev.sh` (line 77) which doesn't exist — it should be `start_dev.sh`.
 
 ## ⚠️ Production Deploy Checklist
 

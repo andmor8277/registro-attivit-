@@ -8,7 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 import os
 from .rate_limit import limiter
 from .database import Base, engine
-from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite
+from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori
 from .routers.gruppi import router as gruppi_router
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
@@ -168,9 +168,13 @@ def run_migrations():
                             id SERIAL PRIMARY KEY,
                             categoria_id INTEGER NOT NULL REFERENCES categorie(id),
                             data_partite DATE NOT NULL,
-                            ora TIME,
-                            avversario VARCHAR(100),
+                             ora TIME,
+                             ora_presentazione TIME,
+                             avversario VARCHAR(100),
                             campo VARCHAR(100),
+                            indirizzo VARCHAR(200),
+                            casa_fuori VARCHAR(10),
+                            mister_id INTEGER,
                             risultato VARCHAR(20),
                             goal_punti INTEGER DEFAULT 0,
                             goal_contro INTEGER DEFAULT 0,
@@ -183,6 +187,212 @@ def run_migrations():
             except Exception as e:
                 print(f"Migration warning (partite table): {e}")
                 conn.rollback()
+
+            for col_name, col_type in [('indirizzo', 'VARCHAR(200)'), ('casa_fuori', 'VARCHAR(10)'), ('mister_id', 'INTEGER'), ('ora_presentazione', 'TIME')]:
+                try:
+                    result = conn.execute(text(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_name = 'partite' AND column_name = :cn"
+                    ), {"cn": col_name})
+                    if result.fetchone() is None:
+                        conn.execute(text(
+                            f"ALTER TABLE partite ADD COLUMN {col_name} {col_type}"
+                        ))
+                        conn.commit()
+                        print(f"Migration: Added {col_name} to partite")
+                except Exception:
+                    pass
+
+            # Weekend table
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS weekend (
+                        id SERIAL PRIMARY KEY,
+                        nome VARCHAR(100) NOT NULL,
+                        data_inizio DATE NOT NULL,
+                        data_fine DATE NOT NULL,
+                        societa_id INTEGER REFERENCES societa(id)
+                    )
+                """))
+                conn.commit()
+                print("Migration: Created weekend table")
+            except Exception as e:
+                print(f"Migration warning (weekend table): {e}")
+                conn.rollback()
+
+            # weekend_id on partite
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'partite' AND column_name = 'weekend_id'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text(
+                        "ALTER TABLE partite ADD COLUMN weekend_id INTEGER"
+                    ))
+                    conn.commit()
+                    print("Migration: Added weekend_id to partite")
+            except Exception:
+                pass
+
+            # Spogliatoi table
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS spogliatoi (
+                        id SERIAL PRIMARY KEY,
+                        etichetta VARCHAR(100) NOT NULL,
+                        ordine INTEGER DEFAULT 0,
+                        societa_id INTEGER REFERENCES societa(id)
+                    )
+                """))
+                conn.commit()
+                print("Migration: Created spogliatoi table")
+            except Exception as e:
+                print(f"Migration warning (spogliatoi table): {e}")
+                conn.rollback()
+
+            # Spogliatoi assegnazioni table
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS spogliatoi_assegnazioni (
+                        id SERIAL PRIMARY KEY,
+                        spogliatoio_id INTEGER REFERENCES spogliatoi(id),
+                        categoria_id INTEGER REFERENCES categorie(id),
+                        nome_squadra_esterna VARCHAR(100),
+                        tipo VARCHAR(20) DEFAULT 'casa',
+                        data_inizio DATE,
+                        weekend_id INTEGER,
+                        societa_id INTEGER REFERENCES societa(id)
+                    )
+                """))
+                conn.commit()
+                print("Migration: Created spogliatoi_assegnazioni table")
+            except Exception as e:
+                print(f"Migration warning (spogliatoi_assegnazioni table): {e}")
+                conn.rollback()
+
+            # Add ora_allenamento column to categorie table
+            try:
+                conn.execute(text("ALTER TABLE categorie ADD COLUMN ora_allenamento VARCHAR(10)"))
+                conn.commit()
+                print("Migration: Added ora_allenamento column to categorie table")
+            except Exception as e:
+                print(f"Migration warning (ora_allenamento column): {e}")
+                conn.rollback()
+
+            # Add data column to spogliatoi_assegnazioni table (per-day assignments)
+            try:
+                conn.execute(text("ALTER TABLE spogliatoi_assegnazioni ADD COLUMN data DATE"))
+                conn.commit()
+                print("Migration: Added data column to spogliatoi_assegnazioni table")
+            except Exception as e:
+                print(f"Migration warning (assegnazioni data column): {e}")
+                conn.rollback()
+
+            # Campi da gioco table
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS campi_da_gioco (
+                        id SERIAL PRIMARY KEY,
+                        etichetta VARCHAR(100) NOT NULL,
+                        ordine INTEGER DEFAULT 0,
+                        societa_id INTEGER REFERENCES societa(id)
+                    )
+                """))
+                conn.commit()
+                print("Migration: Created campi_da_gioco table")
+            except Exception as e:
+                print(f"Migration warning (campi_da_gioco table): {e}")
+                conn.rollback()
+
+            # Campi assegnazioni table
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS campi_assegnazioni (
+                        id SERIAL PRIMARY KEY,
+                        campo_id INTEGER REFERENCES campi_da_gioco(id),
+                        categoria_id INTEGER REFERENCES categorie(id),
+                        nome_squadra_esterna VARCHAR(100),
+                        tipo VARCHAR(20) DEFAULT 'casa',
+                        data_inizio DATE,
+                        data DATE,
+                        weekend_id INTEGER,
+                        societa_id INTEGER REFERENCES societa(id)
+                    )
+                """))
+                conn.commit()
+                print("Migration: Created campi_assegnazioni table")
+            except Exception as e:
+                print(f"Migration warning (campi_assegnazioni table): {e}")
+                conn.rollback()
+
+            # Presenze allenatori table
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS presenze_allenatori (
+                        id SERIAL PRIMARY KEY,
+                        utente_id INTEGER REFERENCES utenti(id),
+                        data DATE NOT NULL,
+                        codice VARCHAR(5) REFERENCES codici.codice,
+                        societa_id INTEGER REFERENCES societa(id)
+                    )
+                """))
+                conn.commit()
+                print("Migration: Created presenze_allenatori table (utente_id)")
+            except Exception as e:
+                print(f"Migration warning (presenze_allenatori table): {e}")
+                conn.rollback()
+
+            # Rename allenatore_id -> utente_id if needed
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'presenze_allenatori' AND column_name = 'allenatore_id'"
+                ))
+                if result.fetchone():
+                    conn.execute(text("ALTER TABLE presenze_allenatori RENAME COLUMN allenatore_id TO utente_id"))
+                    conn.commit()
+                    print("Migration: Renamed allenatore_id -> utente_id in presenze_allenatori")
+            except Exception:
+                pass
+
+            # Add societa_id to gruppi and populate from categorie
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'gruppi' AND column_name = 'societa_id'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text(
+                        "ALTER TABLE gruppi ADD COLUMN societa_id INTEGER REFERENCES societa(id)"
+                    ))
+                    conn.commit()
+                    print("Migration: Added societa_id to gruppi")
+            except Exception:
+                pass
+
+            try:
+                conn.execute(text("""
+                    UPDATE gruppi g SET societa_id = c.societa_id
+                    FROM categorie c
+                    WHERE g.categoria_id = c.id AND g.societa_id IS NULL
+                """))
+                conn.commit()
+                print("Migration: Populated gruppi.societa_id from categorie")
+            except Exception:
+                pass
+
+            # Assign gruppo "Pigna" to categoria "Test2013"
+            try:
+                conn.execute(text("""
+                    UPDATE gruppi SET categoria_id = (SELECT id FROM categorie WHERE nome = :cn LIMIT 1)
+                    WHERE nome = :gn AND categoria_id IS NULL
+                """), {"cn": "TEST2", "gn": "Pigna"})
+                conn.commit()
+                print("Migration: Assigned gruppo Pigna to categoria Test2013")
+            except Exception:
+                pass
+
         finally:
             conn.close()
 
@@ -200,6 +410,10 @@ app.include_router(allenatori.router, dependencies=[Depends(get_current_user)])
 app.include_router(allenamenti.router, dependencies=[Depends(get_current_user)])
 app.include_router(gruppi_router, dependencies=[Depends(get_current_user)])
 app.include_router(partite.router, dependencies=[Depends(get_current_user)])
+app.include_router(weekend.router, dependencies=[Depends(get_current_user)])
+app.include_router(spogliatoi.router, dependencies=[Depends(get_current_user)])
+app.include_router(campi.router, dependencies=[Depends(get_current_user)])
+app.include_router(presenze_allenatori.router, dependencies=[Depends(get_current_user)])
 
 @app.get("/")
 def root():
