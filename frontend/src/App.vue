@@ -837,4 +837,10 @@ onMounted(async () => {
     display: none;
   }
 }
+
+@media print {
+  .topbar {
+    display: none !important;
+  }
+}
 </style>

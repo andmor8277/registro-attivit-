@@ -16,6 +16,7 @@ class CategoriaCreate(BaseModel):
     anno: Optional[int] = None
     stagione: Optional[int] = None
     giorni: Optional[str] = None
+    ora_allenamento: Optional[str] = None
     is_portieri: bool = False
     societa_id: Optional[int] = None
     data_inizio_stagione: Optional[date] = None
@@ -154,6 +155,7 @@ def create_categoria(c: CategoriaCreate, db: Session = Depends(get_db), current_
         anno=c.anno,
         stagione=c.stagione,
         giorni=c.giorni,
+        ora_allenamento=c.ora_allenamento,
         is_portieri=1 if c.is_portieri else 0,
         data_inizio_stagione=c.data_inizio_stagione,
         data_fine_stagione=c.data_fine_stagione
@@ -180,6 +182,7 @@ def update_categoria(categoria_id: int, c: CategoriaCreate, db: Session = Depend
     cat.anno = c.anno
     cat.stagione = c.stagione
     cat.giorni = c.giorni
+    cat.ora_allenamento = c.ora_allenamento
     cat.is_portieri = 1 if c.is_portieri else 0
     cat.data_inizio_stagione = c.data_inizio_stagione
     cat.data_fine_stagione = c.data_fine_stagione
@@ -213,15 +216,13 @@ def get_categoria_utenti(categoria_id: int, db: Session = Depends(get_db), curre
 
 @router.put("/{categoria_id}/utenti")
 def assegna_utenti_categoria(categoria_id: int, data: AssegnaUtenti, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
-    # Get the role for each user being assigned
+    # Remove ALL existing assignments for this category
+    db.query(UtenteCategoria).filter(
+        UtenteCategoria.categoria_id == categoria_id
+    ).delete()
+    
+    # Re-add only the users in the new list
     for uid in data.utente_ids:
-        # Remove existing assignment if any
-        db.query(UtenteCategoria).filter(
-            UtenteCategoria.categoria_id == categoria_id,
-            UtenteCategoria.utente_id == uid
-        ).delete()
-        
-        # Get user's overall role
         user = db.query(Utente).filter(Utente.id == uid).first()
         ruolo = user.ruolo if user and user.ruolo in ['mister', 'dirigente'] else None
         

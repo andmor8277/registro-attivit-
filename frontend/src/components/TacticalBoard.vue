@@ -255,20 +255,21 @@ function syncToServer() {
 }
 
 let _syncDisabled = false
+let _pendingProps = null
 
 function setSyncEnabled(enabled) {
   _syncDisabled = !enabled
 }
 
 watch(() => props.elements, (newVal) => {
-  const prevSelected = selectedIdx.value
   setSyncEnabled(false)
-  elements.value = (newVal || []).map(el => convertToCanvas(el))
-  histIdx.value = -1
-  history.value = [JSON.parse(JSON.stringify(elements.value))]
-  histIdx.value = 0
-  selectedIdx.value = prevSelected >= 0 && prevSelected < elements.value.length ? prevSelected : -1
-  draw()
+  if (fieldW > 0 && fieldH > 0) {
+    elements.value = (newVal || []).map(el => convertToCanvas(el))
+    histIdx.value = -1
+    history.value = [JSON.parse(JSON.stringify(elements.value))]
+    histIdx.value = 0
+    draw()
+  }
   nextTick(() => { setSyncEnabled(true) })
 }, { deep: false })
 
@@ -316,6 +317,21 @@ function resizeCanvas(skipDraw = false) {
   ctx.scale(dpr, dpr)
   canvasW = Math.floor(cw)
   canvasH = Math.floor(ch)
+
+  // Set field coords here so convertToCanvas works (was only in draw())
+  const pad = canvasH * 0.05
+  fieldW = canvasW - pad * 2
+  fieldH = canvasH - pad * 2
+  fieldX = pad
+  fieldY = pad
+
+  // Convert pending elements now that fieldW/fieldH are valid
+  if (_pendingProps && _pendingProps.length > 0 && elements.value.length === 0) {
+    elements.value = _pendingProps.map(el => convertToCanvas(el))
+    _pendingProps = null
+    histIdx.value = 0
+    history.value = [JSON.parse(JSON.stringify(elements.value))]
+  }
 
   if (!skipDraw) draw()
 }
@@ -881,42 +897,61 @@ function pointerDown(e) {
   if (tool.value === 'select') {
     let found = -1
     let resizeIdx = -1
-    let hitResult = null
+    let resizeEndLocal = 'x2'
+
     for (let i = elements.value.length - 1; i >= 0; i--) {
-      const res = hitTest(pos.x, pos.y, elements.value[i], i)
-      if (res) {
-        if (typeof res === 'object' && res.resize) { resizeIdx = res.idx; hitResult = res; break }
-        if (typeof res === 'object' && res.move) { found = res.idx; break }
-        if (typeof res === 'number') { found = res; break }
+      const result = hitTest(pos.x, pos.y, elements.value[i], i)
+
+      if (result !== false && result !== undefined && result !== null) {
+        if (typeof result === 'object' && result.resize) {
+          resizeIdx = result.idx
+          resizeEndLocal = result.end || 'x2'
+          break
+        }
+
+        if (typeof result === 'object' && result.move) {
+          found = result.idx
+          break
+        }
+
+        if (typeof result === 'number') {
+          found = result
+          break
+        }
       }
     }
+
     selectedIdx.value = found >= 0 ? found : resizeIdx
+
     if (resizeIdx >= 0) {
       resizingArrow = resizeIdx
       const el = elements.value[resizeIdx]
-      resizingEnd = hitResult?.end || 'x2'
+      resizingEnd = resizeEndLocal
+
       if (el.type === 'one-two' && resizingEnd === 'x1') {
         dragOffset = { x: pos.x - el.x1, y: pos.y - el.y1 }
       } else {
         dragOffset = { x: pos.x - el.x2, y: pos.y - el.y2 }
       }
+
       dragStart = { ...pos }
     } else if (found >= 0) {
       dragging = true
       const el = elements.value[found]
       dragOffset = {
-        x: pos.x - (el.x || el.x1 || 0),
-        y: pos.y - (el.y || el.y1 || 0)
+        x: pos.x - (el.x ?? el.x1 ?? 0),
+        y: pos.y - (el.y ?? el.y1 ?? 0)
       }
       dragStart = { ...pos }
     }
+
     draw()
     return
   }
 
   if (tool.value === 'erase') {
     for (let i = elements.value.length - 1; i >= 0; i--) {
-      if (hitTest(pos.x, pos.y, elements.value[i], i)) {
+      if (elements.value[i].type === 'free' && hitTest(pos.x, pos.y, elements.value[i], i)) {
         elements.value.splice(i, 1)
         pushHistory()
         draw()
@@ -942,20 +977,17 @@ function pointerDown(e) {
   if (tool.value === 'text') {
     const txt = prompt('Inserisci testo:')
     if (!txt) return
-    const c = percentToCanvas(pos.x / canvasW * 100, pos.y / canvasH * 100)
-    elements.value.push({ type: 'text', x: c.x, y: c.y, color: color.value, size: elemSize.value, text: txt })
+    elements.value.push({ type: 'text', x: pos.x, y: pos.y, color: color.value, size: elemSize.value, text: txt })
     pushHistory()
     draw()
     return
   }
 
   // Place object tools
-  const c = percentToCanvas(pos.x / canvasW * 100, pos.y / canvasH * 100)
-  const newEl = { type: tool.value, x: c.x, y: c.y, color: color.value, size: elemSize.value }
+  const newEl = { type: tool.value, x: pos.x, y: pos.y, color: color.value, size: elemSize.value }
   elements.value.push(newEl)
   selectedIdx.value = elements.value.length - 1
   pushHistory()
-  selectTool('select')
   draw()
 }
 
@@ -1002,7 +1034,7 @@ function pointerMove(e) {
 
   if (tool.value === 'erase' && e.buttons) {
     for (let i = elements.value.length - 1; i >= 0; i--) {
-      if (hitTest(pos.x, pos.y, elements.value[i], i)) {
+      if (elements.value[i].type === 'free' && hitTest(pos.x, pos.y, elements.value[i], i)) {
         elements.value.splice(i, 1)
         draw()
         return
@@ -1153,18 +1185,10 @@ onMounted(() => {
   document.addEventListener('keydown', keyDown)
   window.addEventListener('resize', resizeCanvas)
 
-  nextTick(() => {
-    resizeCanvas()
-    if (props.elements && props.elements.length > 0) {
-      elements.value = props.elements.map(el => convertToCanvas(el))
-      history.value = [JSON.parse(JSON.stringify(elements.value))]
-      histIdx.value = 0
-    } else {
-      history.value = [[]]
-      histIdx.value = 0
-    }
-    draw()
-  })
+  if (props.elements && props.elements.length > 0) {
+    _pendingProps = props.elements
+  }
+  resizeCanvas()
 })
 
 onUnmounted(() => {

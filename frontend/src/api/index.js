@@ -116,3 +116,45 @@ export const getPartite = (categoriaId) => {
 export const creaPartita = (data) => api.post('/partite/', data)
 export const aggiornaPartita = (id, data) => api.put(`/partite/${id}`, data)
 export const eliminaPartita = (id) => api.delete(`/partite/${id}`)
+
+export const getWeekend = (societaId) => {
+  const params = societaId ? `?societa_id=${societaId}` : ''
+  return api.get('/weekend/' + params)
+}
+export const getWeekendPartite = (weekendId) => api.get(`/weekend/${weekendId}/partite`)
+export const creaWeekend = (data) => api.post('/weekend/', data)
+export const aggiornaWeekend = (id, data) => api.put(`/weekend/${id}`, data)
+export const eliminaWeekend = (id) => api.delete(`/weekend/${id}`)
+
+// Spogliatoi
+export const getSpogliatoi = (societaId) => {
+  const params = societaId ? `?societa_id=${societaId}` : ''
+  return api.get('/spogliatoi/' + params)
+}
+export const creaSpogliatoio = (data) => api.post('/spogliatoi/', data)
+export const aggiornaSpogliatoio = (id, data) => api.put(`/spogliatoi/${id}`, data)
+export const eliminaSpogliatoio = (id) => api.delete(`/spogliatoi/${id}`)
+export const getAssegnazioniSettimana = (dataInizio) => api.get(`/spogliatoi/assegnazioni/settimana/${dataInizio}`)
+export const getAssegnazioniWeekend = (weekendId) => api.get(`/spogliatoi/assegnazioni/weekend/${weekendId}`)
+export const creaAssegnazione = (data) => api.post('/spogliatoi/assegnazioni', data)
+export const aggiornaAssegnazione = (id, data) => api.put(`/spogliatoi/assegnazioni/${id}`, data)
+export const eliminaAssegnazione = (id) => api.delete(`/spogliatoi/assegnazioni/${id}`)
+
+// Campi da gioco
+export const getCampi = (societaId) => {
+  const params = societaId ? `?societa_id=${societaId}` : ''
+  return api.get('/campi/' + params)
+}
+export const creaCampo = (data) => api.post('/campi/', data)
+export const aggiornaCampo = (id, data) => api.put(`/campi/${id}`, data)
+export const eliminaCampo = (id) => api.delete(`/campi/${id}`)
+export const getCampiAssegnazioniSettimana = (dataInizio) => api.get(`/campi/assegnazioni/settimana/${dataInizio}`)
+export const getCampiAssegnazioniWeekend = (weekendId) => api.get(`/campi/assegnazioni/weekend/${weekendId}`)
+export const creaCampoAssegnazione = (data) => api.post('/campi/assegnazioni', data)
+export const aggiornaCampoAssegnazione = (id, data) => api.put(`/campi/assegnazioni/${id}`, data)
+export const eliminaCampoAssegnazione = (id) => api.delete(`/campi/assegnazioni/${id}`)
+
+// Presenze allenatori
+export const getPresenzeAllenatoriMese = (anno, mese) => api.get(`/presenze-allenatori/mese/${anno}/${mese}`)
+export const upsertPresenzaAllenatore = (entry) => api.post('/presenze-allenatori/', entry)
+export const getMisterList = () => api.get('/presenze-allenatori/mister')
