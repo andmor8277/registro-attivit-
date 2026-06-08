@@ -63,9 +63,16 @@ registro_presenze/
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v4.0.0**.
+La versione attuale è **v5.0.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
+
+### Novità v5.0.0
+
+- **Convocazioni Redesign Completo**: Nuova griglia giocatori 7 colonne con slot cliccabili, player picker modale con ricerca in tempo reale, contatore assegnati per gara
+- **PDF Convocazioni Editorial Style**: Layout match-day program con header dark, card gare con ombre, griglia info a 2 colonne, righe giocatori con badge numerati, sezione note amber, footer stagione
+- **Fix Gruppo Pigna**: Risolto bug che mostrava gruppi senza categoria in tutte le categorie (filtro backend corretto)
+- **Weekend Gare**: Sidebar con weekend disponibili, creazione convocazione da weekend con partite pre-caricate
 
 ### Novità v4.0.0
 
