@@ -217,3 +217,20 @@ class CatalogoEsercizio(Base):
     creato_da = Column(Integer, nullable=True)
     creato_il = Column(DateTime, nullable=True)
     aggiornato_il = Column(DateTime, nullable=True)
+
+class Valutazione(Base):
+    __tablename__ = "valutazioni"
+    id = Column(Integer, primary_key=True)
+    persona_id = Column(Integer, ForeignKey("persone.id"), nullable=False)
+    categoria_id = Column(Integer, ForeignKey("categorie.id"), nullable=False)
+    tecnica = Column(Integer, nullable=True)
+    velocita = Column(Integer, nullable=True)
+    resistenza = Column(Integer, nullable=True)
+    attitudine = Column(Integer, nullable=True)
+    posizione = Column(Integer, nullable=True)
+    gioco_di_testa = Column(Integer, nullable=True)
+    tiro = Column(Integer, nullable=True)
+    passaggio = Column(Integer, nullable=True)
+    dribbling = Column(Integer, nullable=True)
+    disciplina = Column(Integer, nullable=True)
+    note = Column(Text, nullable=True)

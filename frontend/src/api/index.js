@@ -158,3 +158,8 @@ export const eliminaCampoAssegnazione = (id) => api.delete(`/campi/assegnazioni/
 export const getPresenzeAllenatoriMese = (anno, mese) => api.get(`/presenze-allenatori/mese/${anno}/${mese}`)
 export const upsertPresenzaAllenatore = (entry) => api.post('/presenze-allenatori/', entry)
 export const getMisterList = () => api.get('/presenze-allenatori/mister')
+
+// Valutazioni
+export const getValutazioni = (categoriaId) => api.get('/valutazioni/categoria/' + categoriaId)
+export const updateValutazione = (id, data) => api.put('/valutazioni/' + id, data)
+export const createValutazione = (data) => api.post('/valutazioni/', data)

@@ -8,7 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 import os
 from .rate_limit import limiter
 from .database import Base, engine
-from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori
+from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni
 from .routers.gruppi import router as gruppi_router
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
@@ -393,6 +393,64 @@ def run_migrations():
             except Exception:
                 pass
 
+            # Remove unique constraint on gruppi.nome (needed for multiple "Portieri" groups)
+            try:
+                conn.execute(text("ALTER TABLE gruppi DROP CONSTRAINT IF EXISTS gruppi_nome_key"))
+                conn.commit()
+                print("Migration: Dropped gruppi.nome unique constraint")
+            except Exception as e:
+                print(f"Migration warning (drop gruppi_nome_key): {e}")
+
+            # Create "Portieri" group for every active category that doesn't have one
+            try:
+                cats = conn.execute(text("""
+                    SELECT c.id, c.societa_id FROM categorie c
+                    WHERE c.is_portieri = 0 AND c.is_archiviata = 0
+                    AND NOT EXISTS (
+                        SELECT 1 FROM gruppi g
+                        WHERE g.categoria_id = c.id AND LOWER(g.nome) = 'portieri'
+                    )
+                """)).fetchall()
+                created = 0
+                for cat in cats:
+                    try:
+                        conn.execute(text("""
+                            INSERT INTO gruppi (nome, categoria_id, societa_id)
+                            VALUES ('Portieri', :cid, :sid)
+                        """), {"cid": cat.id, "sid": cat.societa_id})
+                        created += 1
+                    except Exception:
+                        pass
+                conn.commit()
+                print(f"Migration: Created Portieri groups for {created} categories")
+            except Exception as e:
+                print(f"Migration error (Portieri groups): {e}")
+
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS valutazioni (
+                        id SERIAL PRIMARY KEY,
+                        persona_id INTEGER REFERENCES persone(id),
+                        categoria_id INTEGER REFERENCES categorie(id),
+                        tecnica INTEGER,
+                        velocita INTEGER,
+                        resistenza INTEGER,
+                        attitudine INTEGER,
+                        posizione INTEGER,
+                        gioco_di_testa INTEGER,
+                        tiro INTEGER,
+                        passaggio INTEGER,
+                        dribbling INTEGER,
+                        disciplina INTEGER,
+                        note TEXT
+                    )
+                """))
+                conn.commit()
+                print("Migration: Created valutazioni table")
+            except Exception as e:
+                print(f"Migration warning (valutazioni table): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 
@@ -414,6 +472,7 @@ app.include_router(weekend.router, dependencies=[Depends(get_current_user)])
 app.include_router(spogliatoi.router, dependencies=[Depends(get_current_user)])
 app.include_router(campi.router, dependencies=[Depends(get_current_user)])
 app.include_router(presenze_allenatori.router, dependencies=[Depends(get_current_user)])
+app.include_router(valutazioni.router, dependencies=[Depends(get_current_user)])
 
 @app.get("/")
 def root():
