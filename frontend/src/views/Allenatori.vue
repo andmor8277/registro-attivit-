@@ -198,7 +198,7 @@
     </section>
 
     <Teleport to="body">
-      <div v-if="modal.show" class="modal-overlay" @click.self="chiudiModal">
+      <div v-if="modal.show" class="modal-overlay">
         <div class="modal">
           <div class="modal-header">
             <h3>{{ modal.id ? 'Modifica Categoria' : 'Nuova Categoria' }}</h3>
