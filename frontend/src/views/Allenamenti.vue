@@ -960,7 +960,24 @@ function confirmSaveSelectedToCatalogo() {
       tempo: ex.tempo || '',
       descrizione: ex.descrizione || '',
       campo_con_righe: ex.campo_con_righe,
-      elementi: ex.elementi || []
+      elementi: (ex.elementi || []).map(el => ({
+        tipo: el.tipo ?? el.type ?? '',
+        x: el.x ?? null,
+        y: el.y ?? null,
+        rotazione: el.rotazione ?? 0,
+        colore: el.colore ?? el.color ?? null,
+        numero: el.numero ?? el.num ?? null,
+        size: el.size ?? null,
+        w: el.w ?? null,
+        x1: el.x1 ?? null,
+        y1: el.y1 ?? null,
+        x2: el.x2 ?? null,
+        y2: el.y2 ?? null,
+        points: el.points ?? null,
+        text: el.text ?? null,
+        length: el.length ?? null,
+        wavy: el.wavy ?? false,
+      }))
     }).then(() => {
       savedCount++
     }).catch(e => {
