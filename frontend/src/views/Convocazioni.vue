@@ -185,13 +185,18 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M5.5 21c0-4.5 3-6.5 6.5-6.5s6.5 2 6.5 6.5"/></svg>
                   </span>
                   SQUADRA
-                  <span class="giocatori-count">{{ countAssigned(gara) }}/14</span>
+                  <span class="giocatori-count">{{ countAssigned(gara) }}</span>
                 </div>
                 <div class="giocatori-grid">
-                  <div v-for="pos in 14" :key="pos" class="giocatore-slot" :class="{ filled: gara.giocatori[pos-1] }" @click="openPicker(gi, pos - 1)">
-                    <span class="pos-badge">{{ pos }}</span>
-                    <span v-if="gara.giocatori[pos-1]" class="slot-name">{{ getPlayerCognome(gara.giocatori[pos-1]) }}</span>
+                  <div v-for="(pid, pos) in gara.giocatori" :key="'slot-' + pos" class="giocatore-slot" :class="{ filled: !!pid }" @click="openPicker(gi, pos)">
+                    <span class="pos-badge">{{ pos + 1 }}</span>
+                    <span v-if="pid" class="slot-name">{{ getPlayerCognome(pid) }}</span>
                     <span v-else class="slot-empty">+ tap</span>
+                    <span v-if="pid" class="slot-remove" @click.stop="rimuoviGiocatore(gi, pos)">×</span>
+                  </div>
+                  <div class="giocatore-slot add-slot" @click="aggiungiSlot(gi)">
+                    <span class="add-icon">+</span>
+                    <span class="slot-empty">Aggiungi</span>
                   </div>
                 </div>
               </div>
@@ -406,11 +411,25 @@ function selectPlayer(garaIdx, pos, playerId) {
   closePicker()
 }
 
+function rimuoviGiocatore(garaIdx, pos) {
+  const gara = convocazione.value.gare[garaIdx]
+  gara.giocatori.splice(pos, 1)
+}
+
+function aggiungiSlot(garaIdx) {
+  convocazione.value.gare[garaIdx].giocatori.push(null)
+}
+
 function aggiustaGare() {
   const n = numPartite.value
   const gare = convocazione.value.gare
   while (gare.length < n) gare.push(garaVuota(gare.length + 1))
-  if (gare.length > n) gare.splice(n)
+   if (gare.length > n) gare.splice(n)
+}
+
+function padGiocatori(arr) {
+  while (arr.length < 10) arr.push(null)
+  return arr
 }
 
 function formatData(d) {
@@ -426,7 +445,7 @@ function formatDataShort(d) {
 }
 
 function garaVuota(numero) {
-  return { numero, gara: '', data: '', campo: '', indirizzo: '', appuntamento: '', inizio_gara: '', allenatore: '', giocatori: Array(14).fill(null) }
+  return { numero, gara: '', data: '', campo: '', indirizzo: '', appuntamento: '', inizio_gara: '', allenatore: '', giocatori: Array(10).fill(null) }
 }
 
 async function caricaPartiteWeekend(dataInizio, dataFine) {
@@ -458,7 +477,7 @@ async function popolaConvocazione(dataInizio, dataFine) {
   const gare = partite.length > 0 ? partite.map((p, idx) => ({
     numero: idx + 1, gara: `${nomeSocieta} vs ${p.avversario || 'TBD'}`, data: p.data_partite, campo: p.campo || '',
     indirizzo: p.indirizzo || '', appuntamento: '', inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
-    allenatore: getMisterCognome(p.mister_id), giocatori: Array(14).fill(null)
+    allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null)
   })) : [garaVuota(1)]
   numPartite.value = gare.length
   convocazione.value = {
@@ -479,7 +498,7 @@ async function caricaPartiteEsistenti() {
   const gare = partite.map((p, idx) => ({
     numero: idx + 1, gara: `${nomeSocieta} vs ${p.avversario || 'TBD'}`, data: p.data_partite, campo: p.campo || '',
     indirizzo: p.indirizzo || '', appuntamento: '', inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
-    allenatore: getMisterCognome(p.mister_id), giocatori: Array(14).fill(null)
+    allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null)
   }))
   convocazione.value.gare = gare
   numPartite.value = gare.length
@@ -502,7 +521,7 @@ async function caricaConvocazione(id) {
     note: d.note || '',
     gare: d.gare.map((g, idx) => ({
       ...g, numero: g.numero || idx + 1, data: g.data || '',
-      giocatori: Array.from({ length: 14 }, (_, i) => { const gk = g.giocatori.find(x => x.posizione === i + 1); return gk ? gk.persona_id : null })
+       giocatori: padGiocatori((g.giocatori || []).sort((a, b) => a.posizione - b.posizione).map(x => x.persona_id))
     }))
   }
   numPartite.value = convocazione.value.gare.length
@@ -547,7 +566,7 @@ function creaConvocazioneDaWeekend(weekend) {
     numero: idx + 1,
     gara: p.casa_fuori === 'fuori' ? `${p.avversario || 'TBD'} vs ${nomeSocieta}` : `${nomeSocieta} vs ${p.avversario || 'TBD'}`,
     data: p.data_partite, campo: p.campo || '', indirizzo: p.indirizzo || '', appuntamento: '',
-    inizio_gara: p.ora ? p.ora.slice(0, 5) : '', allenatore: getMisterCognome(p.mister_id), giocatori: Array(14).fill(null)
+    inizio_gara: p.ora ? p.ora.slice(0, 5) : '', allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null)
   }))
   numPartite.value = gare.length
   convocazione.value = {
@@ -1381,6 +1400,7 @@ onMounted(async () => {
 }
 
 .giocatore-slot {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1434,6 +1454,48 @@ onMounted(async () => {
   color: #404040;
   font-weight: 500;
   text-transform: uppercase;
+}
+
+.giocatore-slot.add-slot {
+  border-style: dashed;
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.01);
+}
+
+.giocatore-slot.add-slot:hover {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.add-icon {
+  font-size: 1.1rem;
+  font-weight: 300;
+  color: #666;
+  line-height: 1;
+}
+
+.giocatore-slot.add-slot:hover .add-icon {
+  color: #22c55e;
+}
+
+.slot-remove {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 0.7rem;
+  color: #ef4444;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  line-height: 1;
+}
+
+.giocatore-slot:hover .slot-remove {
+  opacity: 1;
+}
+
+.giocatore-slot {
+  position: relative;
   letter-spacing: 0.05em;
 }
 
