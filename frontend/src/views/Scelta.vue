@@ -20,7 +20,7 @@
       <div class="header-main">
         <h1 class="category-name">
           <span class="name-gradient">
-            {{ categoria?.is_archived ? categoria?.nome : categoria?.nome + ' ' + categoria?.anno }}
+            {{ categoria?.is_archived ? categoria?.nome : (categoria?.anno ? categoria?.nome + ' ' + categoria?.anno : categoria?.nome) }}
           </span>
         </h1>
         <p class="header-subtitle" v-if="!categoria?.is_archived">Cosa vuoi gestire?</p>
@@ -72,7 +72,7 @@
           </div>
         </div>
         
-        <div v-if="!isDirigente" class="scelta-card" @click="router.push('/convocazioni/' + categoria?.id)">
+        <div v-if="!isDirigente && !categoria?.is_portieri" class="scelta-card" @click="router.push('/convocazioni/' + categoria?.id)">
           <div class="card-icon-wrap convocazioni">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
               <path d="M22 17H2a3 3 0 000 6h20a3 3 0 000-6z"/>
@@ -90,7 +90,7 @@
           </div>
         </div>
 
-        <div class="scelta-card" @click="router.push('/dati/' + categoria?.id)">
+        <div v-if="!categoria?.is_portieri" class="scelta-card" @click="router.push('/dati/' + categoria?.id)">
           <div class="card-icon-wrap dati">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
@@ -135,6 +135,22 @@
           </div>
           <div class="card-label">Reportistica</div>
           <div class="card-desc">Statistiche e report presenze</div>
+          <div class="card-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </div>
+        </div>
+
+        <div v-if="!isDirigente" class="scelta-card" @click="router.push('/valutazioni/' + categoria?.id)">
+          <div class="card-icon-wrap valutazioni">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
+              <path d="M9 11l3 3L22 4"/>
+              <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+            </svg>
+          </div>
+          <div class="card-label">Valutazioni</div>
+          <div class="card-desc">Schede valutative giocatori</div>
           <div class="card-arrow">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
               <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -436,6 +452,12 @@ onMounted(loadCategorieStagione)
   background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(168, 85, 247, 0.08) 100%);
   border-color: rgba(168, 85, 247, 0.3);
   color: #a78bfa;
+}
+
+.card-icon-wrap.valutazioni {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.2) 0%, rgba(20, 184, 166, 0.08) 100%);
+  border-color: rgba(20, 184, 166, 0.3);
+  color: #2dd4bf;
 }
 
 .card-icon-wrap svg {

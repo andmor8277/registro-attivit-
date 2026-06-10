@@ -22,6 +22,7 @@ import ResponsabiliCategoria from './views/ResponsabiliCategoria.vue'
 import ProgrammazionePartite from './views/ProgrammazionePartite.vue'
 import Spogliatoi from './views/Spogliatoi.vue'
 import PresenzeAllenatori from './views/PresenzeAllenatori.vue'
+import Valutazioni from './views/Valutazioni.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -45,6 +46,7 @@ const router = createRouter({
     { path: '/segreteria', component: Segreteria, name: 'segreteria', meta: { requiresAuth: true } },
     { path: '/segreteria/scheda/:id', component: SchedaGiocatore, name: 'scheda-giocatore', meta: { requiresAuth: true } },
     { path: '/segreteria/:id', component: SegreteriaCategoria, name: 'segreteria-categoria', meta: { requiresAuth: true } },
+    { path: '/valutazioni/:id', component: Valutazioni, name: 'valutazioni', meta: { requiresAuth: true } },
     { path: '/form-iscrizione', component: FormOnlineIscrizione, name: 'form-iscrizione' }
   ]
 })
