@@ -309,6 +309,12 @@ async function doLogin() {
     
     // Se è super_admin (ruolo o flag), mostra selezione società
     if (isSuper) {
+      // Ricarica lista società ora che abbiamo il token
+      try {
+        const res = await getSocieta()
+        societaOptions.value = res.data
+        setListaSocieta(res.data)
+      } catch {}
       showSocietaSelection.value = true
       loading.value = false
       return
