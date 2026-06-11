@@ -270,7 +270,7 @@ const router = useRouter()
 const { setToken, utenteAttivo, setSocietaAttiva, setListaSocieta, societaAttiva } = useStore()
 
 onMounted(async () => {
-  // Carica lista società per selezione
+  // Carica lista società per selezione (richiede auth)
   try {
     const res = await getSocieta()
     societaOptions.value = res.data
@@ -287,7 +287,10 @@ onMounted(async () => {
       setSocietaAttiva(null)
     }
   } catch (e) {
-    console.error('Errore caricamento società:', e)
+    // 401 è atteso quando non si è loggati
+    if (e.response?.status !== 401) {
+      console.error('Errore caricamento società:', e)
+    }
   }
 })
 
