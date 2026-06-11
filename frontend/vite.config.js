@@ -38,13 +38,21 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,ico,png,svg}'],
         runtimeCaching: [
           {
             urlPattern: /\/api\/.*/i,
             handler: 'NetworkOnly',
             options: {
               cacheName: 'skip-api-cache'
+            }
+          },
+          {
+            urlPattern: ({ request }) => request.destination === 'document',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-cache',
+              networkTimeoutSeconds: 10
             }
           }
         ]
