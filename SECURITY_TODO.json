@@ -22,7 +22,8 @@
       "title": "JWT in localStorage — valutare httpOnly cookie",
       "file": "frontend/src/store.js:4, api/index.js:6",
       "description": "Il token JWT è in localStorage, vulnerabile a XSS. Valutare passaggio a httpOnly cookie con Set-Cookie dal backend.",
-      "done": false
+      "done": false,
+      "note": "Deferred: richiede refactoring completo del flow auth (login, refresh, logout). Mitigato da CSP + XSS sanitization (C6)."
     },
     {
       "id": "C4",
@@ -35,10 +36,10 @@
     {
       "id": "C5",
       "severity": "CRITICAL",
-      "title": "Endpoint pubblici PII — /persone/public/{id} con rate limiting",
-      "file": "backend/app/routers/persone.py:225",
-      "description": "Endpoint pubblico che espone dati sensibili. Verificare che il rate limiting sia sufficiente e valutare mascheramento dati.",
-      "done": false
+      "title": "Endpoint PII pubblico senza rate limit",
+      "file": "backend/app/routers/persone.py:224-260",
+      "description": "/persone/public/{id} e /persone/public/ sono accessibili senza auth e senza rate limit.",
+      "done": true
     },
     {
       "id": "C6",
