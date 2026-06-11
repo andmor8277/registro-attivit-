@@ -89,8 +89,8 @@ class RegistroOut(BaseModel):
     class Config: from_attributes = True
 
 class PartitaCreate(BaseModel):
-    categoria_id: int
-    data_partite: str
+    categoria_id: Optional[int] = None
+    data_partite: Optional[str] = None
     ora: Optional[str] = None
     ora_presentazione: Optional[str] = None
     avversario: Optional[str] = None
@@ -122,9 +122,9 @@ class PartitaUpdate(BaseModel):
     weekend_id: Optional[int] = None
 
 class WeekendCreate(BaseModel):
-    nome: str
-    data_inizio: str
-    data_fine: str
+    nome: Optional[str] = None
+    data_inizio: Optional[str] = None
+    data_fine: Optional[str] = None
     societa_id: Optional[int] = None
 
 class WeekendUpdate(BaseModel):
@@ -133,7 +133,7 @@ class WeekendUpdate(BaseModel):
     data_fine: Optional[str] = None
 
 class SpogliatoioCreate(BaseModel):
-    etichetta: str
+    etichetta: Optional[str] = None
     ordine: Optional[int] = 0
     societa_id: Optional[int] = None
 
@@ -142,8 +142,8 @@ class SpogliatoioUpdate(BaseModel):
     ordine: Optional[int] = None
 
 class SpogliatoioAssegnazioneCreate(BaseModel):
-    spogliatoio_id: int
-    categoria_id: int
+    spogliatoio_id: Optional[int] = None
+    categoria_id: Optional[int] = None
     nome_squadra_esterna: Optional[str] = None
     tipo: Optional[str] = "casa"
     data_inizio: Optional[str] = None
@@ -161,7 +161,7 @@ class SpogliatoioAssegnazioneUpdate(BaseModel):
     weekend_id: Optional[int] = None
 
 class CampoCreate(BaseModel):
-    etichetta: str
+    etichetta: Optional[str] = None
     ordine: Optional[int] = 0
     societa_id: Optional[int] = None
 
@@ -170,8 +170,8 @@ class CampoUpdate(BaseModel):
     ordine: Optional[int] = None
 
 class CampoAssegnazioneCreate(BaseModel):
-    campo_id: int
-    categoria_id: int
+    campo_id: Optional[int] = None
+    categoria_id: Optional[int] = None
     nome_squadra_esterna: Optional[str] = None
     tipo: Optional[str] = "casa"
     data_inizio: Optional[str] = None
