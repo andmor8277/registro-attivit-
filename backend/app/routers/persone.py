@@ -169,7 +169,7 @@ def get_persone(request: Request, categoria_id: Optional[int] = None, db: Sessio
 @router.post("/")
 def create_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     societa_id = get_societa_filter(current_user) or current_user.societa_id
-    data = p.dict()
+    data = p.model_dump()
     data["societa_id"] = societa_id
     
     if data.get("codice_fiscale"):

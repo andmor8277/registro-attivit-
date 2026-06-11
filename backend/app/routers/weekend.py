@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from ..database import get_db
 from ..routers.auth import get_current_user, check_societa
+from ..schemas import WeekendCreate, WeekendUpdate
 
 router = APIRouter(prefix="/weekend", tags=["weekend"])
 
@@ -45,8 +46,8 @@ def weekend_partite(weekend_id: int, db=Depends(get_db), user=Depends(get_curren
     return [dict(r._mapping) for r in rows]
 
 @router.post("/")
-def crea_weekend(data: dict, db=Depends(get_db), user=Depends(get_current_user)):
-    societa_id = data.get("societa_id")
+def crea_weekend(data: WeekendCreate, db=Depends(get_db), user=Depends(get_current_user)):
+    societa_id = data.societa_id
     if not societa_id and not user.is_super_admin:
         societa_id = user.societa_id
     check_societa(user, societa_id)
@@ -57,9 +58,9 @@ def crea_weekend(data: dict, db=Depends(get_db), user=Depends(get_current_user))
             RETURNING *
         """),
         {
-            "nome": data.get("nome"),
-            "data_inizio": data.get("data_inizio"),
-            "data_fine": data.get("data_fine"),
+            "nome": data.nome,
+            "data_inizio": data.data_inizio,
+            "data_fine": data.data_fine,
             "societa_id": societa_id,
         }
     )
@@ -68,7 +69,7 @@ def crea_weekend(data: dict, db=Depends(get_db), user=Depends(get_current_user))
     return dict(row._mapping)
 
 @router.put("/{weekend_id}")
-def aggiorna_weekend(weekend_id: int, data: dict, db=Depends(get_db), user=Depends(get_current_user)):
+def aggiorna_weekend(weekend_id: int, data: WeekendUpdate, db=Depends(get_db), user=Depends(get_current_user)):
     check_weekend_access(db, weekend_id, user)
     res = db.execute(
         text("""
@@ -81,9 +82,9 @@ def aggiorna_weekend(weekend_id: int, data: dict, db=Depends(get_db), user=Depen
         """),
         {
             "id": weekend_id,
-            "nome": data.get("nome"),
-            "data_inizio": data.get("data_inizio"),
-            "data_fine": data.get("data_fine"),
+            "nome": data.nome,
+            "data_inizio": data.data_inizio,
+            "data_fine": data.data_fine,
         }
     )
     db.commit()
