@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text, func
 from pydantic import BaseModel
 from typing import Optional
 from app.models import Utente, Gruppo
@@ -32,7 +33,11 @@ def get_gruppi(categoria_id: Optional[int] = None, db: Session = Depends(get_db)
     if societa_id:
         query = query.filter(Gruppo.societa_id == societa_id)
     if categoria_id:
-        query = query.filter(Gruppo.categoria_id == categoria_id)
+        cat_row = db.execute(text("SELECT is_portieri FROM categorie WHERE id = :id"), {"id": categoria_id}).first()
+        if cat_row and cat_row.is_portieri == 1:
+            query = query.filter(func.lower(Gruppo.nome) == "portieri")
+        else:
+            query = query.filter(Gruppo.categoria_id == categoria_id)
     return query.order_by(Gruppo.nome).all()
 
 @router.post("/", response_model=GruppoOut)

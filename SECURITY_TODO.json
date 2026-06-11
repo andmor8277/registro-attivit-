@@ -6,7 +6,7 @@
       "title": "Proteggi /societa/ con autenticazione",
       "file": "backend/app/main.py:461",
       "description": "GET /societa/ e /societa/{sid} sono pubblici. Aggiungere dependencies=[Depends(get_current_user)] al router.",
-      "done": false
+      "done": true
     },
     {
       "id": "C2",
@@ -14,7 +14,7 @@
       "title": "Aggiungi filtro societa su partite/weekend/spogliatoi/campi/allenatori/valutazioni",
       "file": "backend/app/routers/partite.py, weekend.py, spogliatoi.py, campi.py, allenatori.py, valutazioni.py",
       "description": "Un utente autenticato può leggere/scrivere dati di tutte le società. Ogni endpoint deve verificare che current_user.societa_id corrisponda (o sia super_admin).",
-      "done": false
+      "done": true
     },
     {
       "id": "C3",
@@ -30,7 +30,7 @@
       "title": "Ruoli is_super_admin/is_admin da /auth/me, non da localStorage",
       "file": "frontend/src/main.js:56, App.vue, Admin.vue, Login.vue, Home.vue, Allenatori.vue, Societa.vue",
       "description": "I flag di ruolo sono in localStorage e modificabili. Derivarli dalla risposta di /auth/me.",
-      "done": false
+      "done": true
     },
     {
       "id": "C5",
@@ -46,7 +46,7 @@
       "title": "innerHTML / document.write() non sanitizzati",
       "file": "frontend/src/views/Convocazioni.vue:648, Spogliatoi.vue:1358, ProgrammazionePartite.vue:596",
       "description": "HTML costruito con dati utente iniettato via innerHTML/document.write. Sanitizzare con DOMPurify o usare template Vue.",
-      "done": false
+      "done": true
     },
     {
       "id": "H1",
@@ -62,7 +62,7 @@
       "title": "Rimuovi codice_fiscale da /auth/me",
       "file": "backend/app/routers/auth.py:143",
       "description": "Il codice fiscale viene esposto nella risposta di /auth/me. Rimuoverlo o mascherarlo.",
-      "done": false
+      "done": true
     },
     {
       "id": "H3",
@@ -70,7 +70,7 @@
       "title": "GDPR flag in localStorage — passare a sessionStorage o state",
       "file": "frontend/src/views/Segreteria.vue:219, SegreteriaCategoria.vue",
       "description": "gdpr_sbloccato in localStorage sopravvive al reload. Usare ref() o sessionStorage.",
-      "done": false
+      "done": true
     },
     {
       "id": "H4",
@@ -78,7 +78,7 @@
       "title": "Aggiungi filtro societa su valutazioni",
       "file": "backend/app/routers/valutazioni.py",
       "description": "Gli endpoint valutazioni non verificano la societa dell'utente. (Parte di C2 ma separato per tracciamento)",
-      "done": false
+      "done": true
     },
     {
       "id": "H5",
@@ -86,7 +86,7 @@
       "title": "Aggiungi CSP meta tag in index.html",
       "file": "frontend/index.html",
       "description": "Mancanza di Content-Security-Policy. Aggiungere meta tag come fallback al CSP del backend.",
-      "done": false
+      "done": true
     },
     {
       "id": "H6",
@@ -94,7 +94,7 @@
       "title": "Rimuovi IP LAN dalle CORS origins",
       "file": "backend/app/main.py:40",
       "description": "192.168.178.133:3000 nelle CORS è rischioso in caso di AP compromesso.",
-      "done": false
+      "done": true
     },
     {
       "id": "M1",
@@ -150,7 +150,7 @@
       "title": "window.open() senza noopener",
       "file": "frontend/src/views/Spogliatoi.vue:1305, ProgrammazionePartite.vue:574",
       "description": "Aggiungere noopener,noreferrer a window.open().",
-      "done": false
+      "done": true
     },
     {
       "id": "M8",
@@ -174,7 +174,7 @@
       "title": "Rimuovere user-scalable=no dal viewport",
       "file": "frontend/index.html:5",
       "description": "Viola WCAG 2.1. Rimuovere maximum-scale=1.0, user-scalable=no.",
-      "done": false
+      "done": true
     },
     {
       "id": "L3",

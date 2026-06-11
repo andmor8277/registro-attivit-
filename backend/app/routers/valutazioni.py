@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from ..database import SessionLocal
-from ..models import Valutazione, Persona
-from ..routers.auth import get_current_user
+from ..models import Valutazione, Persona, Categoria
+from ..routers.auth import get_current_user, check_societa
 from pydantic import BaseModel
 from typing import Optional
 
@@ -30,8 +31,18 @@ class ValutazioneCreate(BaseModel):
     disciplina: Optional[int] = None
     note: Optional[str] = None
 
+def check_categoria_societa(db, categoria_id, user):
+    if user.is_super_admin:
+        return
+    res = db.execute(text("SELECT societa_id FROM categorie WHERE id = :id"), {"id": categoria_id})
+    row = res.fetchone()
+    if not row:
+        raise HTTPException(404, "Categoria non trovata")
+    check_societa(user, row.societa_id)
+
 @router.get("/categoria/{categoria_id}")
-def get_valutazioni_categoria(categoria_id: int, db: Session = Depends(get_db)):
+def get_valutazioni_categoria(categoria_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
+    check_categoria_societa(db, categoria_id, user)
     valutazioni = db.query(Valutazione).filter(Valutazione.categoria_id == categoria_id).all()
     result = []
     for v in valutazioni:
@@ -57,10 +68,11 @@ def get_valutazioni_categoria(categoria_id: int, db: Session = Depends(get_db)):
     return result
 
 @router.put("/{id}")
-def update_valutazione(id: int, data: ValutazioneCreate, db: Session = Depends(get_db)):
+def update_valutazione(id: int, data: ValutazioneCreate, db: Session = Depends(get_db), user=Depends(get_current_user)):
     v = db.query(Valutazione).filter(Valutazione.id == id).first()
     if not v:
         raise HTTPException(status_code=404, detail="Valutazione non trovata")
+    check_categoria_societa(db, v.categoria_id, user)
     for field in ["tecnica", "velocita", "resistenza", "attitudine", "posizione", "gioco_di_testa", "tiro", "passaggio", "dribbling", "disciplina", "note"]:
         val = getattr(data, field, None)
         if val is not None:
@@ -69,7 +81,8 @@ def update_valutazione(id: int, data: ValutazioneCreate, db: Session = Depends(g
     return {"status": "ok"}
 
 @router.post("/")
-def create_valutazione(data: ValutazioneCreate, db: Session = Depends(get_db)):
+def create_valutazione(data: ValutazioneCreate, db: Session = Depends(get_db), user=Depends(get_current_user)):
+    check_categoria_societa(db, data.categoria_id, user)
     v = Valutazione(
         persona_id=data.persona_id,
         categoria_id=data.categoria_id,

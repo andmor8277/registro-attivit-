@@ -95,6 +95,57 @@
             <span>Nuovo Gruppo</span>
           </button>
         </div>
+        <template v-if="isPortieri">
+          <div v-for="cat in categoriePortieri" :key="cat" class="gruppo-block">
+            <div class="gruppo-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16"/>
+                <polyline points="1 10 5 10 11 14"/>
+                <polyline points="15 10 21 10 21 14"/>
+              </svg>
+              {{ cat }}
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th class="th-num">#</th>
+                  <th class="th-nome">Cognome Nome</th>
+                  <th v-for="g in giorniMese" :key="g.num" :class="{ 'th-weekend': g.weekend }">
+                    <div class="giorno-num">{{ g.num }}</div>
+                    <div class="giorno-nome">{{ g.gg }}</div>
+                  </th>
+                  <th class="th-tot th-pres">TOT</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(persona, idx) in personePerCategoria(cat)" :key="persona.id">
+                  <td class="td-num">{{ idx + 1 }}</td>
+                  <td class="td-nome">
+                    <span class="persona-name">{{ persona.cognome }} {{ persona.nome }}</span>
+                  </td>
+                  <td v-for="g in giorniMese" :key="g.num"
+                    class="cella" 
+                    :class="getCodiceClasse(persona.id, g.num)"
+                    @click="openEdit(persona, g.num)">
+                    {{ getCodice(persona.id, g.num) }}
+                  </td>
+                  <td class="td-tot td-pres">{{ totalePresenze(persona.id) }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="riga-totale pres">
+                  <td class="td-num"></td>
+                  <td class="td-nome tot-label">Presenti</td>
+                  <td v-for="g in giorniMese" :key="g.num" class="tot-cell">
+                    {{ totGiornoCategoria(cat, g.num).pres || '' }}
+                  </td>
+                  <td class="td-tot"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </template>
+        <template v-if="!isPortieri">
         <div v-for="gruppo in gruppi" :key="gruppo" class="gruppo-block">
           <div class="gruppo-header">
             <button v-if="gruppo?.toLowerCase() !== 'portieri' && gruppo !== 'Senza gruppo'" class="btn-edit-gruppo" @click="openEditGruppo(gruppo)" title="Modifica gruppo">
@@ -130,8 +181,8 @@
                   <span class="persona-name">{{ persona.cognome }} {{ persona.nome }}</span>
                 </td>
                 <td v-for="g in giorniMese" :key="g.num"
-                  class="cella" 
-                  :class="getCodiceClasse(persona.id, g.num)"
+                  class="cella"
+                  :class="[getCodiceClasse(persona.id, g.num), { 'cella-readthrough': isReadthrough(persona.id, g.num) }]"
                   @click="openEdit(persona, g.num)">
                   {{ getCodice(persona.id, g.num) }}
                 </td>
@@ -158,6 +209,7 @@
           </tfoot>
         </table>
       </div>
+        </template>
       </template>
       
       <div class="totale-generale">
@@ -281,6 +333,7 @@ const router = useRouter()
 const categoriaId = computed(() => parseInt(route.params.id))
 const { categoriaAttiva, utenteAttivo } = useCategoria()
 const isDirigente = computed(() => ['dirigente', 'segreteria', 'infermeria'].includes(utenteAttivo.value?.ruolo))
+const isPortieri = computed(() => categoriaAttiva.value?.is_portieri)
 const showRotateMessage = ref(false)
 
 const checkOrientation = () => {
@@ -349,6 +402,23 @@ const gruppi = computed(() => {
   const senza = all.filter(g => g?.toLowerCase() === "senza gruppo")
   return [...normali, ...portieri, ...senza]
 })
+
+const categoriePortieri = computed(() => {
+  if (!isPortieri.value) return []
+  const cats = [...new Set(persone.value.map(p => p.categoria_nome).filter(Boolean))].sort()
+  return cats
+})
+
+function personePerCategoria(cat) {
+  return persone.value.filter(p => p.categoria_nome === cat)
+}
+
+function personaLabel(p) {
+  if (isPortieri.value && p.categoria_nome) {
+    return `${p.cognome} ${p.nome} <span class="cat-badge">${p.categoria_nome}</span>`
+  }
+  return `${p.cognome} ${p.nome}`
+}
 const personeAlfabetiche = computed(() => [...persone.value].sort((a, b) => a.cognome.localeCompare(b.cognome)))
 function personePerGruppo(g) { return persone.value.filter(p => (p.gruppo_nome || "Senza gruppo") === g) }
 function getCodice(personaId, giorno) {
@@ -363,12 +433,20 @@ function getCodiceClasse(personaId, giorno) {
   return c.tipo + (codice ? " cod-" + codice.toLowerCase() : "")
 }
 function totalePresenze(personaId) {
-  return registro.value.filter(r => r.persona_id === personaId && ["X","P","R"].includes(r.codice)).length
+  return registro.value.filter(r => r.persona_id === personaId && ["X","P","R"].includes(r.codice) && !r.is_portieri_readthrough).length
 }
 function totaleAssenze(personaId) {
   return registro.value.filter(r => r.persona_id === personaId && ["AG","AI"].includes(r.codice)).length
 }
-function openEdit(persona, giorno) { editModal.value = { show: true, persona, giorno } }
+function isReadthrough(personaId, giorno) {
+  const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
+  const entry = registro.value.find(r => r.persona_id === personaId && r.data === d)
+  return entry && entry.is_portieri_readthrough
+}
+function openEdit(persona, giorno) {
+  if (isReadthrough(persona.id, giorno)) return
+  editModal.value = { show: true, persona, giorno }
+}
 
 async function salvaPresenza(codice) {
   const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(editModal.value.giorno).padStart(2,"0")
@@ -405,6 +483,15 @@ async function rimuoviGruppo(nome) {
 function totGiornoGruppo(gruppo, giorno) {
   const ids = personePerGruppo(gruppo).map(p => p.id)
   const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
+  const entries = registro.value.filter(r => ids.includes(r.persona_id) && r.data === d && !r.is_portieri_readthrough)
+  return {
+    pres: entries.filter(r => ["X","P","R"].includes(r.codice)).length || "",
+    ass: entries.filter(r => ["AG","AI"].includes(r.codice)).length || ""
+  }
+}
+function totGiornoCategoria(cat, giorno) {
+  const ids = personePerCategoria(cat).map(p => p.id)
+  const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
   const entries = registro.value.filter(r => ids.includes(r.persona_id) && r.data === d)
   return {
     pres: entries.filter(r => ["X","P","R"].includes(r.codice)).length || "",
@@ -413,7 +500,7 @@ function totGiornoGruppo(gruppo, giorno) {
 }
 function totGiornoTutti(giorno) {
   const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
-  const entries = registro.value.filter(r => r.data === d)
+  const entries = registro.value.filter(r => r.data === d && !r.is_portieri_readthrough)
   return {
     pres: entries.filter(r => ["X","P","R"].includes(r.codice)).length || "",
     ass: entries.filter(r => ["AG","AI"].includes(r.codice)).length || ""
@@ -450,6 +537,21 @@ async function loadCategoria() {
     const cat = res.data.find(c => c.id === categoriaId.value)
     if (cat && cat.giorni) giorniAllenamento.value = cat.giorni.split(",").map(Number)
     else giorniAllenamento.value = []
+  }
+
+  // Se la categoria è Portieri, usa i suoi giorni; altrimenti mergia i giorni della categoria Portieri
+  const catRow = await getCategorie()
+  const currentCat = catRow.data.find(c => c.id === categoriaId.value)
+  if (currentCat && currentCat.is_portieri) {
+    // Portieri usa solo i suoi giorni
+    if (currentCat.giorni) giorniAllenamento.value = currentCat.giorni.split(",").map(Number)
+  } else {
+    // Cerca la categoria Portieri e mergia i giorni
+    const portieriCat = catRow.data.find(c => c.is_portieri)
+    if (portieriCat && portieriCat.giorni) {
+      const portieriGiorni = portieriCat.giorni.split(",").map(Number)
+      giorniAllenamento.value = [...new Set([...giorniAllenamento.value, ...portieriGiorni])].sort()
+    }
   }
 }
 
@@ -874,6 +976,12 @@ th {
   background: rgba(34, 197, 94, 0.15) !important;
   color: #4ade80 !important;
   font-weight: 700;
+}
+
+.cella-readthrough {
+  opacity: 0.5;
+  cursor: default !important;
+  pointer-events: none;
 }
 
 .td-pres { color: #4ade80; font-weight: 700; }

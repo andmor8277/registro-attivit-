@@ -146,7 +146,7 @@ const societaId = computed(() => {
 })
 
 onMounted(async () => {
-  gdprSbloccato.value = localStorage.getItem('gdpr_sbloccato') === 'true'
+  gdprSbloccato.value = sessionStorage.getItem('gdpr_sbloccato') === 'true'
   await loadDati()
 })
 
@@ -216,7 +216,7 @@ async function sbloccaGdpr() {
     if (loginRes.ok) {
       gdprSbloccato.value = true
       gdprModal.value.show = false
-      localStorage.setItem('gdpr_sbloccato', 'true')
+      sessionStorage.setItem('gdpr_sbloccato', 'true')
     } else {
       gdprModal.value.error = 'Password errata'
     }

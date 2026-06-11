@@ -85,4 +85,5 @@ class RegistroOut(BaseModel):
     codice: Optional[str]
     categoria_id: Optional[int]
     societa_id: Optional[int]
+    is_portieri_readthrough: Optional[bool] = False
     class Config: from_attributes = True
