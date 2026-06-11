@@ -458,7 +458,7 @@ Base.metadata.create_all(bind=engine)
 run_migrations()
 
 app.include_router(auth_router)
-app.include_router(societa.router)
+app.include_router(societa.router, dependencies=[Depends(get_current_user)])
 app.include_router(persone.router)
 app.include_router(registro.router, dependencies=[Depends(get_current_user)])
 app.include_router(codici.router, dependencies=[Depends(get_current_user)])

@@ -1,0 +1,196 @@
+{
+  "todos": [
+    {
+      "id": "C1",
+      "severity": "CRITICAL",
+      "title": "Proteggi /societa/ con autenticazione",
+      "file": "backend/app/main.py:461",
+      "description": "GET /societa/ e /societa/{sid} sono pubblici. Aggiungere dependencies=[Depends(get_current_user)] al router.",
+      "done": false
+    },
+    {
+      "id": "C2",
+      "severity": "CRITICAL",
+      "title": "Aggiungi filtro societa su partite/weekend/spogliatoi/campi/allenatori/valutazioni",
+      "file": "backend/app/routers/partite.py, weekend.py, spogliatoi.py, campi.py, allenatori.py, valutazioni.py",
+      "description": "Un utente autenticato può leggere/scrivere dati di tutte le società. Ogni endpoint deve verificare che current_user.societa_id corrisponda (o sia super_admin).",
+      "done": false
+    },
+    {
+      "id": "C3",
+      "severity": "CRITICAL",
+      "title": "JWT in localStorage — valutare httpOnly cookie",
+      "file": "frontend/src/store.js:4, api/index.js:6",
+      "description": "Il token JWT è in localStorage, vulnerabile a XSS. Valutare passaggio a httpOnly cookie con Set-Cookie dal backend.",
+      "done": false
+    },
+    {
+      "id": "C4",
+      "severity": "CRITICAL",
+      "title": "Ruoli is_super_admin/is_admin da /auth/me, non da localStorage",
+      "file": "frontend/src/main.js:56, App.vue, Admin.vue, Login.vue, Home.vue, Allenatori.vue, Societa.vue",
+      "description": "I flag di ruolo sono in localStorage e modificabili. Derivarli dalla risposta di /auth/me.",
+      "done": false
+    },
+    {
+      "id": "C5",
+      "severity": "CRITICAL",
+      "title": "Endpoint pubblici PII — /persone/public/{id} con rate limiting",
+      "file": "backend/app/routers/persone.py:225",
+      "description": "Endpoint pubblico che espone dati sensibili. Verificare che il rate limiting sia sufficiente e valutare mascheramento dati.",
+      "done": false
+    },
+    {
+      "id": "C6",
+      "severity": "CRITICAL",
+      "title": "innerHTML / document.write() non sanitizzati",
+      "file": "frontend/src/views/Convocazioni.vue:648, Spogliatoi.vue:1358, ProgrammazionePartite.vue:596",
+      "description": "HTML costruito con dati utente iniettato via innerHTML/document.write. Sanitizzare con DOMPurify o usare template Vue.",
+      "done": false
+    },
+    {
+      "id": "H1",
+      "severity": "HIGH",
+      "title": "Sostituisci data: dict con Pydantic models",
+      "file": "backend/app/routers/partite.py, weekend.py, spogliatoi.py, campi.py",
+      "description": "Endpoint che accettano data: dict bypassano la validazione Pydantic. Creare modelli specifici per ogni endpoint.",
+      "done": false
+    },
+    {
+      "id": "H2",
+      "severity": "HIGH",
+      "title": "Rimuovi codice_fiscale da /auth/me",
+      "file": "backend/app/routers/auth.py:143",
+      "description": "Il codice fiscale viene esposto nella risposta di /auth/me. Rimuoverlo o mascherarlo.",
+      "done": false
+    },
+    {
+      "id": "H3",
+      "severity": "HIGH",
+      "title": "GDPR flag in localStorage — passare a sessionStorage o state",
+      "file": "frontend/src/views/Segreteria.vue:219, SegreteriaCategoria.vue",
+      "description": "gdpr_sbloccato in localStorage sopravvive al reload. Usare ref() o sessionStorage.",
+      "done": false
+    },
+    {
+      "id": "H4",
+      "severity": "HIGH",
+      "title": "Aggiungi filtro societa su valutazioni",
+      "file": "backend/app/routers/valutazioni.py",
+      "description": "Gli endpoint valutazioni non verificano la societa dell'utente. (Parte di C2 ma separato per tracciamento)",
+      "done": false
+    },
+    {
+      "id": "H5",
+      "severity": "HIGH",
+      "title": "Aggiungi CSP meta tag in index.html",
+      "file": "frontend/index.html",
+      "description": "Mancanza di Content-Security-Policy. Aggiungere meta tag come fallback al CSP del backend.",
+      "done": false
+    },
+    {
+      "id": "H6",
+      "severity": "HIGH",
+      "title": "Rimuovi IP LAN dalle CORS origins",
+      "file": "backend/app/main.py:40",
+      "description": "192.168.178.133:3000 nelle CORS è rischioso in caso di AP compromesso.",
+      "done": false
+    },
+    {
+      "id": "M1",
+      "severity": "MEDIUM",
+      "title": "Upload files serviti senza autenticazione",
+      "file": "backend/app/main.py:48-50",
+      "description": "/uploads è pubblico. Valutare se serve autenticazione o se va bene così (solo logo/sponsor).",
+      "done": false
+    },
+    {
+      "id": "M2",
+      "severity": "MEDIUM",
+      "title": "Aggiungere pagination agli endpoint lista",
+      "file": "backend/app/routers/ (multipli)",
+      "description": "Nessun endpoint ha skip/limit. Possibile DoS con dataset grandi.",
+      "done": false
+    },
+    {
+      "id": "M3",
+      "severity": "MEDIUM",
+      "title": "Token 8h — ridurre e/o aggiungere refresh token",
+      "file": "backend/app/routers/auth.py:23",
+      "description": "ACCESS_TOKEN_EXPIRE_MINUTES=480 è lungo. Ridurre a 60min e valutare refresh token.",
+      "done": false
+    },
+    {
+      "id": "M4",
+      "severity": "MEDIUM",
+      "title": "Aggiungere 401/403 interceptor globale in axios",
+      "file": "frontend/src/api/index.js",
+      "description": "Mancanza di response interceptor per gestire 401 → redirect login.",
+      "done": false
+    },
+    {
+      "id": "M5",
+      "severity": "MEDIUM",
+      "title": "Rate limiting per-worker — valutare Redis",
+      "file": "backend/app/rate_limit.py:4",
+      "description": "Con 4 workers, il limite effettivo è 4x. Valutare RedisStorage per produzione.",
+      "done": false
+    },
+    {
+      "id": "M6",
+      "severity": "MEDIUM",
+      "title": "Aggiornare dipendenze backend",
+      "file": "backend/requirements.txt",
+      "description": "fastapi 0.110→0.115+, pydantic 2.6→2.10+, uvicorn 0.29→0.34+, sqlalchemy 2.0.29→2.0.36+",
+      "done": false
+    },
+    {
+      "id": "M7",
+      "severity": "MEDIUM",
+      "title": "window.open() senza noopener",
+      "file": "frontend/src/views/Spogliatoi.vue:1305, ProgrammazionePartite.vue:574",
+      "description": "Aggiungere noopener,noreferrer a window.open().",
+      "done": false
+    },
+    {
+      "id": "M8",
+      "severity": "MEDIUM",
+      "title": "Rimuovere backend packages dal frontend package.json",
+      "file": "frontend/package.json",
+      "description": "express, multer, cors non servono nel frontend.",
+      "done": false
+    },
+    {
+      "id": "L1",
+      "severity": "LOW",
+      "title": "Password policy — aggiungere caratteri speciali",
+      "file": "backend/app/routers/auth.py:42-50",
+      "description": "La policy richiede 8+ chars, uppercase, lowercase, digit ma non speciali.",
+      "done": false
+    },
+    {
+      "id": "L2",
+      "severity": "LOW",
+      "title": "Rimuovere user-scalable=no dal viewport",
+      "file": "frontend/index.html:5",
+      "description": "Viola WCAG 2.1. Rimuovere maximum-scale=1.0, user-scalable=no.",
+      "done": false
+    },
+    {
+      "id": "L3",
+      "severity": "LOW",
+      "title": "Aggiungere npm audit al pipeline",
+      "file": "frontend/package.json, deploy scripts",
+      "description": "Nessun controllo vulnerabilità dipendenze nel deploy.",
+      "done": false
+    },
+    {
+      "id": "L4",
+      "severity": "LOW",
+      "title": "Sostituire .dict() con .model_dump() Pydantic v2",
+      "file": "backend/app/routers/persone.py:172, registro.py:112, presenze_allenatori.py:64",
+      "description": ".dict() è deprecato in Pydantic v2.",
+      "done": false
+    }
+  ]
+}
