@@ -1296,17 +1296,22 @@ async function eliminaFn(id, tipo) {
   }
 }
 
+function esc(s) {
+  if (s == null) return ''
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 function stampa() {
   window.print()
 }
 
 function stampaGiornoSingolo(dataGiorno) {
   if (!dataGiorno) return
-  const w = window.open('', '_blank')
+  const w = window.open('', '_blank', 'noopener,noreferrer')
   const g = giorniSettimana.value.find(d => d.data === dataGiorno)
   if (!g) return
   const slots = categoriePerOrario(dataGiorno)
-  let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${g.nomeLungo} ${g.giorno}</title>
+  let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(g.nomeLungo)} ${esc(g.giorno)}</title>
   <style>
     body { font-family: -apple-system, sans-serif; margin: 20px; color: #111; }
     h1 { font-size: 18px; margin: 0 0 4px; }
@@ -1327,18 +1332,18 @@ function stampaGiornoSingolo(dataGiorno) {
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
   </style></head><body>
-  <h1>${g.nomeLungo} ${g.giorno}</h1>
-  <h2>${societaAttiva?.value?.nome || ''} - Assegnazioni Spogliatoi e Campi</h2>`
+  <h1>${esc(g.nomeLungo)} ${esc(g.giorno)}</h1>
+  <h2>${esc(societaAttiva?.value?.nome || '')} - Assegnazioni Spogliatoi e Campi</h2>`
   for (const [ora, cats] of Object.entries(slots)) {
-    html += `<div class="slot"><div class="slot-title">${ora || 'Senza orario'}</div><table>
+    html += `<div class="slot"><div class="slot-title">${esc(ora || 'Senza orario')}</div><table>
       <tr><th>Categoria</th><th class="spo">Spogliatoio</th><th class="cam">Campo da gioco</th></tr>`
     for (const cat of cats) {
       const spoItems = spogliatoi.value.filter(item => getAssegnazioneSpogliatoioGiorno(cat.id, item.id, dataGiorno))
       const camItems = campi.value.filter(item => getAssegnazioneCampoGiorno(cat.id, item.id, dataGiorno))
       html += `<tr>
-        <td><span class="cat-anno">${cat.anno}</span> <span class="cat-nome">${cat.nome}</span></td>
-        <td>${spoItems.map(i => `<span class="spo-chip">${i.etichetta}</span>`).join(' ') || '—'}</td>
-        <td>${camItems.map(i => `<span class="cam-chip">${i.etichetta}</span>`).join(' ') || '—'}</td>
+        <td><span class="cat-anno">${esc(cat.anno)}</span> <span class="cat-nome">${esc(cat.nome)}</span></td>
+        <td>${spoItems.map(i => `<span class="spo-chip">${esc(i.etichetta)}</span>`).join(' ') || '—'}</td>
+        <td>${camItems.map(i => `<span class="cam-chip">${esc(i.etichetta)}</span>`).join(' ') || '—'}</td>
       </tr>`
     }
     const ncSquadre = squadreNonCensiteSettimanali.value.filter(s => s.ora === ora && s.dataGiorno === dataGiorno)
@@ -1347,9 +1352,9 @@ function stampaGiornoSingolo(dataGiorno) {
       const spoItems = spogliatoi.value.filter(item => getAssegnazioneSpogliatoioNonCensitaGiorno(gidx, item.id, dataGiorno))
       const camItems = campi.value.filter(item => getAssegnazioneCampoNonCensitaGiorno(gidx, item.id, dataGiorno))
       html += `<tr>
-        <td>${squadra.nome || 'Squadra non censita'}</td>
-        <td>${spoItems.map(i => `<span class="spo-chip">${i.etichetta}</span>`).join(' ') || '—'}</td>
-        <td>${camItems.map(i => `<span class="cam-chip">${i.etichetta}</span>`).join(' ') || '—'}</td>
+        <td>${esc(squadra.nome || 'Squadra non censita')}</td>
+        <td>${spoItems.map(i => `<span class="spo-chip">${esc(i.etichetta)}</span>`).join(' ') || '—'}</td>
+        <td>${camItems.map(i => `<span class="cam-chip">${esc(i.etichetta)}</span>`).join(' ') || '—'}</td>
       </tr>`
     }
     html += `</table></div>`

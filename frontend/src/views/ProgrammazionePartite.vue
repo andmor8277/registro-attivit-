@@ -569,31 +569,36 @@ async function eliminaWeekendFn(id) {
   await loadWeekend()
 }
 
+function esc(s) {
+  if (s == null) return ''
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 async function stampaWeekend() {
   if (!weekendSelezionato.value) return
-  const win = window.open('', '_blank')
+  const win = window.open('', '_blank', 'noopener,noreferrer')
   const sorted = weekendPartiteGrouped.value.map(g => ({
     cat: g.cat,
     partite: g.partite.sort((a, b) => a.data_partite.localeCompare(b.data_partite))
   }))
   const rows = []
   sorted.forEach(g => {
-    const catLabel = `${g.cat.anno} - ${g.cat.nome}`
+    const catLabel = `${esc(g.cat.anno)} - ${esc(g.cat.nome)}`
     rows.push(`<tr class="cat-divider"><td colspan="7">${catLabel}</td></tr>`)
     g.partite.forEach(p => {
-      const data = formatDate(p.data_partite)
-      const ora = p.ora ? p.ora.slice(0, 5) : '-'
+      const data = esc(formatDate(p.data_partite))
+      const ora = esc(p.ora ? p.ora.slice(0, 5) : '-')
       const cf = p.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa'
-      const campo = p.campo || '-'
-      const indirizzo = p.indirizzo || '-'
-      const mister = p.mister_id ? getMisterName(p.categoria_id, p.mister_id) : '-'
-      const aversario = p.avversario || '-'
+      const campo = esc(p.campo || '-')
+      const indirizzo = esc(p.indirizzo || '-')
+      const mister = esc(p.mister_id ? getMisterName(p.categoria_id, p.mister_id) : '-')
+      const aversario = esc(p.avversario || '-')
       rows.push(`<tr>
         <td>${data}</td><td>${ora}</td><td>${cf}</td><td>${aversario}</td><td>${campo}</td><td>${indirizzo}</td><td>${mister}</td>
       </tr>`)
     })
   })
-  win.document.write(`<!DOCTYPE html><html><head><title>${weekendSelezionato.value.nome} - ${societaNome.value}</title>
+  win.document.write(`<!DOCTYPE html><html><head><title>${esc(weekendSelezionato.value.nome)} - ${esc(societaNome.value)}</title>
     <style>
       body{font-family:Arial,sans-serif;margin:20px;font-size:12px;color:#1a1a1a}
       h1{margin:0 0 5px;font-size:20px}p.sub{color:#666;margin:0 0 15px}
@@ -603,7 +608,7 @@ async function stampaWeekend() {
       tr:nth-child(even) td{background:#fafafa}
       .cat-divider{background:#1e1e1e !important;color:#fff;font-weight:700;font-size:13px;padding:8px 10px !important}
     </style></head><body>
-    <h1>${weekendSelezionato.value.nome} - ${societaNome.value}</h1><p class="sub">${formatDate(weekendSelezionato.value.data_inizio)} - ${formatDate(weekendSelezionato.value.data_fine)} | Stampato il ${new Date().toLocaleDateString('it-IT')}</p>
+    <h1>${esc(weekendSelezionato.value.nome)} - ${esc(societaNome.value)}</h1><p class="sub">${esc(formatDate(weekendSelezionato.value.data_inizio))} - ${esc(formatDate(weekendSelezionato.value.data_fine))} | Stampato il ${new Date().toLocaleDateString('it-IT')}</p>
     <table><thead><tr><th>Data</th><th>Ora</th><th>Casa/Trasferta</th><th>Avversario</th><th>Campo</th><th>Indirizzo</th><th>Mister</th></tr></thead>
     <tbody>${rows.join('')}</tbody></table>
     <script>window.print()<\/script></body></html>`)

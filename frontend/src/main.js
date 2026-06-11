@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import './global.css'
 import { createRouter, createWebHistory } from 'vue-router'
+import { useStore } from './store.js'
 import Home from './views/Home.vue'
 import Registro from './views/Registro.vue'
 import Login from './views/Login.vue'
@@ -23,6 +24,8 @@ import ProgrammazionePartite from './views/ProgrammazionePartite.vue'
 import Spogliatoi from './views/Spogliatoi.vue'
 import PresenzeAllenatori from './views/PresenzeAllenatori.vue'
 import Valutazioni from './views/Valutazioni.vue'
+
+const store = useStore()
 
 const router = createRouter({
   history: createWebHistory(),
@@ -53,16 +56,15 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
-  const isSuperAdmin = localStorage.getItem('is_super_admin') === 'true'
+  const user = store.utenteAttivo.value
+  const isSuperAdmin = user?.is_super_admin || user?.ruolo === 'super_admin'
   if (to.meta.requiresAuth && !token) return next('/login')
-  // SuperAdmin can go to /login to change society
   if (to.path === '/login' && token && !isSuperAdmin) return next('/')
   if (to.meta.requiresSuperAdmin) {
     if (!isSuperAdmin) return next('/')
   }
-  // Check for requiresAdmin (allows both admin and super_admin)
   if (to.meta.requiresAdmin) {
-    const isAdmin = localStorage.getItem('is_admin') === 'true' || isSuperAdmin
+    const isAdmin = user?.is_admin || user?.ruolo === 'admin' || isSuperAdmin
     if (!isAdmin) return next('/')
   }
   next()

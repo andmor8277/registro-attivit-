@@ -198,7 +198,7 @@ const passwordForm = ref({ attuale: '', nuova: '', conferma: '' })
 const passwordErrore = ref('')
 const passwordSuccess = ref('')
 const passwordLoading = ref(false)
-const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === 'true')
+const isSuperAdmin = computed(() => utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'super_admin')
 const mobileMenuOpen = ref(false)
 
 function vaiSelezioneSocieta() {

@@ -1,12 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from ..database import get_db
-from ..routers.auth import get_current_user
+from ..routers.auth import get_current_user, check_societa
 
 router = APIRouter(prefix="/weekend", tags=["weekend"])
 
+def check_weekend_access(db, weekend_id, user):
+    if user.is_super_admin:
+        return
+    res = db.execute(text("SELECT societa_id FROM weekend WHERE id = :id"), {"id": weekend_id})
+    row = res.fetchone()
+    if not row:
+        raise HTTPException(404, "Weekend non trovato")
+    check_societa(user, row.societa_id)
+
 @router.get("/")
 def lista_weekend(societa_id: int = None, db=Depends(get_db), user=Depends(get_current_user)):
+    if not user.is_super_admin:
+        societa_id = user.societa_id
     if societa_id:
         res = db.execute(
             text("SELECT * FROM weekend WHERE societa_id = :sid ORDER BY data_inizio DESC"),
@@ -19,6 +30,7 @@ def lista_weekend(societa_id: int = None, db=Depends(get_db), user=Depends(get_c
 
 @router.get("/{weekend_id}/partite")
 def weekend_partite(weekend_id: int, db=Depends(get_db), user=Depends(get_current_user)):
+    check_weekend_access(db, weekend_id, user)
     res = db.execute(
         text("""
             SELECT p.*, c.nome as categoria_nome, c.anno as categoria_anno
@@ -34,6 +46,10 @@ def weekend_partite(weekend_id: int, db=Depends(get_db), user=Depends(get_curren
 
 @router.post("/")
 def crea_weekend(data: dict, db=Depends(get_db), user=Depends(get_current_user)):
+    societa_id = data.get("societa_id")
+    if not societa_id and not user.is_super_admin:
+        societa_id = user.societa_id
+    check_societa(user, societa_id)
     res = db.execute(
         text("""
             INSERT INTO weekend (nome, data_inizio, data_fine, societa_id)
@@ -44,7 +60,7 @@ def crea_weekend(data: dict, db=Depends(get_db), user=Depends(get_current_user))
             "nome": data.get("nome"),
             "data_inizio": data.get("data_inizio"),
             "data_fine": data.get("data_fine"),
-            "societa_id": data.get("societa_id"),
+            "societa_id": societa_id,
         }
     )
     db.commit()
@@ -53,6 +69,7 @@ def crea_weekend(data: dict, db=Depends(get_db), user=Depends(get_current_user))
 
 @router.put("/{weekend_id}")
 def aggiorna_weekend(weekend_id: int, data: dict, db=Depends(get_db), user=Depends(get_current_user)):
+    check_weekend_access(db, weekend_id, user)
     res = db.execute(
         text("""
             UPDATE weekend SET
@@ -77,6 +94,7 @@ def aggiorna_weekend(weekend_id: int, data: dict, db=Depends(get_db), user=Depen
 
 @router.delete("/{weekend_id}")
 def elimina_weekend(weekend_id: int, db=Depends(get_db), user=Depends(get_current_user)):
+    check_weekend_access(db, weekend_id, user)
     db.execute(text("DELETE FROM weekend WHERE id = :id"), {"id": weekend_id})
     db.commit()
     return {"ok": True}

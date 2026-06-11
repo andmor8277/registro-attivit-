@@ -77,6 +77,12 @@ def get_super_admin(current_user: Utente = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo super admin")
     return current_user
 
+def check_societa(current_user: Utente, societa_id: int):
+    """Verifica che l'utente appartenga alla societa specificata o sia super_admin."""
+    if not current_user.is_super_admin and current_user.societa_id != societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato a operare su questa società")
+    return current_user
+
 class UtenteCreate(BaseModel):
     username: str
     password: str
@@ -140,7 +146,6 @@ def me(current_user: Utente = Depends(get_current_user), db: Session = Depends(g
         "nome": current_user.nome,
         "cognome": current_user.cognome,
         "data_nascita": current_user.data_nascita,
-        "codice_fiscale": current_user.codice_fiscale,
         "cellulare": current_user.cellulare,
         "tesserino": current_user.tesserino,
         "ruolo": current_user.ruolo
@@ -251,7 +256,6 @@ def lista_utenti(
             "nome": u.nome,
             "cognome": u.cognome,
             "data_nascita": u.data_nascita,
-            "codice_fiscale": u.codice_fiscale,
             "cellulare": u.cellulare,
             "tesserino": u.tesserino,
             "ruolo": u.ruolo
