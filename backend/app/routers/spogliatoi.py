@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from ..database import get_db
 from ..routers.auth import get_current_user, check_societa
+from ..schemas import SpogliatoioCreate, SpogliatoioUpdate, SpogliatoioAssegnazioneCreate, SpogliatoioAssegnazioneUpdate
 
 router = APIRouter(prefix="/spogliatoi", tags=["spogliatoi"])
 
@@ -102,8 +103,8 @@ def assegnazioni_weekend(weekend_id: int, db=Depends(get_db), user=Depends(get_c
     return [dict(r._mapping) for r in rows]
 
 @router.post("/")
-def crea_spogliatoio(data: dict, db=Depends(get_db), user=Depends(get_current_user)):
-    societa_id = data.get("societa_id")
+def crea_spogliatoio(data: SpogliatoioCreate, db=Depends(get_db), user=Depends(get_current_user)):
+    societa_id = data.societa_id
     if not societa_id and not user.is_super_admin:
         societa_id = user.societa_id
     check_societa(user, societa_id)
@@ -114,8 +115,8 @@ def crea_spogliatoio(data: dict, db=Depends(get_db), user=Depends(get_current_us
             RETURNING *
         """),
         {
-            "etichetta": data.get("etichetta"),
-            "ordine": data.get("ordine", 0),
+            "etichetta": data.etichetta,
+            "ordine": data.ordine,
             "societa_id": societa_id,
         }
     )
@@ -124,7 +125,7 @@ def crea_spogliatoio(data: dict, db=Depends(get_db), user=Depends(get_current_us
     return dict(row._mapping)
 
 @router.put("/{spogliatoio_id}")
-def aggiorna_spogliatoio(spogliatoio_id: int, data: dict, db=Depends(get_db), user=Depends(get_current_user)):
+def aggiorna_spogliatoio(spogliatoio_id: int, data: SpogliatoioUpdate, db=Depends(get_db), user=Depends(get_current_user)):
     check_spogliatoio_access(db, spogliatoio_id, user)
     res = db.execute(
         text("""
@@ -136,8 +137,8 @@ def aggiorna_spogliatoio(spogliatoio_id: int, data: dict, db=Depends(get_db), us
         """),
         {
             "id": spogliatoio_id,
-            "etichetta": data.get("etichetta"),
-            "ordine": data.get("ordine"),
+            "etichetta": data.etichetta,
+            "ordine": data.ordine,
         }
     )
     db.commit()
@@ -157,8 +158,8 @@ def elimina_spogliatoio(spogliatoio_id: int, db=Depends(get_db), user=Depends(ge
 # ── Assegnazioni CRUD ──
 
 @router.post("/assegnazioni")
-def crea_assegnazione(data: dict, db=Depends(get_db), user=Depends(get_current_user)):
-    societa_id = data.get("societa_id")
+def crea_assegnazione(data: SpogliatoioAssegnazioneCreate, db=Depends(get_db), user=Depends(get_current_user)):
+    societa_id = data.societa_id
     if not societa_id and not user.is_super_admin:
         societa_id = user.societa_id
     check_societa(user, societa_id)
@@ -175,13 +176,13 @@ def crea_assegnazione(data: dict, db=Depends(get_db), user=Depends(get_current_u
             RETURNING *
         """),
         {
-            "spogliatoio_id": data.get("spogliatoio_id"),
-            "categoria_id": data.get("categoria_id"),
-            "nome_squadra_esterna": data.get("nome_squadra_esterna"),
-            "tipo": data.get("tipo", "casa"),
-            "data_inizio": data.get("data_inizio"),
-            "data": data.get("data"),
-            "weekend_id": data.get("weekend_id"),
+            "spogliatoio_id": data.spogliatoio_id,
+            "categoria_id": data.categoria_id,
+            "nome_squadra_esterna": data.nome_squadra_esterna,
+            "tipo": data.tipo,
+            "data_inizio": data.data_inizio,
+            "data": data.data,
+            "weekend_id": data.weekend_id,
             "societa_id": societa_id,
         }
     )
@@ -190,7 +191,7 @@ def crea_assegnazione(data: dict, db=Depends(get_db), user=Depends(get_current_u
     return dict(row._mapping)
 
 @router.put("/assegnazioni/{assegnazione_id}")
-def aggiorna_assegnazione(assegnazione_id: int, data: dict, db=Depends(get_db), user=Depends(get_current_user)):
+def aggiorna_assegnazione(assegnazione_id: int, data: SpogliatoioAssegnazioneUpdate, db=Depends(get_db), user=Depends(get_current_user)):
     if not user.is_super_admin:
         res = db.execute(text("SELECT societa_id FROM spogliatoi_assegnazioni WHERE id = :id"), {"id": assegnazione_id})
         row = res.fetchone()
@@ -212,13 +213,13 @@ def aggiorna_assegnazione(assegnazione_id: int, data: dict, db=Depends(get_db), 
         """),
         {
             "id": assegnazione_id,
-            "spogliatoio_id": data.get("spogliatoio_id"),
-            "categoria_id": data.get("categoria_id"),
-            "nome_squadra_esterna": data.get("nome_squadra_esterna"),
-            "tipo": data.get("tipo", "casa"),
-            "data_inizio": data.get("data_inizio"),
-            "data": data.get("data"),
-            "weekend_id": data.get("weekend_id"),
+            "spogliatoio_id": data.spogliatoio_id,
+            "categoria_id": data.categoria_id,
+            "nome_squadra_esterna": data.nome_squadra_esterna,
+            "tipo": data.tipo,
+            "data_inizio": data.data_inizio,
+            "data": data.data,
+            "weekend_id": data.weekend_id,
         }
     )
     db.commit()

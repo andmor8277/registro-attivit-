@@ -60,7 +60,7 @@ def upsert_presenza(entry: PresenzaAllenatoreIn, db: Session = Depends(get_db), 
         db.commit()
         db.refresh(existing)
         return existing
-    data = entry.dict()
+    data = entry.model_dump()
     data["societa_id"] = societa_id
     r = PresenzaAllenatore(**data)
     db.add(r)
