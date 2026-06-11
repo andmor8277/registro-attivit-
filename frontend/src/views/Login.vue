@@ -270,26 +270,23 @@ const router = useRouter()
 const { setToken, utenteAttivo, setSocietaAttiva, setListaSocieta, societaAttiva } = useStore()
 
 onMounted(async () => {
-  // Carica lista società per selezione (richiede auth)
+  // Se utente già loggato e super_admin, mostra selezione società
+  const token = localStorage.getItem('token')
+  if (!token) return
   try {
-    const res = await getSocieta()
-    societaOptions.value = res.data
-    setListaSocieta(res.data)
-    
-    // Se utente già loggato e super_admin, mostra selezione società
-    const token = localStorage.getItem('token')
-    const isSuper = utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'super_admin'
-    if (token && isSuper) {
-      const me = await getMe()
-      utenteAttivo.value = me.data
+    const me = await getMe()
+    utenteAttivo.value = me.data
+    const isSuper = me.data.is_super_admin || me.data.ruolo === 'super_admin'
+    if (isSuper) {
+      const res = await getSocieta()
+      societaOptions.value = res.data
+      setListaSocieta(res.data)
       showSocietaSelection.value = true
-      // Resetta società attiva per obbligare la scelta
       setSocietaAttiva(null)
     }
   } catch (e) {
-    // 401 è atteso quando non si è loggati
     if (e.response?.status !== 401) {
-      console.error('Errore caricamento società:', e)
+      console.error('Errore caricamento sessione:', e)
     }
   }
 })
