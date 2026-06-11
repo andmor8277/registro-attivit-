@@ -230,7 +230,7 @@ const showSocietaSelection = ref(false)
 const societaOptions = ref([])
 const societaSelezionata = ref(null)
 const societaSelezionataObj = computed(() => societaOptions.value.find(s => s.id === societaSelezionata.value))
-const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === 'true')
+const isSuperAdmin = computed(() => utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'super_admin')
 const showCreateSocieta = ref(false)
 const newSocieta = ref({
   nome: '',
@@ -278,7 +278,7 @@ onMounted(async () => {
     
     // Se utente già loggato e super_admin, mostra selezione società
     const token = localStorage.getItem('token')
-    const isSuper = localStorage.getItem('is_super_admin') === 'true'
+    const isSuper = utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'super_admin'
     if (token && isSuper) {
       const me = await getMe()
       utenteAttivo.value = me.data
@@ -302,11 +302,7 @@ async function doLogin() {
     const me = await getMe()
     utenteAttivo.value = me.data
     
-    // Salva is_super_admin e is_admin
     const isSuper = me.data.is_super_admin || me.data.ruolo === 'super_admin'
-    const isAdmin = me.data.is_admin || me.data.ruolo === 'admin' || me.data.ruolo === 'super_admin'
-    localStorage.setItem('is_super_admin', isSuper ? 'true' : 'false')
-    localStorage.setItem('is_admin', isAdmin ? 'true' : 'false')
     
     // Se è super_admin (ruolo o flag), mostra selezione società
     if (isSuper) {

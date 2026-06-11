@@ -596,6 +596,11 @@ async function salva() {
   alert('Salvato!')
 }
 
+function esc(s) {
+  if (s == null) return ''
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 async function esportaPDF() {
   if (!convocazione.value) return
   const numGare = convocazione.value.gare.length
@@ -614,7 +619,7 @@ async function esportaPDF() {
       const filled = pid !== null
       return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;${i < 13 ? 'border-bottom:1px solid #f0f0f0;' : ''}">
         <span style="min-width:22px;height:22px;border-radius:50%;background:${filled ? '#dc2626' : '#f0f0f0'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;">${i + 1}</span>
-        <span style="font-size:12px;font-weight:${filled ? '700' : '400'};color:${filled ? '#1a1a1a' : '#ccc'};flex:1;">${nome}</span>
+        <span style="font-size:12px;font-weight:${filled ? '700' : '400'};color:${filled ? '#1a1a1a' : '#ccc'};flex:1;">${esc(nome)}</span>
       </div>`
     }).join('')
 
@@ -623,17 +628,17 @@ async function esportaPDF() {
         <span style="font-size:28px;font-weight:900;line-height:1;">${idx + 1}</span>
         <div style="flex:1;">
           <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#dc2626;font-weight:700;">Gara ${idx + 1}</div>
-          <div style="font-size:14px;font-weight:800;letter-spacing:0.5px;">${gara.gara || '—'}</div>
+          <div style="font-size:14px;font-weight:800;letter-spacing:0.5px;">${esc(gara.gara || '—')}</div>
         </div>
       </div>
       <div style="padding:12px 16px;background:#fafafa;border-bottom:1px solid #eee;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;">
-          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Data</span><br><span style="font-weight:700;color:#1a1a1a;">${formatD(gara.data)}</span></div>
-          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Campo</span><br><span style="font-weight:700;color:#1a1a1a;">${gara.campo || '—'}</span></div>
-          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Indirizzo</span><br><span style="font-weight:700;color:#1a1a1a;">${gara.indirizzo || '—'}</span></div>
-          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Appuntamento</span><br><span style="font-weight:700;color:#1a1a1a;">${gara.appuntamento || '—'}</span></div>
-          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Inizio Gara</span><br><span style="font-weight:700;color:#1a1a1a;">${gara.inizio_gara || '—'}</span></div>
-          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Allenatore</span><br><span style="font-weight:700;color:#1a1a1a;">${gara.allenatore || '—'}</span></div>
+          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Data</span><br><span style="font-weight:700;color:#1a1a1a;">${esc(formatD(gara.data))}</span></div>
+          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Campo</span><br><span style="font-weight:700;color:#1a1a1a;">${esc(gara.campo || '—')}</span></div>
+          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Indirizzo</span><br><span style="font-weight:700;color:#1a1a1a;">${esc(gara.indirizzo || '—')}</span></div>
+          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Appuntamento</span><br><span style="font-weight:700;color:#1a1a1a;">${esc(gara.appuntamento || '—')}</span></div>
+          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Inizio Gara</span><br><span style="font-weight:700;color:#1a1a1a;">${esc(gara.inizio_gara || '—')}</span></div>
+          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Allenatore</span><br><span style="font-weight:700;color:#1a1a1a;">${esc(gara.allenatore || '—')}</span></div>
         </div>
       </div>
       <div style="padding:12px 16px;">
@@ -652,9 +657,9 @@ async function esportaPDF() {
         <img src="${societaAttiva.value?.logosponsor ? '/uploads/' + societaAttiva.value.logosponsor : '/logosponsor.png'}" style="height:60px;width:60px;object-fit:contain;border-radius:50%;background:#fff;padding:4px;" />
         <div>
           <div style="font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#dc2626;font-weight:700;margin-bottom:4px;">Convocazione Gare</div>
-          <div style="font-size:28px;font-weight:900;letter-spacing:3px;line-height:1;">${societaAttiva.value?.nome || 'SQUADRA'}</div>
-          <div style="font-size:16px;font-weight:700;color:#dc2626;margin-top:6px;letter-spacing:1px;">${categoriaAttiva.value?.nome || ''} ${categoriaAttiva.value?.anno || ''}</div>
-          <div style="font-size:11px;color:#999;margin-top:4px;letter-spacing:1px;">${formatD(convocazione.value.data_inizio)}${convocazione.value.data_fine ? ' — ' + formatD(convocazione.value.data_fine) : ''}</div>
+          <div style="font-size:28px;font-weight:900;letter-spacing:3px;line-height:1;">${esc(societaAttiva.value?.nome || 'SQUADRA')}</div>
+          <div style="font-size:16px;font-weight:700;color:#dc2626;margin-top:6px;letter-spacing:1px;">${esc(categoriaAttiva.value?.nome || '')} ${esc(categoriaAttiva.value?.anno || '')}</div>
+          <div style="font-size:11px;color:#999;margin-top:4px;letter-spacing:1px;">${esc(formatD(convocazione.value.data_inizio))}${convocazione.value.data_fine ? ' — ' + esc(formatD(convocazione.value.data_fine)) : ''}</div>
         </div>
         <img src="${societaAttiva.value?.logo ? '/uploads/' + societaAttiva.value.logo : '/logo.jpg'}" style="height:60px;width:60px;object-fit:contain;border-radius:50%;background:#fff;padding:4px;" />
       </div>
@@ -665,10 +670,10 @@ async function esportaPDF() {
     ${convocazione.value.note ? `
     <div style="margin:0 20px 20px;padding:16px 20px;background:#fff8f0;border:1px solid #fde0c0;border-radius:8px;">
       <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#dc2626;font-weight:700;margin-bottom:6px;">Note</div>
-      <div style="font-size:10px;color:#666;line-height:1.6;white-space:pre-wrap;">${convocazione.value.note}</div>
+      <div style="font-size:10px;color:#666;line-height:1.6;white-space:pre-wrap;">${esc(convocazione.value.note)}</div>
     </div>` : ''}
     <div style="text-align:center;padding:12px;border-top:2px solid #1a1a1a;margin-top:0;">
-      <span style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#ccc;">${societaAttiva.value?.nome || ''} — Stagione ${stagioneTxt}</span>
+      <span style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#ccc;">${esc(societaAttiva.value?.nome || '')} — Stagione ${esc(stagioneTxt)}</span>
     </div>
   </div>`
 

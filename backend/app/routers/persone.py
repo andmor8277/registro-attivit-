@@ -100,8 +100,16 @@ def get_persone(request: Request, categoria_id: Optional[int] = None, db: Sessio
     societa_id = get_societa_filter(current_user)
     is_admin = current_user.is_admin or current_user.is_super_admin
 
+    # Se la categoria è Portieri (is_portieri=1), restituisci tutti i portieri di tutte le categorie
+    is_portieri = False
+    if categoria_id:
+        cat_row = db.execute(text("SELECT is_portieri FROM categorie WHERE id = :id"), {"id": categoria_id}).first()
+        is_portieri = cat_row and cat_row.is_portieri == 1
+
+    cat_label = ", CASE WHEN pc.anno IS NOT NULL THEN pc.nome || ' ' || pc.anno::text ELSE pc.nome END as categoria_nome" if is_portieri else ""
+
     if is_admin:
-        query = """
+        query = f"""
             SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id,
                     p.data_nascita, p.codice_fiscale, p.matricola,
                     p.numero_maglia, p.scadenza_certificato, p.societa_id,
@@ -109,25 +117,37 @@ def get_persone(request: Request, categoria_id: Optional[int] = None, db: Sessio
                     p.email1, p.email2, p.prof_papa, p.prof_mamma, p.nome_papa, p.nome_mamma, p.comune_nato,
                     p.anamnesi, p.taglia, p.note,
                     p.totale_da_pagare, p.rata_iscrizione, p.rata1, p.rata2, p.rata3, p.rata4, p.rata_saldo
+                    {cat_label}
             FROM persone p
+            LEFT JOIN categorie pc ON p.categoria_id = pc.id
         """
     else:
-        query = """
+        query = f"""
             SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id,
                     p.data_nascita, p.matricola,
                     p.numero_maglia, p.scadenza_certificato, p.societa_id,
                     p.residenza, p.indirizzo, p.cittadinanza,
                     p.email1, p.email2, p.taglia, p.note
+                    {cat_label}
             FROM persone p
+            LEFT JOIN categorie pc ON p.categoria_id = pc.id
         """
 
     conditions = []
     params = {}
-    if categoria_id:
+    if is_portieri:
+        # Tutti i giocatori nei gruppi "Portieri" di tutte le categorie attive
+        conditions.append("""p.gruppo_id IN (
+            SELECT g.id FROM gruppi g
+            INNER JOIN categorie c ON g.categoria_id = c.id
+            WHERE LOWER(g.nome) = 'portieri' AND c.is_archiviata = 0
+        )""")
+    elif categoria_id:
         conditions.append("p.categoria_id = :cid")
         params["cid"] = categoria_id
     if societa_id:
-        conditions.append("p.societa_id = :sid")
+        # Usa COALESCE per includere persone con societa_id NULL ma categoria con societa_id valido
+        conditions.append("COALESCE(p.societa_id, pc.societa_id) = :sid")
         params["sid"] = societa_id
 
     if conditions:
