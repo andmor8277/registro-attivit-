@@ -59,7 +59,7 @@ router.beforeEach((to, from, next) => {
   const user = store.utenteAttivo.value
   const isSuperAdmin = user?.is_super_admin || user?.ruolo === 'super_admin'
   if (to.meta.requiresAuth && !token) return next('/login')
-  if (to.path === '/login' && token && !isSuperAdmin) return next('/')
+  if (to.path === '/login' && token && !isSuperAdmin && !to.query.selezione) return next('/')
   if (to.meta.requiresSuperAdmin) {
     if (!isSuperAdmin) return next('/')
   }
