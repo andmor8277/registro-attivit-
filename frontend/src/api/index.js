@@ -11,11 +11,13 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   response => response,
   error => {
-    if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
+    if (error.response?.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('societa_id')
       localStorage.removeItem('societa_data')
-      window.location.href = '/login'
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
