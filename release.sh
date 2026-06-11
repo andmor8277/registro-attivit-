@@ -73,7 +73,7 @@ cp frontend/nginx.conf releases/v$NEW_VERSION/frontend/ 2>/dev/null || true
 
 # Root files
 cp docker-compose.yml releases/v$NEW_VERSION/
-cp dev.sh releases/v$NEW_VERSION/
+cp start_dev.sh releases/v$NEW_VERSION/ 2>/dev/null || true
 cp deploy.sh releases/v$NEW_VERSION/
 cp README.md releases/v$NEW_VERSION/
 

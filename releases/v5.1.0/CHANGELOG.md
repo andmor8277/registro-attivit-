@@ -145,8 +145,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Salvataggio scheda giocatore con campi rate
 - Form online che non salvava con campi vuoti
-
-## [5.1.0] - 2026-06-11
-
-### Added
-- Security hardening: cross-tenant isolation, Pydantic models, XSS sanitization, CSP, CORS cleanup, GDPR sessionStorage, password policy, token 60min, axios 401 interceptor, viewport accessibility, noopener, model_dump, ruoli da /auth/me, codice_fiscale rimosso, SW cache fix, super_admin multi-società
