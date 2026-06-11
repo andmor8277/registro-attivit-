@@ -109,7 +109,7 @@ def upsert_registro(entry: schemas.RegistroEntry, db: Session = Depends(get_db),
             existing.societa_id = societa_id
         db.commit(); db.refresh(existing)
         return existing
-    data = entry.dict()
+    data = entry.model_dump()
     data["societa_id"] = societa_id
     data["categoria_id"] = target_categoria_id
     r = models.Registro(**data)

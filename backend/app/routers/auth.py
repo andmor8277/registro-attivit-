@@ -20,7 +20,7 @@ DEFAULT_PASSWORD = os.environ.get("DEFAULT_PASSWORD")
 if not DEFAULT_PASSWORD:
     raise RuntimeError("DEFAULT_PASSWORD environment variable is required")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 480
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
@@ -48,6 +48,8 @@ def validate_password(password: str):
         raise HTTPException(status_code=400, detail="La password deve contenere almeno un carattere minuscolo")
     if not re.search(r'\d', password):
         raise HTTPException(status_code=400, detail="La password deve contenere almeno un numero")
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        raise HTTPException(status_code=400, detail="La password deve contenere almeno un carattere speciale")
 
 def create_token(data: dict):
     to_encode = data.copy()

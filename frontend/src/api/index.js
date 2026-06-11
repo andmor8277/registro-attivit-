@@ -8,6 +8,19 @@ api.interceptors.request.use(config => {
   return config
 })
 
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('societa_id')
+      localStorage.removeItem('societa_data')
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
 export const login = (username, password) => {
   const form = new URLSearchParams()
   form.append('username', username)

@@ -54,7 +54,7 @@
       "title": "Sostituisci data: dict con Pydantic models",
       "file": "backend/app/routers/partite.py, weekend.py, spogliatoi.py, campi.py",
       "description": "Endpoint che accettano data: dict bypassano la validazione Pydantic. Creare modelli specifici per ogni endpoint.",
-      "done": false
+      "done": true
     },
     {
       "id": "H2",
@@ -118,7 +118,7 @@
       "title": "Token 8h — ridurre e/o aggiungere refresh token",
       "file": "backend/app/routers/auth.py:23",
       "description": "ACCESS_TOKEN_EXPIRE_MINUTES=480 è lungo. Ridurre a 60min e valutare refresh token.",
-      "done": false
+      "done": true
     },
     {
       "id": "M4",
@@ -126,7 +126,7 @@
       "title": "Aggiungere 401/403 interceptor globale in axios",
       "file": "frontend/src/api/index.js",
       "description": "Mancanza di response interceptor per gestire 401 → redirect login.",
-      "done": false
+      "done": true
     },
     {
       "id": "M5",
@@ -158,7 +158,7 @@
       "title": "Rimuovere backend packages dal frontend package.json",
       "file": "frontend/package.json",
       "description": "express, multer, cors non servono nel frontend.",
-      "done": false
+      "done": true
     },
     {
       "id": "L1",
@@ -166,7 +166,7 @@
       "title": "Password policy — aggiungere caratteri speciali",
       "file": "backend/app/routers/auth.py:42-50",
       "description": "La policy richiede 8+ chars, uppercase, lowercase, digit ma non speciali.",
-      "done": false
+      "done": true
     },
     {
       "id": "L2",
@@ -190,7 +190,7 @@
       "title": "Sostituire .dict() con .model_dump() Pydantic v2",
       "file": "backend/app/routers/persone.py:172, registro.py:112, presenze_allenatori.py:64",
       "description": ".dict() è deprecato in Pydantic v2.",
-      "done": false
+      "done": true
     }
   ]
 }
