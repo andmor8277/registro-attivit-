@@ -63,9 +63,22 @@ registro_presenze/
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v5.0.0**.
+La versione attuale è **v5.2.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
+
+### Novità v5.2.0
+
+- **Infortuni DB-backed**: Registro infortuni persistente nel database, condiviso tra tutti gli utenti
+- **Auto-scadenza**: `data_fine` calcolata automaticamente come `data_inizio + giorni_assenza`; l'infortunio passa da "Attivi" a "Storico" quando scade
+- **Storico permanente**: Tab dedicata per consultare tutti gli infortuni chiusi o scaduti
+- **Eliminazione**: Pulsante cestino per rimuovere inserimenti errati
+- **Chiusura manuale**: Pulsante ✓ per chiudere anticipatamente un infortunio
+- **Infermeria Hub**: Nuova pagina hub con conteggio infortunati attivi e link a certificati e infortuni
+
+### Novità v5.1.0
+
+- **Security Hardening**: Cross-tenant isolation, Pydantic models, XSS sanitization, CSP, CORS cleanup, GDPR sessionStorage, password policy, token 60min, axios 401 interceptor, viewport accessibility, noopener, model_dump, ruoli da /auth/me, codice_fiscale rimosso, SW cache fix, super_admin multi-società
 
 ### Novità v5.0.0
 
@@ -184,6 +197,14 @@ Le credenziali sono configurate nel database. Contattare l'amministratore per l'
 - ✅ Gestione utenti e permessi
 - ✅ Assegnazione categorie agli utenti (mister/dirigente/admin)
 - ✅ Ruolo admin con funzionalità avanzate
+
+### Infermeria
+- ✅ **Registro Infortuni**: persistente in DB, condiviso tra tutti gli utenti
+- ✅ **Auto-scadenza**: infortunio attivo finché `data_fine >= oggi`, poi passa in storico
+- ✅ **Storico permanente**: tab dedicata per infortuni chiusi o scaduti
+- ✅ **Eliminazione**: rimozione inserimenti errati con conferma
+- ✅ **Chiusura manuale**: chiusura anticipata dell'infortunio
+- ✅ **Conteggio attivi**: visibile dalla home Infermeria
 
 ## Database
 
