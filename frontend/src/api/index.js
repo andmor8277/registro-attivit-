@@ -178,3 +178,16 @@ export const getMisterList = () => api.get('/presenze-allenatori/mister')
 export const getValutazioni = (categoriaId) => api.get('/valutazioni/categoria/' + categoriaId)
 export const updateValutazione = (id, data) => api.put('/valutazioni/' + id, data)
 export const createValutazione = (data) => api.post('/valutazioni/', data)
+
+// Infortuni
+export const getInfortuni = (params = {}) => {
+  const qs = new URLSearchParams()
+  if (params.categoria_id) qs.set('categoria_id', params.categoria_id)
+  if (params.attivi !== undefined) qs.set('attivi', params.attivi)
+  return api.get('/infortuni/?' + qs.toString())
+}
+export const creaInfortunio = (data) => api.post('/infortuni/', data)
+export const aggiornaInfortunio = (id, data) => api.put(`/infortuni/${id}`, data)
+export const eliminaInfortunio = (id) => api.delete(`/infortuni/${id}`)
+export const chiudiInfortunio = (id) => api.post(`/infortuni/${id}/chiudi`)
+export const getInfortuniScaduti = () => api.get('/infortuni/scaduti')
