@@ -150,8 +150,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Security hardening: cross-tenant isolation, Pydantic models, XSS sanitization, CSP, CORS cleanup, GDPR sessionStorage, password policy, token 60min, axios 401 interceptor, viewport accessibility, noopener, model_dump, ruoli da /auth/me, codice_fiscale rimosso, SW cache fix, super_admin multi-società
-
-## [5.2.0] - 2026-06-18
-
-### Added
-- Infortuni DB-backed con auto-scadenza, storico permanente, eliminazione, Infermeria hub, conteggio attivi
