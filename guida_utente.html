@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guida Utente — The Home of Football</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #1a1a2e; line-height: 1.55; font-size: 9.5pt; background: #fff; }
+
+  /* COVER */
+  .cover { page-break-after: always; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; background: linear-gradient(160deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%); color: #fff; padding: 40px; }
+  .cover h1 { font-size: 32pt; font-weight: 800; letter-spacing: -1px; margin-bottom: 6px; }
+  .cover .sub { font-size: 14pt; font-weight: 300; opacity: .85; margin-bottom: 32px; }
+  .cover .ver { font-size: 9pt; opacity: .5; margin-top: 40px; }
+  .cover .badge { display: inline-block; background: rgba(255,255,255,.12); border-radius: 20px; padding: 6px 18px; font-size: 10pt; font-weight: 600; letter-spacing: .5px; margin-bottom: 20px; }
+
+  /* TOC */
+  .toc { page-break-after: always; padding: 20px 0; }
+  .toc h2 { font-size: 18pt; font-weight: 700; margin-bottom: 18px; color: #0f172a; border-bottom: 3px solid #2563eb; padding-bottom: 8px; }
+  .toc-section { margin-bottom: 14px; }
+  .toc-section h3 { font-size: 11pt; font-weight: 700; color: #2563eb; margin-bottom: 4px; }
+  .toc-item { display: flex; justify-content: space-between; padding: 2px 0 2px 16px; font-size: 9.5pt; }
+  .toc-item span:last-child { color: #64748b; font-weight: 600; }
+
+  /* ROLE SECTIONS */
+  .role-section { page-break-before: always; }
+  .role-header { background: linear-gradient(135deg, var(--rc), var(--rc2)); color: #fff; padding: 22px 28px; border-radius: 12px; margin-bottom: 20px; }
+  .role-header h2 { font-size: 18pt; font-weight: 800; }
+  .role-header p { font-size: 10pt; opacity: .9; margin-top: 2px; }
+  .role-header .role-tag { display: inline-block; background: rgba(255,255,255,.2); border-radius: 12px; padding: 2px 12px; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+
+  .feature { margin-bottom: 14px; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; page-break-inside: avoid; }
+  .feature-head { background: #f8fafc; padding: 10px 16px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 10px; }
+  .feature-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14pt; flex-shrink: 0; }
+  .feature-head h3 { font-size: 11pt; font-weight: 700; color: #0f172a; }
+  .feature-head .route { font-size: 8pt; color: #94a3b8; font-weight: 600; font-family: 'Courier New', monospace; margin-left: auto; }
+  .feature-body { padding: 10px 16px; }
+  .feature-body p { margin-bottom: 6px; }
+  .feature-body ul { margin: 4px 0 4px 18px; }
+  .feature-body li { margin-bottom: 2px; font-size: 9pt; }
+  .feature-body .note { background: #fef9c3; border-left: 3px solid #eab308; padding: 5px 10px; border-radius: 0 6px 6px 0; font-size: 8.5pt; margin-top: 6px; }
+
+  .sub-feature { margin: 8px 0 0 20px; padding: 8px 12px; background: #f1f5f9; border-radius: 8px; border-left: 3px solid #94a3b8; }
+  .sub-feature h4 { font-size: 9.5pt; font-weight: 700; color: #334155; margin-bottom: 3px; }
+  .sub-feature ul { margin: 3px 0 0 14px; }
+  .sub-feature li { font-size: 8.5pt; margin-bottom: 1px; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 8.5pt; }
+  th { background: #0f172a; color: #fff; padding: 6px 10px; text-align: left; font-weight: 600; font-size: 8pt; text-transform: uppercase; letter-spacing: .5px; }
+  td { padding: 5px 10px; border-bottom: 1px solid #e2e8f0; }
+  tr:nth-child(even) td { background: #f8fafc; }
+
+  /* FOOTER */
+  .page-footer { text-align: center; font-size: 7.5pt; color: #94a3b8; margin-top: 20px; padding-top: 8px; border-top: 1px solid #e2e8f0; }
+
+  @media print {
+    body { font-size: 9pt; }
+    .cover { min-height: 100vh; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div class="badge">MANUALE D'USO</div>
+  <h1>The Home of Football</h1>
+  <div class="sub">Guida completa alle funzionalità del sistema</div>
+  <div style="margin-top:10px; font-size:10pt; opacity:.7;">Registro Presenze &amp; Gestione Società Sportive</div>
+  <div class="ver">Versione 5.1.0 — Aggiornata a Giugno 2026</div>
+</div>
+
+<!-- ============ TOC ============ -->
+<div class="toc">
+  <h2>Indice Contenuti</h2>
+
+  <div class="toc-section">
+    <h3>Introduzione</h3>
+    <div class="toc-item"><span>Cos'è il sistema</span><span>4</span></div>
+    <div class="toc-item"><span>Accesso e login</span><span>4</span></div>
+    <div class="toc-item"><span>Ruoli e permessi</span><span>5</span></div>
+  </div>
+
+  <div class="toc-section">
+    <h3>Super Admin</h3>
+    <div class="toc-item"><span>Selezione e gestione multi-società</span><span>6</span></div>
+    <div class="toc-item"><span>Gestione Società</span><span>6</span></div>
+    <div class="toc-item"><span>Gestione Utenti</span><span>7</span></div>
+    <div class="toc-item"><span>Crittografia dati sensibili</span><span>7</span></div>
+  </div>
+
+  <div class="toc-section">
+    <h3>Admin / Segreteria</h3>
+    <div class="toc-item"><span>Dashboard Home</span><span>8</span></div>
+    <div class="toc-item"><span>Area Allenatori e Categorie</span><span>8</span></div>
+    <div class="toc-item"><span>Segreteria — Tesseramenti e Rate</span><span>9</span></div>
+    <div class="toc-item"><span>Scheda Giocatore</span><span>10</span></div>
+    <div class="toc-item"><span>Preiscrizione Online</span><span>10</span></div>
+    <div class="toc-item"><span>Area Responsabili</span><span>11</span></div>
+    <div class="toc-item"><span>Gestione Stagione</span><span>12</span></div>
+  </div>
+
+  <div class="toc-section">
+    <h3>Mister (Allenatore)</h3>
+    <div class="toc-item"><span>Registro Presenze</span><span>13</span></div>
+    <div class="toc-item"><span>Convocazioni</span><span>13</span></div>
+    <div class="toc-item"><span>Allenamenti e Lavagna Tattica</span><span>14</span></div>
+    <div class="toc-item"><span>Valutazioni Giocatori</span><span>15</span></div>
+    <div class="toc-item"><span>Reportistica</span><span>15</span></div>
+    <div class="toc-item"><span>Dati &amp; Matricole</span><span>16</span></div>
+  </div>
+
+  <div class="toc-section">
+    <h3>Dirigente</h3>
+    <div class="toc-item"><span>Registro Presenze (sola lettura)</span><span>17</span></div>
+    <div class="toc-item"><span>Dati &amp; Matricole</span><span>17</span></div>
+  </div>
+
+  <div class="toc-section">
+    <h3>Infermeria</h3>
+    <div class="toc-item"><span>Accesso ai dati medici</span><span>18</span></div>
+  </div>
+
+  <div class="toc-section">
+    <h3>Utenti Esterni</h3>
+    <div class="toc-item"><span>Modulo Iscrizione Online</span><span>18</span></div>
+  </div>
+</div>
+
+<!-- ============ INTRO ============ -->
+<div class="role-section" style="--rc:#0f172a; --rc2:#1e3a5f;">
+  <div class="role-header">
+    <span class="role-tag">Introduzione</span>
+    <h2>Benvenuto nel Sistema</h2>
+    <p>Registro Presenze e Gestione Società Sportive — versione 5.1.0</p>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dbeafe; color:#2563eb;">📋</div>
+      <h3>Cos'è il Sistema</h3>
+    </div>
+    <div class="feature-body">
+      <p>The Home of Football è una piattaforma web completa per la gestione di società di scuola calcio. Permette di:</p>
+      <ul>
+        <li>Registrare e gestire le presenze di giocatori e allenatori</li>
+        <li>Organizzare convocazioni per le gare</li>
+        <li>Pianificare gli allenamenti con lavagna tattica interattiva</li>
+        <li>Gestire tesseramenti, rate e pagamenti</li>
+        <li>Programmare partite, spogliatoi e campi</li>
+        <li>Valutare le prestazioni dei giocatori</li>
+        <li>Generare report e statistiche</li>
+        <li>Gestire più società sportive con un unico account (Super Admin)</li>
+      </ul>
+      <div class="note">Il sistema è accessibile da qualsiasi dispositivo con browser web. L'interfaccia è ottimizzata per tablet e smartphone per l'uso in campo.</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dcfce7; color:#16a34a;">🔑</div>
+      <h3>Accesso e Login</h3>
+    </div>
+    <div class="feature-body">
+      <p>Per accedere al sistema:</p>
+      <ul>
+        <li><strong>1.</strong> Apri il browser e vai all'indirizzo della tua società (es. <code>https://thof.crickethouse.mywire.org</code>)</li>
+        <li><strong>2.</strong> Inserisci <strong>Username</strong> e <strong>Password</strong> assegnati dall'amministratore</li>
+        <li><strong>3.</strong> Clicca <strong>Accedi</strong></li>
+        <li><strong>4.</strong> Se sei un Super Admin, seleziona la società con cui vuoi lavorare</li>
+      </ul>
+      <div class="note">La sessione scade dopo 60 minuti di inattività. Per motivi di sicurezza, i dati sensibili (codice fiscale, telefoni) richiedono uno sblocco separato con password.</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#fef3c7; color:#d97706;">👥</div>
+      <h3>Ruoli e Permessi</h3>
+    </div>
+    <div class="feature-body">
+      <p>Ogni utente ha un ruolo che determina le funzionalità accessibili:</p>
+      <table>
+        <tr><th>Ruolo</th><th>Descrizione</th><th>Accesso</th></tr>
+        <tr><td><strong>Super Admin</strong></td><td>Amministratore di sistema multi-società</td><td>Tutte le funzionalità + gestione società e utenti</td></tr>
+        <tr><td><strong>Admin</strong></td><td>Amministratore di una singola società</td><td>Tutte le funzionalità della propria società</td></tr>
+        <tr><td><strong>Segreteria</strong></td><td>Staff amministrativo</td><td>Segreteria, Allenatori, Presenze, Dati giocatori</td></tr>
+        <tr><td><strong>Mister</strong></td><td>Allenatore assegnato a una o più categorie</td><td>Presenze, Convocazioni, Allenamenti, Valutazioni, Reportistica</td></tr>
+        <tr><td><strong>Dirigente</strong></td><td>Dirigente di campo</td><td>Presenze (sola lettura), Dati &amp; Matricole</td></tr>
+        <tr><td><strong>Infermeria</strong></td><td>Staff medico</td><td>Accesso ai dati sanitari dei giocatori</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+</div>
+
+<!-- ============ SUPER ADMIN ============ -->
+<div class="role-section" style="--rc:#7c3aed; --rc2:#6d28d9;">
+  <div class="role-header">
+    <span class="role-tag">Ruolo</span>
+    <h2>Super Admin</h2>
+    <p>L'amministratore di sistema con accesso completo a tutte le società</p>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#ede9fe; color:#7c3aed;">🔄</div>
+      <h3>Selezione Multi-Società</h3>
+      <span class="route">/login</span>
+    </div>
+    <div class="feature-body">
+      <p>Il Super Admin può gestire più società sportive con un unico account:</p>
+      <ul>
+        <li>Al login viene presentata la <strong>griglia delle società</strong> disponibili</li>
+        <li>Clicca sulla società desiderata per selezionarla, poi premi <strong>Continua</strong></li>
+        <li>In qualsiasi momento puoi cambiare società dal pulsante <strong>Cambia Società</strong> visibile nella Home o in Allenatori</li>
+        <li>Puoi <strong>creare una nuova società</strong> direttamente dalla schermata di login con il pulsante <strong>+ Crea nuova società</strong></li>
+        <li>Il pulsante <strong>⚙️ Gestione Società</strong> ti porta alla pagina di amministrazione completa</li>
+      </ul>
+      <div class="note">La società selezionata diventa il contesto attivo: tutte le operazioni successive si riferiscono a quella società.</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#ede9fe; color:#7c3aed;">🏢</div>
+      <h3>Gestione Società</h3>
+      <span class="route">/admin/societa</span>
+    </div>
+    <div class="feature-body">
+      <p>Crea, modifica e gestisci le società sportive:</p>
+      <ul>
+        <li><strong>Crea nuova società:</strong> Inserisci nome, colori (primario e secondario), carica il logo e il logo sponsor</li>
+        <li><strong>Modifica società esistente:</strong> Clicca il pulsante modifica accanto alla società nella lista</li>
+        <li><strong>Rimuovi logo:</strong> Puoi rimuovere logo e logo sponsor e caricarne di nuovi</li>
+        <li><strong>Lista società:</strong> Visualizza tutte le società con logo, nome, colori e numero di categorie</li>
+      </ul>
+      <div class="sub-feature">
+        <h4>Campi del form</h4>
+        <ul>
+          <li><strong>Nome Società *</strong> — Obbligatorio, nome ufficiale della società</li>
+          <li><strong>Colore Primario</strong> — Colore principale dell'interfaccia (selettore colore)</li>
+          <li><strong>Colore Secondario</strong> — Colore secondario per accenti e dettagli</li>
+          <li><strong>Logo</strong> — Immagine del logo (JPG, PNG)</li>
+          <li><strong>Logo Sponsor</strong> — Logo dello sponsor principale</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#ede9fe; color:#7c3aed;">👤</div>
+      <h3>Gestione Utenti</h3>
+      <span class="route">/admin</span>
+    </div>
+    <div class="feature-body">
+      <p>Crea e gestisci gli account di tutti gli utenti del sistema:</p>
+      <ul>
+        <li><strong>Crea nuovo utente:</strong> Inserisci username, password, nome, cognome, ruolo e assegna la società</li>
+        <li><strong>Modifica utente:</strong> Cambia dati personali, ruolo, o società di appartenenza</li>
+        <li><strong>Elimina utente:</strong> Rimuovi un account (conferma richiesta)</li>
+        <li><strong>Cambia Società:</strong> Selettore per operare su una società diversa</li>
+      </ul>
+      <div class="sub-feature">
+        <h4>Campi del form utente</h4>
+        <ul>
+          <li><strong>Username *</strong> — Identificativo univoco per il login (non modificabile dopo la creazione)</li>
+          <li><strong>Password *</strong> — Minimo 8 caratteri, richiede maiuscola, minuscola, numero e carattere speciale</li>
+          <li><strong>Nome / Cognome</strong> — Dati anagrafici</li>
+          <li><strong>Data di Nascita</strong> — Opzionale</li>
+          <li><strong>Codice Fiscale</strong> — Opzionale</li>
+          <li><strong>Cellulare</strong> — Numero di telefono</li>
+          <li><strong>Ruolo</strong> — super_admin, admin, mister, dirigente, segreteria, infermeria</li>
+          <li><strong>Società</strong> — Assegnazione alla società (per Super Admin: selettore multipla)</li>
+        </ul>
+      </div>
+      <div class="note">La password deve contenere almeno 8 caratteri, una maiuscola, una minuscola, un numero e un carattere speciale (es. !@#$%).</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#ede9fe; color:#7c3aed;">🔐</div>
+      <h3>Crittografia Dati Sensibili</h3>
+      <span class="route">/admin</span>
+    </div>
+    <div class="feature-body">
+      <p>Gestisci la chiave di crittografia per i dati sensibili (codice fiscale, numeri di telefono):</p>
+      <ul>
+        <li><strong>Imposta chiave:</strong> Inserisci una nuova chiave di crittografia e salva</li>
+        <li><strong>Salva e Ricifra:</strong> Inserisci la chiave vecchia e quella nuova per ricrittografare tutti i dati esistenti con la nuova chiave</li>
+      </ul>
+      <div class="note">⚠️ Importante: senza la chiave di crittografia, i dati sensibili salvati non sono recuperabili. Conserva la chiave in un luogo sicuro.</div>
+    </div>
+  </div>
+
+  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+</div>
+
+<!-- ============ ADMIN / SEGRETERIA ============ -->
+<div class="role-section" style="--rc:#2563eb; --rc2:#1d4ed8;">
+  <div class="role-header">
+    <span class="role-tag">Ruolo</span>
+    <h2>Admin / Segreteria</h2>
+    <p>Gestione completa della società: tesseramenti, rate, categorie e struttura</p>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dbeafe; color:#2563eb;">🏠</div>
+      <h3>Dashboard Home</h3>
+      <span class="route">/</span>
+    </div>
+    <div class="feature-body">
+      <p>La pagina principale del sistema, accessibile dopo il login:</p>
+      <ul>
+        <li><strong>Planning Allenamenti:</strong> Vista settimanale con le categorie che si allenano ogni giorno. Clicca su una categoria per accedere direttamente al registro presenze</li>
+        <li><strong>Sezione Allenatori:</strong> Naviga alla pagina delle categorie e del planning settimanale</li>
+        <li><strong>Sezione Segreteria:</strong> (visibile a Segreteria e Admin) Naviga alla gestione tesseramenti e rate</li>
+        <li><strong>Sezione Responsabili:</strong> (visibile solo ad Admin) Naviga alla gestione mister, dirigenti, partite e strutture</li>
+      </ul>
+      <div class="note">Il Super Admin vede un pulsante <strong>Cambia Società</strong> nell'header per passare da una società all'altra.</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dbeafe; color:#2563eb;">⚽</div>
+      <h3>Area Allenatori e Categorie</h3>
+      <span class="route">/allenatori</span>
+    </div>
+    <div class="feature-body">
+      <p>Gestisci le categorie della società e il planning settimanale:</p>
+      <ul>
+        <li><strong>Planning Settimanale:</strong> Vista a 7 giorni con le categorie attive ogni giorno. Il giorno corrente è evidenziato con badge "OGGI"</li>
+        <li><strong>Lista Categorie:</strong> Tutte le categorie attive con informazioni su giorni di allenamento, mister e dirigenti assegnati</li>
+        <li><strong>Nuova Categoria:</strong> (Admin) Crea una nuova categoria con nome, anno, giorni e orari di allenamento</li>
+        <li><strong>Modifica Categoria:</strong> (Admin/Mister) Modifica nome, stagione, giorni, orario, utenti autorizzati</li>
+        <li><strong>Elimina Categoria:</strong> (Admin) Rimuovi una categoria</li>
+        <li><strong>Importa Giocatori:</strong> (Admin) Importa automaticamente i giocatori dalla categoria corrispondente della stagione precedente</li>
+      </ul>
+      <div class="sub-feature">
+        <h4>Campi della categoria</h4>
+        <ul>
+          <li><strong>Società</strong> — (solo Super Admin) Seleziona a quale società assegnare</li>
+          <li><strong>Nome</strong> — Es. "Esordienti", "Pulcini"</li>
+          <li><strong>Stagione</strong> — Anno di inizio stagione (es. 2025)</li>
+          <li><strong>Categoria Portieri</strong> — Flag per categorie trasversali a tutti gli anni</li>
+          <li><strong>Anno di Nascita</strong> — Anno di riferimento della categoria</li>
+          <li><strong>Giorni di Allenamento</strong> — Seleziona i giorni della settimana (Lun-Dom)</li>
+          <li><strong>Orario di Allenamento</strong> — Ora di inizio (step di 15 minuti)</li>
+          <li><strong>Utenti Autorizzati</strong> — Seleziona quali utenti possono accedere a questa categoria</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dbeafe; color:#2563eb;">📄</div>
+      <h3>Segreteria — Panoramica</h3>
+      <span class="route">/segreteria</span>
+    </div>
+    <div class="feature-body">
+      <p>Dashboard amministrativa con riepilogo iscritti e财务状况:</p>
+      <ul>
+        <li><strong>Barra Riepilogativa:</strong> Totale iscritti, numero categorie, totale incasso, importi da recuperare</li>
+        <li><strong>Finanze:</strong> Clicca sull'icona 👁 per mostrare/nascondere i dati finanziari</li>
+        <li><strong>Griglia Categorie:</strong> Per ogni categoria: numero iscritti, incasso, da recuperare</li>
+        <li><strong>Sblocco Dati Sensibili:</strong> (🔒) Inserisci la password admin per visualizzare CF, telefoni, date di nascita</li>
+        <li><strong>Click su una categoria:</strong> Accedi alla lista dettagliata dei giocatori</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dbeafe; color:#2563eb;">👦</div>
+      <h3>Segreteria — Dettaglio Categoria</h3>
+      <span class="route">/segreteria/:id</span>
+    </div>
+    <div class="feature-body">
+      <p>Lista completa dei giocatori di una categoria con gestione rate:</p>
+      <ul>
+        <li><strong>Ricerca:</strong> Cerca giocatori per nome, cognome o matricola</li>
+        <li><strong>Tabella Rate:</strong> Per ogni giocatore puoi modificare: Totale da pagare, Rata Iscrizione, Rata 1-4, Saldo</li>
+        <li><strong>Colonna "Rimane":</strong> Calcolato automaticamente (Totale - Pagato). Verde se saldo a zero</li>
+        <li><strong>Preiscrizione:</strong> Crea un link di preiscrizione online per un nuovo giocatore</li>
+        <li><strong>Aggiungi Giocatore:</strong> Crea manualmente un nuovo giocatore</li>
+        <li><strong>Scheda:</strong> Clicca su un giocatore o sull'icona griglia per aprire la scheda completa</li>
+        <li><strong>Elimina:</strong> Rimuovi un giocatore dalla categoria</li>
+      </ul>
+      <div class="sub-feature">
+        <h4>Preiscrizione Online</h4>
+        <ul>
+          <li>Inserisci Cognome e Nome del giocatore</li>
+          <li>Il sistema genera un <strong>link pubblico</strong> che puoi condividere con i genitori</li>
+          <li>I genitori compilano il modulo online con tutti i dati</li>
+          <li>I dati vengono salvati automaticamente nella categoria</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dbeafe; color:#2563eb;">📝</div>
+      <h3>Scheda Giocatore</h3>
+      <span class="route">/segreteria/scheda/:id</span>
+    </div>
+    <div class="feature-body">
+      <p>Modulo completo di iscrizione e dati del giocatore:</p>
+      <ul>
+        <li><strong>Dati Personali:</strong> Matricola, nr. maglia, cognome, nome, data nascita, residenza, indirizzo, cittadinanza, scadenza certificato medico</li>
+        <li><strong>Dati Genitori:</strong> Nome e professione di Papà e Mamma, numeri di telefono</li>
+        <li><strong>Dati Sanitari:</strong> Allergie, patologie, note mediche</li>
+        <li><strong>Cont Emergenza:</strong> Nome e numero di telefono del contatto di emergenza</li>
+        <li><strong>Rate:</strong> Totale da pagare e rate (iscrizione, R1-R4, saldo)</li>
+      </ul>
+      <div class="sub-feature">
+        <h4>Funzioni</h4>
+        <ul>
+          <li><strong>Modifica:</strong> Clicca l'icona matita per abilitare la modifica dei campi</li>
+          <li><strong>Esporta PDF:</strong> Genera un PDF della scheda giocatore pronto per la stampa</li>
+          <li><strong>Salva automatico:</strong> Le modifiche vengono salvate in tempo reale</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dbeafe; color:#2563eb;">🌐</div>
+      <h3>Modulo Iscrizione Online (Pubblico)</h3>
+      <span class="route">/form-iscrizione</span>
+    </div>
+    <div class="feature-body">
+      <p>Modulo pubblico accessibile senza login, tramite link di preiscrizione:</p>
+      <ul>
+        <li><strong>Dati Personali:</strong> Cognome e nome (precompilati, non modificabili), data nascita, codice fiscale, residenza, indirizzo, cittadinanza, scadenza certificato</li>
+        <li><strong>Dati Genitori:</strong> Nome e professione di Papà e Mamma</li>
+        <li><strong>Contatti:</strong> Numeri di telefono di entrambi i genitori</li>
+        <li><strong>Contatto Emergenza:</strong> Nome e telefono</li>
+        <li><strong>Dati Sanitari:</strong> Allergie, patologie, note</li>
+        <li><strong>Conferma:</strong> Checkbox per confermare l'accuratezza dei dati e accettare la privacy policy</li>
+      </ul>
+      <div class="note">Questo modulo è accessibile senza autenticazione. Il link contiene un codice univoco che identifica la categoria e il giocatore.</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dbeafe; color:#2563eb;">🏟️</div>
+      <h3>Area Responsabili</h3>
+      <span class="route">/responsabili</span>
+    </div>
+    <div class="feature-body">
+      <p>Hub di gestione per le attività logistiche e organizzative (solo Admin):</p>
+      <ul>
+        <li><strong>Responsabili per Categoria:</strong> Assegna mister e dirigenti alle categorie</li>
+        <li><strong>Programmazione Partite:</strong> Gestisci weekend di gare e singole partite</li>
+        <li><strong>Spogliatoi e Campi:</strong> Assegnazione settimanale e weekend delle strutture</li>
+        <li><strong>Presenze Allenatori:</strong> Registro presenze allenatori e collaboratori</li>
+        <li><strong>Gestione Stagione:</strong> Inizializza o archivia una stagione</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dbeafe; color:#2563eb;">📊</div>
+      <h3>Responsabili per Categoria</h3>
+      <span class="route">/responsabili/categorie</span>
+    </div>
+    <div class="feature-body">
+      <p>Matrice di assegnazione mister e dirigenti alle categorie:</p>
+      <ul>
+        <li><strong>Tabella Mister:</strong> Riga per ogni mister, colonna per ogni categoria. Spunta la casella per assegnare</li>
+        <li><strong>Tabella Dirigenti:</strong> Stessa logica per i dirigenti</li>
+        <li><strong>Salvataggio automatico:</strong> Le modifiche vengono salvate immediatamente</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dbeafe; color:#2563eb;">⚽</div>
+      <h3>Programmazione Partite</h3>
+      <span class="route">/responsabili/partite</span>
+    </div>
+    <div class="feature-body">
+      <p>Gestione completa dei weekend di gare e delle partite:</p>
+      <ul>
+        <li><strong>Lista Weekend:</strong> Visualizza tutti i weekend programmati con data e numero partite</li>
+        <li><strong>Nuovo Weekend:</strong> Crea un nuovo weekend con nome e date (inizio/fine)</li>
+        <li><strong>Dettaglio Weekend:</strong> Partite raggruppate per categoria con avversario, campo, indirizzo, orario</li>
+        <li><strong>Aggiungi Partita:</strong> Crea una partita con tutti i dettagli (categoria, avversario, campo, data, indirizzo, appuntamento, inizio gara)</li>
+        <li><strong>Modifica/Elimina:</strong> Modifica o rimuovi partite e weekend</li>
+        <li><strong>Stampa:</strong> Stampa il dettaglio del weekend</li>
+        <li><strong>Esporta PDF:</strong> Genera un PDF del weekend</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dbeafe; color:#2563eb;">🚿</div>
+      <h3>Spogliatoi e Campi</h3>
+      <span class="route">/responsabili/spogliatoi</span>
+    </div>
+    <div class="feature-body">
+      <p>Assegnazione delle strutture per allenamenti e gare:</p>
+      <ul>
+        <li><strong>Tab Settimanale:</strong> Naviga tra le settimane, visualizza le assegnazioni per giorno e fascia oraria</li>
+        <li><strong>Tab Weekend:</strong> Seleziona un weekend e assegna spogliatoi e campi</li>
+        <li><strong>Giorni della Settimana:</strong> Naviga tra i giorni con allenamenti programmati</li>
+        <li><strong>Fasce Orarie:</strong> Per ogni giorno, assegna spogliatoio e campo a ogni fascia oraria</li>
+        <li><strong>Salva:</strong> Salva le assegnazioni della settimana</li>
+        <li><strong>Stampa:</strong> Stampa un singolo giorno o l'intera settimana</li>
+      </ul>
+      <div class="sub-feature">
+        <h4>Gestione Strutture (Admin)</h4>
+        <ul>
+          <li><strong>Aggiungi Spogliatoio:</strong> Crea un nuovo spogliatoio con nome e capienza</li>
+          <li><strong>Aggiungi Campo:</strong> Crea un nuovo campo con nome, tipo (erba naturale/sintetica), dimensioni</li>
+          <li><strong>Modifica/Elimina:</strong> Gestisci le strutture esistenti</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dbeafe; color:#2563eb;">📋</div>
+      <h3>Presenze Allenatori</h3>
+      <span class="route">/responsabili/presenze-allenatori</span>
+    </div>
+    <div class="feature-body">
+      <p>Registro mensile delle presenze di allenatori e collaboratori:</p>
+      <ul>
+        <li><strong>Navigazione Mensile:</strong> Scorri tra i mesi con frecce avanti/indietro</li>
+        <li><strong>Legenda Codici:</strong> Badge colorati con i codici presenza (P=Presente, A=Assente, M=Malattia, F=Ferie, ecc.)</li>
+        <li><strong>Tabella Presenze:</strong> Riga per ogni allenatore, colonna per ogni giorno del mese</li>
+        <li><strong>Click su una cella:</strong> Modifica il codice presenza per quel giorno</li>
+        <li><strong>Totale:</strong> Colonna con il totale presenze del mese</li>
+        <li><strong>Giorni non allenamento:</strong> Le celle dei giorni in cui l'allenatore non ha allenamenti sono disabilitate</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#dbeafe; color:#2563eb;">📅</div>
+      <h3>Gestione Stagione</h3>
+      <span class="route">/responsabili (modal)</span>
+    </div>
+    <div class="feature-body">
+      <p>Inizializza o archivia le stagioni (solo Admin):</p>
+      <ul>
+        <li><strong>Inizializza Stagione:</strong> Imposta stagione, data inizio e data fine per tutte le categorie attive contemporaneamente</li>
+        <li><strong>Archivia Stagione:</strong> Archivia una stagione passata per renderla consultabile ma non modificabile</li>
+        <li><strong>Stagioni Passate:</strong> Le categorie archiviate sono accessibili dalla schermata di selezione con la dicitura "Stagioni Passate"</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+</div>
+
+<!-- ============ MISTER ============ -->
+<div class="role-section" style="--rc:#059669; --rc2:#047857;">
+  <div class="role-header">
+    <span class="role-tag">Ruolo</span>
+    <h2>Mister (Allenatore)</h2>
+    <p>Gestione presenze, convocazioni, allenamenti tattici e valutazioni</p>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#d1fae5; color:#059669;">📋</div>
+      <h3>Registro Presenze</h3>
+      <span class="route">/registro/:id</span>
+    </div>
+    <div class="feature-body">
+      <p>Segna le presenze dei giocatori per ogni allenamento:</p>
+      <ul>
+        <li><strong>Navigazione Mensile:</strong> Scorri tra i mesi con frecce avanti/indietro</li>
+        <li><strong>Legenda Codici:</strong> Badge colorati con significati: P=Presente, A=Assente, M=Malattia, F=Ferie, N=Non convocato, ecc.</li>
+        <li><strong>Tabella Presenze:</strong> Giocatori in ordine alfabetico, colonne per ogni giorno del mese</li>
+        <li><strong>Click su una cella:</strong> Ciclo tra i codici di presenza (Presente → Assente → Malattia → Ferie → ...)</li>
+        <li><strong>Totale:</strong> Colonna con il totale presenze del mese per ogni giocatore</li>
+        <li><strong>Giorni non allenamento:</strong> Le celle dei giorni senza allenamento sono grigie e disabilitate</li>
+      </ul>
+      <div class="note">Su dispositivi mobili, ruota il dispositivo in orizzontale per una visione migliore della tabella.</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#d1fae5; color:#059669;">📮</div>
+      <h3>Convocazioni</h3>
+      <span class="route">/convocazioni/:id</span>
+    </div>
+    <div class="feature-body">
+      <p>Crea e gestisci le convocazioni per le gare:</p>
+      <ul>
+        <li><strong>Sidebar Storico:</strong> Lista delle convocazioni passate. Clicca per caricarne una</li>
+        <li><strong>Sidebar Mister:</strong> Contatti dei mister assegnati alla categoria</li>
+        <li><strong>Sidebar Weekend Gare:</strong> Weekend programmati. Clicca per creare una convocazione automatica dalle partite</li>
+        <li><strong>+ Nuova Convocazione:</strong> Crea una convocazione da zero</li>
+      </ul>
+      <div class="sub-feature">
+        <h4>Editor Convocazione</h4>
+        <ul>
+          <li><strong>Date:</strong> Imposta data inizio, data fine e numero gare</li>
+          <li><strong>Carica Partite:</strong> Importa automaticamente le partite dal weekend programmato</li>
+          <li><strong>Non Convocabili:</strong> Giocatori esclusi automaticamente (certificato scaduto, ecc.)</li>
+          <li><strong>Esclusioni Manuali:</strong> Escludi giocatori da Sabato Mattina, Sabato Pomeriggio o Domenica</li>
+          <li><strong>Gare:</strong> Per ogni gara: squadra avversaria, data, campo, indirizzo, appuntamento, inizio gara, mister</li>
+          <li><strong>Assegnazione Giocatori:</strong> Per ogni gara, assegna i giocatori alle posizioni in squadra (clicca su uno slot per selezionare)</li>
+          <li><strong>Note:</strong> Campo testo libero per note della convocazione</li>
+          <li><strong>Salva / Elimina / Esporta PDF:</strong> Azioni sulla convocazione</li>
+        </ul>
+      </div>
+      <div class="note">La convocazione può essere esportata in PDF con il layout della società (logo, sponsor, colori).</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#d1fae5; color:#059669;">🏃</div>
+      <h3>Allenamenti e Lavagna Tattica</h3>
+      <span class="route">/allenamenti/:id</span>
+    </div>
+    <div class="feature-body">
+      <p>Pianifica gli allenamenti con esercizi e lavagna tattica interattiva:</p>
+      <ul>
+        <li><strong>Calendario:</strong> Naviga tra mesi e settimane. I giorni con allenamento sono evidenziati</li>
+        <li><strong>Seleziona Giorno:</strong> Clicca su un giorno per vedere/creare gli esercizi</li>
+        <li><strong>+ Esercizio:</strong> Aggiungi un nuovo esercizio all'allenamento</li>
+      </ul>
+      <div class="sub-feature">
+        <h4>Ogni Esercizio Include</h4>
+        <ul>
+          <li><strong>Titolo:</strong> Nome dell'esercizio</li>
+          <li><strong>Focus:</strong> Tipo (Attivazione, Tecnica, Tattica, Fisico, Capacità Coordinativa, Palleggio, Passaggio, Conclusione, Difesa, Attacco, Possesso, Set Piece)</li>
+          <li><strong>Spazio:</strong> Dimensioni del campo (es. 20x30m)</li>
+          <li><strong>Tempo:</strong> Durata (es. 3x4')</li>
+          <li><strong>Descrizione:</strong> Testo libero con istruzioni</li>
+          <li><strong>Lavagna Tattica:</strong> Canvas interattivo per disegnare disposizioni, movimenti e schemi</li>
+        </ul>
+      </div>
+      <div class="sub-feature">
+        <h4>Catalogo Esercizi</h4>
+        <ul>
+          <li><strong>Apri Catalogo:</strong> Visualizza tutti gli esercizi salvati, filtrabili per focus</li>
+          <li><strong>Aggiungi dal Catalogo:</strong> Inserisci un esercizio esistente nell'allenamento corrente</li>
+          <li><strong>Salva nel Catalogo:</strong> Salva un esercizio nuovo nel catalogo per riutilizzarlo</li>
+          <li><strong>Elimina dal Catalogo:</strong> Rimuovi un esercizio non più utile</li>
+        </ul>
+      </div>
+      <div class="sub-feature">
+        <h4>Lavagna Tattica</h4>
+        <ul>
+          <li>Disegna giocatori, palloni, frecce di movimento e zone sul campo</li>
+          <li>Tre modalità campo: Completo, Mezzo Campo, Campo Vuoto</li>
+          <li>Trascina gli elementi per posizionarli</li>
+          <li>Zoom e pan per lavorare su dettagli</li>
+        </ul>
+      </div>
+      <div class="note">Puoi esportare l'allenamento in PDF con tutti gli esercizi e i disegni tattici.</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#d1fae5; color:#059669;">⭐</div>
+      <h3>Valutazioni Giocatori</h3>
+      <span class="route">/valutazioni/:id</span>
+    </div>
+    <div class="feature-body">
+      <p>Schede valutative per valutare le prestazioni dei giocatori:</p>
+      <ul>
+        <li><strong>Scala 1-3:</strong> Per ogni competenza: 1=Base, 2=Intermedio, 3=Avanzato</li>
+        <li><strong>Competenze:</strong> Tecniche, tattiche, fisiche e mentali (configurate dal sistema)</li>
+        <li><strong>Note:</strong> Campo testo libero per ogni giocatore</li>
+        <li><strong>Tabella:</strong> Vista compatta con tutti i giocatori e tutte le competenze</li>
+        <li><strong>Salvataggio:</strong> Le valutazioni vengono salvate automaticamente</li>
+      </ul>
+      <div class="note">Le valutazioni sono utili per il monitoraggio della crescita dei giocatori durante la stagione.</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#d1fae5; color:#059669;">📊</div>
+      <h3>Reportistica</h3>
+      <span class="route">/reportistica/:id</span>
+    </div>
+    <div class="feature-body">
+      <p>Statistiche e report sulle presenze:</p>
+      <ul>
+        <li><strong>Report Mensile:</strong> Assenze per giocatore in un mese specifico, con percentuale. Naviga tra i mesi</li>
+        <li><strong>Report Annuale:</strong> Assenze totali per giocatore nell'intera stagione, con date inizio/fine configurabili</li>
+        <li><strong>Report Doppie Convocazioni:</strong> Rileva giocatori convocati per più gare nello stesso giorno</li>
+      </ul>
+      <div class="sub-feature">
+        <h4>Esportazione</h4>
+        <ul>
+          <li><strong>Stampa:</strong> Stampa il report con intestazione della società</li>
+          <li><strong>CSV:</strong> Scarica i dati in formato CSV per Excel</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#d1fae5; color:#059669;">📇</div>
+      <h3>Dati &amp; Matricole</h3>
+      <span class="route">/dati/:id</span>
+    </div>
+    <div class="feature-body">
+      <p>Visualizza i dati dei giocatori e le matricole:</p>
+      <ul>
+        <li><strong>Tabella Giocatori:</strong> Lista con numero, cognome, nome, numero di maglia</li>
+        <li><strong>Ricerca:</strong> Cerca per nome, cognome o matricola</li>
+        <li><strong>Filtro Gruppo:</strong> Filtra per gruppo (Primo, Secondo, Terzo, Portieri)</li>
+        <li><strong>Sblocco Dati Sensibili:</strong> (🔒 Admin/Mister) Inserisci password per vedere: data nascita, codice fiscale, telefoni genitori, matricola, scadenza certificato</li>
+        <li><strong>Aggiungi Giocatore:</strong> (Admin/Mister) Crea un nuovo giocatore</li>
+        <li><strong>Riga evidenziata:</strong> I giocatori con certificato scaduto sono evidenziati in rosso</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+</div>
+
+<!-- ============ DIRIGENTE ============ -->
+<div class="role-section" style="--rc:#d97706; --rc2:#b45309;">
+  <div class="role-header">
+    <span class="role-tag">Ruolo</span>
+    <h2>Dirigente</h2>
+    <p>Accesso in sola lettura alle presenze e ai dati dei giocatori</p>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#fef3c7; color:#d97706;">📋</div>
+      <h3>Registro Presenze (Sola Lettura)</h3>
+      <span class="route">/registro/:id</span>
+    </div>
+    <div class="feature-body">
+      <p>Il dirigente può visualizzare le presenze ma non modificarle:</p>
+      <ul>
+        <li><strong>Navigazione Mensile:</strong> Scorri tra i mesi</li>
+        <li><strong>Tabella Presenze:</strong> Visualizza tutti i codici di presenza</li>
+        <li><strong>Totale:</strong> Vedi il totale presenze per ogni giocatore</li>
+        <li><strong>Legenda:</strong> I badge colorati indicano il significato di ogni codice</li>
+      </ul>
+      <div class="note">Le celle non sono cliccabili: il dirigente ha accesso in sola lettura.</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#fef3c7; color:#d97706;">📇</div>
+      <h3>Dati &amp; Matricole</h3>
+      <span class="route">/dati/:id</span>
+    </div>
+    <div class="feature-body">
+      <p>Visualizza la lista giocatori con dati essenziali:</p>
+      <ul>
+        <li><strong>Tabella:</strong> Numero, cognome, nome, numero di maglia, gruppo</li>
+        <li><strong>Ricerca:</strong> Cerca per nome, cognome o matricola</li>
+        <li><strong>Filtro Gruppo:</strong> Filtra per gruppo di allenamento</li>
+      </ul>
+      <div class="note">Il dirigente NON può sbloccare i dati sensibili né aggiungere/rimuovere giocatori.</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#fef3c7; color:#d97706;">🚫</div>
+      <h3>Funzioni Non Accessibili</h3>
+    </div>
+    <div class="feature-body">
+      <p>Al dirigente NON sono disponibili:</p>
+      <ul>
+        <li>Convocazioni</li>
+        <li>Allenamenti e lavagna tattica</li>
+        <li>Reportistica</li>
+        <li>Valutazioni</li>
+        <li>Segreteria (tesseramenti e rate)</li>
+        <li>Gestione Responsabili</li>
+        <li>Gestione Utenti</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+</div>
+
+<!-- ============ INFERMERIA ============ -->
+<div class="role-section" style="--rc:#dc2626; --rc2:#b91c1c;">
+  <div class="role-header">
+    <span class="role-tag">Ruolo</span>
+    <h2>Infermeria</h2>
+    <p>Staff medico con accesso ai dati sanitari</p>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#fee2e2; color:#dc2626;">🏥</div>
+      <h3>Accesso ai Dati Medici</h3>
+    </div>
+    <div class="feature-body">
+      <p>L'infermiere ha accesso ai dati sanitari dei giocatori:</p>
+      <ul>
+        <li><strong>Registro Presenze:</strong> Può visualizzare le presenze (sola lettura, come il dirigente)</li>
+        <li><strong>Dati Giocatori:</strong> Può accedere alle schede giocatori per consultare dati sanitari (allergie, patologie, note mediche)</li>
+        <li><strong>Scadenze Certificati:</strong> Può monitorare le scadenze dei certificati medici</li>
+      </ul>
+      <div class="note">Il ruolo Infermeria ha gli stessi permessi di visualizzazione del Dirigente, con accesso aggiuntivo ai dati sanitari nelle schede giocatore.</div>
+    </div>
+  </div>
+
+  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+</div>
+
+<!-- ============ ESTERNI ============ -->
+<div class="role-section" style="--rc:#64748b; --rc2:#475569;">
+  <div class="role-header">
+    <span class="role-tag">Pubblico</span>
+    <h2>Utenti Esterni</h2>
+    <p>Accesso senza account: modulo iscrizione online</p>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#f1f5f9; color:#64748b;">🌐</div>
+      <h3>Modulo Iscrizione Online</h3>
+      <span class="route">/form-iscrizione?code=XXX</span>
+    </div>
+    <div class="feature-body">
+      <p>I genitori possono compilare il modulo di iscrizione online tramite un link fornito dalla segreteria:</p>
+      <ul>
+        <li><strong>Accesso:</strong> Il link contiene un codice univoco che identifica la categoria e il giocatore pre-iscritto</li>
+        <li><strong>Dati precompilati:</strong> Cognome e nome sono già inseriti e non modificabili</li>
+        <li><strong>Sezione Dati Personali:</strong> Data di nascita, codice fiscale, residenza, indirizzo, cittadinanza, scadenza certificato medico</li>
+        <li><strong>Sezione Dati Genitori:</strong> Nome e professione di Papà e Mamma</li>
+        <li><strong>Sezione Contatti:</strong> Numeri di telefono di entrambi i genitori</li>
+        <li><strong>Sezione Emergenza:</strong> Nome e numero del contatto di emergenza</li>
+        <li><strong>Sezione Sanitaria:</strong> Allergie, patologie, note mediche</li>
+        <li><strong>Conferma:</strong> Checkbox obbligatoria per confermare l'accuratezza dei dati e accettare la privacy policy</li>
+        <li><strong>Invio:</strong> Al salvataggio, i dati vengono inseriti nel sistema e il giocatore diventa attivo nella categoria</li>
+      </ul>
+      <div class="note">Questo modulo non richiede login. Il link di preiscrizione viene generato dalla segreteria nella pagina di dettaglio categoria.</div>
+    </div>
+  </div>
+
+  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+</div>
+
+<!-- ============ APPENDICE ============ -->
+<div class="role-section" style="--rc:#334155; --rc2:#1e293b;">
+  <div class="role-header">
+    <span class="role-tag">Appendice</span>
+    <h2>Riferimenti Rapidi</h2>
+    <p>Codici presenza, struttura URL e note tecniche</p>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#f1f5f9; color:#334155;">🏷️</div>
+      <h3>Codici Presenza</h3>
+    </div>
+    <div class="feature-body">
+      <p>I codici visualizzati nella tabella presenze:</p>
+      <table>
+        <tr><th>Codice</th><th>Significato</th><th>Colore</th></tr>
+        <tr><td><strong>P</strong></td><td>Presente</td><td style="background:#dcfce7; color:#16a34a; font-weight:700; text-align:center;">Verde</td></tr>
+        <tr><td><strong>A</strong></td><td>Assente</td><td style="background:#fee2e2; color:#dc2626; font-weight:700; text-align:center;">Rosso</td></tr>
+        <tr><td><strong>M</strong></td><td>Malattia</td><td style="background:#fef3c7; color:#d97706; font-weight:700; text-align:center;">Giallo</td></tr>
+        <tr><td><strong>F</strong></td><td>Ferie</td><td style="background:#dbeafe; color:#2563eb; font-weight:700; text-align:center;">Blu</td></tr>
+        <tr><td><strong>N</strong></td><td>Non convocato</td><td style="background:#f1f5f9; color:#64748b; font-weight:700; text-align:center;">Grigio</td></tr>
+      </table>
+      <div class="note">I codici sono configurabili dall'amministratore. I codici sopra sono quelli predefiniti.</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#f1f5f9; color:#334155;">🔗</div>
+      <h3>Struttura URL</h3>
+    </div>
+    <div class="feature-body">
+      <table>
+        <tr><th>Pagina</th><th>URL</th><th>Accesso</th></tr>
+        <tr><td>Login</td><td><code>/login</code></td><td>Pubblico</td></tr>
+        <tr><td>Home</td><td><code>/</code></td><td>Autenticato</td></tr>
+        <tr><td>Allenatori / Categorie</td><td><code>/allenatori</code></td><td>Autenticato</td></tr>
+        <tr><td>Scelta Azione Categoria</td><td><code>/scelta/:id</code></td><td>Autenticato</td></tr>
+        <tr><td>Registro Presenze</td><td><code>/registro/:id</code></td><td>Autenticato</td></tr>
+        <tr><td>Convocazioni</td><td><code>/convocazioni/:id</code></td><td>Mister, Admin</td></tr>
+        <tr><td>Dati &amp; Matricole</td><td><code>/dati/:id</code></td><td>Autenticato</td></tr>
+        <tr><td>Allenamenti</td><td><code>/allenamenti/:id</code></td><td>Mister, Admin</td></tr>
+        <tr><td>Valutazioni</td><td><code>/valutazioni/:id</code></td><td>Mister, Admin</td></tr>
+        <tr><td>Reportistica</td><td><code>/reportistica/:id</code></td><td>Mister, Admin</td></tr>
+        <tr><td>Segreteria</td><td><code>/segreteria</code></td><td>Segreteria, Admin</td></tr>
+        <tr><td>Segreteria Categoria</td><td><code>/segreteria/:id</code></td><td>Segreteria, Admin</td></tr>
+        <tr><td>Scheda Giocatore</td><td><code>/segreteria/scheda/:id</code></td><td>Segreteria, Admin</td></tr>
+        <tr><td>Responsabili</td><td><code>/responsabili</code></td><td>Admin</td></tr>
+        <tr><td>Responsabili per Categoria</td><td><code>/responsabili/categorie</code></td><td>Admin</td></tr>
+        <tr><td>Programmazione Partite</td><td><code>/responsabili/partite</code></td><td>Admin</td></tr>
+        <tr><td>Spogliatoi e Campi</td><td><code>/responsabili/spogliatoi</code></td><td>Admin</td></tr>
+        <tr><td>Presenze Allenatori</td><td><code>/responsabili/presenze-allenatori</code></td><td>Admin</td></tr>
+        <tr><td>Gestione Utenti</td><td><code>/admin</code></td><td>Admin, Super Admin</td></tr>
+        <tr><td>Gestione Società</td><td><code>/admin/societa</code></td><td>Super Admin</td></tr>
+        <tr><td>Modulo Iscrizione</td><td><code>/form-iscrizione</code></td><td>Pubblico</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#f1f5f9; color:#334155;">💡</div>
+      <h3>Note e Suggerimenti</h3>
+    </div>
+    <div class="feature-body">
+      <ul>
+        <li><strong>Sessione:</strong> La sessione scade dopo 60 minuti. Al scadere verrai reindirizzato al login</li>
+        <li><strong>Dati sensibili:</strong> CF, telefoni e date di nascita sono nascosti di default. Clicca il lucchetto 🔒 e inserisci la password per sbloccarli (valido fino alla chiusura della scheda)</li>
+        <li><strong>Finanze:</strong> Gli importi sono nascosti di default. Clicca sull'icona 👁 per visualizzarli</li>
+        <li><strong>Stampa PDF:</strong> Le pagine di convocazioni, allenamenti e report supportano l'esportazione PDF</li>
+        <li><strong>Mobile:</strong> Ruota il dispositivo in orizzontale per una migliore visualizzazione delle tabelle</li>
+        <li><strong>Multi-società:</strong> Il Super Admin può cambiare società in qualsiasi momento dal pulsante nell'header</li>
+        <li><strong>Stagioni passate:</strong> Le categorie archiviate sono consultabili dalla schermata "Stagioni Passate"</li>
+        <li><strong>Importazione:</strong> Quando crei una nuova categoria, puoi importare i giocatori dalla stagione precedente con un click</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="page-footer">The Home of Football — Guida Utente v5.1.0 — Documento riservato</div>
+</div>
+
+</body>
+</html>

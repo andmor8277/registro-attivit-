@@ -8,7 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 import os
 from .rate_limit import limiter
 from .database import Base, engine
-from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni
+from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni, infortuni
 from .routers.gruppi import router as gruppi_router
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
@@ -451,6 +451,28 @@ def run_migrations():
                 print(f"Migration warning (valutazioni table): {e}")
                 conn.rollback()
 
+            # Infortuni table
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS infortuni (
+                        id SERIAL PRIMARY KEY,
+                        persona_id INTEGER NOT NULL REFERENCES persone(id),
+                        categoria_id INTEGER REFERENCES categorie(id),
+                        societa_id INTEGER NOT NULL REFERENCES societa(id),
+                        data_inizio DATE NOT NULL,
+                        giorni_assenza INTEGER NOT NULL DEFAULT 0,
+                        data_fine DATE,
+                        tipo_infortunio VARCHAR(100),
+                        note TEXT,
+                        creato_il TIMESTAMP
+                    )
+                """))
+                conn.commit()
+                print("Migration: Created infortuni table")
+            except Exception as e:
+                print(f"Migration warning (infortuni table): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 
@@ -473,6 +495,7 @@ app.include_router(spogliatoi.router, dependencies=[Depends(get_current_user)])
 app.include_router(campi.router, dependencies=[Depends(get_current_user)])
 app.include_router(presenze_allenatori.router, dependencies=[Depends(get_current_user)])
 app.include_router(valutazioni.router, dependencies=[Depends(get_current_user)])
+app.include_router(infortuni.router, dependencies=[Depends(get_current_user)])
 
 @app.get("/")
 def root():
