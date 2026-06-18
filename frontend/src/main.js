@@ -24,6 +24,9 @@ import ProgrammazionePartite from './views/ProgrammazionePartite.vue'
 import Spogliatoi from './views/Spogliatoi.vue'
 import PresenzeAllenatori from './views/PresenzeAllenatori.vue'
 import Valutazioni from './views/Valutazioni.vue'
+import Infermeria from './views/Infermeria.vue'
+import CertificatoMedico from './views/CertificatoMedico.vue'
+import Infortunati from './views/Infortunati.vue'
 
 const store = useStore()
 
@@ -50,6 +53,9 @@ const router = createRouter({
     { path: '/segreteria/scheda/:id', component: SchedaGiocatore, name: 'scheda-giocatore', meta: { requiresAuth: true } },
     { path: '/segreteria/:id', component: SegreteriaCategoria, name: 'segreteria-categoria', meta: { requiresAuth: true } },
     { path: '/valutazioni/:id', component: Valutazioni, name: 'valutazioni', meta: { requiresAuth: true } },
+    { path: '/infermeria', component: Infermeria, name: 'infermeria', meta: { requiresAuth: true } },
+    { path: '/infermeria/certificati', component: CertificatoMedico, name: 'certificati', meta: { requiresAuth: true } },
+    { path: '/infermeria/infortunati', component: Infortunati, name: 'infortunati', meta: { requiresAuth: true } },
     { path: '/form-iscrizione', component: FormOnlineIscrizione, name: 'form-iscrizione' }
   ]
 })

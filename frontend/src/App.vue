@@ -48,6 +48,16 @@
           </svg>
           <span>Home</span>
         </button>
+        <a href="/guida.html" target="_blank" rel="noopener,noreferrer" class="btn-nav btn-guida" title="Guida Utente">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <span>Guida</span>
+        </a>
         <button @click="logout" class="btn-logout">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
@@ -127,6 +137,16 @@
             </svg>
             Modifica Società
           </button>
+          <a href="/guida.html" target="_blank" rel="noopener,noreferrer" class="mobile-menu-item" @click="mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Guida
+          </a>
           <button @click="logout" class="mobile-menu-item mobile-menu-logout">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
@@ -395,6 +415,15 @@ onMounted(async () => {
 
 .btn-nav.btn-admin:hover {
   background: rgba(220, 38, 38, 0.35);
+}
+
+.btn-nav.btn-guida {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.btn-nav.btn-guida:hover {
+  background: rgba(34, 197, 94, 0.3);
 }
 
 .btn-nav svg {

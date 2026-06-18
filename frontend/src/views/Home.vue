@@ -162,6 +162,27 @@
             </svg>
           </div>
         </div>
+
+        <div v-if="['infermeria', 'admin', 'super_admin'].includes(utenteAttivo?.ruolo)" class="section-card infermeria" @click="router.push('/infermeria')">
+          <div class="card-glow"></div>
+          <div class="card-pattern"></div>
+          <div class="card-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
+              <path d="M9 12l2 2 4-4"/>
+              <path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/>
+              <path d="M12 6v6"/>
+            </svg>
+          </div>
+          <div class="card-text">
+            <h3 class="card-title">Infermeria</h3>
+            <p class="card-desc">Certificati medici · Infortuni</p>
+          </div>
+          <div class="card-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </div>
+        </div>
       </div>
     </section>
   </div>
@@ -746,6 +767,24 @@ onMounted(async () => {
   box-shadow: 0 8px 32px rgba(245, 158, 11, 0.15), 0 0 0 1px rgba(245, 158, 11, 0.1);
 }
 .section-card.responsabili .card-pattern { color: #f59e0b; }
+
+/* Infermeria - Green */
+.section-card.infermeria::before {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.04) 100%);
+}
+.section-card.infermeria .card-glow {
+  background: radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.15) 0%, transparent 60%);
+}
+.section-card.infermeria .card-icon-wrap {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.08) 100%);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+.section-card.infermeria:hover {
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.15), 0 0 0 1px rgba(16, 185, 129, 0.1);
+}
+.section-card.infermeria .card-pattern { color: #10b981; }
 
 .card-icon-wrap {
   width: 56px;
