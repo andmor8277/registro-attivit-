@@ -19,7 +19,7 @@
       <div class="header-right">
         <div class="summary-pill">
           <span class="pill-dot dot-amber"></span>
-          <span>{{ nonIscritti }} in attesa</span>
+          <span>{{ nonIscritti }} in prova</span>
         </div>
         <div class="summary-pill pill-ok">
           <span>{{ iscritti }} iscritti</span>
@@ -139,7 +139,7 @@
         </div>
         <div class="filter-group">
           <button class="filter-btn" :class="{ active: filter === 'all' }" @click="filter = 'all'">Tutti</button>
-          <button class="filter-btn" :class="{ active: filter === 'pending' }" @click="filter = 'pending'">In Attesa</button>
+          <button class="filter-btn" :class="{ active: filter === 'pending' }" @click="filter = 'pending'">In Prova</button>
           <button class="filter-btn" :class="{ active: filter === 'enrolled' }" @click="filter = 'enrolled'">Iscritti</button>
         </div>
       </div>

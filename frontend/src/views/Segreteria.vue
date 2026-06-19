@@ -103,7 +103,7 @@
           <div class="cat-card-body openday-body">
             <div class="cat-stat">
               <span class="cat-stat-value">{{ opendayStats.pending }}</span>
-              <span class="cat-stat-label">in attesa</span>
+              <span class="cat-stat-label">in prova</span>
             </div>
             <div class="cat-stat">
               <span class="cat-stat-value enrolled">{{ opendayStats.enrolled }}</span>
@@ -114,6 +114,13 @@
             <span class="cat-arrow">→</span>
           </div>
         </div>
+      </div>
+
+      <div class="section-divider">
+        <span>Categorie Iscrizioni</span>
+      </div>
+
+      <div class="cat-grid">
         <div
           v-for="cat in categorieOrdinate"
           :key="cat.id"
@@ -376,6 +383,25 @@ async function sbloccaGdpr() {
 
 .summary-value.debt {
   color: #dc2626;
+}
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 2rem 0 1.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.08);
 }
 
 .cat-grid {
