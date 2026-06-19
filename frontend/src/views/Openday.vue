@@ -27,11 +27,12 @@
       </div>
     </header>
 
+    <!-- Add/Edit Modal -->
     <Teleport to="body">
       <div v-if="showAddForm" class="modal-overlay" @click.self="showAddForm = false">
-        <div class="modal">
+        <div class="modal modal-wide">
           <div class="modal-header">
-            <h3>Nuovo Interessato</h3>
+            <h3>{{ editingEntry ? 'Modifica' : 'Nuovo Interessato' }}</h3>
             <button class="modal-close" @click="showAddForm = false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"/>
@@ -40,22 +41,80 @@
             </button>
           </div>
           <div class="modal-body">
-            <div class="form-group">
-              <label>Nome</label>
-              <input type="text" v-model="form.nome" class="form-input" placeholder="Nome" />
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nome *</label>
+                <input type="text" v-model="form.nome" class="form-input" placeholder="Nome" />
+              </div>
+              <div class="form-group">
+                <label>Cognome *</label>
+                <input type="text" v-model="form.cognome" class="form-input" placeholder="Cognome" />
+              </div>
+              <div class="form-group">
+                <label>Data di Nascita *</label>
+                <input type="date" v-model="form.data_nascita" class="form-input" />
+              </div>
             </div>
-            <div class="form-group">
-              <label>Cognome</label>
-              <input type="text" v-model="form.cognome" class="form-input" placeholder="Cognome" />
+
+            <div class="form-section">
+              <div class="section-label">Date Prova</div>
+              <div class="chip-row">
+                <span v-for="(d, i) in form.date_prova" :key="i" class="chip">
+                  {{ formatDate(d) }}
+                  <button class="chip-remove" @click="form.date_prova.splice(i, 1)">&times;</button>
+                </span>
+                <input type="date" @change="onAddProvaDate" class="form-input chip-input" placeholder="Aggiungi data..." />
+              </div>
             </div>
-            <div class="form-group">
-              <label>Data di Nascita</label>
-              <input type="date" v-model="form.data_nascita" class="form-input" />
+
+            <div class="form-section">
+              <div class="section-label">Documenti</div>
+              <div class="checkbox-row">
+                <label class="checkbox-label">
+                  <input type="checkbox" v-model="form.nulla_osta" />
+                  <span class="check-box" :class="{ checked: form.nulla_osta }"></span>
+                  Nulla Osta
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" v-model="form.certificato_medico" />
+                  <span class="check-box" :class="{ checked: form.certificato_medico }"></span>
+                  Certificato Medico
+                </label>
+              </div>
+              <div class="form-group" v-if="form.certificato_medico">
+                <label>Scadenza Certificato</label>
+                <input type="date" v-model="form.scadenza_certificato" class="form-input" />
+              </div>
             </div>
+
+            <div class="form-section">
+              <div class="section-label">Contatti Genitori</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Telefono Papà</label>
+                  <input type="tel" v-model="form.tel_papa" class="form-input" placeholder="Telefono" />
+                </div>
+                <div class="form-group">
+                  <label>Email Papà</label>
+                  <input type="email" v-model="form.email_papa" class="form-input" placeholder="email@esempio.com" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Telefono Mamma</label>
+                  <input type="tel" v-model="form.tel_mamma" class="form-input" placeholder="Telefono" />
+                </div>
+                <div class="form-group">
+                  <label>Email Mamma</label>
+                  <input type="email" v-model="form.email_mamma" class="form-input" placeholder="email@esempio.com" />
+                </div>
+              </div>
+            </div>
+
             <p v-if="formMsg" class="form-msg">{{ formMsg }}</p>
             <div class="modal-actions">
               <button class="btn-cancel" @click="showAddForm = false">Annulla</button>
-              <button class="btn-save" @click="salvaNuovo">Salva</button>
+              <button class="btn-save" @click="salvaForm">Salva</button>
             </div>
           </div>
         </div>
@@ -64,7 +123,7 @@
 
     <div class="content">
       <div class="toolbar">
-        <button class="btn-add" @click="showAddForm = true">
+        <button class="btn-add" @click="openAddForm">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
             <line x1="12" y1="5" x2="12" y2="19"/>
             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -92,54 +151,117 @@
               <th>Nome</th>
               <th>Cognome</th>
               <th>Data Nascita</th>
-              <th>Anno</th>
+              <th>Date Prova</th>
+              <th>Doc.</th>
               <th>Iscritto</th>
               <th>Categoria</th>
               <th>Azioni</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="entry in filteredEntries" :key="entry.id" :class="{ 'row-enrolled': entry.iscritto }">
-              <td class="td-editable" @click="startEdit(entry, 'nome')">
-                {{ entry.nome }}
-              </td>
-              <td class="td-editable" @click="startEdit(entry, 'cognome')">
-                {{ entry.cognome }}
-              </td>
-              <td class="td-editable" @click="startEditDate(entry)">
-                {{ formatDate(entry.data_nascita) }}
-              </td>
-              <td>{{ getAnno(entry.data_nascita) }}</td>
-              <td>
-                <label class="toggle-switch">
-                  <input type="checkbox" :checked="entry.iscritto" @change="toggleIscritto(entry)" />
-                  <span class="toggle-slider"></span>
-                </label>
-              </td>
-              <td>
-                <span v-if="entry.categoria_nome" class="cat-badge">{{ entry.categoria_nome }} {{ entry.categoria_anno }}</span>
-                <span v-else class="cat-none">—</span>
-              </td>
-              <td class="td-actions">
-                <button v-if="!entry.iscritto" class="btn-action btn-enroll" @click="iscrivi(entry)" title="Iscrivi">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                    <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-                    <circle cx="8.5" cy="7" r="4"/>
-                    <line x1="20" y1="8" x2="20" y2="14"/>
-                    <line x1="23" y1="11" x2="17" y2="11"/>
-                  </svg>
-                  Iscrivi
-                </button>
-                <button class="btn-action btn-delete" @click="elimina(entry)" title="Elimina">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                  </svg>
-                </button>
-              </td>
-            </tr>
+            <template v-for="entry in filteredEntries" :key="entry.id">
+              <tr
+                :class="{ 'row-enrolled': entry.iscritto, 'row-expandable': !entry.iscritto }"
+                @click="toggleExpand(entry.id)"
+              >
+                <td>{{ entry.nome }}</td>
+                <td>{{ entry.cognome }}</td>
+                <td>{{ formatDate(entry.data_nascita) }}</td>
+                <td>
+                  <span v-if="entry.date_prova && entry.date_prova.length" class="mini-chips">
+                    <span v-for="(d, i) in entry.date_prova" :key="i" class="mini-chip">{{ formatDateShort(d) }}</span>
+                  </span>
+                  <span v-else class="cat-none">—</span>
+                </td>
+                <td>
+                  <div class="doc-badges">
+                    <span v-if="entry.nulla_osta" class="doc-badge doc-no" title="Nulla Osta">NO</span>
+                    <span v-if="entry.certificato_medico" class="doc-badge doc-cm" :title="'Certificato medico' + (entry.scadenza_certificato ? ' (scade ' + formatDate(entry.scadenza_certificato) + ')' : '')">CM</span>
+                    <span v-if="!entry.nulla_osta && !entry.certificato_medico" class="cat-none">—</span>
+                  </div>
+                </td>
+                <td>
+                  <label class="toggle-switch">
+                    <input type="checkbox" :checked="entry.iscritto" @click.stop="toggleIscritto(entry)" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </td>
+                <td>
+                  <span v-if="entry.categoria_nome" class="cat-badge">{{ entry.categoria_nome }} {{ entry.categoria_anno }}</span>
+                  <span v-else class="cat-none">—</span>
+                </td>
+                <td class="td-actions">
+                  <button v-if="!entry.iscritto" class="btn-action btn-enroll" @click.stop="iscrivi(entry)" title="Iscrivi">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                      <circle cx="8.5" cy="7" r="4"/>
+                      <line x1="20" y1="8" x2="20" y2="14"/>
+                      <line x1="23" y1="11" x2="17" y2="11"/>
+                    </svg>
+                    Iscrivi
+                  </button>
+                  <button class="btn-action btn-edit" @click.stop="openEditForm(entry)" title="Modifica">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button class="btn-action btn-delete" @click.stop="elimina(entry)" title="Elimina">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+              <tr v-if="expandedIds.includes(entry.id)">
+                <td colspan="8" class="expand-row">
+                  <div class="expand-content">
+                    <div class="expand-col">
+                      <div class="expand-label">Contatti Genitori</div>
+                      <div class="expand-grid">
+                        <div class="expand-item" v-if="entry.tel_papa">
+                          <span class="expand-icon">📞</span> Papà: {{ entry.tel_papa }}
+                        </div>
+                        <div class="expand-item" v-if="entry.email_papa">
+                          <span class="expand-icon">✉️</span> Papà: {{ entry.email_papa }}
+                        </div>
+                        <div class="expand-item" v-if="entry.tel_mamma">
+                          <span class="expand-icon">📞</span> Mamma: {{ entry.tel_mamma }}
+                        </div>
+                        <div class="expand-item" v-if="entry.email_mamma">
+                          <span class="expand-icon">✉️</span> Mamma: {{ entry.email_mamma }}
+                        </div>
+                      </div>
+                    </div>
+                    <div class="expand-col">
+                      <div class="expand-label">Documenti</div>
+                      <div class="expand-grid">
+                        <div class="expand-item">
+                          Nulla Osta: <span :class="entry.nulla_osta ? 'status-ok' : 'status-no'">{{ entry.nulla_osta ? 'Sì' : 'No' }}</span>
+                        </div>
+                        <div class="expand-item">
+                          Certificato Medico: <span :class="entry.certificato_medico ? 'status-ok' : 'status-no'">{{ entry.certificato_medico ? 'Sì' : 'No' }}</span>
+                        </div>
+                        <div class="expand-item" v-if="entry.certificato_medico && entry.scadenza_certificato">
+                          Scadenza: <span class="status-info">{{ formatDate(entry.scadenza_certificato) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="expand-col" v-if="entry.date_prova && entry.date_prova.length">
+                      <div class="expand-label">Date Prova</div>
+                      <div class="expand-grid">
+                        <div v-for="(d, i) in entry.date_prova" :key="i" class="expand-item">
+                          {{ formatDate(d) }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
             <tr v-if="filteredEntries.length === 0">
-              <td colspan="7" class="empty-row">
+              <td colspan="8" class="empty-row">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40">
                   <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
                   <circle cx="9" cy="7" r="4"/>
@@ -147,7 +269,7 @@
                   <path d="M16 3.13a4 4 0 010 7.75"/>
                 </svg>
                 <p>Nessun interessato registrato</p>
-                <button class="btn-add-inline" @click="showAddForm = true">Aggiungi il primo</button>
+                <button class="btn-add-inline" @click="openAddForm">Aggiungi il primo</button>
               </td>
             </tr>
           </tbody>
@@ -160,7 +282,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getOpenday, creaOpenday, eliminaOpenday, iscriviOpenday, aggiornaOpenday } from '../api/index.js'
+import { getOpenday, creaOpenday, eliminaOpenday, aggiornaOpenday, iscriviOpenday, disiscriviOpenday } from '../api/index.js'
 
 const router = useRouter()
 const entries = ref([])
@@ -168,8 +290,16 @@ const search = ref('')
 const filter = ref('all')
 const showAddForm = ref(false)
 const formMsg = ref('')
+const editingEntry = ref(null)
+const expandedIds = ref([])
 
-const form = ref({ nome: '', cognome: '', data_nascita: '' })
+const emptyForm = {
+  nome: '', cognome: '', data_nascita: '',
+  date_prova: [],
+  nulla_osta: false, certificato_medico: false, scadenza_certificato: '',
+  tel_papa: '', tel_mamma: '', email_papa: '', email_mamma: ''
+}
+const form = ref({ ...emptyForm })
 
 const iscritti = computed(() => entries.value.filter(e => e.iscritto).length)
 const nonIscritti = computed(() => entries.value.filter(e => !e.iscritto).length)
@@ -193,9 +323,76 @@ function formatDate(d) {
   return dt.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-function getAnno(d) {
-  if (!d) return '—'
-  return new Date(d).getFullYear()
+function formatDateShort(d) {
+  if (!d) return ''
+  const dt = new Date(d)
+  return dt.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
+}
+
+function onAddProvaDate(e) {
+  const val = e.target.value
+  if (val && !form.value.date_prova.includes(val)) {
+    form.value.date_prova.push(val)
+  }
+  e.target.value = ''
+}
+
+function openAddForm() {
+  editingEntry.value = null
+  form.value = { ...emptyForm }
+  formMsg.value = ''
+  showAddForm.value = true
+}
+
+function openEditForm(entry) {
+  editingEntry.value = entry
+  form.value = {
+    nome: entry.nome || '',
+    cognome: entry.cognome || '',
+    data_nascita: entry.data_nascita ? entry.data_nascita.split('T')[0] : '',
+    date_prova: entry.date_prova ? [...entry.date_prova] : [],
+    nulla_osta: entry.nulla_osta || false,
+    certificato_medico: entry.certificato_medico || false,
+    scadenza_certificato: entry.scadenza_certificato ? entry.scadenza_certificato.split('T')[0] : '',
+    tel_papa: entry.tel_papa || '',
+    tel_mamma: entry.tel_mamma || '',
+    email_papa: entry.email_papa || '',
+    email_mamma: entry.email_mamma || ''
+  }
+  formMsg.value = ''
+  showAddForm.value = true
+}
+
+async function salvaForm() {
+  if (!form.value.nome || !form.value.cognome || !form.value.data_nascita) {
+    formMsg.value = 'Compila nome, cognome e data di nascita'
+    return
+  }
+  formMsg.value = ''
+  const payload = {
+    nome: form.value.nome.trim(),
+    cognome: form.value.cognome.trim(),
+    data_nascita: form.value.data_nascita,
+    date_prova: form.value.date_prova,
+    nulla_osta: form.value.nulla_osta,
+    certificato_medico: form.value.certificato_medico,
+    scadenza_certificato: form.value.scadenza_certificato || null,
+    tel_papa: form.value.tel_papa || null,
+    tel_mamma: form.value.tel_mamma || null,
+    email_papa: form.value.email_papa || null,
+    email_mamma: form.value.email_mamma || null
+  }
+  try {
+    if (editingEntry.value) {
+      await aggiornaOpenday(editingEntry.value.id, payload)
+    } else {
+      await creaOpenday(payload)
+    }
+    showAddForm.value = false
+    await carica()
+  } catch (e) {
+    formMsg.value = 'Errore nel salvataggio'
+  }
 }
 
 async function carica() {
@@ -204,26 +401,6 @@ async function carica() {
     entries.value = Array.isArray(res) ? res : (res?.data || [])
   } catch (e) {
     console.error('Errore caricamento openday:', e)
-  }
-}
-
-async function salvaNuovo() {
-  if (!form.value.nome || !form.value.cognome || !form.value.data_nascita) {
-    formMsg.value = 'Compila tutti i campi'
-    return
-  }
-  formMsg.value = ''
-  try {
-    await creaOpenday({
-      nome: form.value.nome.trim(),
-      cognome: form.value.cognome.trim(),
-      data_nascita: form.value.data_nascita
-    })
-    form.value = { nome: '', cognome: '', data_nascita: '' }
-    showAddForm.value = false
-    await carica()
-  } catch (e) {
-    formMsg.value = 'Errore nel salvataggio'
   }
 }
 
@@ -238,8 +415,11 @@ async function elimina(entry) {
 }
 
 async function toggleIscritto(entry) {
-  if (entry.iscritto) return
-  await iscrivi(entry)
+  if (entry.iscritto) {
+    await disiscrivi(entry)
+  } else {
+    await iscrivi(entry)
+  }
 }
 
 async function iscrivi(entry) {
@@ -257,26 +437,26 @@ async function iscrivi(entry) {
   }
 }
 
-function startEdit(entry, field) {
-  const val = prompt(`${field === 'nome' ? 'Nome' : 'Cognome'}:`, entry[field])
-  if (val !== null && val.trim()) {
-    aggiorna(entry, { [field]: val.trim() })
-  }
-}
-
-function startEditDate(entry) {
-  const val = prompt('Data di nascita (YYYY-MM-DD):', entry.data_nascita?.split('T')[0] || '')
-  if (val !== null && val.trim()) {
-    aggiorna(entry, { data_nascita: val.trim() })
-  }
-}
-
-async function aggiorna(entry, data) {
+async function disiscrivi(entry) {
+  if (!entry.iscritto) return
+  if (!confirm(`Disiscrivere ${entry.cognome} ${entry.nome}? Verrà scollegato dalla categoria ma i dati rimarranno.`)) return
   try {
-    await aggiornaOpenday(entry.id, data)
-    await carica()
+    const res = await disiscriviOpenday(entry.id)
+    if (res.data?.ok) {
+      await carica()
+    }
   } catch (e) {
-    console.error('Errore aggiornamento:', e)
+    const msg = e.response?.data?.detail || 'Errore nella disiscrizione'
+    alert(msg)
+  }
+}
+
+function toggleExpand(id) {
+  const idx = expandedIds.value.indexOf(id)
+  if (idx >= 0) {
+    expandedIds.value.splice(idx, 1)
+  } else {
+    expandedIds.value.push(id)
   }
 }
 
@@ -287,7 +467,7 @@ onMounted(carica)
 .openday-page {
   position: relative;
   padding: 2.5rem 2rem 4rem;
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
   min-height: 100vh;
 }
@@ -481,62 +661,49 @@ onMounted(carica)
   background: rgba(16,185,129,0.04);
 }
 
-.td-editable {
+.data-table tbody tr.row-expandable {
   cursor: pointer;
-  position: relative;
 }
 
-.td-editable:hover {
-  color: #818cf8;
+.mini-chips {
+  display: flex;
+  gap: 0.2rem;
+  flex-wrap: wrap;
 }
 
-.td-editable::after {
-  content: '✎';
-  margin-left: 0.4rem;
-  font-size: 0.65rem;
-  opacity: 0;
-  transition: opacity 0.2s;
-  color: #818cf8;
-}
-
-.td-editable:hover::after { opacity: 1; }
-
-.toggle-switch {
-  position: relative;
+.mini-chip {
   display: inline-block;
-  width: 40px;
-  height: 22px;
+  padding: 0.1rem 0.35rem;
+  background: rgba(139,92,246,0.15);
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #a78bfa;
+  white-space: nowrap;
 }
 
-.toggle-switch input { opacity: 0; width: 0; height: 0; }
-
-.toggle-slider {
-  position: absolute;
-  inset: 0;
-  background: rgba(255,255,255,0.1);
-  border-radius: 11px;
-  cursor: pointer;
-  transition: 0.2s;
+.doc-badges {
+  display: flex;
+  gap: 0.25rem;
 }
 
-.toggle-slider::before {
-  content: '';
-  position: absolute;
-  height: 16px;
-  width: 16px;
-  left: 3px;
-  bottom: 3px;
-  background: #fff;
-  border-radius: 50%;
-  transition: 0.2s;
+.doc-badge {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
-.toggle-switch input:checked + .toggle-slider {
-  background: #10b981;
+.doc-no {
+  background: rgba(245,158,11,0.15);
+  color: #f59e0b;
 }
 
-.toggle-switch input:checked + .toggle-slider::before {
-  transform: translateX(18px);
+.doc-cm {
+  background: rgba(16,185,129,0.15);
+  color: #10b981;
 }
 
 .cat-badge {
@@ -581,6 +748,14 @@ onMounted(carica)
 
 .btn-enroll:hover { background: rgba(16,185,129,0.25); }
 
+.btn-edit {
+  background: rgba(99,102,241,0.12);
+  color: #818cf8;
+  padding: 0.35rem;
+}
+
+.btn-edit:hover { background: rgba(99,102,241,0.25); }
+
 .btn-delete {
   background: rgba(239,68,68,0.1);
   color: #ef4444;
@@ -588,6 +763,63 @@ onMounted(carica)
 }
 
 .btn-delete:hover { background: rgba(239,68,68,0.25); }
+
+.expand-row td {
+  padding: 0 1.5rem 1rem !important;
+  background: rgba(99,102,241,0.03);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.expand-content {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+}
+
+.expand-col {
+  flex: 1;
+  min-width: 200px;
+}
+
+.expand-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted, #6b7280);
+  margin-bottom: 0.4rem;
+}
+
+.expand-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.expand-item {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary, #9ca3af);
+}
+
+.expand-icon {
+  margin-right: 0.25rem;
+}
+
+.status-ok {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.status-no {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.status-info {
+  color: #818cf8;
+  font-weight: 600;
+}
 
 .empty-row {
   text-align: center;
@@ -638,6 +870,10 @@ onMounted(carica)
   overflow: hidden;
 }
 
+.modal-wide {
+  max-width: 560px;
+}
+
 .modal-header {
   display: flex;
   align-items: center;
@@ -669,7 +905,116 @@ onMounted(carica)
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.form-row .form-group:first-child {
+  grid-column: 1;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  background: rgba(139,92,246,0.15);
+  border: 1px solid rgba(139,92,246,0.3);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #a78bfa;
+}
+
+.chip-remove {
+  background: none;
+  border: none;
+  color: #a78bfa;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.chip-remove:hover { opacity: 1; }
+
+.chip-input {
+  width: auto;
+  min-width: 160px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.checkbox-row {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: var(--color-text, #fff);
+}
+
+.checkbox-label input[type="checkbox"] {
+  display: none;
+}
+
+.check-box {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.check-box.checked {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+
+.check-box.checked::after {
+  content: '✓';
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
 .form-group {
@@ -732,6 +1077,44 @@ onMounted(carica)
   cursor: pointer;
 }
 
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+}
+
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.1);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: #10b981;
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(18px);
+}
+
 @media (max-width: 768px) {
   .openday-page { padding: 1.5rem 1rem 3rem; }
   .toolbar { flex-direction: column; align-items: stretch; }
@@ -740,5 +1123,8 @@ onMounted(carica)
   .data-table { font-size: 0.75rem; }
   .data-table th, .data-table td { padding: 0.5rem 0.6rem; }
   .btn-enroll span { display: none; }
+  .form-row { grid-template-columns: 1fr; }
+  .expand-content { flex-direction: column; gap: 1rem; }
+  .modal-wide { max-width: 95vw; }
 }
 </style>
