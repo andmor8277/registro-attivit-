@@ -8,7 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 import os
 from .rate_limit import limiter
 from .database import Base, engine
-from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni, infortuni
+from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni, infortuni, openday
 from .routers.gruppi import router as gruppi_router
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
@@ -473,6 +473,25 @@ def run_migrations():
                 print(f"Migration warning (infortuni table): {e}")
                 conn.rollback()
 
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS openday (
+                        id SERIAL PRIMARY KEY,
+                        societa_id INTEGER REFERENCES societa(id),
+                        nome VARCHAR(100) NOT NULL,
+                        cognome VARCHAR(100) NOT NULL,
+                        data_nascita DATE NOT NULL,
+                        iscritto BOOLEAN DEFAULT FALSE,
+                        persona_id INTEGER REFERENCES persone(id),
+                        creato_il TIMESTAMP
+                    )
+                """))
+                conn.commit()
+                print("Migration: Created openday table")
+            except Exception as e:
+                print(f"Migration warning (openday table): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 
@@ -496,6 +515,7 @@ app.include_router(campi.router, dependencies=[Depends(get_current_user)])
 app.include_router(presenze_allenatori.router, dependencies=[Depends(get_current_user)])
 app.include_router(valutazioni.router, dependencies=[Depends(get_current_user)])
 app.include_router(infortuni.router, dependencies=[Depends(get_current_user)])
+app.include_router(openday.router, prefix="/openday", dependencies=[Depends(get_current_user)])
 
 @app.get("/")
 def root():

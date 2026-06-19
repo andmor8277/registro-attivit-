@@ -247,3 +247,14 @@ class Infortunio(Base):
     tipo_infortunio = Column(String(100), nullable=True)
     note = Column(Text, nullable=True)
     creato_il = Column(DateTime, nullable=True)
+
+class Openday(Base):
+    __tablename__ = "openday"
+    id = Column(Integer, primary_key=True)
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
+    nome = Column(String(100), nullable=False)
+    cognome = Column(String(100), nullable=False)
+    data_nascita = Column(Date, nullable=False)
+    iscritto = Column(Boolean, default=False)
+    persona_id = Column(Integer, ForeignKey("persone.id"), nullable=True)
+    creato_il = Column(DateTime, nullable=True)

@@ -6,7 +6,7 @@ Sistema di gestione multi-società per società sportive dilettantistiche (calci
 - **Prod server**: 192.168.178.132 (root, key `~/.ssh/id_ed25519_prod`)
 - **URL prod**: https://thof.crickethouse.mywire.org
 - **Path remoto**: `/opt/registro_presenze/` (bare repo: `/opt/registro_presenze.git`)
-- **Versione attiva**: v5.1.0
+- **Versione attiva**: v5.2.0
 
 ## Stack
 Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docker Compose
