@@ -191,3 +191,10 @@ export const aggiornaInfortunio = (id, data) => api.put(`/infortuni/${id}`, data
 export const eliminaInfortunio = (id) => api.delete(`/infortuni/${id}`)
 export const chiudiInfortunio = (id) => api.post(`/infortuni/${id}/chiudi`)
 export const getInfortuniScaduti = () => api.get('/infortuni/scaduti')
+
+// Openday
+export const getOpenday = () => api.get('/openday/')
+export const creaOpenday = (data) => api.post('/openday/', data)
+export const aggiornaOpenday = (id, data) => api.put(`/openday/${id}`, data)
+export const eliminaOpenday = (id) => api.delete(`/openday/${id}`)
+export const iscriviOpenday = (id) => api.post(`/openday/${id}/iscrivi`)
