@@ -492,6 +492,21 @@ def run_migrations():
                 print(f"Migration warning (openday table): {e}")
                 conn.rollback()
 
+            try:
+                conn.execute(text("ALTER TABLE openday ADD COLUMN date_prova JSONB DEFAULT '[]'"))
+                conn.execute(text("ALTER TABLE openday ADD COLUMN nulla_osta BOOLEAN DEFAULT FALSE"))
+                conn.execute(text("ALTER TABLE openday ADD COLUMN certificato_medico BOOLEAN DEFAULT FALSE"))
+                conn.execute(text("ALTER TABLE openday ADD COLUMN scadenza_certificato DATE"))
+                conn.execute(text("ALTER TABLE openday ADD COLUMN tel_papa VARCHAR(20)"))
+                conn.execute(text("ALTER TABLE openday ADD COLUMN tel_mamma VARCHAR(20)"))
+                conn.execute(text("ALTER TABLE openday ADD COLUMN email_papa VARCHAR(100)"))
+                conn.execute(text("ALTER TABLE openday ADD COLUMN email_mamma VARCHAR(100)"))
+                conn.commit()
+                print("Migration: Added new columns to openday table")
+            except Exception as e:
+                print(f"Migration warning (openday new columns): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 
