@@ -17,14 +17,6 @@
       </div>
       <span class="page-title">Segreteria</span>
       <div class="header-right">
-        <button class="btn-icon" @click="router.push('/segreteria/openday')" title="Open Day">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-            <circle cx="8.5" cy="7" r="4"/>
-            <line x1="20" y1="8" x2="20" y2="14"/>
-            <line x1="23" y1="11" x2="17" y2="11"/>
-          </svg>
-        </button>
         <button class="btn-icon" @click="gdprModal.show = true" :class="{ 'btn-unlocked': gdprSbloccato }" :title="gdprSbloccato ? 'Dati sbloccati' : 'Sblocca Dati Sensibili'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -96,6 +88,32 @@
       </div>
 
       <div class="cat-grid">
+        <div class="cat-card openday-card" @click="router.push('/segreteria/openday')">
+          <div class="cat-card-header openday-header">
+            <span class="cat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                <circle cx="8.5" cy="7" r="4"/>
+                <line x1="20" y1="8" x2="20" y2="14"/>
+                <line x1="23" y1="11" x2="17" y2="11"/>
+              </svg>
+            </span>
+            <span class="cat-nome">Iscrizioni OpenDay</span>
+          </div>
+          <div class="cat-card-body openday-body">
+            <div class="cat-stat">
+              <span class="cat-stat-value">{{ opendayStats.pending }}</span>
+              <span class="cat-stat-label">in attesa</span>
+            </div>
+            <div class="cat-stat">
+              <span class="cat-stat-value enrolled">{{ opendayStats.enrolled }}</span>
+              <span class="cat-stat-label">iscritti</span>
+            </div>
+          </div>
+          <div class="cat-card-footer">
+            <span class="cat-arrow">→</span>
+          </div>
+        </div>
         <div
           v-for="cat in categorieOrdinate"
           :key="cat.id"
@@ -133,7 +151,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '../store.js'
-import { getPersone, getCategorie } from '../api/index.js'
+import { getPersone, getCategorie, getOpenday } from '../api/index.js'
 
 const router = useRouter()
 const { utenteAttivo } = useStore()
@@ -143,6 +161,7 @@ const persone = ref([])
 const gdprSbloccato = ref(false)
 const gdprModal = ref({ show: false, password: '', error: '' })
 const mostraFinanze = ref(false)
+const opendayStats = ref({ pending: 0, enrolled: 0 })
 
 function toggleFinanze() {
   mostraFinanze.value = !mostraFinanze.value
@@ -172,6 +191,15 @@ async function loadDati() {
       all.push(...players)
     }
     persone.value = all
+
+    try {
+      const oRes = await getOpenday()
+      const entries = Array.isArray(oRes) ? oRes : (oRes?.data || [])
+      opendayStats.value = {
+        pending: entries.filter(e => !e.iscritto).length,
+        enrolled: entries.filter(e => e.iscritto).length
+      }
+    } catch(e) { /* silent */ }
   } catch(e) { console.error('Error loading:', e) }
 }
 
@@ -448,6 +476,28 @@ async function sbloccaGdpr() {
 
 .cat-card:hover .cat-arrow {
   transform: translateX(4px);
+}
+
+.openday-card .cat-card-header.openday-header {
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+}
+
+.openday-card:hover {
+  border-color: #0d9488;
+}
+
+.openday-card .cat-icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.9;
+}
+
+.openday-card .cat-card-body.openday-body {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.openday-body .cat-stat-value.enrolled {
+  color: #10b981;
 }
 
 .modal-overlay {
