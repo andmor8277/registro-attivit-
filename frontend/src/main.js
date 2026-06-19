@@ -27,6 +27,7 @@ import Valutazioni from './views/Valutazioni.vue'
 import Infermeria from './views/Infermeria.vue'
 import CertificatoMedico from './views/CertificatoMedico.vue'
 import Infortunati from './views/Infortunati.vue'
+import Openday from './views/Openday.vue'
 
 const store = useStore()
 
@@ -56,6 +57,7 @@ const router = createRouter({
     { path: '/infermeria', component: Infermeria, name: 'infermeria', meta: { requiresAuth: true } },
     { path: '/infermeria/certificati', component: CertificatoMedico, name: 'certificati', meta: { requiresAuth: true } },
     { path: '/infermeria/infortunati', component: Infortunati, name: 'infortunati', meta: { requiresAuth: true } },
+    { path: '/segreteria/openday', component: Openday, name: 'openday', meta: { requiresAuth: true } },
     { path: '/form-iscrizione', component: FormOnlineIscrizione, name: 'form-iscrizione' }
   ]
 })
