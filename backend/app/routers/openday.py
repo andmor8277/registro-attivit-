@@ -71,13 +71,14 @@ def delete_openday(entry_id: int, current_user: Utente = Depends(get_current_use
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     if o.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
-    if o.persona_id:
-        p = db.query(models.Persona).filter(models.Persona.id == o.persona_id).first()
+    persona_id = o.persona_id
+    db.delete(o)
+    db.commit()
+    if persona_id:
+        p = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
         if p:
             db.delete(p)
             db.commit()
-    db.delete(o)
-    db.commit()
     return {"ok": True}
 
 @router.post("/{entry_id}/iscrivi")
