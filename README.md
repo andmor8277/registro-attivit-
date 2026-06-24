@@ -63,9 +63,19 @@ registro_presenze/
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v5.2.0**.
+La versione attuale è **v5.3.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
+
+### Novità v5.3.0
+
+- **Open Day Completo**: Form preiscrizione con date prova (chip selector), documenti (nulla osta, certificato medico con scadenza), contatti genitori (tel/email papà e mamma), toggle iscrizione/disiscrizione bidirezionale, terminologia "In Prova"
+- **Campi a Metà**: Split field assignment — un campo (tipo ≥ 7) può essere diviso in "Metà A" e "Metà B" assegnabili a categorie diverse; chip singolo con dropdown menu
+- **Planning Eventi**: Calendario settimanale nella pagina categoria (Scelta.vue) con eventi (sospensione, vacanza, evento, festa, gara), visualizzazione assegnazioni spogliatoi e campi per giorno
+- **Redirect Login per Ruolo**: Segreteria → /segreteria, Infermeria → /infermeria, Dirigente/Mister → categoria assegnata (o pagina default se multiple)
+- **Settimana Tipo**: Template assegnazioni spogliatoi/campi applicabile a una settimana intera con un click
+- **Stagione Persistente**: Salvata in localStorage, ricaricata all'avvio, aggiornata al cambio società
+- **Ruoli**: Aggiunti `segreteria` e `infermeria` con accesso diretto alle rispettive pagine
 
 ### Novità v5.2.0
 
@@ -318,6 +328,8 @@ Il sistema supporta la **gestione di più società sportive** con dati isolati.
 | admin | Accesso alla propria società assegnata |
 | mister | Accesso alle proprie categorie assegnate |
 | dirigente | Accesso in sola lettura alle statistiche |
+| segreteria | Accesso diretto a Segreteria (gestione iscritti, pagamenti, Open Day) |
+| infermeria | Accesso diretto a Infermeria (certificati, infortuni) |
 
 ### Funzionalità
 
