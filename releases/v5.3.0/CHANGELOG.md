@@ -155,8 +155,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Infortuni DB-backed con auto-scadenza, storico permanente, eliminazione, Infermeria hub, conteggio attivi
-
-## [5.3.0] - 2026-06-24
-
-### Added
-- Open Day completo, campi a metà, planning eventi, redirect login per ruolo, settimana tipo, stagione persistente
