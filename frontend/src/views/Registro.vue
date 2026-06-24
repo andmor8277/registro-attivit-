@@ -87,14 +87,8 @@
         </table>
       </template>
       <template v-else>
-        <div class="gruppi-actions">
-          <button class="btn-gruppo-add" @click="groupModal = { show: true, nome: '', editing: null }">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-            <span>Nuovo Gruppo</span>
-          </button>
-        </div>
+
+
         <template v-if="isPortieri">
           <div v-for="cat in categoriePortieri" :key="cat" class="gruppo-block">
             <div class="gruppo-header">
@@ -148,12 +142,6 @@
         <template v-if="!isPortieri">
         <div v-for="gruppo in gruppi" :key="gruppo" class="gruppo-block">
           <div class="gruppo-header">
-            <button v-if="gruppo?.toLowerCase() !== 'portieri' && gruppo !== 'Senza gruppo'" class="btn-edit-gruppo" @click="openEditGruppo(gruppo)" title="Modifica gruppo">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-            </button>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
               <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
@@ -272,60 +260,14 @@
       </div>
     </Teleport>
 
-    <Teleport to="body">
-      <div v-if="groupModal.show" class="modal-overlay" @click.self="groupModal.show = false">
-        <div class="gruppo-modal">
-          <div class="gruppo-modal-header">
-            <svg class="gruppo-modal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-              <path d="M16 3.13a4 4 0 010 7.75"/>
-            </svg>
-            <h3>{{ groupModal.editing ? 'Modifica Gruppo' : 'Nuovo Gruppo' }}</h3>
-          </div>
-          <div class="gruppo-modal-body">
-            <label for="gruppo-nome" class="sr-only">Nome gruppo</label>
-            <input 
-              id="gruppo-nome" 
-              v-model="groupModal.nome" 
-              name="gruppo_nome" 
-              class="gruppo-input"
-              placeholder="Inserisci nome gruppo..." 
-              @keyup.enter="salvaGruppo" 
-            />
-          </div>
-          <div class="gruppo-modal-actions">
-            <button v-if="groupModal.editing" class="btn-rimuovi" @click="rimuoviGruppo(groupModal.nome)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-              </svg>
-              Elimina
-            </button>
-            <button class="btn-save" @click="salvaGruppo">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              {{ groupModal.editing ? 'Salva' : 'Crea' }}
-            </button>
-          </div>
-          <button class="btn-close-gruppo" @click="groupModal.show = false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </Teleport>
+
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { getPersone, getCodici, getRegistroMese, upsertRegistro, getCategorie, getGruppi, createGruppo, deleteGruppo } from "../api/index.js"
+import { getPersone, getCodici, getRegistroMese, upsertRegistro, getCategorie, getGruppi } from "../api/index.js"
 import { useStore as useCategoria } from "../store.js"
 
 const route = useRoute()
@@ -361,7 +303,6 @@ const codici = ref([])
 const registro = ref([])
 const giorniAllenamento = ref([])
 const editModal = ref({ show: false, persona: null, giorno: null })
-const groupModal = ref({ show: false, nome: '', editing: null })
 
 const mesiNomi = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"]
 const giorniNomi = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"]
@@ -453,31 +394,6 @@ async function salvaPresenza(codice) {
   await upsertRegistro({ persona_id: editModal.value.persona.id, data: d, codice, categoria_id: categoriaId.value })
   await loadRegistro()
   editModal.value.show = false
-}
-
-async function salvaGruppo() {
-  if (!groupModal.value.nome.trim()) return
-  await createGruppo({ nome: groupModal.value.nome.trim(), categoria_id: categoriaId.value })
-  groupModal.value.show = false
-  groupModal.value.nome = ''
-  groupModal.value.editing = null
-  await loadPersone()
-}
-
-function openEditGruppo(nome) {
-  const g = gruppiList.value.find(x => x.nome === nome)
-  if (g) {
-    groupModal.value = { show: true, nome: g.nome, editing: g }
-  }
-}
-
-async function rimuoviGruppo(nome) {
-  if (!confirm('Eliminare il gruppo "' + nome + '"?')) return
-  const g = gruppiList.value.find(x => x.nome === nome)
-  if (g?.id) {
-    await deleteGruppo(g.id)
-    await loadPersone()
-  }
 }
 
 function totGiornoGruppo(gruppo, giorno) {
@@ -890,52 +806,6 @@ th {
   color: var(--color-primary);
 }
 
-.gruppi-actions {
-  margin-bottom: 1rem;
-}
-
-.btn-gruppo-add {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: rgba(220, 38, 38, 0.1);
-  border: 1px solid rgba(220, 38, 38, 0.2);
-  border-radius: 100px;
-  color: var(--color-primary);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-gruppo-add:hover {
-  background: rgba(220, 38, 38, 0.18);
-  border-color: rgba(220, 38, 38, 0.35);
-  transform: translateY(-1px);
-}
-
-.btn-edit-gruppo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  margin-left: auto;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-edit-gruppo:hover {
-  background: rgba(220, 38, 38, 0.15);
-  border-color: rgba(220, 38, 38, 0.3);
-  color: var(--color-primary);
-  transform: scale(1.1);
-}
 
 /* ── Cells ── */
 .cella {
@@ -1199,133 +1069,6 @@ th {
 
 .btn-close-modal:hover {
   background: rgba(255, 255, 255, 0.08);
-}
-
-/* ── Gruppo Modal ── */
-.gruppo-modal {
-  background: rgba(30, 30, 30, 0.95);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--color-border);
-  border-radius: 24px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
-  padding: 2rem;
-  position: relative;
-  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.gruppo-modal-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.gruppo-modal-icon {
-  width: 28px;
-  height: 28px;
-  color: var(--color-primary);
-}
-
-.gruppo-modal-header h3 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.gruppo-modal-body {
-  margin-bottom: 1.5rem;
-}
-
-.gruppo-input {
-  width: 100%;
-  padding: 0.875rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  font-size: 1rem;
-  color: var(--color-text);
-  background: rgba(255, 255, 255, 0.04);
-  transition: all var(--transition-fast);
-}
-
-.gruppo-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
-}
-
-.gruppo-modal-actions {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.btn-rimuovi, .btn-save {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border: none;
-  border-radius: 12px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-rimuovi {
-  background: rgba(220, 38, 38, 0.12);
-  border: 1px solid rgba(220, 38, 38, 0.2);
-  color: #f87171;
-}
-
-.btn-rimuovi:hover {
-  background: rgba(220, 38, 38, 0.2);
-  transform: translateY(-1px);
-}
-
-.btn-save {
-  flex: 1;
-  background: linear-gradient(135deg, var(--color-primary) 0%, #b91c1c 100%);
-  color: white;
-}
-
-.btn-save:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.35);
-}
-
-.btn-rimuovi svg, .btn-save svg {
-  width: 18px;
-  height: 18px;
-}
-
-.btn-close-gruppo {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  color: var(--color-text-muted);
-}
-
-.btn-close-gruppo:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-text);
-}
-
-.btn-close-gruppo svg {
-  width: 18px;
-  height: 18px;
 }
 
 /* ── Rotate Overlay ── */
