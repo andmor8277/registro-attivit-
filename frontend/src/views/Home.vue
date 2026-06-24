@@ -272,6 +272,22 @@ onMounted(async () => {
       console.error('Errore caricamento società:', e)
     }
   }
+
+  // Redirect diretto per ruoli specifici
+  const ruolo = utenteAttivo.value?.ruolo
+  if (ruolo === 'mister') {
+    router.replace('/allenatori')
+    return
+  }
+  if (ruolo === 'segreteria') {
+    router.replace('/segreteria')
+    return
+  }
+  if (ruolo === 'infermeria') {
+    router.replace('/infermeria')
+    return
+  }
+
   loadPlanning()
 })
 </script>

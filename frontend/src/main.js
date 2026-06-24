@@ -75,6 +75,12 @@ router.beforeEach((to, from, next) => {
     const isAdmin = user?.is_admin || user?.ruolo === 'admin' || isSuperAdmin
     if (!isAdmin) return next('/')
   }
+  // Redirect diretto da home per ruoli specifici
+  if (to.path === '/') {
+    if (user?.ruolo === 'mister') return next('/allenatori')
+    if (user?.ruolo === 'segreteria') return next('/segreteria')
+    if (user?.ruolo === 'infermeria') return next('/infermeria')
+  }
   next()
 })
 

@@ -266,3 +266,14 @@ class Openday(Base):
     tel_mamma = Column(String(20), nullable=True)
     email_papa = Column(String(100), nullable=True)
     email_mamma = Column(String(100), nullable=True)
+
+class PlanningEvento(Base):
+    __tablename__ = "planning_eventi"
+    id = Column(Integer, primary_key=True)
+    categoria_id = Column(Integer, ForeignKey("categorie.id"), nullable=False)
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
+    data = Column(Date, nullable=False)
+    tipo = Column(String(20), nullable=False)  # sospensione, vacanza, evento, festa, gara
+    titolo = Column(String(200), nullable=True)
+    note = Column(Text, nullable=True)
+    creato_il = Column(DateTime, nullable=True)

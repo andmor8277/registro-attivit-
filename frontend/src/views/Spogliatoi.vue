@@ -1,5 +1,5 @@
 <template>
-  <div class="spogliatoi-page">
+  <div class="spogliatoi-page" @click="chiudiCampoMenu">
     <div class="print-header">
       <h1>Gestione Spogliatoi e Campi da gioco — {{ societaAttiva?.nome || '' }}</h1>
       <p v-if="tabAttivo === 'settimanale'">Settimana {{ formatDate(settimanaInizio) }} - {{ formatDate(settimanaFine) }}</p>
@@ -22,6 +22,7 @@
 
     <div class="tabs-bar">
       <button class="tab-btn" :class="{ active: tabAttivo === 'settimanale' }" @click="tabAttivo = 'settimanale'">Settimanale</button>
+      <button class="tab-btn" :class="{ active: tabAttivo === 'default' }" @click="tabAttivo = 'default'">Settimana Tipo</button>
       <button class="tab-btn" :class="{ active: tabAttivo === 'weekend' }" @click="tabAttivo = 'weekend'">Weekend</button>
     </div>
 
@@ -44,6 +45,12 @@
             <polyline points="20 6 9 17 4 12"/>
           </svg>
           Salva
+        </button>
+        <button class="btn-default-apply" @click="applicaSettimanaTipo" :disabled="!haSettimanaTipo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Applica Settimana Tipo
         </button>
         <button class="btn-save" @click="stampaGiornoSingolo(giornoAttivo)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
@@ -103,15 +110,33 @@
                   <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
                 </div>
                 <div class="col-campo multi-select">
-                  <div v-for="item in campi" :key="item.id"
-                       class="select-chip"
-                       :class="{
-                         active: getAssegnazioneCampoGiorno(cat.id, item.id, giornoAttivo),
-                         occupied: isCampoOccupatoFascia(cat.id, item.id, giornoAttivo)
-                       }"
-                       @click="!isCampoOccupatoFascia(cat.id, item.id, giornoAttivo) && toggleAssegnazioneCampoGiorno(cat.id, item.id, giornoAttivo)">
-                    {{ item.etichetta }}
-                  </div>
+                  <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
+                    <div class="select-chip campo-chip-main"
+                         :class="{
+                           active: getCampoAssegnato(cat.id, item.id, giornoAttivo),
+                           occupied: isCampoTuttoOccupatoFascia(cat.id, item.id, giornoAttivo) && !getCampoAssegnato(cat.id, item.id, giornoAttivo)
+                         }"
+                         @click.stop="toggleCampoMenu(cat.id, item.id, giornoAttivo)">
+                       {{ item.etichetta }}{{ getCampoLabelSuffisso(cat.id, item.id, giornoAttivo) }}
+                       <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
+                         <polyline points="6 9 12 15 18 9"/>
+                       </svg>
+                     </div>
+                     <div v-if="campoMenuAperto === `${cat.id}_${item.id}_${giornoAttivo}`" class="campo-dropdown" @click.stop>
+                       <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
+                            class="campo-dropdown-item"
+                            :class="{
+                              active: getCampoAssegnato(cat.id, item.id, giornoAttivo) === (opt.metacampo || 'FULL'),
+                              disabled: isCampoOccupatoFascia(cat.id, item.id, giornoAttivo, opt.metacampo) && getCampoAssegnato(cat.id, item.id, giornoAttivo) !== (opt.metacampo || 'FULL')
+                            }"
+                            @click="!isCampoOccupatoFascia(cat.id, item.id, giornoAttivo, opt.metacampo) || getCampoAssegnato(cat.id, item.id, giornoAttivo) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenu(cat.id, item.id, giornoAttivo, opt.metacampo) : null">
+                         {{ opt.label }}
+                       </div>
+                       <div v-if="getCampoAssegnato(cat.id, item.id, giornoAttivo)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenu(cat.id, item.id, giornoAttivo, getCampoAssegnato(cat.id, item.id, giornoAttivo) === 'FULL' ? null : getCampoAssegnato(cat.id, item.id, giornoAttivo))">
+                         Rimuovi
+                       </div>
+                     </div>
+                   </div>
                   <span v-if="campi.length === 0" class="no-items">Nessuno disponibile</span>
                 </div>
               </div>
@@ -140,15 +165,33 @@
                     <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
                   </div>
                   <div class="col-campo multi-select">
-                    <div v-for="item in campi" :key="item.id"
-                         class="select-chip"
-                         :class="{
-                           active: getAssegnazioneCampoNonCensitaGiorno(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo),
-                           occupied: isCampoOccupatoNonCensitaGiorno(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo)
-                         }"
-                         @click="!isCampoOccupatoNonCensitaGiorno(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo) && toggleAssegnazioneCampoNonCensitaGiorno(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo)">
-                      {{ item.etichetta }}
-                    </div>
+                    <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
+                      <div class="select-chip campo-chip-main"
+                           :class="{
+                             active: getCampoAssegnatoNC(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo),
+                             occupied: isCampoTuttoOccupatoNonCensitaGiorno(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo) && !getCampoAssegnatoNC(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo)
+                           }"
+                           @click.stop="toggleCampoMenuNC(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo)">
+                         {{ item.etichetta }}{{ getCampoLabelSuffissoNC(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo) }}
+                         <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
+                           <polyline points="6 9 12 15 18 9"/>
+                         </svg>
+                       </div>
+                       <div v-if="campoMenuAperto === `nc_${squadra.id}_${item.id}_${giornoAttivo}`" class="campo-dropdown" @click.stop>
+                         <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
+                              class="campo-dropdown-item"
+                              :class="{
+                                active: getCampoAssegnatoNC(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo) === (opt.metacampo || 'FULL'),
+                                disabled: isCampoOccupatoNonCensitaGiorno(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo, opt.metacampo) && getCampoAssegnatoNC(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo) !== (opt.metacampo || 'FULL')
+                              }"
+                              @click="!isCampoOccupatoNonCensitaGiorno(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo, opt.metacampo) || getCampoAssegnatoNC(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuNC(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo, opt.metacampo) : null">
+                           {{ opt.label }}
+                         </div>
+                         <div v-if="getCampoAssegnatoNC(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuNC(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo, getCampoAssegnatoNC(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo) === 'FULL' ? null : getCampoAssegnatoNC(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, giornoAttivo))">
+                           Rimuovi
+                         </div>
+                       </div>
+                     </div>
                     <span v-if="campi.length === 0" class="no-items">Nessuno disponibile</span>
                   </div>
                 </div>
@@ -190,12 +233,14 @@
                    </template>
                    <span v-if="spogliatoi.length === 0" class="no-items">—</span>
                  </div>
-                 <div class="col-campo print-chips">
-                   <template v-for="item in campi" :key="item.id">
-                     <span v-if="getAssegnazioneCampoGiorno(cat.id, item.id, g.data)" class="print-chip campo-chip">{{ item.etichetta }}</span>
-                   </template>
-                   <span v-if="campi.length === 0" class="no-items">—</span>
-                 </div>
+                  <div class="col-campo print-chips">
+                    <template v-for="item in campi" :key="item.id">
+                      <span v-if="getAssegnazioneCampoGiorno(cat.id, item.id, g.data)" class="print-chip campo-chip">{{ item.etichetta }}</span>
+                      <span v-if="getAssegnazioneCampoGiorno(cat.id, item.id, g.data, 'A')" class="print-chip campo-chip">{{ item.etichetta }} A</span>
+                      <span v-if="getAssegnazioneCampoGiorno(cat.id, item.id, g.data, 'B')" class="print-chip campo-chip">{{ item.etichetta }} B</span>
+                    </template>
+                    <span v-if="campi.length === 0" class="no-items">—</span>
+                  </div>
                </div>
                 <div v-for="(squadra, fidx) in squadreNonCensiteSettimanali.filter(s => s.ora === ora && s.dataGiorno === g.data)" :key="'pnc-' + squadra.id" class="table-row non-censite-row">
                  <div class="col-cat non-censita-cell">
@@ -206,15 +251,111 @@
                      <span v-if="getAssegnazioneSpogliatoioNonCensitaGiorno(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, g.data)" class="print-chip spo-chip">{{ item.etichetta }}</span>
                    </template>
                  </div>
-                 <div class="col-campo print-chips">
-                   <template v-for="item in campi" :key="item.id">
-                     <span v-if="getAssegnazioneCampoNonCensitaGiorno(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, g.data)" class="print-chip campo-chip">{{ item.etichetta }}</span>
-                   </template>
-                 </div>
+                  <div class="col-campo print-chips">
+                    <template v-for="item in campi" :key="item.id">
+                      <span v-if="getAssegnazioneCampoNonCensitaGiorno(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, g.data)" class="print-chip campo-chip">{{ item.etichetta }}</span>
+                      <span v-if="getAssegnazioneCampoNonCensitaGiorno(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, g.data, 'A')" class="print-chip campo-chip">{{ item.etichetta }} A</span>
+                      <span v-if="getAssegnazioneCampoNonCensitaGiorno(getNonCensitaGlobalIdx(squadreNonCensiteSettimanali, squadra), item.id, g.data, 'B')" class="print-chip campo-chip">{{ item.etichetta }} B</span>
+                    </template>
+                  </div>
                </div>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- SETTIMANA TIPO TAB -->
+    <div v-if="tabAttivo === 'default'">
+      <div class="week-selector">
+        <span class="week-label">📋 Settimana Tipo — Modello predefinito</span>
+        <button class="btn-save" @click="salvaAssegnazioniDefault">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Salva Modello
+        </button>
+      </div>
+      <div class="default-info-banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <span>Configura qui il modello settimanale. Poi dalla tabella "Settimanale" puoi applicarlo a qualsiasi settimana.</span>
+      </div>
+
+      <!-- Day tabs -->
+      <div class="day-tabs" v-if="giorniDefault.length > 0">
+        <button v-for="g in giorniDefault" :key="g.data" class="day-tab" :class="{ active: giornoDefaultAttivo === g.data, empty: g.categorie.length === 0 }" @click="giornoDefaultAttivo = g.data">
+          <span class="day-name">{{ g.nomeBreve }}</span>
+          <span class="day-date">{{ g.giorno }}</span>
+          <span class="day-count" v-if="g.categorie.length > 0">{{ g.categorie.length }}</span>
+        </button>
+      </div>
+
+      <div v-if="giornoDefaultAttivo" class="day-view">
+        <div v-if="getCategorieGiorno(giornoDefaultAttivo).length === 0" class="empty-state">
+          <p>Nessuna categoria si allena questo giorno</p>
+        </div>
+        <template v-else>
+          <div v-for="(slot, ora) in categoriePerOrario(giornoDefaultAttivo)" :key="ora" class="time-slot-section">
+            <div class="time-slot-header">{{ ora || 'Senza orario' }}</div>
+            <div class="assegnazioni-table">
+              <div class="table-header">
+                <div class="col-cat">Categoria</div>
+                <div class="col-spo">Spogliatoio</div>
+                <div class="col-campo">Campo da gioco</div>
+              </div>
+              <div v-for="cat in slot" :key="'d-s-' + cat.id" class="table-row">
+                <div class="col-cat">
+                  <span class="cat-anno">{{ cat.anno }}</span>
+                  <span class="cat-nome">{{ cat.nome }}</span>
+                </div>
+                <div class="col-spo multi-select">
+                  <div v-for="item in spogliatoi" :key="item.id"
+                       class="select-chip"
+                       :class="{
+                         active: getAssegnazioneSpogliatoioDefault(cat.id, item.id, giornoDefaultAttivo),
+                         occupied: isSpogliatoioOccupatoDefault(cat.id, item.id, giornoDefaultAttivo)
+                       }"
+                       @click="!isSpogliatoioOccupatoDefault(cat.id, item.id, giornoDefaultAttivo) && toggleAssegnazioneSpogliatoioDefault(cat.id, item.id, giornoDefaultAttivo)">
+                    {{ item.etichetta }}
+                  </div>
+                  <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
+                </div>
+                <div class="col-campo multi-select">
+                  <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
+                    <div class="select-chip campo-chip-main"
+                         :class="{
+                           active: getCampoAssegnatoDefault(cat.id, item.id, giornoDefaultAttivo),
+                           occupied: isCampoTuttoOccupatoDefault(cat.id, item.id, giornoDefaultAttivo) && !getCampoAssegnatoDefault(cat.id, item.id, giornoDefaultAttivo)
+                         }"
+                         @click.stop="toggleCampoMenuDefault(cat.id, item.id, giornoDefaultAttivo)">
+                      {{ item.etichetta }}{{ getCampoLabelSuffissoDefault(cat.id, item.id, giornoDefaultAttivo) }}
+                      <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
+                        <polyline points="6 9 12 15 18 9"/>
+                      </svg>
+                    </div>
+                    <div v-if="campoMenuDefaultAperto === `${cat.id}_${item.id}_${giornoDefaultAttivo}`" class="campo-dropdown" @click.stop>
+                      <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
+                           class="campo-dropdown-item"
+                           :class="{
+                             active: getCampoAssegnatoDefault(cat.id, item.id, giornoDefaultAttivo) === (opt.metacampo || 'FULL'),
+                             disabled: isCampoOccupatoDefault(cat.id, item.id, giornoDefaultAttivo, opt.metacampo) && getCampoAssegnatoDefault(cat.id, item.id, giornoDefaultAttivo) !== (opt.metacampo || 'FULL')
+                           }"
+                           @click="!isCampoOccupatoDefault(cat.id, item.id, giornoDefaultAttivo, opt.metacampo) || getCampoAssegnatoDefault(cat.id, item.id, giornoDefaultAttivo) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuDefault(cat.id, item.id, giornoDefaultAttivo, opt.metacampo) : null">
+                        {{ opt.label }}
+                      </div>
+                      <div v-if="getCampoAssegnatoDefault(cat.id, item.id, giornoDefaultAttivo)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuDefault(cat.id, item.id, giornoDefaultAttivo, getCampoAssegnatoDefault(cat.id, item.id, giornoDefaultAttivo) === 'FULL' ? null : getCampoAssegnatoDefault(cat.id, item.id, giornoDefaultAttivo))">
+                        Rimuovi
+                      </div>
+                    </div>
+                  </div>
+                  <span v-if="campi.length === 0" class="no-items">Nessuno disponibile</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -283,15 +424,33 @@
             <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
           </div>
           <div class="col-campo multi-select">
-            <div v-for="item in campi" :key="item.id"
-                 class="select-chip"
-                 :class="{
-                   active: getAssegnazioneCampo(p.categoria_id, item.id, 'casa', p.id),
-                   occupied: isCampoOccupatoWeekend(p.categoria_id, item.id, 'casa', p.id)
-                 }"
-                 @click="!isCampoOccupatoWeekend(p.categoria_id, item.id, 'casa', p.id) && toggleAssegnazioneCampo(p.categoria_id, item.id, 'casa', p.id)">
-              {{ item.etichetta }}
-            </div>
+            <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
+              <div class="select-chip campo-chip-main"
+                   :class="{
+                     active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id),
+                     occupied: isCampoTuttoOccupatoWeekend(p.categoria_id, item.id, 'casa', p.id) && !getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id)
+                   }"
+                   @click.stop="toggleCampoMenuWeekend(p.categoria_id, item.id, 'casa', p.id)">
+                 {{ item.etichetta }}{{ getCampoLabelSuffissoWeekend(p.categoria_id, item.id, 'casa', p.id) }}
+                 <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
+                   <polyline points="6 9 12 15 18 9"/>
+                 </svg>
+               </div>
+               <div v-if="campoMenuAperto === `casa_${p.id || ''}_${item.id}`" class="campo-dropdown" @click.stop>
+                 <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
+                      class="campo-dropdown-item"
+                      :class="{
+                        active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) === (opt.metacampo || 'FULL'),
+                        disabled: isCampoOccupatoWeekend(p.categoria_id, item.id, 'casa', p.id, opt.metacampo) && getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) !== (opt.metacampo || 'FULL')
+                      }"
+                      @click="!isCampoOccupatoWeekend(p.categoria_id, item.id, 'casa', p.id, opt.metacampo) || getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'casa', p.id, opt.metacampo) : null">
+                   {{ opt.label }}
+                 </div>
+                 <div v-if="getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'casa', p.id, getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) === 'FULL' ? null : getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id))">
+                   Rimuovi
+                 </div>
+               </div>
+             </div>
             <span v-if="campi.length === 0" class="no-items">Nessuno disponibile</span>
           </div>
         </div>
@@ -313,15 +472,33 @@
             <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
           </div>
           <div class="col-campo multi-select">
-            <div v-for="item in campi" :key="item.id"
-                 class="select-chip"
-                 :class="{
-                   active: getAssegnazioneCampo(p.categoria_id, item.id, 'ospite', p.id),
-                   occupied: isCampoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p.id)
-                 }"
-                 @click="!isCampoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p.id) && toggleAssegnazioneCampo(p.categoria_id, item.id, 'ospite', p.id)">
-              {{ item.etichetta }}
-            </div>
+            <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
+              <div class="select-chip campo-chip-main"
+                   :class="{
+                     active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id),
+                     occupied: isCampoTuttoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p.id) && !getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id)
+                   }"
+                   @click.stop="toggleCampoMenuWeekend(p.categoria_id, item.id, 'ospite', p.id)">
+                 {{ item.etichetta }}{{ getCampoLabelSuffissoWeekend(p.categoria_id, item.id, 'ospite', p.id) }}
+                 <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
+                   <polyline points="6 9 12 15 18 9"/>
+                 </svg>
+               </div>
+               <div v-if="campoMenuAperto === `ospite_${p.id || ''}_${item.id}`" class="campo-dropdown" @click.stop>
+                 <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
+                      class="campo-dropdown-item"
+                      :class="{
+                        active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) === (opt.metacampo || 'FULL'),
+                        disabled: isCampoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p.id, opt.metacampo) && getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) !== (opt.metacampo || 'FULL')
+                      }"
+                      @click="!isCampoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p.id, opt.metacampo) || getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'ospite', p.id, opt.metacampo) : null">
+                   {{ opt.label }}
+                 </div>
+                 <div v-if="getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'ospite', p.id, getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) === 'FULL' ? null : getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id))">
+                   Rimuovi
+                 </div>
+               </div>
+             </div>
             <span v-if="campi.length === 0" class="no-items">Nessuno disponibile</span>
           </div>
         </div>
@@ -350,15 +527,33 @@
             <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
           </div>
           <div class="col-campo multi-select">
-            <div v-for="item in campi" :key="item.id"
-                 class="select-chip"
-                 :class="{
-                   active: getAssegnazioneCampoNonCensita(idx, item.id, 'weekend'),
-                   occupied: isCampoOccupatoNonCensitaWeekend(idx, item.id)
-                 }"
-                 @click="!isCampoOccupatoNonCensitaWeekend(idx, item.id) && toggleAssegnazioneCampoNonCensita(idx, item.id, 'weekend')">
-              {{ item.etichetta }}
-            </div>
+            <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
+              <div class="select-chip campo-chip-main"
+                   :class="{
+                     active: getCampoAssegnatoNCWeekend(idx, item.id),
+                     occupied: isCampoTuttoOccupatoNonCensitaWeekend(idx, item.id) && !getCampoAssegnatoNCWeekend(idx, item.id)
+                   }"
+                   @click.stop="toggleCampoMenuNCWeekend(idx, item.id)">
+                 {{ item.etichetta }}{{ getCampoLabelSuffissoNCWeekend(idx, item.id) }}
+                 <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
+                   <polyline points="6 9 12 15 18 9"/>
+                 </svg>
+               </div>
+               <div v-if="campoMenuAperto === `nc_weekend_${idx}_${item.id}`" class="campo-dropdown" @click.stop>
+                 <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
+                      class="campo-dropdown-item"
+                      :class="{
+                        active: getCampoAssegnatoNCWeekend(idx, item.id) === (opt.metacampo || 'FULL'),
+                        disabled: isCampoOccupatoNonCensitaWeekend(idx, item.id, opt.metacampo) && getCampoAssegnatoNCWeekend(idx, item.id) !== (opt.metacampo || 'FULL')
+                      }"
+                      @click="!isCampoOccupatoNonCensitaWeekend(idx, item.id, opt.metacampo) || getCampoAssegnatoNCWeekend(idx, item.id) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuNCWeekend(idx, item.id, opt.metacampo) : null">
+                   {{ opt.label }}
+                 </div>
+                 <div v-if="getCampoAssegnatoNCWeekend(idx, item.id)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuNCWeekend(idx, item.id, getCampoAssegnatoNCWeekend(idx, item.id) === 'FULL' ? null : getCampoAssegnatoNCWeekend(idx, item.id))">
+                   Rimuovi
+                 </div>
+               </div>
+             </div>
             <span v-if="campi.length === 0" class="no-items">Nessuno disponibile</span>
           </div>
         </div>
@@ -414,7 +609,7 @@
           Campi da gioco
         </span>
         <div v-for="item in campi" :key="item.id" class="item-chip">
-          <span class="chip-label">{{ item.etichetta }}</span>
+          <span class="chip-label">{{ item.etichetta }} <span class="campo-tipo-badge" v-if="item.tipo_campo">({{ item.tipo_campo }})</span></span>
           <button class="btn-icon-xs" @click="apriModal(item, 'campi')" title="Modifica">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
               <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
@@ -454,6 +649,16 @@
               <label>Ordine</label>
               <input type="number" v-model.number="modal.ordine" min="0" />
             </div>
+            <div class="form-group" v-if="modal.tipo === 'campi'">
+              <label>Tipo campo</label>
+              <select v-model="modal.tipo_campo" class="form-select">
+                <option value="11">11</option>
+                <option value="9">9</option>
+                <option value="8">8</option>
+                <option value="7">7</option>
+                <option value="5">5</option>
+              </select>
+            </div>
           </div>
           <div class="modal-footer">
             <button class="btn-secondary" @click="modal.show = false">Annulla</button>
@@ -488,7 +693,11 @@ import {
   getCampiAssegnazioniWeekend,
   creaCampoAssegnazione,
   aggiornaCampoAssegnazione,
-  getWeekendPartite
+  getWeekendPartite,
+  getAssegnazioniDefault,
+  applyDefaultWeekSpogliatoi,
+  getCampiAssegnazioniDefault,
+  applyDefaultWeekCampi
 } from "../api/index.js"
 
 const router = useRouter()
@@ -515,7 +724,15 @@ const assegSpogliatoioWeekend = ref({})
 const assegCampoWeekend = ref({})
 const squadreNonCensiteWeekend = ref([])
 
-const modal = ref({ show: false, id: null, tipo: 'spogliatoi', etichetta: '', ordine: 0 })
+// Default week assignments
+const assegSpogliatoioDefault = ref({})
+const assegCampoDefault = ref({})
+const giornoDefaultAttivo = ref(null)
+const campoMenuDefaultAperto = ref(null)
+const haSettimanaTipo = ref(false)
+
+const modal = ref({ show: false, id: null, tipo: 'spogliatoi', etichetta: '', ordine: 0, tipo_campo: '11' })
+const campoMenuAperto = ref(null)
 
 const categorieOrdinate = computed(() =>
   categorie.value.sort((a, b) => (a.anno || 9999) - (b.anno || 9999))
@@ -548,6 +765,28 @@ function getCategoriePerGiornoSettimana(dow) {
     return c.giorni.split(',').map(Number).includes(dow)
   })
 }
+
+const giorniDefault = computed(() => {
+  const giorni = []
+  const nomi = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven']
+  const d = new Date()
+  const giorno = d.getDay()
+  const diff = giorno === 0 ? -6 : 1 - giorno
+  d.setDate(d.getDate() + diff)
+  for (let i = 0; i < 5; i++) {
+    const dataStr = d.toISOString().split('T')[0]
+    const dow = d.getDay()
+    const cats = getCategoriePerGiornoSettimana(dow)
+    giorni.push({
+      data: dataStr,
+      nomeBreve: nomi[i],
+      giorno: d.getDate(),
+      categorie: cats
+    })
+    d.setDate(d.getDate() + 1)
+  }
+  return giorni
+})
 
 function getCategorieGiorno(dataGiorno) {
   const d = new Date(dataGiorno)
@@ -619,6 +858,12 @@ function cambiaSettimana(delta) {
   d.setDate(d.getDate() + delta * 7)
   settimanaInizio.value = d.toISOString().split('T')[0]
   caricaAssegnazioniSettimana()
+  // Auto-select today's day if in current week
+  const oggi = new Date().toISOString().split('T')[0]
+  if (giorniSettimana.value.length > 0) {
+    const todayMatch = giorniSettimana.value.find(g => g.data === oggi)
+    giornoAttivo.value = todayMatch ? todayMatch.data : giorniSettimana.value[0].data
+  }
 }
 
 // ── Assignment helpers: SPOGLIATOI (settimanale per giorno) ──
@@ -652,19 +897,59 @@ function isSpogliatoioOccupatoFascia(catId, itemId, dataGiorno) {
   )
 }
 
-function isCampoOccupatoFascia(catId, itemId, dataGiorno) {
+function isCampoOccupatoFascia(catId, itemId, dataGiorno, metacampo) {
   const ora = getOraCategoria(catId)
   const dow = new Date(dataGiorno).getDay()
-  if (categorie.value.some(c =>
-    c.id !== catId &&
+  const allCats = categorie.value.filter(c =>
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora &&
-    assegCampoSettimanali.value[`${c.id}_${itemId}_${dataGiorno}`] !== undefined
-  )) return true
-  return squadreNonCensiteSettimanali.value.some(s =>
-    s.ora === ora && s.dataGiorno === dataGiorno &&
-    assegCampoSettimanali.value[`noncensita_${s.id}_${itemId}_${dataGiorno}`] !== undefined
+    (c.ora_allenamento || 'Senza orario') === ora
   )
+  const ncSquadre = squadreNonCensiteSettimanali.value.filter(s =>
+    s.ora === ora && s.dataGiorno === dataGiorno
+  )
+  if (metacampo === 'A' || metacampo === 'B') {
+    for (const c of allCats) {
+      if (c.id === catId) continue
+      const a = assegCampoSettimanali.value[`${c.id}_${itemId}_${dataGiorno}`]
+      if (a && (a.metacampo == null || a.metacampo === 'FULL' || a.metacampo === metacampo)) return true
+    }
+    for (const s of ncSquadre) {
+      const a = assegCampoSettimanali.value[`noncensita_${s.id}_${itemId}_${dataGiorno}`]
+      if (a && (a.metacampo == null || a.metacampo === 'FULL' || a.metacampo === metacampo)) return true
+    }
+    return false
+  }
+  for (const c of allCats) {
+    if (c.id === catId) continue
+    const a = assegCampoSettimanali.value[`${c.id}_${itemId}_${dataGiorno}`]
+    if (a) return true
+  }
+  for (const s of ncSquadre) {
+    if (assegCampoSettimanali.value[`noncensita_${s.id}_${itemId}_${dataGiorno}`]) return true
+  }
+  return false
+}
+
+function isCampoTuttoOccupatoFascia(catId, itemId, dataGiorno) {
+  const ora = getOraCategoria(catId)
+  const dow = new Date(dataGiorno).getDay()
+  const allCats = categorie.value.filter(c =>
+    (c.giorni || '').split(',').map(Number).includes(dow) &&
+    (c.ora_allenamento || 'Senza orario') === ora
+  )
+  const ncSquadre = squadreNonCensiteSettimanali.value.filter(s =>
+    s.ora === ora && s.dataGiorno === dataGiorno
+  )
+  for (const c of allCats) {
+    if (c.id === catId) continue
+    const a = assegCampoSettimanali.value[`${c.id}_${itemId}_${dataGiorno}`]
+    if (a && (a.metacampo == null || a.metacampo === 'FULL')) return true
+  }
+  for (const s of ncSquadre) {
+    const a = assegCampoSettimanali.value[`noncensita_${s.id}_${itemId}_${dataGiorno}`]
+    if (a && (a.metacampo == null || a.metacampo === 'FULL')) return true
+  }
+  return false
 }
 
 function isSpogliatoioOccupatoNonCensitaGiorno(idx, itemId, dataGiorno) {
@@ -683,20 +968,61 @@ function isSpogliatoioOccupatoNonCensitaGiorno(idx, itemId, dataGiorno) {
   )
 }
 
-function isCampoOccupatoNonCensitaGiorno(idx, itemId, dataGiorno) {
+function isCampoOccupatoNonCensitaGiorno(idx, itemId, dataGiorno, metacampo) {
   const squadra = squadreNonCensiteSettimanali.value[idx]
   if (!squadra) return false
   const ora = squadra.ora || 'Senza orario'
   const dow = new Date(dataGiorno).getDay()
-  if (categorie.value.some(c =>
+  const allCats = categorie.value.filter(c =>
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora &&
-    assegCampoSettimanali.value[`${c.id}_${itemId}_${dataGiorno}`] !== undefined
-  )) return true
-  return squadreNonCensiteSettimanali.value.some(s =>
-    s.id !== squadra.id && s.ora === ora && s.dataGiorno === dataGiorno &&
-    assegCampoSettimanali.value[`noncensita_${s.id}_${itemId}_${dataGiorno}`] !== undefined
+    (c.ora_allenamento || 'Senza orario') === ora
   )
+  const ncSquadre = squadreNonCensiteSettimanali.value.filter(s =>
+    s.ora === ora && s.dataGiorno === dataGiorno
+  )
+  if (metacampo === 'A' || metacampo === 'B') {
+    for (const c of allCats) {
+      const a = assegCampoSettimanali.value[`${c.id}_${itemId}_${dataGiorno}`]
+      if (a && (a.metacampo == null || a.metacampo === 'FULL' || a.metacampo === metacampo)) return true
+    }
+    for (const s of ncSquadre) {
+      if (s.id === squadra.id) continue
+      const a = assegCampoSettimanali.value[`noncensita_${s.id}_${itemId}_${dataGiorno}`]
+      if (a && (a.metacampo == null || a.metacampo === 'FULL' || a.metacampo === metacampo)) return true
+    }
+    return false
+  }
+  for (const c of allCats) {
+    if (assegCampoSettimanali.value[`${c.id}_${itemId}_${dataGiorno}`]) return true
+  }
+  for (const s of ncSquadre) {
+    if (s.id !== squadra.id && assegCampoSettimanali.value[`noncensita_${s.id}_${itemId}_${dataGiorno}`]) return true
+  }
+  return false
+}
+
+function isCampoTuttoOccupatoNonCensitaGiorno(idx, itemId, dataGiorno) {
+  const squadra = squadreNonCensiteSettimanali.value[idx]
+  if (!squadra) return false
+  const ora = squadra.ora || 'Senza orario'
+  const dow = new Date(dataGiorno).getDay()
+  const allCats = categorie.value.filter(c =>
+    (c.giorni || '').split(',').map(Number).includes(dow) &&
+    (c.ora_allenamento || 'Senza orario') === ora
+  )
+  const ncSquadre = squadreNonCensiteSettimanali.value.filter(s =>
+    s.ora === ora && s.dataGiorno === dataGiorno
+  )
+  for (const c of allCats) {
+    const a = assegCampoSettimanali.value[`${c.id}_${itemId}_${dataGiorno}`]
+    if (a && (a.metacampo == null || a.metacampo === 'FULL')) return true
+  }
+  for (const s of ncSquadre) {
+    if (s.id === squadra.id) continue
+    const a = assegCampoSettimanali.value[`noncensita_${s.id}_${itemId}_${dataGiorno}`]
+    if (a && (a.metacampo == null || a.metacampo === 'FULL')) return true
+  }
+  return false
 }
 
 function isSpogliatoioOccupatoWeekend(catId, itemId, tipo, partitaId) {
@@ -707,12 +1033,46 @@ function isSpogliatoioOccupatoWeekend(catId, itemId, tipo, partitaId) {
   )
 }
 
-function isCampoOccupatoWeekend(catId, itemId, tipo, partitaId) {
+function isCampoOccupatoWeekend(catId, itemId, tipo, partitaId, metacampo) {
   const altrePartite = tipo === 'ospite' ? weekendPartiteFuori.value : weekendPartiteCasa.value
-  return altrePartite.some(p =>
-    p.id !== partitaId &&
-    assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`] !== undefined
-  )
+  const ncSquadre = squadreNonCensiteWeekend.value
+  if (metacampo === 'A' || metacampo === 'B') {
+    for (const p of altrePartite) {
+      if (p.id === partitaId) continue
+      const a = assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]
+      if (a && (a.metacampo == null || a.metacampo === 'FULL' || a.metacampo === metacampo)) return true
+    }
+    for (let i = 0; i < ncSquadre.length; i++) {
+      const a = assegCampoWeekend.value[`noncensita_weekend_${i}_${itemId}`]
+      if (a && (a.metacampo == null || a.metacampo === 'FULL' || a.metacampo === metacampo)) return true
+    }
+    return false
+  }
+  for (const p of altrePartite) {
+    if (p.id === partitaId && assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]) return true
+  }
+  for (const p of altrePartite) {
+    if (p.id !== partitaId && assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]) return true
+  }
+  for (let i = 0; i < ncSquadre.length; i++) {
+    if (assegCampoWeekend.value[`noncensita_weekend_${i}_${itemId}`]) return true
+  }
+  return false
+}
+
+function isCampoTuttoOccupatoWeekend(catId, itemId, tipo, partitaId) {
+  const altrePartite = tipo === 'ospite' ? weekendPartiteFuori.value : weekendPartiteCasa.value
+  const ncSquadre = squadreNonCensiteWeekend.value
+  for (const p of altrePartite) {
+    if (p.id === partitaId) continue
+    const a = assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]
+    if (a && (a.metacampo == null || a.metacampo === 'FULL')) return true
+  }
+  for (let i = 0; i < ncSquadre.length; i++) {
+    const a = assegCampoWeekend.value[`noncensita_weekend_${i}_${itemId}`]
+    if (a && (a.metacampo == null || a.metacampo === 'FULL')) return true
+  }
+  return false
 }
 
 function isSpogliatoioOccupatoNonCensitaWeekend(idx, itemId) {
@@ -725,14 +1085,44 @@ function isSpogliatoioOccupatoNonCensitaWeekend(idx, itemId) {
   )
 }
 
-function isCampoOccupatoNonCensitaWeekend(idx, itemId) {
-  return weekendPartiteCasa.value.some(p =>
-    assegCampoWeekend.value[`casa_${p.id || ''}_${itemId}`] !== undefined
-  ) || weekendPartiteFuori.value.some(p =>
-    assegCampoWeekend.value[`ospite_${p.id || ''}_${itemId}`] !== undefined
-  ) || squadreNonCensiteWeekend.value.some((_, i) =>
-    i !== idx && assegCampoWeekend.value[`noncensita_weekend_${i}_${itemId}`] !== undefined
-  )
+function isCampoOccupatoNonCensitaWeekend(idx, itemId, metacampo) {
+  const allPartite = [...weekendPartiteCasa.value, ...weekendPartiteFuori.value]
+  if (metacampo === 'A' || metacampo === 'B') {
+    for (const p of allPartite) {
+      const tipo = p.casa_fuori === 'fuori' ? 'ospite' : 'casa'
+      const a = assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]
+      if (a && (a.metacampo == null || a.metacampo === 'FULL' || a.metacampo === metacampo)) return true
+    }
+    for (let i = 0; i < squadreNonCensiteWeekend.value.length; i++) {
+      if (i === idx) continue
+      const a = assegCampoWeekend.value[`noncensita_weekend_${i}_${itemId}`]
+      if (a && (a.metacampo == null || a.metacampo === 'FULL' || a.metacampo === metacampo)) return true
+    }
+    return false
+  }
+  for (const p of allPartite) {
+    const tipo = p.casa_fuori === 'fuori' ? 'ospite' : 'casa'
+    if (assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]) return true
+  }
+  for (let i = 0; i < squadreNonCensiteWeekend.value.length; i++) {
+    if (i !== idx && assegCampoWeekend.value[`noncensita_weekend_${i}_${itemId}`]) return true
+  }
+  return false
+}
+
+function isCampoTuttoOccupatoNonCensitaWeekend(idx, itemId) {
+  const allPartite = [...weekendPartiteCasa.value, ...weekendPartiteFuori.value]
+  for (const p of allPartite) {
+    const tipo = p.casa_fuori === 'fuori' ? 'ospite' : 'casa'
+    const a = assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]
+    if (a && (a.metacampo == null || a.metacampo === 'FULL')) return true
+  }
+  for (let i = 0; i < squadreNonCensiteWeekend.value.length; i++) {
+    if (i === idx) continue
+    const a = assegCampoWeekend.value[`noncensita_weekend_${i}_${itemId}`]
+    if (a && (a.metacampo == null || a.metacampo === 'FULL')) return true
+  }
+  return false
 }
 
 function toggleAssegnazioneSpogliatoioGiorno(catId, itemId, dataGiorno) {
@@ -797,73 +1187,240 @@ function toggleAssegnazioneSpogliatoioNonCensitaGiorno(idx, itemId, dataGiorno) 
   }
 }
 
-// ── Assignment helpers: CAMPI (settimanale per giorno) ──
-
-function getAssegnazioneCampoGiorno(catId, itemId, dataGiorno) {
-  const key = `${catId}_${itemId}_${dataGiorno}`
-  return assegCampoSettimanali.value[key] !== undefined
+function getCampoChips(campo) {
+  const tipo = parseInt(campo.tipo_campo) || 11
+  if (tipo <= 5) return [{ campo, label: campo.etichetta, metacampo: null }]
+  return [
+    { campo, label: campo.etichetta, metacampo: null },
+    { campo, label: `${campo.etichetta} A`, metacampo: 'A' },
+    { campo, label: `${campo.etichetta} B`, metacampo: 'B' },
+  ]
 }
 
-function toggleAssegnazioneCampoGiorno(catId, itemId, dataGiorno) {
+function getCampoMenuOpzioni(campo) {
+  const tipo = parseInt(campo.tipo_campo) || 11
+  if (tipo <= 5) return [{ label: 'Tutto', metacampo: null }]
+  return [
+    { label: 'Tutto', metacampo: null },
+    { label: 'Metà A', metacampo: 'A' },
+    { label: 'Metà B', metacampo: 'B' },
+  ]
+}
+
+function getCampoAssegnato(catId, itemId, dataGiorno) {
+  const a = assegCampoSettimanali.value[`${catId}_${itemId}_${dataGiorno}`]
+  if (!a) return null
+  return a.metacampo || 'FULL'
+}
+
+function getCampoLabelSuffisso(catId, itemId, dataGiorno) {
+  const asg = getCampoAssegnato(catId, itemId, dataGiorno)
+  if (asg === 'A') return ' A'
+  if (asg === 'B') return ' B'
+  return ''
+}
+
+function toggleCampoMenu(catId, itemId, dataGiorno) {
   const key = `${catId}_${itemId}_${dataGiorno}`
-  if (assegCampoSettimanali.value[key]) {
+  campoMenuAperto.value = campoMenuAperto.value === key ? null : key
+}
+
+function chiudiCampoMenu() {
+  campoMenuAperto.value = null
+  campoMenuDefaultAperto.value = null
+}
+
+function assegnaCampoDaMenu(catId, itemId, dataGiorno, metacampo) {
+  toggleAssegnazioneCampoGiorno(catId, itemId, dataGiorno, metacampo)
+  campoMenuAperto.value = null
+}
+
+function getCampoAssegnatoNC(idx, itemId, dataGiorno) {
+  const squadra = squadreNonCensiteSettimanali.value[idx]
+  const a = assegCampoSettimanali.value[`noncensita_${squadra.id}_${itemId}_${dataGiorno}`]
+  if (!a) return null
+  return a.metacampo || 'FULL'
+}
+
+function getCampoLabelSuffissoNC(idx, itemId, dataGiorno) {
+  const asg = getCampoAssegnatoNC(idx, itemId, dataGiorno)
+  if (asg === 'A') return ' A'
+  if (asg === 'B') return ' B'
+  return ''
+}
+
+function toggleCampoMenuNC(idx, itemId, dataGiorno) {
+  const squadra = squadreNonCensiteSettimanali.value[idx]
+  const key = `nc_${squadra.id}_${itemId}_${dataGiorno}`
+  campoMenuAperto.value = campoMenuAperto.value === key ? null : key
+}
+
+function assegnaCampoDaMenuNC(idx, itemId, dataGiorno, metacampo) {
+  toggleAssegnazioneCampoNonCensitaGiorno(idx, itemId, dataGiorno, metacampo)
+  campoMenuAperto.value = null
+}
+
+function getCampoAssegnatoWeekend(catId, itemId, tipo, partitaId) {
+  const a = assegCampoWeekend.value[`${tipo}_${partitaId || ''}_${itemId}`]
+  if (!a) return null
+  return a.metacampo || 'FULL'
+}
+
+function getCampoLabelSuffissoWeekend(catId, itemId, tipo, partitaId) {
+  const asg = getCampoAssegnatoWeekend(catId, itemId, tipo, partitaId)
+  if (asg === 'A') return ' A'
+  if (asg === 'B') return ' B'
+  return ''
+}
+
+function toggleCampoMenuWeekend(catId, itemId, tipo, partitaId) {
+  const key = `${tipo}_${partitaId || ''}_${itemId}`
+  campoMenuAperto.value = campoMenuAperto.value === key ? null : key
+}
+
+function assegnaCampoDaMenuWeekend(catId, itemId, tipo, partitaId, metacampo) {
+  toggleAssegnazioneCampo(catId, itemId, tipo, partitaId, metacampo)
+  campoMenuAperto.value = null
+}
+
+function getCampoAssegnatoNCWeekend(idx, itemId) {
+  const a = assegCampoWeekend.value[`noncensita_weekend_${idx}_${itemId}`]
+  if (!a) return null
+  return a.metacampo || 'FULL'
+}
+
+function getCampoLabelSuffissoNCWeekend(idx, itemId) {
+  const asg = getCampoAssegnatoNCWeekend(idx, itemId)
+  if (asg === 'A') return ' A'
+  if (asg === 'B') return ' B'
+  return ''
+}
+
+function toggleCampoMenuNCWeekend(idx, itemId) {
+  const key = `nc_weekend_${idx}_${itemId}`
+  campoMenuAperto.value = campoMenuAperto.value === key ? null : key
+}
+
+function assegnaCampoDaMenuNCWeekend(idx, itemId, metacampo) {
+  toggleAssegnazioneCampoNonCensita(idx, itemId, 'weekend', metacampo)
+  campoMenuAperto.value = null
+}
+
+// ── Assignment helpers: CAMPI (settimanale per giorno) ──
+
+function getAssegnazioneCampoGiorno(catId, itemId, dataGiorno, metacampo) {
+  const key = `${catId}_${itemId}_${dataGiorno}`
+  const a = assegCampoSettimanali.value[key]
+  if (!a) return false
+  if (metacampo == null) return a.metacampo == null || a.metacampo === 'FULL'
+  return a.metacampo === metacampo
+}
+
+function toggleAssegnazioneCampoGiorno(catId, itemId, dataGiorno, metacampo) {
+  const key = `${catId}_${itemId}_${dataGiorno}`
+  const existing = assegCampoSettimanali.value[key]
+  if (existing && (metacampo == null ? (existing.metacampo == null || existing.metacampo === 'FULL') : existing.metacampo === metacampo)) {
     delete assegCampoSettimanali.value[key]
-  } else {
-    const ora = getOraCategoria(catId)
-    const dow = new Date(dataGiorno).getDay()
-    const categorieStessaFascia = categorie.value.filter(c =>
-      c.id !== catId &&
-      (c.giorni || '').split(',').map(Number).includes(dow) &&
-      (c.ora_allenamento || 'Senza orario') === ora
-    )
+    return
+  }
+  const ora = getOraCategoria(catId)
+  const dow = new Date(dataGiorno).getDay()
+  const categorieStessaFascia = categorie.value.filter(c =>
+    c.id !== catId &&
+    (c.giorni || '').split(',').map(Number).includes(dow) &&
+    (c.ora_allenamento || 'Senza orario') === ora
+  )
+  if (metacampo == null || metacampo === 'FULL') {
     categorieStessaFascia.forEach(c => {
       const otherKey = `${c.id}_${itemId}_${dataGiorno}`
       delete assegCampoSettimanali.value[otherKey]
     })
     squadreNonCensiteSettimanali.value.forEach(s => {
       if (s.ora === ora && s.dataGiorno === dataGiorno) {
-        const ncKey = `noncensita_${s.id}_${itemId}_${dataGiorno}`
-        delete assegCampoSettimanali.value[ncKey]
+        delete assegCampoSettimanali.value[`noncensita_${s.id}_${itemId}_${dataGiorno}`]
       }
     })
-    assegCampoSettimanali.value[key] = { categoria_id: catId, campo_id: itemId, data: dataGiorno }
-  }
-}
-
-function getAssegnazioneCampoNonCensitaGiorno(idx, itemId, dataGiorno) {
-  const squadra = squadreNonCensiteSettimanali.value[idx]
-  const key = `noncensita_${squadra.id}_${itemId}_${dataGiorno}`
-  return assegCampoSettimanali.value[key] !== undefined
-}
-
-function toggleAssegnazioneCampoNonCensitaGiorno(idx, itemId, dataGiorno) {
-  const squadra = squadreNonCensiteSettimanali.value[idx]
-  const key = `noncensita_${squadra.id}_${itemId}_${dataGiorno}`
-  if (assegCampoSettimanali.value[key]) {
-    delete assegCampoSettimanali.value[key]
   } else {
-    const ora = squadra.ora || 'Senza orario'
-    const dow = new Date(dataGiorno).getDay()
-    categorie.value.filter(c =>
-      (c.giorni || '').split(',').map(Number).includes(dow) &&
-      (c.ora_allenamento || 'Senza orario') === ora
-    ).forEach(c => {
+    categorieStessaFascia.forEach(c => {
       const otherKey = `${c.id}_${itemId}_${dataGiorno}`
-      delete assegCampoSettimanali.value[otherKey]
+      const other = assegCampoSettimanali.value[otherKey]
+      if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
+        delete assegCampoSettimanali.value[otherKey]
+      }
+    })
+    squadreNonCensiteSettimanali.value.forEach(s => {
+      if (s.ora === ora && s.dataGiorno === dataGiorno) {
+        const ncKey = `noncensita_${s.id}_${itemId}_${dataGiorno}`
+        const other = assegCampoSettimanali.value[ncKey]
+        if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
+          delete assegCampoSettimanali.value[ncKey]
+        }
+      }
+    })
+  }
+  const payload = { categoria_id: catId, campo_id: itemId, data: dataGiorno }
+  if (metacampo && metacampo !== 'FULL') payload.metacampo = metacampo
+  assegCampoSettimanali.value[key] = payload
+}
+
+function getAssegnazioneCampoNonCensitaGiorno(idx, itemId, dataGiorno, metacampo) {
+  const squadra = squadreNonCensiteSettimanali.value[idx]
+  const key = `noncensita_${squadra.id}_${itemId}_${dataGiorno}`
+  const a = assegCampoSettimanali.value[key]
+  if (!a) return false
+  if (metacampo == null) return a.metacampo == null || a.metacampo === 'FULL'
+  return a.metacampo === metacampo
+}
+
+function toggleAssegnazioneCampoNonCensitaGiorno(idx, itemId, dataGiorno, metacampo) {
+  const squadra = squadreNonCensiteSettimanali.value[idx]
+  const key = `noncensita_${squadra.id}_${itemId}_${dataGiorno}`
+  const existing = assegCampoSettimanali.value[key]
+  if (existing && (metacampo == null ? (existing.metacampo == null || existing.metacampo === 'FULL') : existing.metacampo === metacampo)) {
+    delete assegCampoSettimanali.value[key]
+    return
+  }
+  const ora = squadra.ora || 'Senza orario'
+  const dow = new Date(dataGiorno).getDay()
+  const allCats = categorie.value.filter(c =>
+    (c.giorni || '').split(',').map(Number).includes(dow) &&
+    (c.ora_allenamento || 'Senza orario') === ora
+  )
+  if (metacampo == null || metacampo === 'FULL') {
+    allCats.forEach(c => {
+      delete assegCampoSettimanali.value[`${c.id}_${itemId}_${dataGiorno}`]
+    })
+    squadreNonCensiteSettimanali.value.forEach(s => {
+      if (s.id !== squadra.id && s.ora === ora && s.dataGiorno === dataGiorno) {
+        delete assegCampoSettimanali.value[`noncensita_${s.id}_${itemId}_${dataGiorno}`]
+      }
+    })
+  } else {
+    allCats.forEach(c => {
+      const otherKey = `${c.id}_${itemId}_${dataGiorno}`
+      const other = assegCampoSettimanali.value[otherKey]
+      if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
+        delete assegCampoSettimanali.value[otherKey]
+      }
     })
     squadreNonCensiteSettimanali.value.forEach(s => {
       if (s.id !== squadra.id && s.ora === ora && s.dataGiorno === dataGiorno) {
         const ncKey = `noncensita_${s.id}_${itemId}_${dataGiorno}`
-        delete assegCampoSettimanali.value[ncKey]
+        const other = assegCampoSettimanali.value[ncKey]
+        if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
+          delete assegCampoSettimanali.value[ncKey]
+        }
       }
     })
-    assegCampoSettimanali.value[key] = {
-      campo_id: itemId,
-      nome_squadra_esterna: squadra.nome,
-      tipo: 'esterna',
-      data: dataGiorno
-    }
   }
+  const payload = {
+    campo_id: itemId,
+    nome_squadra_esterna: squadra.nome,
+    tipo: 'esterna',
+    data: dataGiorno
+  }
+  if (metacampo && metacampo !== 'FULL') payload.metacampo = metacampo
+  assegCampoSettimanali.value[key] = payload
 }
 
 // ── Assignment helpers: SPOGLIATOI (weekend) ──
@@ -928,45 +1485,72 @@ function toggleAssegnazioneSpogliatoioNonCensita(idx, itemId, contesto) {
 
 // ── Assignment helpers: CAMPI (weekend) ──
 
-function getAssegnazioneCampo(catId, itemId, tipo, partitaId) {
+function getAssegnazioneCampo(catId, itemId, tipo, partitaId, metacampo) {
   const key = `${tipo}_${partitaId || ''}_${itemId}`
-  return assegCampoWeekend.value[key] !== undefined
+  const a = assegCampoWeekend.value[key]
+  if (!a) return false
+  if (metacampo == null) return a.metacampo == null || a.metacampo === 'FULL'
+  return a.metacampo === metacampo
 }
 
-function toggleAssegnazioneCampo(catId, itemId, tipo, partitaId) {
+function toggleAssegnazioneCampo(catId, itemId, tipo, partitaId, metacampo) {
   const key = `${tipo}_${partitaId || ''}_${itemId}`
-  if (assegCampoWeekend.value[key]) {
+  const existing = assegCampoWeekend.value[key]
+  if (existing && (metacampo == null ? (existing.metacampo == null || existing.metacampo === 'FULL') : existing.metacampo === metacampo)) {
     delete assegCampoWeekend.value[key]
+    return
+  }
+  const altrePartite = tipo === 'ospite' ? weekendPartiteFuori.value : weekendPartiteCasa.value
+  if (metacampo == null || metacampo === 'FULL') {
+    altrePartite.filter(p => p.id !== partitaId).forEach(p => {
+      delete assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]
+    })
+    squadreNonCensiteWeekend.value.forEach((_, idx) => {
+      delete assegCampoWeekend.value[`noncensita_weekend_${idx}_${itemId}`]
+    })
   } else {
-    const altrePartite = tipo === 'ospite' ? weekendPartiteFuori.value : weekendPartiteCasa.value
     altrePartite.filter(p => p.id !== partitaId).forEach(p => {
       const otherKey = `${tipo}_${p.id || ''}_${itemId}`
-      delete assegCampoWeekend.value[otherKey]
+      const other = assegCampoWeekend.value[otherKey]
+      if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
+        delete assegCampoWeekend.value[otherKey]
+      }
     })
     squadreNonCensiteWeekend.value.forEach((_, idx) => {
       const ncKey = `noncensita_weekend_${idx}_${itemId}`
-      delete assegCampoWeekend.value[ncKey]
+      const other = assegCampoWeekend.value[ncKey]
+      if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
+        delete assegCampoWeekend.value[ncKey]
+      }
     })
-    assegCampoWeekend.value[key] = {
-      categoria_id: catId,
-      campo_id: itemId,
-      tipo: tipo,
-      partita_id: partitaId
-    }
   }
+  const payload = {
+    categoria_id: catId,
+    campo_id: itemId,
+    tipo: tipo,
+    partita_id: partitaId
+  }
+  if (metacampo && metacampo !== 'FULL') payload.metacampo = metacampo
+  assegCampoWeekend.value[key] = payload
 }
 
-function getAssegnazioneCampoNonCensita(idx, itemId, contesto) {
+function getAssegnazioneCampoNonCensita(idx, itemId, contesto, metacampo) {
   const key = `noncensita_weekend_${idx}_${itemId}`
-  return assegCampoWeekend.value[key] !== undefined
+  const a = assegCampoWeekend.value[key]
+  if (!a) return false
+  if (metacampo == null) return a.metacampo == null || a.metacampo === 'FULL'
+  return a.metacampo === metacampo
 }
 
-function toggleAssegnazioneCampoNonCensita(idx, itemId, contesto) {
+function toggleAssegnazioneCampoNonCensita(idx, itemId, contesto, metacampo) {
   const key = `noncensita_weekend_${idx}_${itemId}`
   const squadra = squadreNonCensiteWeekend.value[idx]
-  if (assegCampoWeekend.value[key]) {
+  const existing = assegCampoWeekend.value[key]
+  if (existing && (metacampo == null ? (existing.metacampo == null || existing.metacampo === 'FULL') : existing.metacampo === metacampo)) {
     delete assegCampoWeekend.value[key]
-  } else {
+    return
+  }
+  if (metacampo == null || metacampo === 'FULL') {
     weekendPartiteCasa.value.forEach(p => {
       delete assegCampoWeekend.value[`casa_${p.id || ''}_${itemId}`]
     })
@@ -976,12 +1560,38 @@ function toggleAssegnazioneCampoNonCensita(idx, itemId, contesto) {
     squadreNonCensiteWeekend.value.forEach((_, i) => {
       if (i !== idx) delete assegCampoWeekend.value[`noncensita_weekend_${i}_${itemId}`]
     })
-    assegCampoWeekend.value[key] = {
-      campo_id: itemId,
-      nome_squadra_esterna: squadra.nome,
-      tipo: 'esterna'
-    }
+  } else {
+    weekendPartiteCasa.value.forEach(p => {
+      const otherKey = `casa_${p.id || ''}_${itemId}`
+      const other = assegCampoWeekend.value[otherKey]
+      if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
+        delete assegCampoWeekend.value[otherKey]
+      }
+    })
+    weekendPartiteFuori.value.forEach(p => {
+      const otherKey = `ospite_${p.id || ''}_${itemId}`
+      const other = assegCampoWeekend.value[otherKey]
+      if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
+        delete assegCampoWeekend.value[otherKey]
+      }
+    })
+    squadreNonCensiteWeekend.value.forEach((_, i) => {
+      if (i !== idx) {
+        const ncKey = `noncensita_weekend_${i}_${itemId}`
+        const other = assegCampoWeekend.value[ncKey]
+        if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
+          delete assegCampoWeekend.value[ncKey]
+        }
+      }
+    })
   }
+  const payload = {
+    campo_id: itemId,
+    nome_squadra_esterna: squadra.nome,
+    tipo: 'esterna'
+  }
+  if (metacampo && metacampo !== 'FULL') payload.metacampo = metacampo
+  assegCampoWeekend.value[key] = payload
 }
 
 let ncIdCounter = 0
@@ -1011,6 +1621,148 @@ function rimuoviSquadraNonCensita(idx, contesto) {
 }
 
 // ── Load data ──
+
+// ── Default Week Helpers ──
+
+function getAssegnazioneSpogliatoioDefault(catId, itemId, dataGiorno) {
+  const key = `${catId}_${itemId}_${dataGiorno}`
+  return !!assegSpogliatoioDefault.value[key]
+}
+
+function isSpogliatoioOccupatoDefault(catId, itemId, dataGiorno) {
+  const ora = getOraCategoria(catId)
+  const dow = new Date(dataGiorno).getDay()
+  return categorie.value.some(c =>
+    c.id !== catId &&
+    (c.giorni || '').split(',').map(Number).includes(dow) &&
+    (c.ora_allenamento || 'Senza orario') === ora &&
+    !!assegSpogliatoioDefault.value[`${c.id}_${itemId}_${dataGiorno}`]
+  )
+}
+
+function toggleAssegnazioneSpogliatoioDefault(catId, itemId, dataGiorno) {
+  const key = `${catId}_${itemId}_${dataGiorno}`
+  if (assegSpogliatoioDefault.value[key]) {
+    delete assegSpogliatoioDefault.value[key]
+  } else {
+    const ora = getOraCategoria(catId)
+    const dow = new Date(dataGiorno).getDay()
+    categorie.value.filter(c =>
+      c.id !== catId &&
+      (c.giorni || '').split(',').map(Number).includes(dow) &&
+      (c.ora_allenamento || 'Senza orario') === ora
+    ).forEach(c => {
+      delete assegSpogliatoioDefault.value[`${c.id}_${itemId}_${dataGiorno}`]
+    })
+    assegSpogliatoioDefault.value[key] = {
+      categoria_id: catId,
+      spogliatoio_id: itemId,
+      data: dataGiorno,
+      tipo: 'casa',
+      is_default: true
+    }
+  }
+}
+
+function getCampoAssegnatoDefault(catId, itemId, dataGiorno) {
+  const a = assegCampoDefault.value[`${catId}_${itemId}_${dataGiorno}`]
+  if (!a) return null
+  return a.metacampo || 'FULL'
+}
+
+function getCampoLabelSuffissoDefault(catId, itemId, dataGiorno) {
+  const asg = getCampoAssegnatoDefault(catId, itemId, dataGiorno)
+  if (asg === 'A') return ' A'
+  if (asg === 'B') return ' B'
+  return ''
+}
+
+function isCampoOccupatoDefault(catId, itemId, dataGiorno, metacampo) {
+  const ora = getOraCategoria(catId)
+  const dow = new Date(dataGiorno).getDay()
+  const allCats = categorie.value.filter(c =>
+    (c.giorni || '').split(',').map(Number).includes(dow) &&
+    (c.ora_allenamento || 'Senza orario') === ora
+  )
+  if (metacampo === 'A' || metacampo === 'B') {
+    for (const c of allCats) {
+      if (c.id === catId) continue
+      const a = assegCampoDefault.value[`${c.id}_${itemId}_${dataGiorno}`]
+      if (a && (a.metacampo == null || a.metacampo === 'FULL' || a.metacampo === metacampo)) return true
+    }
+    return false
+  }
+  for (const c of allCats) {
+    if (c.id === catId) continue
+    if (assegCampoDefault.value[`${c.id}_${itemId}_${dataGiorno}`]) return true
+  }
+  return false
+}
+
+function isCampoTuttoOccupatoDefault(catId, itemId, dataGiorno) {
+  const ora = getOraCategoria(catId)
+  const dow = new Date(dataGiorno).getDay()
+  const allCats = categorie.value.filter(c =>
+    (c.giorni || '').split(',').map(Number).includes(dow) &&
+    (c.ora_allenamento || 'Senza orario') === ora
+  )
+  for (const c of allCats) {
+    if (c.id === catId) continue
+    const a = assegCampoDefault.value[`${c.id}_${itemId}_${dataGiorno}`]
+    if (a && (a.metacampo == null || a.metacampo === 'FULL')) return true
+  }
+  return false
+}
+
+function toggleAssegnazioneCampoDefault(catId, itemId, dataGiorno, metacampo) {
+  const key = `${catId}_${itemId}_${dataGiorno}`
+  const existing = assegCampoDefault.value[key]
+  if (existing && (metacampo == null ? (existing.metacampo == null || existing.metacampo === 'FULL') : existing.metacampo === metacampo)) {
+    delete assegCampoDefault.value[key]
+    return
+  }
+  const ora = getOraCategoria(catId)
+  const dow = new Date(dataGiorno).getDay()
+  const categorieStessaFascia = categorie.value.filter(c =>
+    c.id !== catId &&
+    (c.giorni || '').split(',').map(Number).includes(dow) &&
+    (c.ora_allenamento || 'Senza orario') === ora
+  )
+  if (metacampo == null || metacampo === 'FULL') {
+    categorieStessaFascia.forEach(c => {
+      delete assegCampoDefault.value[`${c.id}_${itemId}_${dataGiorno}`]
+    })
+  } else {
+    categorieStessaFascia.forEach(c => {
+      const otherKey = `${c.id}_${itemId}_${dataGiorno}`
+      const other = assegCampoDefault.value[otherKey]
+      if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
+        delete assegCampoDefault.value[otherKey]
+      }
+    })
+  }
+  const payload = {
+    campo_id: itemId,
+    categoria_id: catId,
+    tipo: 'casa',
+    data: dataGiorno,
+    is_default: true
+  }
+  if (metacampo && metacampo !== 'FULL') payload.metacampo = metacampo
+  assegCampoDefault.value[key] = payload
+}
+
+function toggleCampoMenuDefault(catId, itemId, dataGiorno) {
+  const key = `${catId}_${itemId}_${dataGiorno}`
+  campoMenuDefaultAperto.value = campoMenuDefaultAperto.value === key ? null : key
+}
+
+function assegnaCampoDaMenuDefault(catId, itemId, dataGiorno, metacampo) {
+  toggleAssegnazioneCampoDefault(catId, itemId, dataGiorno, metacampo)
+  campoMenuDefaultAperto.value = null
+}
+
+// ── Load ──
 
 async function loadSpogliatoi() {
   try {
@@ -1254,14 +2006,94 @@ async function salvaAssegnazioniWeekend() {
   alert('Assegnazioni weekend salvate!')
 }
 
+// ── Default Week Save & Load ──
+
+async function salvaAssegnazioniDefault() {
+  // Clear existing default assignments
+  const spRes = await getAssegnazioniDefault()
+  const caRes = await getCampiAssegnazioniDefault()
+  ;(spRes.data || []).forEach(a => { if (a.id) eliminaAssegnazione(a.id) })
+  ;(caRes.data || []).forEach(a => { if (a.id) eliminaCampoAssegnazione(a.id) })
+
+  // Save spogliatoi
+  for (const [, val] of Object.entries(assegSpogliatoioDefault.value)) {
+    await creaAssegnazione({
+      ...val,
+      societa_id: societaAttiva.value?.id || null,
+      is_default: true
+    })
+  }
+  // Save campi
+  for (const [, val] of Object.entries(assegCampoDefault.value)) {
+    await creaCampoAssegnazione({
+      ...val,
+      societa_id: societaAttiva.value?.id || null,
+      is_default: true
+    })
+  }
+  alert('Settimana tipo salvata!')
+  await caricaAssegnazioniDefault()
+}
+
+async function caricaAssegnazioniDefault() {
+  assegSpogliatoioDefault.value = {}
+  assegCampoDefault.value = {}
+  haSettimanaTipo.value = false
+  try {
+    const [spRes, caRes] = await Promise.all([
+      getAssegnazioniDefault(),
+      getCampiAssegnazioniDefault()
+    ])
+    const spData = spRes.data || []
+    const caData = caRes.data || []
+    if (spData.length > 0 || caData.length > 0) {
+      haSettimanaTipo.value = true
+    }
+    spData.forEach(a => {
+      const dataKey = a.data || getLunesdiCorrente()
+      const key = `${a.categoria_id}_${a.spogliatoio_id}_${dataKey}`
+      assegSpogliatoioDefault.value[key] = a
+    })
+    caData.forEach(a => {
+      const dataKey = a.data || getLunesdiCorrente()
+      const key = `${a.categoria_id}_${a.campo_id}_${dataKey}`
+      assegCampoDefault.value[key] = a
+    })
+    if (giorniDefault.value.length > 0 && !giornoDefaultAttivo.value) {
+      const oggi = new Date().toISOString().split('T')[0]
+      const todayMatch = giorniDefault.value.find(g => g.data === oggi)
+      giornoDefaultAttivo.value = todayMatch ? todayMatch.data : giorniDefault.value[0].data
+    }
+  } catch (e) {
+    console.error('Errore caricamento settimana tipo:', e)
+  }
+}
+
+async function applicaSettimanaTipo() {
+  if (!haSettimanaTipo.value) {
+    alert('Nessuna settimana tipo configurata. Vai su "Settimana Tipo" per crearla.')
+    return
+  }
+  if (!confirm('Applicare la settimana tipo a questa settimana? Sostituirà le assegnazioni esistenti.')) return
+  try {
+    await applyDefaultWeekSpogliatoi(settimanaInizio.value)
+    await applyDefaultWeekCampi(settimanaInizio.value)
+    await caricaAssegnazioniSettimana()
+    alert('Settimana tipo applicata!')
+  } catch (e) {
+    console.error('Errore applicazione settimana tipo:', e)
+    alert('Errore nell\'applicazione della settimana tipo.')
+  }
+}
+
 // ── Modal CRUD ──
 
 function apriModal(item, tipo) {
   if (item) {
-    modal.value = { show: true, id: item.id, tipo: tipo, etichetta: item.etichetta, ordine: item.ordine || 0 }
+    modal.value = { show: true, id: item.id, tipo: tipo, etichetta: item.etichetta, ordine: item.ordine || 0, tipo_campo: item.tipo_campo || '11' }
   } else {
     const list = tipo === 'spogliatoi' ? spogliatoi.value : campi.value
-    modal.value = { show: true, id: null, tipo: tipo, etichetta: '', ordine: list.length }
+    modal.value = { show: true, id: null, tipo: tipo, etichetta: '', ordine: list.length, tipo_campo: '11' }
   }
 }
 
@@ -1339,22 +2171,28 @@ function stampaGiornoSingolo(dataGiorno) {
       <tr><th>Categoria</th><th class="spo">Spogliatoio</th><th class="cam">Campo da gioco</th></tr>`
     for (const cat of cats) {
       const spoItems = spogliatoi.value.filter(item => getAssegnazioneSpogliatoioGiorno(cat.id, item.id, dataGiorno))
-      const camItems = campi.value.filter(item => getAssegnazioneCampoGiorno(cat.id, item.id, dataGiorno))
+      const camFull = campi.value.filter(item => getAssegnazioneCampoGiorno(cat.id, item.id, dataGiorno, null))
+      const camA = campi.value.filter(item => getAssegnazioneCampoGiorno(cat.id, item.id, dataGiorno, 'A'))
+      const camB = campi.value.filter(item => getAssegnazioneCampoGiorno(cat.id, item.id, dataGiorno, 'B'))
+      const camChips = [...camFull.map(i => `<span class="cam-chip">${esc(i.etichetta)}</span>`), ...camA.map(i => `<span class="cam-chip">${esc(i.etichetta)} A</span>`), ...camB.map(i => `<span class="cam-chip">${esc(i.etichetta)} B</span>`)]
       html += `<tr>
         <td><span class="cat-anno">${esc(cat.anno)}</span> <span class="cat-nome">${esc(cat.nome)}</span></td>
         <td>${spoItems.map(i => `<span class="spo-chip">${esc(i.etichetta)}</span>`).join(' ') || '—'}</td>
-        <td>${camItems.map(i => `<span class="cam-chip">${esc(i.etichetta)}</span>`).join(' ') || '—'}</td>
+        <td>${camChips.join(' ') || '—'}</td>
       </tr>`
     }
     const ncSquadre = squadreNonCensiteSettimanali.value.filter(s => s.ora === ora && s.dataGiorno === dataGiorno)
     for (const squadra of ncSquadre) {
       const gidx = squadreNonCensiteSettimanali.value.findIndex(s => s.id === squadra.id)
       const spoItems = spogliatoi.value.filter(item => getAssegnazioneSpogliatoioNonCensitaGiorno(gidx, item.id, dataGiorno))
-      const camItems = campi.value.filter(item => getAssegnazioneCampoNonCensitaGiorno(gidx, item.id, dataGiorno))
+      const camFull = campi.value.filter(item => getAssegnazioneCampoNonCensitaGiorno(gidx, item.id, dataGiorno, null))
+      const camA = campi.value.filter(item => getAssegnazioneCampoNonCensitaGiorno(gidx, item.id, dataGiorno, 'A'))
+      const camB = campi.value.filter(item => getAssegnazioneCampoNonCensitaGiorno(gidx, item.id, dataGiorno, 'B'))
+      const camChips = [...camFull.map(i => `<span class="cam-chip">${esc(i.etichetta)}</span>`), ...camA.map(i => `<span class="cam-chip">${esc(i.etichetta)} A</span>`), ...camB.map(i => `<span class="cam-chip">${esc(i.etichetta)} B</span>`)]
       html += `<tr>
         <td>${esc(squadra.nome || 'Squadra non censita')}</td>
         <td>${spoItems.map(i => `<span class="spo-chip">${esc(i.etichetta)}</span>`).join(' ') || '—'}</td>
-        <td>${camItems.map(i => `<span class="cam-chip">${esc(i.etichetta)}</span>`).join(' ') || '—'}</td>
+        <td>${camChips.join(' ') || '—'}</td>
       </tr>`
     }
     html += `</table></div>`
@@ -1371,6 +2209,13 @@ onMounted(() => {
   loadCategorie()
   loadWeekend()
   caricaAssegnazioniSettimana()
+  caricaAssegnazioniDefault()
+  // Auto-select today's day
+  const oggi = new Date().toISOString().split('T')[0]
+  if (giorniSettimana.value.length > 0) {
+    const todayMatch = giorniSettimana.value.find(g => g.data === oggi)
+    giornoAttivo.value = todayMatch ? todayMatch.data : giorniSettimana.value[0].data
+  }
 })
 </script>
 
@@ -1496,6 +2341,81 @@ onMounted(() => {
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--color-text);
+}
+
+.campo-tipo-badge {
+  font-size: 0.6875rem;
+  color: #10b981;
+  font-weight: 700;
+}
+
+.campo-menu-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.campo-chip-main {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+
+.campo-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  min-width: 130px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.campo-dropdown-item {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: all var(--transition-fast);
+}
+
+.campo-dropdown-item:hover:not(.disabled):not(.active) {
+  background: var(--color-surface-elevated);
+  color: var(--color-primary);
+}
+
+.campo-dropdown-item.active {
+  background: var(--color-primary);
+  color: white;
+}
+
+.campo-dropdown-item.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.campo-dropdown-item.rimuovi {
+  border-top: 1px solid var(--color-border);
+  color: #ef4444;
+}
+
+.campo-dropdown-item.rimuovi:hover {
+  background: rgba(239,68,68,0.1);
+}
+
+.form-select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: 0.875rem;
 }
 
 .btn-icon-xs {
@@ -2288,5 +3208,49 @@ onMounted(() => {
     background: #10b981 !important;
     color: #fff !important;
   }
+}
+
+.btn-default-apply {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-default-apply:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.btn-default-apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.default-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05));
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  color: #92400e;
+}
+
+.default-info-banner svg {
+  flex-shrink: 0;
+  color: #f59e0b;
 }
 </style>

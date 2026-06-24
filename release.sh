@@ -92,7 +92,7 @@ echo "### Added" >> CHANGELOG.md
 echo "- $MESSAGE" >> CHANGELOG.md
 
 # Commit della release
-git add releases/v$NEW_VERSION
+git add -f releases/v$NEW_VERSION
 git add CHANGELOG.md
 git commit -m "Release v$NEW_VERSION - $MESSAGE"
 
