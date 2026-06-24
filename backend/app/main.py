@@ -8,7 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 import os
 from .rate_limit import limiter
 from .database import Base, engine
-from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni, infortuni, openday
+from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni, infortuni, openday, planning_eventi
 from .routers.gruppi import router as gruppi_router
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
@@ -305,6 +305,14 @@ def run_migrations():
                 print(f"Migration warning (campi_da_gioco table): {e}")
                 conn.rollback()
 
+            try:
+                conn.execute(text("ALTER TABLE campi_da_gioco ADD COLUMN tipo_campo VARCHAR(5) DEFAULT '11'"))
+                conn.commit()
+                print("Migration: Added tipo_campo to campi_da_gioco")
+            except Exception as e:
+                print(f"Migration warning (campi_da_gioco tipo_campo): {e}")
+                conn.rollback()
+
             # Campi assegnazioni table
             try:
                 conn.execute(text("""
@@ -324,6 +332,31 @@ def run_migrations():
                 print("Migration: Created campi_assegnazioni table")
             except Exception as e:
                 print(f"Migration warning (campi_assegnazioni table): {e}")
+                conn.rollback()
+
+            try:
+                conn.execute(text("ALTER TABLE campi_assegnazioni ADD COLUMN metacampo VARCHAR(2)"))
+                conn.commit()
+                print("Migration: Added metacampo to campi_assegnazioni")
+            except Exception as e:
+                print(f"Migration warning (campi_assegnazioni metacampo): {e}")
+                conn.rollback()
+
+            # is_default column for default week template
+            try:
+                conn.execute(text("ALTER TABLE spogliatoi_assegnazioni ADD COLUMN is_default BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+                print("Migration: Added is_default to spogliatoi_assegnazioni")
+            except Exception as e:
+                print(f"Migration warning (spogliatoi_assegnazioni is_default): {e}")
+                conn.rollback()
+
+            try:
+                conn.execute(text("ALTER TABLE campi_assegnazioni ADD COLUMN is_default BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+                print("Migration: Added is_default to campi_assegnazioni")
+            except Exception as e:
+                print(f"Migration warning (campi_assegnazioni is_default): {e}")
                 conn.rollback()
 
             # Presenze allenatori table
@@ -507,6 +540,29 @@ def run_migrations():
                 print(f"Migration warning (openday new columns): {e}")
                 conn.rollback()
 
+            try:
+                result = conn.execute(text(
+                    "SELECT table_name FROM information_schema.tables WHERE table_name = 'planning_eventi'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text("""
+                        CREATE TABLE planning_eventi (
+                            id SERIAL PRIMARY KEY,
+                            categoria_id INTEGER REFERENCES categorie(id) NOT NULL,
+                            societa_id INTEGER REFERENCES societa(id) NOT NULL,
+                            data DATE NOT NULL,
+                            tipo VARCHAR(20) NOT NULL,
+                            titolo VARCHAR(200),
+                            note TEXT,
+                            creato_il TIMESTAMP
+                        )
+                    """))
+                    conn.commit()
+                    print("Migration: Created planning_eventi table")
+            except Exception as e:
+                print(f"Migration warning (planning_eventi): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 
@@ -531,6 +587,7 @@ app.include_router(presenze_allenatori.router, dependencies=[Depends(get_current
 app.include_router(valutazioni.router, dependencies=[Depends(get_current_user)])
 app.include_router(infortuni.router, dependencies=[Depends(get_current_user)])
 app.include_router(openday.router, prefix="/openday", dependencies=[Depends(get_current_user)])
+app.include_router(planning_eventi.router, dependencies=[Depends(get_current_user)])
 
 @app.get("/")
 def root():

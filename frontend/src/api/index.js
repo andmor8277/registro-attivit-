@@ -154,6 +154,8 @@ export const getAssegnazioniWeekend = (weekendId) => api.get(`/spogliatoi/assegn
 export const creaAssegnazione = (data) => api.post('/spogliatoi/assegnazioni', data)
 export const aggiornaAssegnazione = (id, data) => api.put(`/spogliatoi/assegnazioni/${id}`, data)
 export const eliminaAssegnazione = (id) => api.delete(`/spogliatoi/assegnazioni/${id}`)
+export const getAssegnazioniDefault = () => api.get('/spogliatoi/assegnazioni/default')
+export const applyDefaultWeekSpogliatoi = (dataInizio) => api.post(`/spogliatoi/assegnazioni/default/apply?data_inizio=${dataInizio}`)
 
 // Campi da gioco
 export const getCampi = (societaId) => {
@@ -168,6 +170,8 @@ export const getCampiAssegnazioniWeekend = (weekendId) => api.get(`/campi/assegn
 export const creaCampoAssegnazione = (data) => api.post('/campi/assegnazioni', data)
 export const aggiornaCampoAssegnazione = (id, data) => api.put(`/campi/assegnazioni/${id}`, data)
 export const eliminaCampoAssegnazione = (id) => api.delete(`/campi/assegnazioni/${id}`)
+export const getCampiAssegnazioniDefault = () => api.get('/campi/assegnazioni/default')
+export const applyDefaultWeekCampi = (dataInizio) => api.post(`/campi/assegnazioni/default/apply?data_inizio=${dataInizio}`)
 
 // Presenze allenatori
 export const getPresenzeAllenatoriMese = (anno, mese) => api.get(`/presenze-allenatori/mese/${anno}/${mese}`)
@@ -199,3 +203,9 @@ export const aggiornaOpenday = (id, data) => api.put(`/openday/${id}`, data)
 export const eliminaOpenday = (id) => api.delete(`/openday/${id}`)
 export const iscriviOpenday = (id) => api.post(`/openday/${id}/iscrivi`)
 export const disiscriviOpenday = (id) => api.post(`/openday/${id}/disiscrivi`)
+
+// Planning Eventi
+export const getPlanningEventi = (categoria_id = null) => api.get('/planning-eventi/', { params: { categoria_id } })
+export const creaPlanningEvento = (data) => api.post('/planning-eventi/', data)
+export const aggiornaPlanningEvento = (id, data) => api.put(`/planning-eventi/${id}`, data)
+export const eliminaPlanningEvento = (id) => api.delete(`/planning-eventi/${id}`)
