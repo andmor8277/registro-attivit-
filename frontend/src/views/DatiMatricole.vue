@@ -26,6 +26,15 @@
             </svg>
             Aggiungi
           </button>
+          <button v-if="utenteAttivo?.is_admin || utenteAttivo?.ruolo === 'mister'" class="btn-gruppi-pill" @click="apriGestisciGruppi">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+              <path d="M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+            Gruppi
+          </button>
         </div>
       </div>
       <div class="header-main">
@@ -41,10 +50,7 @@
         <input v-model="search" placeholder="Cerca per nome, cognome o matricola..." class="search-input" />
         <select v-if="!isDirigente" v-model="gruppoFilter" class="gruppo-filter">
           <option value="">Tutti i gruppi</option>
-          <option value="1">Primo Gruppo</option>
-          <option value="2">Secondo Gruppo</option>
-          <option value="3">Terzo Gruppo</option>
-          <option value="4">Portieri</option>
+          <option v-for="g in gruppiList" :key="g.id" :value="g.id">{{ g.nome }}</option>
         </select>
       </div>
 
@@ -159,10 +165,7 @@
           <div v-if="!isDirigente" class="form-field">
             <label>Gruppo</label>
             <select v-model="modal.gruppo_id">
-              <option :value="1">Primo Gruppo</option>
-              <option :value="2">Secondo Gruppo</option>
-              <option :value="3">Terzo Gruppo</option>
-              <option :value="4">Portieri</option>
+              <option v-for="g in gruppiList" :key="g.id" :value="g.id">{{ g.nome }}</option>
             </select>
           </div>
         </div>
@@ -175,6 +178,63 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal Gestione Gruppi -->
+    <div v-if="gruppiModal.show" class="modal-overlay" @click.self="gruppiModal.show = false">
+      <div class="modal gruppi-modal">
+        <h3>Gestione Gruppi</h3>
+        <div class="gruppi-list">
+          <div v-for="g in gruppiList" :key="g.id" class="gruppo-row">
+            <span class="gruppo-nome">{{ g.nome }}</span>
+            <div class="gruppo-row-actions">
+              <button class="btn-gruppo-edit" @click="apriModificaGruppo(g)" title="Modifica">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              <button class="btn-gruppo-delete" @click="eliminaGruppo(g)" title="Elimina">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div v-if="gruppiList.length === 0" class="no-gruppi">Nessun gruppo configurato</div>
+        </div>
+        <div class="gruppi-add-row">
+          <input v-model="gruppiModal.nome" placeholder="Nome nuovo gruppo..." @keyup.enter="creaGruppo" class="gruppo-add-input" />
+          <button class="btn-gruppo-add" @click="creaGruppo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Aggiungi
+          </button>
+        </div>
+        <div class="modal-actions">
+          <div class="modal-actions-right" style="width:100%;justify-content:flex-end;">
+            <button class="btn-annulla" @click="gruppiModal.show = false">Chiudi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Modifica Gruppo -->
+    <div v-if="gruppoEditModal.show" class="modal-overlay" @click.self="gruppoEditModal.show = false">
+      <div class="modal modal-small">
+        <h3>Modifica Gruppo</h3>
+        <div class="form-field">
+          <label>Nome</label>
+          <input v-model="gruppoEditModal.nome" @keyup.enter="salvaModificaGruppo" />
+        </div>
+        <div class="modal-actions">
+          <button class="btn-annulla" @click="gruppoEditModal.show = false">Annulla</button>
+          <button class="btn-salva" @click="salvaModificaGruppo">Salva</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -182,7 +242,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../store.js'
-import { getPersone, updatePersona, createPersona, deletePersona } from '../api/index.js'
+import { getPersone, updatePersona, createPersona, deletePersona, getGruppi, createGruppo, deleteGruppo, updateGruppo } from '../api/index.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -338,11 +398,58 @@ async function elimina() {
   if (!confirm('Eliminare questo giocatore?')) return
   await deletePersona(modal.value.id)
   modal.value.show = false
+  await reloadData()
+}
+
+// ── Gruppi management ──
+const gruppiList = ref([])
+const gruppiModal = ref({ show: false, nome: '' })
+const gruppoEditModal = ref({ show: false, id: null, nome: '' })
+
+async function loadGruppi() {
+  try {
+    const res = await getGruppi(categoriaId)
+    gruppiList.value = (res.data || []).map(item =>
+      typeof item === 'string' ? { id: null, nome: item } : { id: item.id, nome: item.nome }
+    )
+  } catch(e) { console.error('Error loading gruppi:', e) }
+}
+
+function apriGestisciGruppi() {
+  gruppiModal.value = { show: true, nome: '' }
+}
+
+function apriModificaGruppo(g) {
+  gruppoEditModal.value = { show: true, id: g.id, nome: g.nome }
+}
+
+async function creaGruppo() {
+  if (!gruppiModal.value.nome.trim()) return
+  await createGruppo({ nome: gruppiModal.value.nome.trim(), categoria_id: categoriaId })
+  gruppiModal.value.nome = ''
+  await loadGruppi()
+}
+
+async function salvaModificaGruppo() {
+  if (!gruppoEditModal.value.nome.trim()) return
+  await updateGruppo(gruppoEditModal.value.id, { nome: gruppoEditModal.value.nome.trim() })
+  gruppoEditModal.value.show = false
+  await loadGruppi()
+}
+
+async function eliminaGruppo(g) {
+  if (!confirm('Eliminare il gruppo "' + g.nome + '"?')) return
+  await deleteGruppo(g.id)
+  await loadGruppi()
+}
+
+async function reloadData() {
   const res = await getPersone(categoriaId)
   persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
 }
 
 onMounted(async () => {
+  await loadGruppi()
   const res = await getPersone(categoriaId)
   persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
 })
@@ -488,6 +595,28 @@ onMounted(async () => {
 .btn-add-pill:hover {
   background: rgba(34, 197, 94, 0.18);
   border-color: rgba(34, 197, 94, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-gruppi-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 1rem;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 100px;
+  color: #a78bfa;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-gruppi-pill:hover {
+  background: rgba(168, 85, 247, 0.18);
+  border-color: rgba(168, 85, 247, 0.35);
   transform: translateY(-1px);
 }
 
@@ -886,6 +1015,120 @@ tr:last-child td { border-bottom: none; }
 .btn-salva:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(220, 38, 38, 0.35);
+}
+
+/* ── Gruppi management ── */
+.gruppi-list {
+  max-height: 280px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+
+.gruppo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  transition: all var(--transition-fast);
+}
+
+.gruppo-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.gruppo-nome {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.gruppo-row-actions {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.btn-gruppo-edit,
+.btn-gruppo-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-gruppo-edit:hover {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: rgba(168, 85, 247, 0.3);
+  color: #a78bfa;
+}
+
+.btn-gruppo-delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.gruppi-add-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.gruppo-add-input {
+  flex: 1;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text);
+  transition: all var(--transition-fast);
+}
+
+.gruppo-add-input::placeholder { color: var(--color-text-muted); }
+
+.gruppo-add-input:focus {
+  outline: none;
+  border-color: rgba(168, 85, 247, 0.4);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.08);
+}
+
+.btn-gruppo-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 10px;
+  color: #a78bfa;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-gruppo-add:hover {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+.no-gruppi {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
 }
 
 /* ── Responsive ── */

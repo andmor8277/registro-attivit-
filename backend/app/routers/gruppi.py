@@ -21,6 +21,9 @@ class GruppoIn(BaseModel):
     nome: str
     categoria_id: Optional[int] = None
 
+class GruppoUpdate(BaseModel):
+    nome: str
+
 def get_societa_filter(current_user: Utente):
     if current_user.is_super_admin:
         return None
@@ -52,6 +55,19 @@ def create_gruppo(data: GruppoIn, db: Session = Depends(get_db), current_user: U
         return existing
     gruppo = Gruppo(nome=data.nome, categoria_id=data.categoria_id, societa_id=societa_id)
     db.add(gruppo)
+    db.commit()
+    db.refresh(gruppo)
+    return gruppo
+
+@router.put("/{gruppo_id}", response_model=GruppoOut)
+def update_gruppo(gruppo_id: int, data: GruppoUpdate, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    gruppo = db.query(Gruppo).filter(Gruppo.id == gruppo_id).first()
+    if not gruppo:
+        raise HTTPException(status_code=404, detail="Gruppo non trovato")
+    societa_id = get_societa_filter(current_user)
+    if societa_id and gruppo.societa_id != societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    gruppo.nome = data.nome
     db.commit()
     db.refresh(gruppo)
     return gruppo
