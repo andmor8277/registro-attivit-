@@ -34,7 +34,7 @@ def assegnazioni_settimana(data_inizio: str, db=Depends(get_db), user=Depends(ge
     from datetime import timedelta
     data_date = data_inizio.replace('-', '')
     data_int = int(data_date)
-    data_fine = data_int + 4  # Mon-Fri
+    data_fine = data_int + 4
     societa_filter = ""
     params = {"data_inizio": data_inizio, "data_inizio_int": data_int, "data_fine_int": data_fine}
     if not user.is_super_admin:
@@ -42,7 +42,7 @@ def assegnazioni_settimana(data_inizio: str, db=Depends(get_db), user=Depends(ge
         params["sid"] = user.societa_id
     res = db.execute(
         text(f"""
-            SELECT sa.*, c.etichetta as campo_etichetta,
+            SELECT sa.*, c.etichetta as campo_etichetta, c.tipo_campo,
                    cat.nome as categoria_nome, cat.anno as categoria_anno,
                    cat.ora_allenamento, cat.giorni
             FROM campi_assegnazioni sa
@@ -66,7 +66,7 @@ def assegnazioni_giorno(data_giorno: str, db=Depends(get_db), user=Depends(get_c
         params["sid"] = user.societa_id
     res = db.execute(
         text(f"""
-            SELECT sa.*, c.etichetta as campo_etichetta,
+            SELECT sa.*, c.etichetta as campo_etichetta, c.tipo_campo,
                    cat.nome as categoria_nome, cat.anno as categoria_anno,
                    cat.ora_allenamento, cat.giorni
             FROM campi_assegnazioni sa
@@ -89,7 +89,7 @@ def assegnazioni_weekend(weekend_id: int, db=Depends(get_db), user=Depends(get_c
         params["sid"] = user.societa_id
     res = db.execute(
         text(f"""
-            SELECT sa.*, c.etichetta as campo_etichetta,
+            SELECT sa.*, c.etichetta as campo_etichetta, c.tipo_campo,
                    cat.nome as categoria_nome, cat.anno as categoria_anno
             FROM campi_assegnazioni sa
             LEFT JOIN campi_da_gioco c ON sa.campo_id = c.id
@@ -110,14 +110,15 @@ def crea_campo(data: CampoCreate, db=Depends(get_db), user=Depends(get_current_u
     check_societa(user, societa_id)
     res = db.execute(
         text("""
-            INSERT INTO campi_da_gioco (etichetta, ordine, societa_id)
-            VALUES (:etichetta, :ordine, :societa_id)
+            INSERT INTO campi_da_gioco (etichetta, ordine, societa_id, tipo_campo)
+            VALUES (:etichetta, :ordine, :societa_id, :tipo_campo)
             RETURNING *
         """),
         {
             "etichetta": data.etichetta,
             "ordine": data.ordine,
             "societa_id": societa_id,
+            "tipo_campo": data.tipo_campo or "11",
         }
     )
     db.commit()
@@ -131,7 +132,8 @@ def aggiorna_campo(campo_id: int, data: CampoUpdate, db=Depends(get_db), user=De
         text("""
             UPDATE campi_da_gioco SET
                 etichetta = :etichetta,
-                ordine = :ordine
+                ordine = :ordine,
+                tipo_campo = :tipo_campo
             WHERE id = :id
             RETURNING *
         """),
@@ -139,6 +141,7 @@ def aggiorna_campo(campo_id: int, data: CampoUpdate, db=Depends(get_db), user=De
             "id": campo_id,
             "etichetta": data.etichetta,
             "ordine": data.ordine,
+            "tipo_campo": data.tipo_campo,
         }
     )
     db.commit()
@@ -167,11 +170,11 @@ def crea_assegnazione(data: CampoAssegnazioneCreate, db=Depends(get_db), user=De
         text("""
             INSERT INTO campi_assegnazioni (
                 campo_id, categoria_id, nome_squadra_esterna,
-                tipo, data_inizio, data, weekend_id, societa_id
+                tipo, data_inizio, data, weekend_id, societa_id, metacampo, is_default
             )
             VALUES (
                 :campo_id, :categoria_id, :nome_squadra_esterna,
-                :tipo, :data_inizio, :data, :weekend_id, :societa_id
+                :tipo, :data_inizio, :data, :weekend_id, :societa_id, :metacampo, :is_default
             )
             RETURNING *
         """),
@@ -184,6 +187,8 @@ def crea_assegnazione(data: CampoAssegnazioneCreate, db=Depends(get_db), user=De
             "data": data.data,
             "weekend_id": data.weekend_id,
             "societa_id": societa_id,
+            "metacampo": data.metacampo,
+            "is_default": data.is_default or False,
         }
     )
     db.commit()
@@ -207,7 +212,8 @@ def aggiorna_assegnazione(assegnazione_id: int, data: CampoAssegnazioneUpdate, d
                 tipo = :tipo,
                 data_inizio = :data_inizio,
                 data = :data,
-                weekend_id = :weekend_id
+                weekend_id = :weekend_id,
+                metacampo = :metacampo
             WHERE id = :id
             RETURNING *
         """),
@@ -220,6 +226,7 @@ def aggiorna_assegnazione(assegnazione_id: int, data: CampoAssegnazioneUpdate, d
             "data_inizio": data.data_inizio,
             "data": data.data,
             "weekend_id": data.weekend_id,
+            "metacampo": data.metacampo,
         }
     )
     db.commit()
@@ -237,5 +244,50 @@ def elimina_assegnazione(assegnazione_id: int, db=Depends(get_db), user=Depends(
             raise HTTPException(404, "Assegnazione non trovata")
         check_societa(user, row.societa_id)
     db.execute(text("DELETE FROM campi_assegnazioni WHERE id = :id"), {"id": assegnazione_id})
+    db.commit()
+    return {"ok": True}
+
+# ── Settimana Tipo (Default Week) ──
+
+@router.get("/assegnazioni/default")
+def assegnazioni_default(db=Depends(get_db), user=Depends(get_current_user)):
+    societa_filter = ""
+    params = {}
+    if not user.is_super_admin:
+        societa_filter = " AND sa.societa_id = :sid"
+        params["sid"] = user.societa_id
+    res = db.execute(
+        text(f"""
+            SELECT sa.*, c.etichetta as campo_etichetta, c.tipo_campo,
+                   cat.nome as categoria_nome, cat.anno as categoria_anno,
+                   cat.ora_allenamento, cat.giorni
+            FROM campi_assegnazioni sa
+            LEFT JOIN campi_da_gioco c ON sa.campo_id = c.id
+            LEFT JOIN categorie cat ON sa.categoria_id = cat.id
+            WHERE sa.is_default = TRUE{societa_filter}
+            ORDER BY cat.ora_allenamento ASC, cat.anno ASC, c.ordine ASC
+        """),
+        params
+    )
+    rows = res.fetchall()
+    return [dict(r._mapping) for r in rows]
+
+@router.post("/assegnazioni/default/apply")
+def apply_default_week(data_inizio: str, db=Depends(get_db), user=Depends(get_current_user)):
+    societa_id = user.societa_id if not user.is_super_admin else None
+    if societa_id:
+        db.execute(text("DELETE FROM campi_assegnazioni WHERE data_inizio = :di AND is_default = FALSE AND societa_id = :sid"), {"di": data_inizio, "sid": societa_id})
+    else:
+        db.execute(text("DELETE FROM campi_assegnazioni WHERE data_inizio = :di AND is_default = FALSE"), {"di": data_inizio})
+    db.execute(
+        text("""
+            INSERT INTO campi_assegnazioni (campo_id, categoria_id, nome_squadra_esterna, tipo, data_inizio, data, weekend_id, societa_id, metacampo)
+            SELECT campo_id, categoria_id, nome_squadra_esterna, tipo, :data_inizio, data, weekend_id, societa_id, metacampo
+            FROM campi_assegnazioni
+            WHERE is_default = TRUE
+              AND (:sid IS NULL OR societa_id = :sid)
+        """),
+        {"data_inizio": data_inizio, "sid": societa_id}
+    )
     db.commit()
     return {"ok": True}

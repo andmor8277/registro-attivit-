@@ -150,6 +150,7 @@ class SpogliatoioAssegnazioneCreate(BaseModel):
     data: Optional[str] = None
     weekend_id: Optional[int] = None
     societa_id: Optional[int] = None
+    is_default: Optional[bool] = False
 
 class SpogliatoioAssegnazioneUpdate(BaseModel):
     spogliatoio_id: Optional[int] = None
@@ -159,15 +160,18 @@ class SpogliatoioAssegnazioneUpdate(BaseModel):
     data_inizio: Optional[str] = None
     data: Optional[str] = None
     weekend_id: Optional[int] = None
+    is_default: Optional[bool] = None
 
 class CampoCreate(BaseModel):
     etichetta: Optional[str] = None
     ordine: Optional[int] = 0
     societa_id: Optional[int] = None
+    tipo_campo: Optional[str] = "11"
 
 class CampoUpdate(BaseModel):
     etichetta: Optional[str] = None
     ordine: Optional[int] = None
+    tipo_campo: Optional[str] = None
 
 class CampoAssegnazioneCreate(BaseModel):
     campo_id: Optional[int] = None
@@ -178,6 +182,8 @@ class CampoAssegnazioneCreate(BaseModel):
     data: Optional[str] = None
     weekend_id: Optional[int] = None
     societa_id: Optional[int] = None
+    metacampo: Optional[str] = None
+    is_default: Optional[bool] = False
 
 class CampoAssegnazioneUpdate(BaseModel):
     campo_id: Optional[int] = None
@@ -187,3 +193,5 @@ class CampoAssegnazioneUpdate(BaseModel):
     data_inizio: Optional[str] = None
     data: Optional[str] = None
     weekend_id: Optional[int] = None
+    metacampo: Optional[str] = None
+    is_default: Optional[bool] = None

@@ -167,11 +167,11 @@ def crea_assegnazione(data: SpogliatoioAssegnazioneCreate, db=Depends(get_db), u
         text("""
             INSERT INTO spogliatoi_assegnazioni (
                 spogliatoio_id, categoria_id, nome_squadra_esterna,
-                tipo, data_inizio, data, weekend_id, societa_id
+                tipo, data_inizio, data, weekend_id, societa_id, is_default
             )
             VALUES (
                 :spogliatoio_id, :categoria_id, :nome_squadra_esterna,
-                :tipo, :data_inizio, :data, :weekend_id, :societa_id
+                :tipo, :data_inizio, :data, :weekend_id, :societa_id, :is_default
             )
             RETURNING *
         """),
@@ -184,6 +184,7 @@ def crea_assegnazione(data: SpogliatoioAssegnazioneCreate, db=Depends(get_db), u
             "data": data.data,
             "weekend_id": data.weekend_id,
             "societa_id": societa_id,
+            "is_default": data.is_default or False,
         }
     )
     db.commit()
@@ -237,5 +238,54 @@ def elimina_assegnazione(assegnazione_id: int, db=Depends(get_db), user=Depends(
             raise HTTPException(404, "Assegnazione non trovata")
         check_societa(user, row.societa_id)
     db.execute(text("DELETE FROM spogliatoi_assegnazioni WHERE id = :id"), {"id": assegnazione_id})
+    db.commit()
+    return {"ok": True}
+
+# ── Settimana Tipo (Default Week) ──
+
+@router.get("/assegnazioni/default")
+def assegnazioni_default(db=Depends(get_db), user=Depends(get_current_user)):
+    societa_filter = ""
+    params = {}
+    if not user.is_super_admin:
+        societa_filter = " AND sa.societa_id = :sid"
+        params["sid"] = user.societa_id
+    res = db.execute(
+        text(f"""
+            SELECT sa.*, s.etichetta as spogliatoio_etichetta,
+                   c.nome as categoria_nome, c.anno as categoria_anno,
+                   c.ora_allenamento, c.giorni
+            FROM spogliatoi_assegnazioni sa
+            LEFT JOIN spogliatoi s ON sa.spogliatoio_id = s.id
+            LEFT JOIN categorie c ON sa.categoria_id = c.id
+            WHERE sa.is_default = TRUE{societa_filter}
+            ORDER BY c.ora_allenamento ASC, c.anno ASC, s.ordine ASC
+        """),
+        params
+    )
+    rows = res.fetchall()
+    return [dict(r._mapping) for r in rows]
+
+@router.post("/assegnazioni/default/apply")
+def apply_default_week(data_inizio: str, db=Depends(get_db), user=Depends(get_current_user)):
+    from datetime import timedelta
+    data_date = data_inizio.replace('-', '')
+    data_int = int(data_date)
+    data_fine = data_int + 4
+    societa_id = user.societa_id if not user.is_super_admin else None
+    if societa_id:
+        db.execute(text("DELETE FROM spogliatoi_assegnazioni WHERE data_inizio = :di AND is_default = FALSE AND societa_id = :sid"), {"di": data_inizio, "sid": societa_id})
+    else:
+        db.execute(text("DELETE FROM spogliatoi_assegnazioni WHERE data_inizio = :di AND is_default = FALSE"), {"di": data_inizio})
+    db.execute(
+        text("""
+            INSERT INTO spogliatoi_assegnazioni (spogliatoio_id, categoria_id, nome_squadra_esterna, tipo, data_inizio, data, weekend_id, societa_id, metacampo)
+            SELECT spogliatoio_id, categoria_id, nome_squadra_esterna, tipo, :data_inizio, data, weekend_id, societa_id, NULL
+            FROM spogliatoi_assegnazioni
+            WHERE is_default = TRUE
+              AND (:sid IS NULL OR societa_id = :sid)
+        """),
+        {"data_inizio": data_inizio, "sid": societa_id}
+    )
     db.commit()
     return {"ok": True}

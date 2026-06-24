@@ -205,7 +205,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useStore } from './store.js'
 import { useRouter } from 'vue-router'
 import { getMe, getStagioni, changePassword } from './api/index.js'
@@ -276,9 +276,12 @@ async function loadStagione() {
     const stagioniAttive = res.data?.attiva || []
     if (stagioniAttive.length > 0) {
       setStagioneCorrente(stagioniAttive[0])
+    } else {
+      setStagioneCorrente(null)
     }
   } catch (e) {
     console.error('Errore nel caricamento stagione:', e)
+    setStagioneCorrente(null)
   }
 }
 
@@ -292,6 +295,14 @@ onMounted(async () => {
       clearToken()
       router.push('/login')
     }
+  }
+})
+
+watch(societaAttiva, async (newVal) => {
+  if (newVal?.id) {
+    await loadStagione()
+  } else {
+    setStagioneCorrente(null)
   }
 })
 </script>

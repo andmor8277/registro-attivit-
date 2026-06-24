@@ -218,7 +218,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { login, getMe, getSocieta, getSocietaById, createSocieta, uploadSocietaFile, createUtente, createCategoria } from '../api/index.js'
+import { login, getMe, getSocieta, getSocietaById, createSocieta, uploadSocietaFile, createUtente, createCategoria, getCategorie } from '../api/index.js'
 import { useStore } from '../store.js'
 
 const username = ref('')
@@ -317,12 +317,36 @@ async function doLogin() {
       return
     }
     
-    // Admin locale: carica la società dell'utente e vai alla home
+    // Admin locale: carica la società dell'utente
     if (me.data.societa_id) {
       const societaRes = await getSocietaById(me.data.societa_id)
       setSocietaAttiva(societaRes.data)
     }
-    
+
+    // Redirect diretto per ruoli specifici
+    const ruolo = me.data.ruolo
+    if (ruolo === 'segreteria') {
+      return router.push('/segreteria')
+    }
+    if (ruolo === 'infermeria') {
+      return router.push('/infermeria')
+    }
+
+    // Mister e Dirigente: categoria assegnata o pagina di default
+    if (ruolo === 'mister' || ruolo === 'dirigente') {
+      try {
+        const catRes = await getCategorie()
+        const cats = catRes.data || []
+        if (cats.length === 1) {
+          return router.push('/scelta/' + cats[0].id)
+        }
+        if (ruolo === 'mister') {
+          return router.push('/allenatori')
+        }
+        // Dirigente con più categorie: home
+      } catch {}
+    }
+
     router.push('/')
   } catch {
     errore.value = 'Credenziali non valide. Riprova.'
@@ -338,6 +362,30 @@ async function confermaSocieta() {
   }
   const societa = societaOptions.value.find(s => s.id === societaSelezionata.value)
   setSocietaAttiva(societa)
+
+  // Redirect diretto per ruoli specifici
+  const ruolo = utenteAttivo.value?.ruolo
+  if (ruolo === 'segreteria') {
+    return router.push('/segreteria')
+  }
+  if (ruolo === 'infermeria') {
+    return router.push('/infermeria')
+  }
+
+  // Mister e Dirigente: categoria assegnata o pagina di default
+  if (ruolo === 'mister' || ruolo === 'dirigente') {
+    try {
+      const catRes = await getCategorie()
+      const cats = catRes.data || []
+      if (cats.length === 1) {
+        return router.push('/scelta/' + cats[0].id)
+      }
+      if (ruolo === 'mister') {
+        return router.push('/allenatori')
+      }
+    } catch {}
+  }
+
   router.push('/')
 }
 
