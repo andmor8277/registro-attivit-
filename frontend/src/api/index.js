@@ -71,6 +71,7 @@ export const getPersone = (categoriaId) => {
 export const getGruppi = (categoriaId) => categoriaId ? api.get('/gruppi/?categoria_id=' + categoriaId) : api.get('/gruppi/')
 export const createGruppo = (data) => api.post('/gruppi/', data)
 export const deleteGruppo = (id) => api.delete('/gruppi/' + id)
+export const updateGruppo = (id, data) => api.put('/gruppi/' + id, data)
 export const getCodici = () => api.get('/codici/')
 export const getRegistroMese = (categoriaId, anno, mese) => api.get('/registro/mese/' + categoriaId + '/' + anno + '/' + mese)
 export const upsertRegistro = (entry) => api.post('/registro/', entry)
