@@ -218,6 +218,7 @@ class CatalogoEsercizio(Base):
     creato_il = Column(DateTime, nullable=True)
     aggiornato_il = Column(DateTime, nullable=True)
     visibilita = Column(String(20), nullable=False, server_default=text("'pubblico'"))
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=True)
 
 class Valutazione(Base):
     __tablename__ = "valutazioni"
