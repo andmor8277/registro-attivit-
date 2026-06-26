@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, Float, Text, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, Float, Text, DateTime, JSON, text
 from sqlalchemy.dialects.postgresql import JSONB
 from .database import Base
 
@@ -217,6 +217,7 @@ class CatalogoEsercizio(Base):
     creato_da = Column(Integer, nullable=True)
     creato_il = Column(DateTime, nullable=True)
     aggiornato_il = Column(DateTime, nullable=True)
+    visibilita = Column(String(20), nullable=False, server_default=text("'pubblico'"))
 
 class Valutazione(Base):
     __tablename__ = "valutazioni"
