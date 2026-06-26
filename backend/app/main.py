@@ -158,6 +158,22 @@ def run_migrations():
                 print(f"Migration warning (non-critical): {e}")
                 conn.rollback()
 
+            # visibilita column on catalogo_esercizi
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'catalogo_esercizi' AND column_name = 'visibilita'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text(
+                        "ALTER TABLE catalogo_esercizi ADD COLUMN visibilita VARCHAR(20) NOT NULL DEFAULT 'pubblico'"
+                    ))
+                    conn.commit()
+                    print("Migration: Added visibilita to catalogo_esercizi")
+            except Exception as e:
+                print(f"Migration warning (visibilita): {e}")
+                conn.rollback()
+
             try:
                 result = conn.execute(text(
                     "SELECT table_name FROM information_schema.tables WHERE table_name = :tn"

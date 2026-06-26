@@ -101,14 +101,14 @@
                 <polyline points="17 21 17 13 7 13 7 21"/>
                 <polyline points="7 3 7 8 15 8"/>
               </svg>
-              Salva
+              Salva Allenamento
             </button>
             <button class="btn-action" @click="openSaveToCatalogoDialog">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                 <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
                 <polyline points="22 4 12 14.01 9 11.01"/>
               </svg>
-              Catalogo
+              Condividi
             </button>
             <button class="btn-action" @click="exportPdf">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -200,7 +200,10 @@
           <div v-for="(ex, idx) in catalogoEsercizi" :key="idx" class="catalogo-item" :class="{ 'already-added': titoloGiaPresente(ex.titolo) }" @click="selezionaDaCatalogo(ex)">
             <div class="catalogo-item-header">
               <span class="catalogo-item-title">{{ ex.titolo }}</span>
-              <span class="catalogo-item-focus" :class="'focus-' + ex.focus">{{ ex.focus_label }}</span>
+              <div style="display:flex;gap:0.35rem;align-items:center;">
+                <span v-if="ex.visibilita === 'societa'" class="catalogo-visibilita-badge" title="Visibile solo nella tua società">🔒 Società</span>
+                <span class="catalogo-item-focus" :class="'focus-' + ex.focus">{{ ex.focus_label }}</span>
+              </div>
             </div>
             <div class="catalogo-item-body">
               <div class="catalogo-item-info">
@@ -230,10 +233,10 @@
     <div v-if="showCatalogoSelectDialog" class="catalogo-overlay" @click.self="closeCatalogoSelectDialog">
       <div class="save-dialog">
         <div class="save-dialog-header">
-          <h3>💾 Salva nel Catalogo</h3>
+          <h3>Condividi Esercizi</h3>
         </div>
         <div class="save-dialog-body">
-          <p>Seleziona gli esercizi da salvare nel catalogo:</p>
+          <p>Seleziona gli esercizi da condividere:</p>
           <div class="esercizi-selezione">
               <label class="esercizio-checkbox" v-for="ex in eserciziConTitolo" :key="ex.id">
               <input type="checkbox" v-model="selectedForCatalogo[ex.id]" :disabled="!ex.titolo || !ex.titolo.trim()" />
@@ -243,9 +246,16 @@
               Non ci sono esercizi in questo allenamento
             </div>
           </div>
+          <div class="save-dialog-visibility">
+            <label>Visibilità:</label>
+            <select v-model="catalogoVisibilita">
+              <option value="pubblico">🌍 Tutti — visibile a tutte le società</option>
+              <option value="societa">🔒 Solo mia società</option>
+            </select>
+          </div>
         </div>
         <div class="save-dialog-actions">
-          <button class="btn-save-catalogo" @click="confirmSaveSelectedToCatalogo" :disabled="!hasSelectedForCatalogo">💾 Salva selezionati</button>
+          <button class="btn-save-catalogo" @click="confirmSaveSelectedToCatalogo" :disabled="!hasSelectedForCatalogo">Condividi selezionati</button>
           <button class="btn-cancel" @click="closeCatalogoSelectDialog">Annulla</button>
         </div>
       </div>
@@ -287,6 +297,7 @@ const currentUserId = ref(null)
 const isSuperAdmin = ref(false)
 const showCatalogoSelectDialog = ref(false)
 const selectedForCatalogo = ref({})
+const catalogoVisibilita = ref('pubblico')
 const saveError = ref('')
 const hasChanges = ref(false)
 let saveDebounceTimer = null
@@ -935,7 +946,7 @@ function saveDataToServer() {
 function openSaveToCatalogoDialog() {
   const exercisesWithTitles = esercizi.value.filter(e => e.titolo && e.titolo.trim())
   if (exercisesWithTitles.length === 0) {
-    alert('Non ci sono esercizi con titolo da salvare nel catalogo')
+    alert('Non ci sono esercizi con titolo da condividere')
     return
   }
   exercisesWithTitles.forEach(ex => {
@@ -975,6 +986,7 @@ function confirmSaveSelectedToCatalogo() {
       tempo: ex.tempo || '',
       descrizione: ex.descrizione || '',
       campo_con_righe: ex.campo_con_righe,
+      visibilita: catalogoVisibilita.value,
       elementi: (ex.elementi || []).map(el => ({
         tipo: el.tipo ?? el.type ?? '',
         x: el.x ?? null,
@@ -1004,7 +1016,7 @@ function confirmSaveSelectedToCatalogo() {
   
   Promise.all(promises).then(() => {
     saveLoading.value = false
-    let msg = `Salvati ${savedCount} esercizi nel catalogo!`
+    let msg = `Condivisi ${savedCount} esercizi!`
     if (failedCount > 0) {
       msg += `\n\nFalliti: ${failedTitles.join(', ')}`
     }
@@ -1480,6 +1492,12 @@ onUnmounted(() => {
 .catalogo-empty { text-align: center; padding: 2rem; color: #666; }
 .catalogo-item.already-added { opacity: 0.6; cursor: not-allowed; }
 .catalogo-item.already-added:hover { border-color: #333; background: #252525; }
+.catalogo-visibilita-badge { padding: 0.2rem 0.55rem; border-radius: 12px; font-size: 0.7rem; font-weight: 500; background: rgba(234, 179, 8, 0.15); color: #eab308; white-space: nowrap; }
+
+.save-dialog-visibility { margin-top: 1.25rem; display: flex; align-items: center; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid #333; }
+.save-dialog-visibility label { color: #888; font-size: 0.85rem; font-weight: 500; white-space: nowrap; }
+.save-dialog-visibility select { flex: 1; padding: 0.5rem 0.75rem; background: #252525; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 0.85rem; cursor: pointer; }
+.save-dialog-visibility select:focus { outline: none; border-color: var(--color-primary); }
 
 
 
