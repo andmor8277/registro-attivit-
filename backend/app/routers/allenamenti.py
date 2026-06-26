@@ -181,7 +181,19 @@ def get_catalogo_new(focus: Optional[str] = None, db: Session = Depends(get_db),
     query = db.query(models.CatalogoEsercizio)
     if focus:
         query = query.filter(models.CatalogoEsercizio.focus == focus)
-    
+
+    # Filter: public exercises + society-only exercises from user's own society
+    user_societa_id = current_user.societa_id
+    query = query.filter(
+        or_(
+            models.CatalogoEsercizio.visibilita == 'pubblico',
+            and_(
+                models.CatalogoEsercizio.visibilita == 'societa',
+                models.CatalogoEsercizio.societa_id == user_societa_id
+            )
+        )
+    )
+
     esercizi = query.order_by(models.CatalogoEsercizio.titolo).all()
     
     focus_nomi = {
@@ -205,6 +217,7 @@ def get_catalogo_new(focus: Optional[str] = None, db: Session = Depends(get_db),
                 "elementi": e.elementi or [],
                 "creato_da": e.creato_da,
                 "creato_il": e.creato_il.isoformat() if e.creato_il else None,
+                "visibilita": e.visibilita or 'pubblico',
                 "can_delete": current_user.is_super_admin or e.creato_da == current_user.id
             }
             for e in esercizi
@@ -222,6 +235,7 @@ class CatalogoEsercizioIn(BaseModel):
     descrizione: Optional[str] = ''
     campo_con_righe: bool = True
     elementi: List[EsercizioElemento] = []
+    visibilita: str = 'pubblico'
 
 @router.post("/catalogo-new")
 def save_to_catalogo(data: CatalogoEsercizioIn, db: Session = Depends(get_db), current_user: models.Utente = Depends(get_current_user)):
@@ -245,6 +259,7 @@ def save_to_catalogo(data: CatalogoEsercizioIn, db: Session = Depends(get_db), c
         existing.descrizione = data.descrizione
         existing.campo_con_righe = data.campo_con_righe
         existing.elementi = [e.model_dump() for e in data.elementi]
+        existing.visibilita = data.visibilita
         existing.aggiornato_il = datetime.now()
     else:
         new_ex = models.CatalogoEsercizio(
@@ -256,7 +271,9 @@ def save_to_catalogo(data: CatalogoEsercizioIn, db: Session = Depends(get_db), c
             campo_con_righe=data.campo_con_righe,
             elementi=[e.model_dump() for e in data.elementi],
             creato_da=current_user.id,
-            creato_il=datetime.now()
+            creato_il=datetime.now(),
+            visibilita=data.visibilita,
+            societa_id=current_user.societa_id
         )
         db.add(new_ex)
     
