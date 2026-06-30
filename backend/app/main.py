@@ -594,6 +594,97 @@ def run_migrations():
                 print(f"Migration warning (planning_eventi): {e}")
                 conn.rollback()
 
+            # parent_id on categorie for category hierarchy
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'categorie' AND column_name = 'parent_id'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text(
+                        "ALTER TABLE categorie ADD COLUMN parent_id INTEGER REFERENCES categorie(id)"
+                    ))
+                    conn.commit()
+                    print("Migration: Added parent_id to categorie")
+            except Exception as e:
+                print(f"Migration warning (categorie parent_id): {e}")
+                conn.rollback()
+
+            # Create Agonistica and Scuola Calcio parent categories and Under categories
+            try:
+                result = conn.execute(text(
+                    "SELECT id FROM categorie WHERE nome = :n AND parent_id IS NULL"
+                ), {"n": "Agonistica"})
+                if result.fetchone() is None:
+                    # Get societa_id from existing categories
+                    societa_result = conn.execute(text(
+                        "SELECT DISTINCT societa_id FROM categorie LIMIT 1"
+                    ))
+                    societa_id = societa_result.fetchone()[0] if societa_result.fetchone() else 1
+
+                    # Create Agonistica parent
+                    conn.execute(text("""
+                        INSERT INTO categorie (societa_id, nome, parent_id, is_portieri, is_archiviata)
+                        VALUES (:sid, 'Agonistica', NULL, 0, 0)
+                    """), {"sid": societa_id})
+
+                    # Create Scuola Calcio parent
+                    conn.execute(text("""
+                        INSERT INTO categorie (societa_id, nome, parent_id, is_portieri, is_archiviata)
+                        VALUES (:sid, 'Scuola Calcio', NULL, 0, 0)
+                    """), {"sid": societa_id})
+                    conn.commit()
+
+                    # Get the parent IDs
+                    ag_result = conn.execute(text(
+                        "SELECT id FROM categorie WHERE nome = 'Agonistica' AND parent_id IS NULL"
+                    ))
+                    agonistica_id = ag_result.fetchone()[0]
+
+                    sc_result = conn.execute(text(
+                        "SELECT id FROM categorie WHERE nome = 'Scuola Calcio' AND parent_id IS NULL"
+                    ))
+                    scuola_id = sc_result.fetchone()[0]
+
+                    # Create Under categories under Agonistica
+                    under_cats = [
+                        ('Under 14', 2014, '1,3,5', '16:00'),
+                        ('Under 15', 2013, '1,3,5', '16:30'),
+                        ('Under 16', 2012, '1,3,5', '17:00'),
+                        ('Under 17', 2011, '1,3,5', '17:30'),
+                        ('Under 18', 2010, '1,3,5', '18:00'),
+                        ('Under 19', 2009, '1,3,5', '18:30'),
+                    ]
+                    for nome, anno, giorni, ora in under_cats:
+                        conn.execute(text("""
+                            INSERT INTO categorie (societa_id, nome, anno, giorni, ora_allenamento, parent_id, is_portieri, is_archiviata, stagione)
+                            VALUES (:sid, :nome, :anno, :giorni, :ora, :pid, 0, 0, 2025)
+                        """), {"sid": societa_id, "nome": nome, "anno": anno, "giorni": giorni, "ora": ora, "pid": agonistica_id})
+                    conn.commit()
+
+                    # Set existing non-portieri categories under Scuola Calcio
+                    conn.execute(text("""
+                        UPDATE categorie SET parent_id = :pid
+                        WHERE parent_id IS NULL AND is_portieri = 0 AND nome NOT IN ('Agonistica', 'Scuola Calcio')
+                    """), {"pid": scuola_id})
+                    conn.commit()
+
+                    # Delete TEST categories and their test players
+                    conn.execute(text("""
+                        DELETE FROM persone WHERE categoria_id IN (
+                            SELECT id FROM categorie WHERE nome LIKE 'TEST%'
+                        )
+                    """))
+                    conn.execute(text("""
+                        DELETE FROM categorie WHERE nome LIKE 'TEST%'
+                    """))
+                    conn.commit()
+
+                    print("Migration: Created Agonistica, Scuola Calcio, Under categories, and cleaned TEST")
+            except Exception as e:
+                print(f"Migration warning (category hierarchy): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 

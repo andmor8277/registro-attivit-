@@ -19,6 +19,7 @@ class CategoriaCreate(BaseModel):
     ora_allenamento: Optional[str] = None
     is_portieri: bool = False
     societa_id: Optional[int] = None
+    parent_id: Optional[int] = None
     data_inizio_stagione: Optional[date] = None
     data_fine_stagione: Optional[date] = None
 
@@ -157,6 +158,7 @@ def create_categoria(c: CategoriaCreate, db: Session = Depends(get_db), current_
         giorni=c.giorni,
         ora_allenamento=c.ora_allenamento,
         is_portieri=1 if c.is_portieri else 0,
+        parent_id=c.parent_id,
         data_inizio_stagione=c.data_inizio_stagione,
         data_fine_stagione=c.data_fine_stagione
     )
@@ -184,6 +186,7 @@ def update_categoria(categoria_id: int, c: CategoriaCreate, db: Session = Depend
     cat.giorni = c.giorni
     cat.ora_allenamento = c.ora_allenamento
     cat.is_portieri = 1 if c.is_portieri else 0
+    cat.parent_id = c.parent_id
     cat.data_inizio_stagione = c.data_inizio_stagione
     cat.data_fine_stagione = c.data_fine_stagione
     db.commit(); db.refresh(cat)
