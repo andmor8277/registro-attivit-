@@ -454,21 +454,6 @@ async function loadCategoria() {
     if (cat && cat.giorni) giorniAllenamento.value = cat.giorni.split(",").map(Number)
     else giorniAllenamento.value = []
   }
-
-  // Se la categoria è Portieri, usa i suoi giorni; altrimenti mergia i giorni della categoria Portieri
-  const catRow = await getCategorie()
-  const currentCat = catRow.data.find(c => c.id === categoriaId.value)
-  if (currentCat && currentCat.is_portieri) {
-    // Portieri usa solo i suoi giorni
-    if (currentCat.giorni) giorniAllenamento.value = currentCat.giorni.split(",").map(Number)
-  } else {
-    // Cerca la categoria Portieri e mergia i giorni
-    const portieriCat = catRow.data.find(c => c.is_portieri)
-    if (portieriCat && portieriCat.giorni) {
-      const portieriGiorni = portieriCat.giorni.split(",").map(Number)
-      giorniAllenamento.value = [...new Set([...giorniAllenamento.value, ...portieriGiorni])].sort()
-    }
-  }
 }
 
 onMounted(async () => {
