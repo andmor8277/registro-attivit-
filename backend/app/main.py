@@ -8,7 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 import os
 from .rate_limit import limiter
 from .database import Base, engine
-from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni, infortuni, openday, planning_eventi
+from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni, infortuni, openday, planning_eventi, schede_allenamento
 from .routers.gruppi import router as gruppi_router
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
@@ -685,6 +685,40 @@ def run_migrations():
                 print(f"Migration warning (category hierarchy): {e}")
                 conn.rollback()
 
+            # schede_allenamento table for GPS training data
+            try:
+                result = conn.execute(text(
+                    "SELECT table_name FROM information_schema.tables WHERE table_name = :tn"
+                ), {"tn": "schede_allenamento"})
+                if result.fetchone() is None:
+                    conn.execute(text("""
+                        CREATE TABLE schede_allenamento (
+                            id SERIAL PRIMARY KEY,
+                            persona_id INTEGER REFERENCES persone(id) NOT NULL,
+                            categoria_id INTEGER REFERENCES categorie(id) NOT NULL,
+                            societa_id INTEGER REFERENCES societa(id) NOT NULL,
+                            data DATE NOT NULL,
+                            distanza_totale FLOAT,
+                            distanza_alta_velocita FLOAT,
+                            distanza_sprint FLOAT,
+                            velocita_massima FLOAT,
+                            accelerazioni INTEGER,
+                            decelerazioni INTEGER,
+                            metabolic_power FLOAT,
+                            player_load FLOAT,
+                            calorie FLOAT,
+                            tempo_lavoro INTEGER,
+                            rpe INTEGER,
+                            note TEXT,
+                            creato_il TIMESTAMP
+                        )
+                    """))
+                    conn.commit()
+                    print("Migration: Created schede_allenamento table")
+            except Exception as e:
+                print(f"Migration warning (schede_allenamento): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 
@@ -710,6 +744,7 @@ app.include_router(valutazioni.router, dependencies=[Depends(get_current_user)])
 app.include_router(infortuni.router, dependencies=[Depends(get_current_user)])
 app.include_router(openday.router, prefix="/openday", dependencies=[Depends(get_current_user)])
 app.include_router(planning_eventi.router, dependencies=[Depends(get_current_user)])
+app.include_router(schede_allenamento.router, dependencies=[Depends(get_current_user)])
 
 @app.get("/")
 def root():

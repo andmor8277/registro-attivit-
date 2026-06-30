@@ -280,3 +280,24 @@ class PlanningEvento(Base):
     titolo = Column(String(200), nullable=True)
     note = Column(Text, nullable=True)
     creato_il = Column(DateTime, nullable=True)
+
+class SchedaAllenamento(Base):
+    __tablename__ = "schede_allenamento"
+    id = Column(Integer, primary_key=True)
+    persona_id = Column(Integer, ForeignKey("persone.id"), nullable=False)
+    categoria_id = Column(Integer, ForeignKey("categorie.id"), nullable=False)
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
+    data = Column(Date, nullable=False)
+    distanza_totale = Column(Float, nullable=True)  # metri
+    distanza_alta_velocita = Column(Float, nullable=True)  # metri, >19.8 km/h
+    distanza_sprint = Column(Float, nullable=True)  # metri, >25.2 km/h
+    velocita_massima = Column(Float, nullable=True)  # km/h
+    accelerazioni = Column(Integer, nullable=True)  # >3m/s²
+    decelerazioni = Column(Integer, nullable=True)  # >3m/s²
+    metabolic_power = Column(Float, nullable=True)  # W/kg
+    player_load = Column(Float, nullable=True)  # unitario
+    calorie = Column(Float, nullable=True)  # kcal
+    tempo_lavoro = Column(Integer, nullable=True)  # minuti
+    rpe = Column(Integer, nullable=True)  # 1-10, Rate of Perceived Exertion
+    note = Column(Text, nullable=True)
+    creato_il = Column(DateTime, nullable=True)
