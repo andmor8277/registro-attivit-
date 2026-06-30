@@ -155,7 +155,7 @@
               <tr>
                 <th class="th-num">#</th>
                 <th class="th-nome">Cognome Nome</th>
-                <th v-for="g in giorniMese" :key="g.num" :class="{ 'th-weekend': g.weekend }">
+                <th v-for="g in getGiorniMese(gruppo)" :key="g.num" :class="{ 'th-weekend': g.weekend }">
                   <div class="giorno-num">{{ g.num }}</div>
                   <div class="giorno-nome">{{ g.gg }}</div>
                 </th>
@@ -168,7 +168,7 @@
                 <td class="td-nome">
                   <span class="persona-name">{{ persona.cognome }} {{ persona.nome }}</span>
                 </td>
-                <td v-for="g in giorniMese" :key="g.num"
+                <td v-for="g in getGiorniMese(gruppo)" :key="g.num"
                   class="cella"
                   :class="[getCodiceClasse(persona.id, g.num), { 'cella-readthrough': isReadthrough(persona.id, g.num) }]"
                   @click="openEdit(persona, g.num)">
@@ -181,7 +181,7 @@
               <tr class="riga-totale pres">
                 <td class="td-num"></td>
                 <td class="td-nome tot-label">Presenti</td>
-                <td v-for="g in giorniMese" :key="g.num" class="tot-cell">
+                <td v-for="g in getGiorniMese(gruppo)" :key="g.num" class="tot-cell">
                   {{ totGiornoGruppo(gruppo, g.num).pres || '' }}
                 </td>
                 <td class="td-tot"></td>
@@ -189,7 +189,7 @@
               <tr class="riga-totale ass">
                 <td class="td-num"></td>
                 <td class="td-nome tot-label">Assenti</td>
-                <td v-for="g in giorniMese" :key="g.num" class="tot-cell">
+                <td v-for="g in getGiorniMese(gruppo)" :key="g.num" class="tot-cell">
                   {{ totGiornoGruppo(gruppo, g.num).ass || '' }}
                 </td>
                 <td class="td-tot"></td>
@@ -213,7 +213,7 @@
           <thead>
             <tr>
               <th class="th-label"></th>
-              <th v-for="g in giorniMese" :key="g.num" :class="{ 'th-weekend': g.weekend }">
+              <th v-for="g in giorniMeseTutti" :key="g.num" :class="{ 'th-weekend': g.weekend }">
                 <div class="giorno-num">{{ g.num }}</div>
                 <div class="giorno-nome">{{ g.gg }}</div>
               </th>
@@ -222,13 +222,13 @@
           <tbody>
             <tr>
               <td class="tot-label th-label">Presenti</td>
-              <td v-for="g in giorniMese" :key="g.num" class="tot-cell tot-pres">
+              <td v-for="g in giorniMeseTutti" :key="g.num" class="tot-cell tot-pres">
                 {{ totGiornoTutti(g.num).pres || '' }}
               </td>
             </tr>
             <tr>
               <td class="tot-label th-label">Assenti</td>
-              <td v-for="g in giorniMese" :key="g.num" class="tot-cell tot-ass">
+              <td v-for="g in giorniMeseTutti" :key="g.num" class="tot-cell tot-ass">
                 {{ totGiornoTutti(g.num).ass || '' }}
               </td>
             </tr>
@@ -302,6 +302,7 @@ const persone = ref([])
 const codici = ref([])
 const registro = ref([])
 const giorniAllenamento = ref([])
+const giorniAllenamentoPortieriCat = ref([])
 const editModal = ref({ show: false, persona: null, giorno: null })
 
 const mesiNomi = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"]
@@ -323,6 +324,29 @@ const giorniMese = computed(() => {
   if (giorniAllenamento.value.length === 0) return tutti
   return tutti.filter(g => giorniAllenamento.value.includes(g.dow))
 })
+
+// Per il gruppo "Portieri" dentro una categoria normale: unisce giorni categoria + giorni Portieri
+const giorniMesePortieri = computed(() => {
+  const n = new Date(anno.value, mese.value, 0).getDate()
+  const mergedDows = new Set([...giorniAllenamento.value, ...giorniAllenamentoPortieriCat.value])
+  const tutti = Array.from({ length: n }, (_, i) => {
+    const d = new Date(anno.value, mese.value - 1, i + 1)
+    const dow = d.getDay()
+    return { num: i + 1, dow, gg: giorniNomi[dow], weekend: dow === 0 || dow === 6 }
+  })
+  if (mergedDows.size === 0) return tutti
+  return tutti.filter(g => mergedDows.has(g.dow))
+})
+
+// Totale generale: unione di tutti i giorni (categoria + portieri se presente)
+const giorniMeseTutti = computed(() => {
+  const hasPortieriGruppo = gruppi.value.some(g => g?.toLowerCase() === 'portieri')
+  return hasPortieriGruppo ? giorniMesePortieri.value : giorniMese.value
+})
+
+function getGiorniMese(gruppo) {
+  return gruppo && gruppo.toLowerCase() === 'portieri' ? giorniMesePortieri.value : giorniMese.value
+}
 
 const hasSenzaGruppo = computed(() => {
   return persone.value.some(p => !p.gruppo_nome && !p.gruppo_id)
@@ -454,15 +478,17 @@ async function loadCategoria() {
     giorniAllenamento.value = []
   }
 
-  // Per la categoria Portieri, unisci i giorni di tutte le categorie non-portieri
+  // Per la categoria Portieri, usa i giorni della categoria Portieri
   if (isPortieri.value) {
-    const allGiorni = new Set()
-    res.data.forEach(c => {
-      if (c.giorni && !c.is_portieri) {
-        c.giorni.split(",").forEach(g => allGiorni.add(parseInt(g)))
-      }
-    })
-    giorniAllenamento.value = [...allGiorni].sort()
+    giorniAllenamento.value = cat && cat.giorni ? cat.giorni.split(",").map(Number) : []
+  }
+
+  // Cerca la categoria Portieri per avere i suoi giorni
+  const portieriCat = res.data.find(c => c.is_portieri)
+  if (portieriCat && portieriCat.giorni) {
+    giorniAllenamentoPortieriCat.value = portieriCat.giorni.split(",").map(Number)
+  } else {
+    giorniAllenamentoPortieriCat.value = []
   }
 }
 
