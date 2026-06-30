@@ -104,86 +104,104 @@
       </div>
 
       <div class="categorie-grid">
-        <div
-          v-for="(cat, index) in categorie"
-          :key="cat.id"
-          class="categoria-card"
-          :style="{ animationDelay: index * 50 + 'ms' }"
-          @click="apriRegistro(cat)"
-        >
-          <div class="card-glow"></div>
-          <div class="card-pattern"></div>
-          <div class="card-top">
-            <div class="card-icon-wrap" :class="{ portieri: cat.is_portieri }">
-              <svg v-if="cat.is_portieri" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
-                <!-- Left glove -->
-                <rect x="3" y="10" width="5" height="14" rx="2.5" stroke-linecap="round"/>
-                <rect x="10" y="6" width="5" height="18" rx="2.5" stroke-linecap="round"/>
-                <rect x="17" y="8" width="5" height="16" rx="2.5" stroke-linecap="round"/>
-                <rect x="24" y="11" width="5" height="13" rx="2.5" stroke-linecap="round"/>
-                <path d="M3 24 C3 30 8 33 12 33 L24 33 C28 33 29 30 29 24" stroke-linecap="round"/>
-                <!-- Right glove -->
-                <rect x="40" y="10" width="5" height="14" rx="2.5" stroke-linecap="round"/>
-                <rect x="33" y="6" width="5" height="18" rx="2.5" stroke-linecap="round"/>
-                <rect x="26" y="8" width="5" height="16" rx="2.5" stroke-linecap="round"/>
-                <rect x="19" y="11" width="5" height="13" rx="2.5" stroke-linecap="round"/>
-                <path d="M45 24 C45 30 40 33 36 33 L24 33 C20 33 19 30 19 24" stroke-linecap="round"/>
+        <template v-for="group in categorieGruppo" :key="group.parentId">
+          <div v-if="group.parent" class="parent-category-header" @click="toggleParent(group.parentId)">
+            <div class="parent-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16"/>
+                <polyline points="1 10 5 10 11 14"/>
+                <polyline points="15 10 21 10 21 14"/>
               </svg>
-              <span v-else class="card-year">{{ cat.anno }}</span>
             </div>
-            <div class="card-actions" v-if="utenteAttivo?.is_admin || utenteAttivo?.ruolo === 'mister'">
-              <button class="btn-action" @click.stop="apriModifica(cat)" title="Modifica">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-              </button>
-              <button v-if="utenteAttivo?.is_admin" class="btn-action btn-danger" @click.stop="eliminaCategoria(cat.id)" title="Elimina">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                </svg>
-              </button>
+            <div class="parent-info">
+              <h3 class="parent-title">{{ group.parent.nome }}</h3>
+              <span class="parent-count">{{ group.children.length }} categorie</span>
             </div>
-          </div>
-          <div class="card-text">
-            <h3 class="card-title">{{ cat.nome }}</h3>
-            <div class="card-meta">
-              <div v-if="cat.giorni" class="meta-row">
-                <span class="meta-label">Giorni</span>
-                <div class="giorni-badges">
-                  <span class="giorno-badge" v-for="g in cat.giorni.split(',').slice(0, 3)" :key="g">
-                    {{ nomiBreviGiorni(parseInt(g)) }}
-                  </span>
-                  <span v-if="cat.giorni.split(',').length > 3" class="giorno-badge more">
-                    +{{ cat.giorni.split(',').length - 3 }}
-                  </span>
-                </div>
-              </div>
-              <div v-if="getMistersCat(cat.id).length > 0" class="meta-row">
-                <span class="meta-label">Mister</span>
-                <div class="people-badges">
-                  <span class="person-badge mister" v-for="m in getMistersCat(cat.id)" :key="m.id">
-                    {{ m.cognome }}
-                  </span>
-                </div>
-              </div>
-              <div v-if="getDirigentiCat(cat.id).length > 0" class="meta-row">
-                <span class="meta-label">Dirigente</span>
-                <div class="people-badges">
-                  <span class="person-badge dirigente" v-for="d in getDirigentiCat(cat.id)" :key="d.id">
-                    {{ d.cognome }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="card-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
+            <svg class="parent-chevron" :class="{ expanded: isParentExpanded(group.parentId) }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <polyline points="6 9 12 15 18 9"/>
             </svg>
           </div>
-        </div>
+          <template v-if="isParentExpanded(group.parentId)">
+            <div
+              v-for="(cat, index) in group.children"
+              :key="cat.id"
+              class="categoria-card child-card"
+              :style="{ animationDelay: index * 50 + 'ms' }"
+              @click="apriRegistro(cat)"
+            >
+              <div class="card-glow"></div>
+              <div class="card-pattern"></div>
+              <div class="card-top">
+                <div class="card-icon-wrap" :class="{ portieri: cat.is_portieri }">
+                  <svg v-if="cat.is_portieri" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+                    <rect x="3" y="10" width="5" height="14" rx="2.5" stroke-linecap="round"/>
+                    <rect x="10" y="6" width="5" height="18" rx="2.5" stroke-linecap="round"/>
+                    <rect x="17" y="8" width="5" height="16" rx="2.5" stroke-linecap="round"/>
+                    <rect x="24" y="11" width="5" height="13" rx="2.5" stroke-linecap="round"/>
+                    <path d="M3 24 C3 30 8 33 12 33 L24 33 C28 33 29 30 29 24" stroke-linecap="round"/>
+                    <rect x="40" y="10" width="5" height="14" rx="2.5" stroke-linecap="round"/>
+                    <rect x="33" y="6" width="5" height="18" rx="2.5" stroke-linecap="round"/>
+                    <rect x="26" y="8" width="5" height="16" rx="2.5" stroke-linecap="round"/>
+                    <rect x="19" y="11" width="5" height="13" rx="2.5" stroke-linecap="round"/>
+                    <path d="M45 24 C45 30 40 33 36 33 L24 33 C20 33 19 30 19 24" stroke-linecap="round"/>
+                  </svg>
+                  <span v-else class="card-year">{{ cat.anno }}</span>
+                </div>
+                <div class="card-actions" v-if="utenteAttivo?.is_admin || utenteAttivo?.ruolo === 'mister'">
+                  <button class="btn-action" @click.stop="apriModifica(cat)" title="Modifica">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button v-if="utenteAttivo?.is_admin" class="btn-action btn-danger" @click.stop="eliminaCategoria(cat.id)" title="Elimina">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="card-text">
+                <h3 class="card-title">{{ cat.nome }}</h3>
+                <div class="card-meta">
+                  <div v-if="cat.giorni" class="meta-row">
+                    <span class="meta-label">Giorni</span>
+                    <div class="giorni-badges">
+                      <span class="giorno-badge" v-for="g in cat.giorni.split(',').slice(0, 3)" :key="g">
+                        {{ nomiBreviGiorni(parseInt(g)) }}
+                      </span>
+                      <span v-if="cat.giorni.split(',').length > 3" class="giorno-badge more">
+                        +{{ cat.giorni.split(',').length - 3 }}
+                      </span>
+                    </div>
+                  </div>
+                  <div v-if="getMistersCat(cat.id).length > 0" class="meta-row">
+                    <span class="meta-label">Mister</span>
+                    <div class="people-badges">
+                      <span class="person-badge mister" v-for="m in getMistersCat(cat.id)" :key="m.id">
+                        {{ m.cognome }}
+                      </span>
+                    </div>
+                  </div>
+                  <div v-if="getDirigentiCat(cat.id).length > 0" class="meta-row">
+                    <span class="meta-label">Dirigente</span>
+                    <div class="people-badges">
+                      <span class="person-badge dirigente" v-for="d in getDirigentiCat(cat.id)" :key="d.id">
+                        {{ d.cognome }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="card-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </div>
+            </div>
+          </template>
+        </template>
 
         <div v-if="utenteAttivo?.is_admin" class="categoria-card nuova" @click="apriNuova">
           <div class="nuova-icon">
@@ -225,6 +243,13 @@
             <div class="form-group">
               <label>Stagione (anno inizio)</label>
               <input v-model="modal.stagione" placeholder="Es. 2025" type="number" />
+            </div>
+            <div class="form-group">
+              <label>Categoria padre</label>
+              <select v-model="modal.parent_id">
+                <option :value="null">Nessuna (categoria principale)</option>
+                <option v-for="p in categoriePadre" :key="p.id" :value="p.id">{{ p.nome }}</option>
+              </select>
             </div>
             <div class="form-group" v-if="!modal.is_portieri">
               <label>Categoria Portieri</label>
@@ -331,6 +356,45 @@ function vaiSelezioneSocieta() {
 }
 const categorie = ref([])
 const allCategories = ref([])
+const expandedParents = ref(new Set())
+
+function toggleParent(parentId) {
+  if (expandedParents.value.has(parentId)) {
+    expandedParents.value.delete(parentId)
+  } else {
+    expandedParents.value.add(parentId)
+  }
+}
+
+function isParentExpanded(parentId) {
+  return expandedParents.value.has(parentId)
+}
+
+const categorieGruppo = computed(() => {
+  const parents = categorie.value.filter(c => c.parent_id === null || c.parent_id === undefined)
+  const children = categorie.value.filter(c => c.parent_id !== null && c.parent_id !== undefined)
+
+  const result = []
+  for (const parent of parents) {
+    const kids = children.filter(c => c.parent_id === parent.id).sort((a, b) => (b.anno || 0) - (a.anno || 0))
+    if (kids.length > 0) {
+      result.push({ parentId: parent.id, parent, children: kids })
+    }
+  }
+
+  // Categorie orfane (senza padre ma con parent_id non trovato)
+  const groupedIds = new Set(result.flatMap(g => g.children.map(c => c.id)))
+  const orphans = children.filter(c => !groupedIds.has(c.id)).sort((a, b) => (b.anno || 0) - (a.anno || 0))
+  if (orphans.length > 0) {
+    result.push({ parentId: null, parent: null, children: orphans })
+  }
+
+  return result
+})
+
+const categoriePadre = computed(() => {
+  return categorie.value.filter(c => c.parent_id === null || c.parent_id === undefined)
+})
 const loading = ref(false)
 const errore = ref('')
 const stagioni = ref({ attiva: [], archiviate: [] })
@@ -378,7 +442,7 @@ function isToday(giornoVal) {
   return new Date().getDay() === giornoVal
 }
 
-const modal = ref({ show: false, id: null, nome: "", anno: null, stagione: new Date().getFullYear(), giorniSel: [], ora_allenamento: "", is_portieri: false, data_inizio_stagione: "", data_fine_stagione: "" })
+const modal = ref({ show: false, id: null, nome: "", anno: null, stagione: new Date().getFullYear(), giorniSel: [], ora_allenamento: "", is_portieri: false, parent_id: null, data_inizio_stagione: "", data_fine_stagione: "" })
 
 function chiudiModal() {
   modal.value.show = false
@@ -387,7 +451,7 @@ function chiudiModal() {
 
 function apriNuova() {
   const currentYear = new Date().getMonth() >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1
-  modal.value = { show: true, id: null, nome: "", anno: null, stagione: currentYear, giorniSel: [], ora_allenamento: "", is_portieri: false, data_inizio_stagione: "", data_fine_stagione: "" }
+  modal.value = { show: true, id: null, nome: "", anno: null, stagione: currentYear, giorniSel: [], ora_allenamento: "", is_portieri: false, parent_id: null, data_inizio_stagione: "", data_fine_stagione: "" }
   modalUtentiSel.value = []
   errore.value = ''
 }
@@ -444,6 +508,7 @@ async function apriModifica(cat) {
     giorniSel: cat.giorni ? cat.giorni.split(",").map(Number) : [],
     ora_allenamento: cat.ora_allenamento || "",
     is_portieri: cat.is_portieri === 1 || cat.is_portieri === true,
+    parent_id: cat.parent_id || null,
     data_inizio_stagione: cat.data_inizio_stagione || "",
     data_fine_stagione: cat.data_fine_stagione || ""
   }
@@ -499,6 +564,7 @@ async function salvaCategoria() {
     giorni: modal.value.giorniSel.sort().join(",") || null,
     ora_allenamento: modal.value.ora_allenamento || null,
     is_portieri: modal.value.is_portieri,
+    parent_id: modal.value.parent_id || null,
     societa_id: societaId,
     data_inizio_stagione: modal.value.data_inizio_stagione || null,
     data_fine_stagione: modal.value.data_fine_stagione || null
@@ -986,6 +1052,72 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
+}
+
+.parent-category-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.12) 0%, rgba(220, 38, 38, 0.04) 100%);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  margin-bottom: 0.25rem;
+}
+
+.parent-category-header:hover {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.18) 0%, rgba(220, 38, 38, 0.08) 100%);
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.parent-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(220, 38, 38, 0.15);
+  border-radius: 10px;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.parent-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.parent-title {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.parent-count {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.parent-chevron {
+  color: var(--color-text-muted);
+  transition: transform var(--transition-base);
+  flex-shrink: 0;
+}
+
+.parent-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.child-card {
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
 }
 
 .categoria-card {
