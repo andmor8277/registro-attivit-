@@ -28,6 +28,7 @@ import Infermeria from './views/Infermeria.vue'
 import CertificatoMedico from './views/CertificatoMedico.vue'
 import Infortunati from './views/Infortunati.vue'
 import Openday from './views/Openday.vue'
+import SchedaAllenamento from './views/SchedaAllenamento.vue'
 
 const store = useStore()
 
@@ -47,6 +48,7 @@ const router = createRouter({
     { path: '/convocazioni/:id', component: Convocazioni, name: 'convocazioni', meta: { requiresAuth: true } },
     { path: '/dati/:id', component: DatiMatricole, name: 'dati-matricole', meta: { requiresAuth: true } },
     { path: '/allenamenti/:id', component: Allenamenti, name: 'allenamenti', meta: { requiresAuth: true } },
+    { path: '/scheda-allenamento/:id', component: SchedaAllenamento, name: 'scheda-allenamento', meta: { requiresAuth: true } },
     { path: '/admin', component: Admin, name: 'admin', meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/admin/societa', component: Societa, name: 'societa', meta: { requiresAuth: true } },
     { path: '/reportistica/:id', component: Reportistica, name: 'reportistica', meta: { requiresAuth: true } },
