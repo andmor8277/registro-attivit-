@@ -24,6 +24,7 @@ class Categoria(Base):
     ora_allenamento = Column(String(10), nullable=True)  # es. "15:15", "17:30", "19:00"
     is_portieri = Column(Integer, default=0)  # 1 = portieri (cross-year)
     is_archiviata = Column(Integer, default=0)  # 1 = categoria archiviata
+    parent_id = Column(Integer, ForeignKey("categorie.id"), nullable=True)  # categoria padre
     data_inizio_stagione = Column(Date, nullable=True)
     data_fine_stagione = Column(Date, nullable=True)
 
