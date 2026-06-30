@@ -198,6 +198,23 @@
           </div>
         </div>
 
+        <div v-if="!isDirigente && isAgonistica" class="scelta-card" @click="router.push('/scheda-allenamento/' + categoria?.id)">
+          <div class="card-icon-wrap scheda-allenamento">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
+              <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/>
+              <rect x="8" y="2" width="8" height="4" rx="1"/>
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+          </div>
+          <div class="card-label">Scheda Allenamento</div>
+          <div class="card-desc">Dati GPS e metriche individuali</div>
+          <div class="card-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </div>
+        </div>
+
         <div v-if="!isDirigente" class="scelta-card" @click="router.push('/reportistica/' + categoria?.id)">
           <div class="card-icon-wrap reportistica">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
@@ -294,6 +311,7 @@ const route = useRoute()
 const { categoriaAttiva, setCategoria, utenteAttivo } = useStore()
 const categoria = categoriaAttiva
 const isDirigente = computed(() => ['dirigente', 'segreteria', 'infermeria'].includes(utenteAttivo.value?.ruolo))
+const isAgonistica = computed(() => categoria.value?.nome?.startsWith('Under') || false)
 const currentSeason = computed(() => {
   const m = new Date().getMonth()
   const y = new Date().getFullYear()
@@ -833,6 +851,12 @@ function selezionaCategoria(cat) {
   background: linear-gradient(135deg, rgba(20, 184, 166, 0.2) 0%, rgba(20, 184, 166, 0.08) 100%);
   border-color: rgba(20, 184, 166, 0.3);
   color: #2dd4bf;
+}
+
+.card-icon-wrap.scheda-allenamento {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.08) 100%);
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
 }
 
 .card-icon-wrap svg {

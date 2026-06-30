@@ -210,3 +210,9 @@ export const getPlanningEventi = (categoria_id = null) => api.get('/planning-eve
 export const creaPlanningEvento = (data) => api.post('/planning-eventi/', data)
 export const aggiornaPlanningEvento = (id, data) => api.put(`/planning-eventi/${id}`, data)
 export const eliminaPlanningEvento = (id) => api.delete(`/planning-eventi/${id}`)
+
+// Schede Allenamento
+export const getSchedeAllenamento = (params = {}) => api.get('/schede-allenamento/', { params })
+export const creaSchedaAllenamento = (data) => api.post('/schede-allenamento/', data)
+export const aggiornaSchedaAllenamento = (id, data) => api.put(`/schede-allenamento/${id}`, data)
+export const eliminaSchedaAllenamento = (id) => api.delete(`/schede-allenamento/${id}`)
