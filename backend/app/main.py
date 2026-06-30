@@ -648,12 +648,12 @@ def run_migrations():
 
                     # Create Under categories under Agonistica
                     under_cats = [
-                        ('Under 14', 2014, '1,3,5', '16:00'),
-                        ('Under 15', 2013, '1,3,5', '16:30'),
-                        ('Under 16', 2012, '1,3,5', '17:00'),
-                        ('Under 17', 2011, '1,3,5', '17:30'),
-                        ('Under 18', 2010, '1,3,5', '18:00'),
-                        ('Under 19', 2009, '1,3,5', '18:30'),
+                        ('Under 14', 2012, '1,3,5', '16:00'),
+                        ('Under 15', 2011, '1,3,5', '16:30'),
+                        ('Under 16', 2010, '1,3,5', '17:00'),
+                        ('Under 17', 2009, '1,3,5', '17:30'),
+                        ('Under 18', 2008, '1,3,5', '18:00'),
+                        ('Under 19', 2007, '1,3,5', '18:30'),
                     ]
                     for nome, anno, giorni, ora in under_cats:
                         conn.execute(text("""
