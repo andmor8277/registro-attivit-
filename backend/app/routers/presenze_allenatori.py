@@ -87,8 +87,7 @@ def get_mister(db: Session = Depends(get_db), current_user: Utente = Depends(get
         giorni_set = set()
         for cat_id in cat_ids:
             cat = db.query(Categoria).filter(
-                Categoria.id == cat_id,
-                Categoria.is_portieri == 0
+                Categoria.id == cat_id
             ).first()
             if cat and cat.giorni:
                 for g in cat.giorni.split(","):
