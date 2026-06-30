@@ -131,11 +131,18 @@ const codiciOrdinati = computed(() => {
 
 const giorniMese = computed(() => {
   const n = new Date(anno.value, mese.value, 0).getDate()
+  // Collect all training day-of-week values across all coaches
+  const trainingDows = new Set()
+  allenatori.value.forEach(a => {
+    ;(a.giorni || []).forEach(g => trainingDows.add(g))
+  })
   return Array.from({ length: n }, (_, i) => {
     const d = new Date(anno.value, mese.value - 1, i + 1)
     const dow = d.getDay()
+    if (!trainingDows.size) return { num: i + 1, dow, gg: giorniNomi[dow], weekend: dow === 0 || dow === 6 }
+    if (!trainingDows.has(dow)) return null
     return { num: i + 1, dow, gg: giorniNomi[dow], weekend: dow === 0 || dow === 6 }
-  })
+  }).filter(Boolean)
 })
 
 function getCodice(utenteId, giorno) {
