@@ -446,13 +446,23 @@ async function loadPersone() {
   persone.value.forEach(p => { if (p.gruppo_id && idToNome[p.gruppo_id]) p.gruppo_nome = idToNome[p.gruppo_id] })
 }
 async function loadCategoria() {
-  if (categoriaAttiva.value && categoriaAttiva.value.giorni) {
-    giorniAllenamento.value = categoriaAttiva.value.giorni.split(",").map(Number)
+  const res = await getCategorie()
+  const cat = res.data.find(c => c.id === categoriaId.value)
+  if (cat && cat.giorni) {
+    giorniAllenamento.value = cat.giorni.split(",").map(Number)
   } else {
-    const res = await getCategorie()
-    const cat = res.data.find(c => c.id === categoriaId.value)
-    if (cat && cat.giorni) giorniAllenamento.value = cat.giorni.split(",").map(Number)
-    else giorniAllenamento.value = []
+    giorniAllenamento.value = []
+  }
+
+  // Per la categoria Portieri, unisci i giorni di tutte le categorie non-portieri
+  if (isPortieri.value) {
+    const allGiorni = new Set()
+    res.data.forEach(c => {
+      if (c.giorni && !c.is_portieri) {
+        c.giorni.split(",").forEach(g => allGiorni.add(parseInt(g)))
+      }
+    })
+    giorniAllenamento.value = [...allGiorni].sort()
   }
 }
 
