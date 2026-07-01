@@ -216,3 +216,7 @@ export const getSchedeAllenamento = (params = {}) => api.get('/schede-allenament
 export const creaSchedaAllenamento = (data) => api.post('/schede-allenamento/', data)
 export const aggiornaSchedaAllenamento = (id, data) => api.put(`/schede-allenamento/${id}`, data)
 export const eliminaSchedaAllenamento = (id) => api.delete(`/schede-allenamento/${id}`)
+export const getSchedeTrend = (params) => api.get('/schede-allenamento/stats/trend', { params })
+export const getSchedeSummary = (params) => api.get('/schede-allenamento/stats/summary', { params })
+export const getSchedeTeam = (params) => api.get('/schede-allenamento/stats/team', { params })
+export const getSchedePlayerTrend = (params) => api.get('/schede-allenamento/stats/player-trend', { params })

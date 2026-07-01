@@ -21,92 +21,181 @@
         <h1 class="category-name">
           <span class="name-gradient">{{ categoriaAttiva?.nome }}</span>
         </h1>
-        <p class="header-subtitle">Scheda Allenamento Individuale</p>
+        <p class="header-subtitle">Dashboard GPS Allenamento</p>
       </div>
     </header>
 
-    <div class="controls-row">
-      <div class="date-picker-pill">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-          <line x1="16" y1="2" x2="16" y2="6"/>
-          <line x1="8" y1="2" x2="8" y2="6"/>
-          <line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-        <input type="date" v-model="dataSelezionata" class="date-input" />
-      </div>
-      <button class="btn-add" @click="apriModalNuovo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        Nuovo
-      </button>
+    <div class="tab-bar">
+      <button
+        class="tab-btn"
+        :class="{ active: tabAttiva === 'dashboard' }"
+        @click="tabAttiva = 'dashboard'"
+      >Dashboard</button>
+      <button
+        class="tab-btn"
+        :class="{ active: tabAttiva === 'tabella' }"
+        @click="tabAttiva = 'tabella'"
+      >Tabella</button>
     </div>
 
-    <div class="table-wrapper">
-      <table v-if="schede.length > 0">
-        <thead>
-          <tr>
-            <th class="th-num">#</th>
-            <th class="th-nome">Giocatore</th>
-            <th class="th-gps">Distanza Totale</th>
-            <th class="th-gps">Alta Velocità</th>
-            <th class="th-gps">Sprint</th>
-            <th class="th-gps">Vel. Max</th>
-            <th class="th-gps">Accel.</th>
-            <th class="th-gps">Decel.</th>
-            <th class="th-gps">Met. Power</th>
-            <th class="th-gps">PlayerLoad</th>
-            <th class="th-gps">Calorie</th>
-            <th class="th-gps">Tempo</th>
-            <th class="th-gps">RPE</th>
-            <th class="th-note">Note</th>
-            <th class="th-actions"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(scheda, idx) in schede" :key="scheda.id">
-            <td class="td-num">{{ idx + 1 }}</td>
-            <td class="td-nome">
-              <span class="persona-name">{{ scheda.cognome }} {{ scheda.nome }}</span>
-            </td>
-            <td class="td-gps">{{ scheda.distanza_totale ? scheda.distanza_totale.toFixed(0) + 'm' : '-' }}</td>
-            <td class="td-gps">{{ scheda.distanza_alta_velocita ? scheda.distanza_alta_velocita.toFixed(0) + 'm' : '-' }}</td>
-            <td class="td-gps">{{ scheda.distanza_sprint ? scheda.distanza_sprint.toFixed(0) + 'm' : '-' }}</td>
-            <td class="td-gps">{{ scheda.velocita_massima ? scheda.velocita_massima.toFixed(1) + 'km/h' : '-' }}</td>
-            <td class="td-gps">{{ scheda.accelerazioni ?? '-' }}</td>
-            <td class="td-gps">{{ scheda.decelerazioni ?? '-' }}</td>
-            <td class="td-gps">{{ scheda.metabolic_power ? scheda.metabolic_power.toFixed(1) + 'W/kg' : '-' }}</td>
-            <td class="td-gps">{{ scheda.player_load ? scheda.player_load.toFixed(0) : '-' }}</td>
-            <td class="td-gps">{{ scheda.calorie ? scheda.calorie.toFixed(0) + 'kcal' : '-' }}</td>
-            <td class="td-gps">{{ scheda.tempo_lavoro ? scheda.tempo_lavoro + 'min' : '-' }}</td>
-            <td class="td-rpe" :class="rpeClass(scheda.rpe)">{{ scheda.rpe ?? '-' }}</td>
-            <td class="td-note">{{ scheda.note || '-' }}</td>
-            <td class="td-actions">
-              <button class="btn-edit" @click="apriModalEdit(scheda)" title="Modifica">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-              </button>
-              <button class="btn-delete" @click="eliminaScheda(scheda.id)" title="Elimina">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                </svg>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div v-else class="empty-state">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M12 6v6l4 2"/>
-        </svg>
-        <p>Nessun dato allenamento per questa data</p>
-        <button class="btn-add-empty" @click="apriModalNuovo">Aggiungi primo allenamento</button>
+    <div v-if="tabAttiva === 'dashboard'" class="dashboard-content">
+      <div class="controls-row dashboard-controls">
+        <div class="period-selector">
+          <button
+            v-for="p in periodi" :key="p.value"
+            class="period-btn"
+            :class="{ active: periodo === p.value }"
+            @click="periodo = p.value"
+          >{{ p.label }}</button>
+        </div>
+        <div class="view-toggle">
+          <button
+            class="toggle-btn"
+            :class="{ active: vista === 'squadra' }"
+            @click="vista = 'squadra'"
+          >Squadra</button>
+          <button
+            class="toggle-btn"
+            :class="{ active: vista === 'individuale' }"
+            @click="vista = 'individuale'"
+          >Individuale</button>
+        </div>
+        <select v-if="vista === 'individuale'" v-model="playerSelezionato" class="player-select">
+          <option :value="null" disabled>Seleziona giocatore...</option>
+          <option v-for="p in persone" :key="p.id" :value="p.id">
+            {{ p.cognome }} {{ p.nome }}
+          </option>
+        </select>
+        <select v-model="metricaSelezionata" class="metric-select">
+          <option v-for="m in metriche" :key="m.key" :value="m.key">{{ m.label }} ({{ m.unit }})</option>
+        </select>
+      </div>
+
+      <div class="summary-cards">
+        <div v-for="(val, key) in summaryData" :key="key" class="summary-card">
+          <div class="card-label">{{ getMetricLabel(key) }}</div>
+          <div class="card-value">{{ formatSummaryValue(key, val) }}</div>
+          <div class="card-meta">{{ val.sessions || 0 }} session{{ (val.sessions || 0) !== 1 ? 'i' : 'e' }}</div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">
+            <span>Trend {{ getMetricLabel(metricaSelezionata) }}</span>
+            <span class="chart-subtitle">Media per sessione</span>
+          </div>
+          <div class="chart-container">
+            <canvas ref="trendChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title">
+            <span>Classifica Squadra</span>
+            <span class="chart-subtitle">{{ getMetricLabel(metricaSelezionata) }}</span>
+          </div>
+          <div class="chart-container">
+            <canvas ref="teamChart"></canvas>
+          </div>
+        </div>
+
+        <div v-if="vista === 'individuale' && playerSelezionato" class="chart-card chart-full">
+          <div class="chart-title">
+            <span>Analisi Completa Giocatore</span>
+            <span class="chart-subtitle">{{ getPlayerName(playerSelezionato) }}</span>
+          </div>
+          <div class="chart-container">
+            <canvas ref="playerChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="tabAttiva === 'tabella'" class="tabella-content">
+      <div class="controls-row">
+        <div class="date-picker-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <input type="date" v-model="dataSelezionata" class="date-input" />
+        </div>
+        <button class="btn-add" @click="apriModalNuovo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Nuovo
+        </button>
+      </div>
+
+      <div class="table-wrapper">
+        <table v-if="schede.length > 0">
+          <thead>
+            <tr>
+              <th class="th-num">#</th>
+              <th class="th-nome">Giocatore</th>
+              <th class="th-gps">Distanza Totale</th>
+              <th class="th-gps">Alta Velocità</th>
+              <th class="th-gps">Sprint</th>
+              <th class="th-gps">Vel. Max</th>
+              <th class="th-gps">Accel.</th>
+              <th class="th-gps">Decel.</th>
+              <th class="th-gps">Met. Power</th>
+              <th class="th-gps">PlayerLoad</th>
+              <th class="th-gps">Calorie</th>
+              <th class="th-gps">Tempo</th>
+              <th class="th-gps">RPE</th>
+              <th class="th-note">Note</th>
+              <th class="th-actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(scheda, idx) in schede" :key="scheda.id">
+              <td class="td-num">{{ idx + 1 }}</td>
+              <td class="td-nome">
+                <span class="persona-name">{{ scheda.cognome }} {{ scheda.nome }}</span>
+              </td>
+              <td class="td-gps">{{ scheda.distanza_totale ? scheda.distanza_totale.toFixed(0) + 'm' : '-' }}</td>
+              <td class="td-gps">{{ scheda.distanza_alta_velocita ? scheda.distanza_alta_velocita.toFixed(0) + 'm' : '-' }}</td>
+              <td class="td-gps">{{ scheda.distanza_sprint ? scheda.distanza_sprint.toFixed(0) + 'm' : '-' }}</td>
+              <td class="td-gps">{{ scheda.velocita_massima ? scheda.velocita_massima.toFixed(1) + 'km/h' : '-' }}</td>
+              <td class="td-gps">{{ scheda.accelerazioni ?? '-' }}</td>
+              <td class="td-gps">{{ scheda.decelerazioni ?? '-' }}</td>
+              <td class="td-gps">{{ scheda.metabolic_power ? scheda.metabolic_power.toFixed(1) + 'W/kg' : '-' }}</td>
+              <td class="td-gps">{{ scheda.player_load ? scheda.player_load.toFixed(0) : '-' }}</td>
+              <td class="td-gps">{{ scheda.calorie ? scheda.calorie.toFixed(0) + 'kcal' : '-' }}</td>
+              <td class="td-gps">{{ scheda.tempo_lavoro ? scheda.tempo_lavoro + 'min' : '-' }}</td>
+              <td class="td-rpe" :class="rpeClass(scheda.rpe)">{{ scheda.rpe ?? '-' }}</td>
+              <td class="td-note">{{ scheda.note || '-' }}</td>
+              <td class="td-actions">
+                <button class="btn-edit" @click="apriModalEdit(scheda)" title="Modifica">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+                <button class="btn-delete" @click="eliminaScheda(scheda.id)" title="Elimina">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-else class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 6v6l4 2"/>
+          </svg>
+          <p>Nessun dato allenamento per questa data</p>
+          <button class="btn-add-empty" @click="apriModalNuovo">Aggiungi primo allenamento</button>
+        </div>
       </div>
     </div>
 
@@ -148,7 +237,7 @@
                 </div>
               </div>
               <div class="metric-input">
-                <label class="metric-label">Alta Velocità (&gt;19.8km/h)</label>
+                <label class="metric-label">Alta Velocit\u00e0 (&gt;19.8km/h)</label>
                 <div class="metric-field">
                   <input type="number" v-model.number="modal.distanza_alta_velocita" placeholder="0" class="metric-value" />
                   <span class="metric-unit">m</span>
@@ -169,14 +258,14 @@
                 </div>
               </div>
               <div class="metric-input">
-                <label class="metric-label">Accelerazioni (&gt;3m/s²)</label>
+                <label class="metric-label">Accelerazioni (&gt;3m/s\u00b2)</label>
                 <div class="metric-field">
                   <input type="number" v-model.number="modal.accelerazioni" placeholder="0" class="metric-value" />
                   <span class="metric-unit">n.</span>
                 </div>
               </div>
               <div class="metric-input">
-                <label class="metric-label">Decelerazioni (&gt;3m/s²)</label>
+                <label class="metric-label">Decelerazioni (&gt;3m/s\u00b2)</label>
                 <div class="metric-field">
                   <input type="number" v-model.number="modal.decelerazioni" placeholder="0" class="metric-value" />
                   <span class="metric-unit">n.</span>
@@ -238,31 +327,88 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue"
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { getPersone, getCategorie } from "../api/index.js"
-import { getSchedeAllenamento, creaSchedaAllenamento, aggiornaSchedaAllenamento, eliminaSchedaAllenamento } from "../api/index.js"
+import Chart from 'chart.js/auto'
+import {
+  getPersone, getCategorie,
+  getSchedeAllenamento, creaSchedaAllenamento, aggiornaSchedaAllenamento, eliminaSchedaAllenamento,
+  getSchedeTrend, getSchedeSummary, getSchedeTeam, getSchedePlayerTrend
+} from "../api/index.js"
 
 const route = useRoute()
 const router = useRouter()
 const categoriaId = computed(() => parseInt(route.params.id))
 const categoriaAttiva = ref(null)
 
-async function loadCategoria() {
-  if (categoriaAttiva.value) return
-  try {
-    const res = await getCategorie()
-    const found = (res.data || []).find(c => c.id === categoriaId.value)
-    if (found) categoriaAttiva.value = found
-  } catch (e) {
-    console.error('Errore caricamento categoria:', e)
-  }
+const tabAttiva = ref('dashboard')
+const periodo = ref('settimana')
+const vista = ref('squadra')
+const playerSelezionato = ref(null)
+const metricaSelezionata = ref('distanza_totale')
+
+const periodi = [
+  { value: 'settimana', label: 'Settimana' },
+  { value: 'mese', label: 'Mese' },
+  { value: 'stagione', label: 'Stagione' }
+]
+
+const metriche = [
+  { key: 'distanza_totale', label: 'Distanza Totale', unit: 'm' },
+  { key: 'distanza_alta_velocita', label: 'Alta Velocit\u00e0', unit: 'm' },
+  { key: 'distanza_sprint', label: 'Sprint', unit: 'm' },
+  { key: 'velocita_massima', label: 'Vel. Max', unit: 'km/h' },
+  { key: 'accelerazioni', label: 'Accelerazioni', unit: 'n.' },
+  { key: 'decelerazioni', label: 'Decelerazioni', unit: 'n.' },
+  { key: 'metabolic_power', label: 'Met. Power', unit: 'W/kg' },
+  { key: 'player_load', label: 'PlayerLoad', unit: 'PL' },
+  { key: 'calorie', label: 'Calorie', unit: 'kcal' },
+  { key: 'tempo_lavoro', label: 'Tempo', unit: 'min' },
+  { key: 'rpe', label: 'RPE', unit: '/10' }
+]
+
+const getMetricLabel = (key) => {
+  const m = metriche.find(m => m.key === key)
+  return m ? m.label : key
+}
+
+const getMetricUnit = (key) => {
+  const m = metriche.find(m => m.key === key)
+  return m ? m.unit : ''
+}
+
+const formatValue = (key, val) => {
+  if (val == null) return '-'
+  const unit = getMetricUnit(key)
+  if (['velocita_massima', 'metabolic_power'].includes(key)) return val.toFixed(1) + ' ' + unit
+  if (key === 'rpe') return val + ' /10'
+  if (['accelerazioni', 'decelerazioni', 'player_load'].includes(key)) return val.toFixed(0) + ' ' + unit
+  return val.toFixed(0) + ' ' + unit
+}
+
+const formatSummaryValue = (key, val) => {
+  if (!val) return '-'
+  const avg = val.avg != null ? val.avg : 0
+  return formatValue(key, avg)
 }
 
 const oggi = new Date()
 const dataSelezionata = ref(oggi.toISOString().split('T')[0])
 const persone = ref([])
 const schede = ref([])
+
+const summaryData = ref({})
+const trendData = ref([])
+const teamData = ref([])
+const playerTrendData = ref([])
+
+const trendChartRef = ref(null)
+const teamChartRef = ref(null)
+const playerChartRef = ref(null)
+
+let trendChartInstance = null
+let teamChartInstance = null
+let playerChartInstance = null
 
 const modal = ref({
   show: false,
@@ -337,6 +483,99 @@ function rpeClass(rpe) {
   return 'rpe-high'
 }
 
+function getPlayerName(id) {
+  const p = persone.value.find(p => p.id === id)
+  return p ? `${p.cognome} ${p.nome}` : ''
+}
+
+const chartColors = {
+  primary: '#dc2626',
+  primaryAlpha: 'rgba(220, 38, 38, 0.15)',
+  secondary: '#7c3aed',
+  secondaryAlpha: 'rgba(124, 58, 237, 0.15)',
+  accent: '#3b82f6',
+  accentAlpha: 'rgba(59, 130, 246, 0.15)',
+  green: '#4ade80',
+  greenAlpha: 'rgba(74, 222, 128, 0.15)',
+  yellow: '#fbbf24',
+  yellowAlpha: 'rgba(251, 191, 36, 0.15)',
+  grid: 'rgba(255, 255, 255, 0.06)',
+  text: '#aaaaaa',
+  textMuted: '#666666'
+}
+
+const playerMetricColors = [
+  chartColors.primary,
+  chartColors.secondary,
+  chartColors.accent,
+  chartColors.green,
+  chartColors.yellow,
+  '#f97316',
+  '#ec4899',
+  '#14b8a6',
+  '#a855f7',
+  '#06b6d4',
+  '#84cc16'
+]
+
+const playerMetricsKeys = [
+  'distanza_totale',
+  'distanza_alta_velocita',
+  'distanza_sprint',
+  'velocita_massima',
+  'accelerazioni',
+  'decelerazioni',
+  'metabolic_power',
+  'player_load',
+  'calorie',
+  'tempo_lavoro',
+  'rpe'
+]
+
+function getChartDefaults() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: {
+          color: chartColors.text,
+          font: { size: 11, family: "'Inter', sans-serif" }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: chartColors.grid },
+        ticks: { color: chartColors.textMuted, font: { size: 10 } }
+      },
+      y: {
+        grid: { color: chartColors.grid },
+        ticks: { color: chartColors.textMuted, font: { size: 10 } }
+      }
+    }
+  }
+}
+
+function destroyChart(instance) {
+  if (instance) {
+    instance.destroy()
+    return null
+  }
+  return null
+}
+
+async function loadCategoria() {
+  if (categoriaAttiva.value) return
+  try {
+    const res = await getCategorie()
+    const found = (res.data || []).find(c => c.id === categoriaId.value)
+    if (found) categoriaAttiva.value = found
+  } catch (e) {
+    console.error('Errore caricamento categoria:', e)
+  }
+}
+
 async function loadPersone() {
   if (!categoriaId.value) return
   const res = await getPersone(categoriaId.value)
@@ -356,6 +595,269 @@ async function loadSchede() {
     nome: personaMap[s.persona_id]?.nome || '',
     cognome: personaMap[s.persona_id]?.cognome || ''
   }))
+}
+
+async function loadSummary() {
+  if (!categoriaId.value) return
+  try {
+    const params = { categoria_id: categoriaId.value, period: periodo.value }
+    if (vista.value === 'individuale' && playerSelezionato.value) {
+      params.persona_id = playerSelezionato.value
+    }
+    const res = await getSchedeSummary(params)
+    summaryData.value = res.data || {}
+  } catch (e) {
+    console.error('Errore caricamento summary:', e)
+  }
+}
+
+async function loadTrend() {
+  if (!categoriaId.value) return
+  try {
+    const params = {
+      categoria_id: categoriaId.value,
+      period: periodo.value,
+      metric: metricaSelezionata.value
+    }
+    if (vista.value === 'individuale' && playerSelezionato.value) {
+      params.persona_id = playerSelezionato.value
+    }
+    const res = await getSchedeTrend(params)
+    trendData.value = res.data || []
+    renderTrendChart()
+  } catch (e) {
+    console.error('Errore caricamento trend:', e)
+  }
+}
+
+async function loadTeam() {
+  if (!categoriaId.value) return
+  try {
+    const res = await getSchedeTeam({
+      categoria_id: categoriaId.value,
+      period: periodo.value,
+      metric: metricaSelezionata.value
+    })
+    teamData.value = res.data || []
+    renderTeamChart()
+  } catch (e) {
+    console.error('Errore caricamento team:', e)
+  }
+}
+
+async function loadPlayerTrend() {
+  if (!categoriaId.value || !playerSelezionato.value) return
+  try {
+    const res = await getSchedePlayerTrend({
+      categoria_id: categoriaId.value,
+      persona_id: playerSelezionato.value,
+      period: periodo.value
+    })
+    playerTrendData.value = res.data || []
+    renderPlayerChart()
+  } catch (e) {
+    console.error('Errore caricamento player trend:', e)
+  }
+}
+
+function renderTrendChart() {
+  if (!trendChartRef.value) return
+  trendChartInstance = destroyChart(trendChartInstance)
+
+  const labels = trendData.value.map(d => {
+    const date = new Date(d.period)
+    return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
+  })
+  const values = trendData.value.map(d => d.avg != null ? parseFloat(d.avg) : null)
+
+  trendChartInstance = new Chart(trendChartRef.value, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: getMetricLabel(metricaSelezionata.value),
+        data: values,
+        borderColor: chartColors.primary,
+        backgroundColor: chartColors.primaryAlpha,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: chartColors.primary,
+        pointBorderColor: 'transparent',
+        borderWidth: 2.5,
+        spanGaps: true
+      }]
+    },
+    options: {
+      ...getChartDefaults(),
+      plugins: {
+        ...getChartDefaults().plugins,
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(30, 30, 30, 0.95)',
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          borderWidth: 1,
+          titleColor: '#ffffff',
+          bodyColor: '#aaaaaa',
+          padding: 10,
+          cornerRadius: 8,
+          callbacks: {
+            label: (ctx) => {
+              const val = ctx.parsed.y
+              return val != null ? `${getMetricLabel(metricaSelezionata.value)}: ${formatValue(metricaSelezionata.value, val)}` : 'N/D'
+            }
+          }
+        }
+      }
+    }
+  })
+}
+
+function renderTeamChart() {
+  if (!teamChartRef.value) return
+  teamChartInstance = destroyChart(teamChartInstance)
+
+  const sorted = [...teamData.value].sort((a, b) => (b.avg || 0) - (a.avg || 0))
+  const labels = sorted.map(d => `${d.cognome} ${d.nome}`)
+  const values = sorted.map(d => d.avg != null ? parseFloat(d.avg) : 0)
+  const sessions = sorted.map(d => d.sessions || 0)
+
+  const bgColors = values.map((_, i) => {
+    if (i === 0) return chartColors.primary
+    if (i === 1) return chartColors.secondary
+    if (i === 2) return chartColors.accent
+    return chartColors.textMuted
+  })
+
+  teamChartInstance = new Chart(teamChartRef.value, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: getMetricLabel(metricaSelezionata.value),
+        data: values,
+        backgroundColor: bgColors.map(c => c + '33'),
+        borderColor: bgColors,
+        borderWidth: 1.5,
+        borderRadius: 4,
+        barThickness: 20
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      ...getChartDefaults(),
+      plugins: {
+        ...getChartDefaults().plugins,
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(30, 30, 30, 0.95)',
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          borderWidth: 1,
+          titleColor: '#ffffff',
+          bodyColor: '#aaaaaa',
+          padding: 10,
+          cornerRadius: 8,
+          callbacks: {
+            label: (ctx) => {
+              const idx = ctx.dataIndex
+              const entry = sorted[idx]
+              return [
+                `${getMetricLabel(metricaSelezionata.value)}: ${formatValue(metricaSelezionata.value, entry.avg)}`,
+                `Max: ${formatValue(metricaSelezionata.value, entry.max)}`,
+                `Sessioni: ${sessions[idx]}`
+              ]
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: chartColors.grid },
+          ticks: { color: chartColors.textMuted, font: { size: 10 } }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: chartColors.text, font: { size: 11 } }
+        }
+      }
+    }
+  })
+}
+
+function renderPlayerChart() {
+  if (!playerChartRef.value) return
+  playerChartInstance = destroyChart(playerChartInstance)
+
+  if (playerTrendData.value.length === 0) return
+
+  const labels = playerTrendData.value.map(d => {
+    const date = new Date(d.data)
+    return date.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
+  })
+
+  const datasets = playerMetricsKeys.map((key, i) => ({
+    label: getMetricLabel(key),
+    data: playerTrendData.value.map(d => d[key] != null ? parseFloat(d[key]) : null),
+    borderColor: playerMetricColors[i],
+    backgroundColor: playerMetricColors[i] + '15',
+    fill: false,
+    tension: 0.4,
+    pointRadius: 3,
+    pointHoverRadius: 5,
+    borderWidth: 2,
+    spanGaps: true
+  }))
+
+  playerChartInstance = new Chart(playerChartRef.value, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      ...getChartDefaults(),
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        ...getChartDefaults().plugins,
+        legend: {
+          ...getChartDefaults().plugins.legend,
+          position: 'bottom',
+          labels: {
+            ...getChartDefaults().plugins.legend.labels,
+            boxWidth: 12,
+            padding: 12,
+            usePointStyle: true,
+            pointStyle: 'circle'
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(30, 30, 30, 0.95)',
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          borderWidth: 1,
+          titleColor: '#ffffff',
+          bodyColor: '#aaaaaa',
+          padding: 10,
+          cornerRadius: 8,
+          filter: (item) => item.parsed.y != null
+        }
+      }
+    }
+  })
+}
+
+async function loadDashboardData() {
+  await Promise.all([
+    loadSummary(),
+    loadTrend(),
+    loadTeam()
+  ])
+  if (vista.value === 'individuale' && playerSelezionato.value) {
+    await loadPlayerTrend()
+  } else {
+    playerChartInstance = destroyChart(playerChartInstance)
+    playerTrendData.value = []
+  }
 }
 
 async function salvaScheda() {
@@ -385,6 +887,7 @@ async function salvaScheda() {
     }
     modal.value.show = false
     await loadSchede()
+    await loadDashboardData()
   } catch (e) {
     console.error('Errore salvataggio:', e)
   }
@@ -395,17 +898,39 @@ async function eliminaScheda(id) {
   try {
     await eliminaSchedaAllenamento(id)
     await loadSchede()
+    await loadDashboardData()
   } catch (e) {
     console.error('Errore eliminazione:', e)
   }
 }
 
 watch(dataSelezionata, loadSchede)
+watch(periodo, loadDashboardData)
+watch(metricaSelezionata, loadDashboardData)
+watch(vista, () => {
+  if (vista.value === 'individuale' && !playerSelezionato.value && persone.value.length > 0) {
+    playerSelezionato.value = persone.value[0].id
+  }
+  loadDashboardData()
+})
+watch(playerSelezionato, () => {
+  if (vista.value === 'individuale') {
+    loadDashboardData()
+  }
+})
 
 onMounted(async () => {
   await loadCategoria()
   await loadPersone()
   await loadSchede()
+  await nextTick()
+  await loadDashboardData()
+})
+
+onUnmounted(() => {
+  destroyChart(trendChartInstance)
+  destroyChart(teamChartInstance)
+  destroyChart(playerChartInstance)
 })
 </script>
 
@@ -451,7 +976,7 @@ onMounted(async () => {
 .page-header {
   position: relative;
   z-index: 1;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 .header-top {
   display: flex;
@@ -531,9 +1056,209 @@ onMounted(async () => {
   font-weight: 400;
 }
 
-.controls-row {
+/* ── Tab Bar ── */
+.tab-bar {
   position: relative;
   z-index: 1;
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 4px;
+  width: fit-content;
+}
+.tab-btn {
+  padding: 0.5rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.tab-btn:hover {
+  color: var(--color-text-secondary);
+}
+.tab-btn.active {
+  background: rgba(220, 38, 38, 0.15);
+  color: var(--color-primary);
+}
+
+/* ── Dashboard Controls ── */
+.dashboard-content {
+  position: relative;
+  z-index: 1;
+}
+.dashboard-controls {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.period-selector {
+  display: flex;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 3px;
+}
+.period-btn {
+  padding: 0.4rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.period-btn:hover {
+  color: var(--color-text-secondary);
+}
+.period-btn.active {
+  background: rgba(220, 38, 38, 0.15);
+  color: var(--color-primary);
+}
+.view-toggle {
+  display: flex;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 3px;
+}
+.toggle-btn {
+  padding: 0.4rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.toggle-btn:hover {
+  color: var(--color-text-secondary);
+}
+.toggle-btn.active {
+  background: rgba(124, 58, 237, 0.15);
+  color: #a78bfa;
+}
+.player-select, .metric-select {
+  padding: 0.45rem 0.875rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+.player-select:focus, .metric-select:focus {
+  border-color: rgba(220, 38, 38, 0.5);
+}
+.player-select option, .metric-select option {
+  background: #1a1a1a;
+  color: var(--color-text);
+}
+
+/* ── Summary Cards ── */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.summary-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 1rem;
+  transition: all var(--transition-fast);
+}
+.summary-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.card-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+}
+.card-value {
+  font-family: var(--font-mono);
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.1;
+  margin-bottom: 0.25rem;
+}
+.card-meta {
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+}
+
+/* ── Charts ── */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.chart-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 1.25rem;
+}
+.chart-full {
+  grid-column: 1 / -1;
+}
+.chart-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1rem;
+}
+.chart-title span:first-child {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.chart-subtitle {
+  font-size: 0.6875rem !important;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+.chart-container {
+  position: relative;
+  height: 280px;
+}
+.chart-full .chart-container {
+  height: 320px;
+}
+
+/* ── Table (Tabella tab) ── */
+.tabella-content {
+  position: relative;
+  z-index: 1;
+}
+.controls-row {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -584,8 +1309,6 @@ onMounted(async () => {
 }
 
 .table-wrapper {
-  position: relative;
-  z-index: 1;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -879,9 +1602,16 @@ th {
   background: rgba(255, 255, 255, 0.08);
 }
 
+@media (max-width: 1024px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
 @media (max-width: 768px) {
   .scheda-page { padding: 1.5rem 1rem 3rem; }
   .controls-row { flex-wrap: wrap; }
+  .dashboard-controls { flex-direction: column; align-items: stretch; }
   .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .summary-cards { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 }
 </style>
