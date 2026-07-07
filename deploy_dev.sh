@@ -34,16 +34,16 @@ $SSH $REMOTE "cd $REMOTE_PATH && docker compose cp migrations/drop_telefono_colu
 
 # Stop existing containers
 echo "Stopping containers..."
-$SSH $REMOTE "cd $REMOTE_PATH && docker compose down"
+$SSH $REMOTE "cd $REMOTE_PATH && docker compose -f docker-compose.yml -f docker-compose.dev.yml down"
 
 # Force rebuild without cache
 # VITE_API_URL=/api → frontend usa nginx interno che proxya al backend locale (no CORS)
 echo "Building containers (no cache)..."
-$SSH $REMOTE "cd $REMOTE_PATH && VITE_API_URL=/api docker compose build --no-cache"
+$SSH $REMOTE "cd $REMOTE_PATH && docker compose -f docker-compose.yml -f docker-compose.dev.yml build --no-cache"
 
 # Start containers
 echo "Starting containers..."
-$SSH $REMOTE "cd $REMOTE_PATH && docker compose up -d"
+$SSH $REMOTE "cd $REMOTE_PATH && docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d"
 
 # Wait for services
 echo "Waiting for services..."
