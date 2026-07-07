@@ -19,15 +19,15 @@ ssh root@192.168.178.132 'cd /opt/registro_presenze && docker compose cp migrati
 
 # Stop existing containers
 echo "Stopping containers..."
-ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose down"
+ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose -f docker-compose.yml -f docker-compose.prod.yml down"
 
 # Force rebuild without cache (ensure fresh build)
 echo "Building containers (no cache)..."
-ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose build --no-cache"
+ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache"
 
 # Start containers
 echo "Starting containers..."
-ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose up -d"
+ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d"
 
 # Wait for services to be ready
 echo "Waiting for services..."

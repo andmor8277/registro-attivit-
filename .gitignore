@@ -39,6 +39,7 @@ releases/
 
 # Environment files with secrets
 .env
-.env.production
+!.env.example
 .env.local
+.env.production
 *.local.env
