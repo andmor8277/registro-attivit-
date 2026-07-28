@@ -149,6 +149,7 @@
               <path d="M16 3.13a4 4 0 010 7.75"/>
             </svg>
             {{ gruppo }}
+            <span v-if="gruppoIsMisto(gruppo)" class="badge-misto-registro">MISTO</span>
           </div>
           <table>
             <thead>
@@ -387,6 +388,7 @@ function personaLabel(p) {
 }
 const personeAlfabetiche = computed(() => [...persone.value].sort((a, b) => a.cognome.localeCompare(b.cognome)))
 function personePerGruppo(g) { return persone.value.filter(p => (p.gruppo_nome || "Senza gruppo") === g) }
+function gruppoIsMisto(g) { const gr = gruppiList.value.find(x => x.nome === g); return gr && (gr.is_misto || false) }
 function getCodice(personaId, giorno) {
   const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
   if (hasActiveInfortunio(personaId, d)) return "I"
@@ -524,11 +526,16 @@ async function loadPersone() {
   try {
     const g = await getGruppi(categoriaId.value)
     gruppiList.value = (g.data || []).map(item =>
-      typeof item === 'string' ? { id: null, nome: item } : { id: item.id, nome: item.nome }
+      typeof item === 'string' ? { id: null, nome: item, is_misto: false } : { id: item.id, nome: item.nome, is_misto: item.is_misto || false }
     )
   } catch(e) { console.error('Error loading gruppi:', e) }
-  const idToNome = Object.fromEntries(gruppiList.value.map(g => [g.id, g.nome]).filter(([id]) => id != null))
-  persone.value.forEach(p => { if (p.gruppo_id && idToNome[p.gruppo_id]) p.gruppo_nome = idToNome[p.gruppo_id] })
+  const idToGruppo = Object.fromEntries(gruppiList.value.map(g => [g.id, g]).filter(([id]) => id != null))
+  persone.value.forEach(p => {
+    if (p.gruppo_id && idToGruppo[p.gruppo_id]) {
+      p.gruppo_nome = idToGruppo[p.gruppo_id].nome
+      p.gruppo_is_misto = idToGruppo[p.gruppo_id].is_misto || false
+    }
+  })
 }
 async function loadCategoria() {
   const res = await getCategorie()
@@ -890,6 +897,19 @@ th {
 .gruppo-header svg {
   opacity: 0.7;
   color: var(--color-primary);
+}
+
+.badge-misto-registro {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-left: 0.25rem;
 }
 
 
