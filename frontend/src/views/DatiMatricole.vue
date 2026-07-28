@@ -89,8 +89,9 @@
                 </td>
               </template>
               <td v-if="!isDirigente" class="cell-gruppo">
-                <span class="badge" :class="'badge-g' + p.gruppo_id">
+                <span class="badge" :class="'badge-g' + (p.gruppo_id % 4 || 4)">
                   {{ p.gruppo_nome || '-' }}
+                  <span v-if="p.gruppo_is_misto" class="badge-misto-inline">MISTO</span>
                 </span>
               </td>
               <td class="cell-action">
@@ -460,9 +461,11 @@ async function eliminaGruppo(g) {
 }
 
 function enrichGruppoNome(personeList) {
-  const idToNome = Object.fromEntries(gruppiList.value.map(g => [g.id, g.nome]))
+  const idToGruppo = Object.fromEntries(gruppiList.value.map(g => [g.id, g]))
   personeList.forEach(p => {
-    p.gruppo_nome = idToNome[p.gruppo_id] || ''
+    const g = idToGruppo[p.gruppo_id]
+    p.gruppo_nome = g ? g.nome : ''
+    p.gruppo_is_misto = g ? (g.is_misto || false) : false
   })
 }
 
@@ -1173,6 +1176,20 @@ tr:last-child td { border-bottom: none; }
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.05em;
+}
+
+.badge-misto-inline {
+  display: inline-block;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 4px;
+  background: rgba(251, 191, 36, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-left: 0.375rem;
+  vertical-align: middle;
 }
 
 .checkbox-misto {
