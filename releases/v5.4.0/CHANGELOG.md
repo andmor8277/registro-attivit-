@@ -160,8 +160,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Open Day completo, campi a metà, planning eventi, redirect login per ruolo, settimana tipo, stagione persistente
-
-## [5.4.0] - 2026-07-28
-
-### Added
-- Report Individuale in Reportistica, non_presente in Convocazioni, stagione dinamica da DB, parent categories escluse, Renaming Gestione Squadre
