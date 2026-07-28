@@ -191,6 +191,21 @@ def run_migrations():
 
             try:
                 result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'allenamenti_elemento' AND column_name = 'size'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text(
+                        "ALTER TABLE allenamenti_elemento ADD COLUMN size FLOAT"
+                    ))
+                    conn.commit()
+                    print("Migration: Added size to allenamenti_elemento")
+            except Exception as e:
+                print(f"Migration warning (elemento size): {e}")
+                conn.rollback()
+
+            try:
+                result = conn.execute(text(
                     "SELECT table_name FROM information_schema.tables WHERE table_name = :tn"
                 ), {"tn": "partite"})
                 if result.fetchone() is None:
@@ -717,6 +732,30 @@ def run_migrations():
                     print("Migration: Created schede_allenamento table")
             except Exception as e:
                 print(f"Migration warning (schede_allenamento): {e}")
+                conn.rollback()
+
+            try:
+                conn.execute(text("UPDATE codici SET codice='I' WHERE codice='Ai'"))
+                conn.execute(text("UPDATE registro SET codice='I' WHERE codice='Ai'"))
+                conn.commit()
+                print("Migration: Renamed codice Ai -> I (Infortunato)")
+            except Exception as e:
+                print(f"Migration warning (Ai->I): {e}")
+                conn.rollback()
+
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'convocazione_giocatori' AND column_name = 'non_presente'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text(
+                        "ALTER TABLE convocazione_giocatori ADD COLUMN non_presente INTEGER DEFAULT 0"
+                    ))
+                    conn.commit()
+                    print("Migration: Added non_presente to convocazione_giocatori")
+            except Exception as e:
+                print(f"Migration warning (non_presente): {e}")
                 conn.rollback()
 
         finally:

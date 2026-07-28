@@ -170,7 +170,7 @@
                 </td>
                 <td v-for="g in getGiorniMese(gruppo)" :key="g.num"
                   class="cella"
-                  :class="[getCodiceClasse(persona.id, g.num), { 'cella-readthrough': isReadthrough(persona.id, g.num) }]"
+                  :class="[getCodiceClasse(persona.id, g.num), { 'cella-readthrough': isReadthrough(persona.id, g.num), 'cella-locked': isAutoInfortunio(persona.id, g.num) }]"
                   @click="openEdit(persona, g.num)">
                   {{ getCodice(persona.id, g.num) }}
                 </td>
@@ -223,13 +223,13 @@
             <tr>
               <td class="tot-label th-label">Presenti</td>
               <td v-for="g in giorniMeseTutti" :key="g.num" class="tot-cell tot-pres">
-                {{ totGiornoTutti(g.num).pres || '' }}
+                {{ totaliGiorno[g.num]?.pres || '' }}
               </td>
             </tr>
             <tr>
               <td class="tot-label th-label">Assenti</td>
               <td v-for="g in giorniMeseTutti" :key="g.num" class="tot-cell tot-ass">
-                {{ totGiornoTutti(g.num).ass || '' }}
+                {{ totaliGiorno[g.num]?.ass || '' }}
               </td>
             </tr>
           </tbody>
@@ -267,7 +267,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { getPersone, getCodici, getRegistroMese, upsertRegistro, getCategorie, getGruppi } from "../api/index.js"
+import { getPersone, getCodici, getRegistroMese, upsertRegistro, getCategorie, getGruppi, getInfortuni } from "../api/index.js"
 import { useStore as useCategoria } from "../store.js"
 
 const route = useRoute()
@@ -301,6 +301,7 @@ const mese = ref(oggi.getMonth() + 1)
 const persone = ref([])
 const codici = ref([])
 const registro = ref([])
+const infortuniAttivi = ref([])
 const giorniAllenamento = ref([])
 const giorniAllenamentoPortieriCat = ref([])
 const editModal = ref({ show: false, persona: null, giorno: null })
@@ -310,7 +311,7 @@ const giorniNomi = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"]
 const meseLabel = computed(() => mesiNomi[mese.value - 1])
 
 const codiciOrdinati = computed(() => {
-  const order = ['X', 'AG', 'AI', 'P', 'R']
+  const order = ['X', 'AG', 'AI', 'I', 'R']
   return [...codici.value].sort((a, b) => order.indexOf(a.codice) - order.indexOf(b.codice))
 })
 
@@ -388,20 +389,44 @@ const personeAlfabetiche = computed(() => [...persone.value].sort((a, b) => a.co
 function personePerGruppo(g) { return persone.value.filter(p => (p.gruppo_nome || "Senza gruppo") === g) }
 function getCodice(personaId, giorno) {
   const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
+  if (hasActiveInfortunio(personaId, d)) return "I"
   const entry = registro.value.find(r => r.persona_id === personaId && r.data === d)
-  return entry ? entry.codice : ""
+  if (entry) return entry.codice
+  return ""
+}
+
+function isAutoInfortunio(personaId, giorno) {
+  const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
+  return hasActiveInfortunio(personaId, d)
+}
+
+function hasActiveInfortunio(personaId, dataStr) {
+  return infortuniAttivi.value.some(inf => {
+    if (inf.persona_id !== personaId) return false
+    if (inf.data_inizio > dataStr) return false
+    if (inf.data_fine && inf.data_fine < dataStr) return false
+    return true
+  })
 }
 function getCodiceClasse(personaId, giorno) {
   const codice = getCodice(personaId, giorno)
   const c = codici.value.find(x => x.codice === codice)
   if (!c) return ""
-  return c.tipo + (codice ? " cod-" + codice.toLowerCase() : "")
+  const auto = isAutoInfortunio(personaId, giorno) ? " cod-auto" : ""
+  return c.tipo + (codice ? " cod-" + codice.toLowerCase() : "") + auto
 }
 function totalePresenze(personaId) {
-  return registro.value.filter(r => r.persona_id === personaId && ["X","P","R"].includes(r.codice) && !r.is_portieri_readthrough).length
+  return registro.value.filter(r => r.persona_id === personaId && ["X","R"].includes(r.codice) && !r.is_portieri_readthrough && !hasActiveInfortunio(r.persona_id, r.data)).length
 }
 function totaleAssenze(personaId) {
-  return registro.value.filter(r => r.persona_id === personaId && ["AG","AI"].includes(r.codice)).length
+  let count = 0
+  giorniMeseTutti.value.forEach(g => {
+    const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(g.num).padStart(2,"0")
+    const entry = registro.value.find(r => r.persona_id === personaId && r.data === d)
+    if (entry && ["AG","AI","I"].includes(entry.codice)) count++
+    else if (hasActiveInfortunio(personaId, d)) count++
+  })
+  return count
 }
 function isReadthrough(personaId, giorno) {
   const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
@@ -410,6 +435,7 @@ function isReadthrough(personaId, giorno) {
 }
 function openEdit(persona, giorno) {
   if (isReadthrough(persona.id, giorno)) return
+  if (hasActiveInfortunio(persona.id, giorno)) return
   editModal.value = { show: true, persona, giorno }
 }
 
@@ -423,35 +449,70 @@ async function salvaPresenza(codice) {
 function totGiornoGruppo(gruppo, giorno) {
   const ids = personePerGruppo(gruppo).map(p => p.id)
   const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
-  const entries = registro.value.filter(r => ids.includes(r.persona_id) && r.data === d && !r.is_portieri_readthrough)
-  return {
-    pres: entries.filter(r => ["X","P","R"].includes(r.codice)).length || "",
-    ass: entries.filter(r => ["AG","AI"].includes(r.codice)).length || ""
-  }
+  const entries = registro.value.filter(r => ids.includes(r.persona_id) && r.data === d && !r.is_portieri_readthrough && r.codice)
+  let pres = 0
+  let ass = 0
+  entries.forEach(r => {
+    if (hasActiveInfortunio(r.persona_id, d)) return
+    if (["X","R"].includes(r.codice)) pres++
+    else if (["AG","AI","I"].includes(r.codice)) ass++
+  })
+  ids.forEach(id => {
+    if (hasActiveInfortunio(id, d)) ass++
+  })
+  return { pres: pres || "", ass: ass || "" }
 }
 function totGiornoCategoria(cat, giorno) {
   const ids = personePerCategoria(cat).map(p => p.id)
   const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
-  const entries = registro.value.filter(r => ids.includes(r.persona_id) && r.data === d)
-  return {
-    pres: entries.filter(r => ["X","P","R"].includes(r.codice)).length || "",
-    ass: entries.filter(r => ["AG","AI"].includes(r.codice)).length || ""
-  }
+  const entries = registro.value.filter(r => ids.includes(r.persona_id) && r.data === d && r.codice)
+  let pres = 0
+  let ass = 0
+  entries.forEach(r => {
+    if (hasActiveInfortunio(r.persona_id, d)) return
+    if (["X","R"].includes(r.codice)) pres++
+    else if (["AG","AI","I"].includes(r.codice)) ass++
+  })
+  ids.forEach(id => {
+    if (hasActiveInfortunio(id, d)) ass++
+  })
+  return { pres: pres || "", ass: ass || "" }
 }
-function totGiornoTutti(giorno) {
-  const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
-  const entries = registro.value.filter(r => r.data === d && !r.is_portieri_readthrough)
-  return {
-    pres: entries.filter(r => ["X","P","R"].includes(r.codice)).length || "",
-    ass: entries.filter(r => ["AG","AI"].includes(r.codice)).length || ""
-  }
-}
+const totaliGiorno = computed(() => {
+  const result = {}
+  giorniMeseTutti.value.forEach(g => {
+    const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(g.num).padStart(2,"0")
+    const entries = registro.value.filter(r => r.data === d && !r.is_portieri_readthrough && r.codice)
+    const allIds = persone.value.map(p => p.id)
+    let pres = 0
+    let ass = 0
+    entries.forEach(r => {
+      if (hasActiveInfortunio(r.persona_id, d)) return
+      if (["X","R"].includes(r.codice)) pres++
+      else if (["AG","AI","I"].includes(r.codice)) ass++
+    })
+    allIds.forEach(id => {
+      if (hasActiveInfortunio(id, d)) ass++
+    })
+    result[g.num] = { pres: pres || "", ass: ass || "" }
+  })
+  return result
+})
 function prevMese() { if (mese.value === 1) { mese.value = 12; anno.value-- } else mese.value-- }
 function nextMese() { if (mese.value === 12) { mese.value = 1; anno.value++ } else mese.value++ }
 async function loadRegistro() {
   if (!categoriaId.value || isNaN(categoriaId.value)) return
   const res = await getRegistroMese(categoriaId.value, anno.value, mese.value)
   registro.value = res.data
+}
+async function loadInfortuni() {
+  if (!categoriaId.value || isNaN(categoriaId.value)) return
+  try {
+    const res = await getInfortuni({ categoria_id: categoriaId.value, attivi: true })
+    infortuniAttivi.value = res.data || []
+  } catch (e) {
+    console.error('Errore caricamento infortuni:', e)
+  }
 }
 const gruppiList = ref([])
 async function loadPersone() {
@@ -498,8 +559,12 @@ onMounted(async () => {
   await loadCategoria()
   await loadPersone()
   await loadRegistro()
+  await loadInfortuni()
 })
-watch([anno, mese], loadRegistro)
+watch([anno, mese], async () => {
+  await loadRegistro()
+  await loadInfortuni()
+})
 </script>
 
 <style scoped>
@@ -869,10 +934,45 @@ th {
   font-weight: 700;
 }
 
+.cella.cod-i {
+  background: rgba(220, 38, 38, 0.15) !important;
+  color: #f87171 !important;
+  font-weight: 700;
+}
+
 .cella-readthrough {
   opacity: 0.5;
   cursor: default !important;
   pointer-events: none;
+}
+
+.cella-locked {
+  cursor: default !important;
+  position: relative;
+}
+
+.cella-locked::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  background: rgba(248, 113, 113, 0.7);
+  border-radius: 50%;
+}
+
+.cella.cod-auto {
+  border: 1px dashed rgba(248, 113, 113, 0.4);
+  background: rgba(220, 38, 38, 0.06) !important;
+  color: rgba(248, 113, 113, 0.6) !important;
+  font-style: italic;
+}
+
+.cella.cod-auto:hover {
+  background: rgba(220, 38, 38, 0.18) !important;
+  color: #f87171 !important;
+  border-color: rgba(248, 113, 113, 0.6);
 }
 
 .td-pres { color: #4ade80; font-weight: 700; }
@@ -1138,30 +1238,139 @@ th {
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .registro-page {
-    padding: 1.5rem 1rem 3rem;
+    padding: 1rem 0.5rem 2rem;
   }
+
+  .page-header {
+    margin-bottom: 1rem;
+  }
+
   .header-top {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
+
+  .category-name {
+    font-size: 1.75rem;
+  }
+
+  .header-subtitle {
+    font-size: 0.9rem;
+  }
+
   .mese-selector-pill {
     width: 100%;
     justify-content: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .legenda {
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    padding: 0.5rem;
+  }
+
+  .badge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .badge-code {
+    font-size: 0.7rem;
+  }
+
+  .badge-desc {
+    display: none;
+  }
+
+  .table-wrapper {
+    border-radius: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-wrapper::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .btn-back-pill {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .gruppo-header {
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .modal {
+    max-width: 100%;
+    border-radius: var(--radius-lg);
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .codici-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.375rem;
+    padding: 1rem;
+  }
+
+  .btn-codice {
+    padding: 0.75rem 0.375rem;
+    border-radius: 10px;
+    min-height: 48px;
+  }
+
+  .btn-codice .codice {
+    font-size: 1.1rem;
+  }
+
+  .btn-codice .descrizione {
+    font-size: 0.6rem;
+  }
+
+  .modal-header {
+    padding: 1.25rem 1.25rem 0;
+  }
+
+  .btn-close-modal {
+    width: calc(100% - 2.5rem);
+    margin: 0 1.25rem 1.25rem;
+    min-height: 44px;
   }
 }
 
 @media (max-width: 480px) {
+  .registro-page {
+    padding: 0.75rem 0.375rem 1.5rem;
+  }
+
   .category-name {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
   }
+
   .mese-label {
-    font-size: 0.875rem;
-    min-width: 130px;
+    font-size: 0.85rem;
+    min-width: 120px;
   }
+
   .btn-nav-mese {
-    width: 28px;
-    height: 28px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .codici-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .rotate-device-message svg {
+    width: 60px;
+    height: 60px;
+  }
+
+  .rotate-device-message span {
+    font-size: 1rem;
   }
 }
 </style>

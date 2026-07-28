@@ -221,6 +221,13 @@ def decrypt_row(db: Session, row) -> dict:
         r[field] = safe_decrypt(db, r.get(field))
     return r
 
+@router.get("/public/categoria/{categoria_id}")
+def get_public_categoria(categoria_id: int, db: Session = Depends(get_db)):
+    row = db.execute(text("SELECT id, nome, stagione FROM categorie WHERE id = :id"), {"id": categoria_id}).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Categoria non trovata")
+    return dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
+
 @router.get("/public/{persona_id}")
 @limiter.limit("5/minute")
 def get_public_persona(request: Request, persona_id: int, db: Session = Depends(get_db)):

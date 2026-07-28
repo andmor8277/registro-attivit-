@@ -103,6 +103,49 @@
         </div>
       </div>
 
+      <!-- Infortunati Attivi -->
+      <div v-if="!categoria?.is_archived && infortuniAttivi.length > 0" class="infortuni-section">
+        <div class="section-header">
+          <div class="section-icon section-icon-infortunati">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
+              <path d="M9 12l2 2 4-4"/>
+              <path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/>
+              <path d="M12 6v6"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="section-title">Infortunati</h2>
+            <p class="section-subtitle">{{ infortuniAttivi.length }} giocatore{{ infortuniAttivi.length > 1 ? 'i' : '' }} infortunato{{ infortuniAttivi.length > 1 ? 'i' : '' }}</p>
+          </div>
+        </div>
+
+        <div class="infortuni-grid">
+          <div
+            v-for="inf in infortuniAttivi"
+            :key="inf.id"
+            class="infortunato-card"
+          >
+            <div class="infortunato-avatar">
+              {{ inf.persona_cognome?.charAt(0) || '?' }}{{ inf.persona_nome?.charAt(0) || '' }}
+            </div>
+            <div class="infortunato-info">
+              <div class="infortunato-name">{{ inf.persona_cognome }} {{ inf.persona_nome }}</div>
+              <div class="infortunato-tipo">{{ inf.tipo_infortunio || 'Infortunio' }}</div>
+            </div>
+            <div class="infortunato-date">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <span v-if="inf.data_fine">{{ formatDate(inf.data_fine) }}</span>
+              <span v-else>In corso</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div v-if="categoria?.is_archived" class="scelta-grid">
         <div
           v-for="cat in categorieStagione"
@@ -305,7 +348,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../store.js'
-import { getCategorie, getCategorieByStagione, getPlanningEventi, creaPlanningEvento, aggiornaPlanningEvento, eliminaPlanningEvento, getSpogliatoi, getAssegnazioniSettimana, getCampi, getCampiAssegnazioniSettimana } from '../api/index.js'
+import { getCategorie, getCategorieByStagione, getPlanningEventi, creaPlanningEvento, aggiornaPlanningEvento, eliminaPlanningEvento, getSpogliatoi, getAssegnazioniSettimana, getCampi, getCampiAssegnazioniSettimana, getInfortuni } from '../api/index.js'
 const router = useRouter()
 const route = useRoute()
 const { categoriaAttiva, setCategoria, utenteAttivo } = useStore()
@@ -313,11 +356,11 @@ const categoria = categoriaAttiva
 const isDirigente = computed(() => ['dirigente', 'segreteria', 'infermeria'].includes(utenteAttivo.value?.ruolo))
 const isAgonistica = computed(() => categoria.value?.nome?.startsWith('Under') || false)
 const currentSeason = computed(() => {
-  const m = new Date().getMonth()
-  const y = new Date().getFullYear()
-  return m >= 7 ? `${y}/${y + 1}` : `${y - 1}/${y}`
+  const s = categoria.value?.stagione
+  return s ? `${s}/${s + 1}` : '2025/2026'
 })
 const categorieStagione = ref([])
+const infortuniAttivi = ref([])
 const loading = ref(false)
 
 // ── Planning Allenamenti (settimanale) ──
@@ -475,6 +518,16 @@ async function loadEventi() {
   }
 }
 
+async function loadInfortuni() {
+  if (!categoria.value?.id) return
+  try {
+    const res = await getInfortuni({ categoria_id: categoria.value.id, attivi: true })
+    infortuniAttivi.value = res.data || []
+  } catch (e) {
+    console.error('Errore caricamento infortuni:', e)
+  }
+}
+
 const eventoModal = ref({ show: false, id: null, data: '', tipo: 'sospensione', titolo: '', note: '', loading: false })
 
 function apriEventoModal(dataStr, evento) {
@@ -520,9 +573,11 @@ watch(categoria, (newCat) => {
     eventi.value = []
     assegnazioniCaricate.value = false
     loadEventi()
+    loadInfortuni()
   }
   else if (!newCat) {
     assegnazioniCaricate.value = false
+    infortuniAttivi.value = []
   }
 })
 
@@ -555,11 +610,20 @@ onMounted(async () => {
   await loadCategoriaFromRoute()
   await loadSpogliatoiCampi()
   await loadAssegnazioniSettimana()
-  if (categoria.value?.id) loadEventi()
+  if (categoria.value?.id) {
+    loadEventi()
+    loadInfortuni()
+  }
   loadCategorieStagione()
 })
 
 const nomiBreviGiorni = (val) => tuttiGiorni.find(g => g.val === val)?.nome || ''
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })
+}
 
 async function loadCategorieStagione() {
   if (categoria?.is_archived && categoria?.stagione) {
@@ -920,21 +984,93 @@ function selezionaCategoria(cat) {
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .scelta-page {
-    padding: 1.5rem 1rem 3rem;
+    padding: 1.25rem 0.75rem 2rem;
   }
+
+  .page-header {
+    margin-bottom: 1.5rem;
+  }
+
   .scelta-grid {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .scelta-card {
+    padding: 1.125rem;
+    min-height: 48px;
+  }
+
+  .category-name {
+    font-size: 1.75rem;
+  }
+
+  .header-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .btn-back-pill {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .planning-section {
+    margin-bottom: 2rem;
+  }
+
+  .section-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .section-title {
+    font-size: 1.15rem;
+  }
+
+  .modal {
+    width: 95%;
+    max-width: 100%;
+    padding: 1.25rem;
+    border-radius: var(--radius-lg);
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+    text-align: center;
+    padding: 0.75rem;
+    min-height: 44px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 16px;
+    padding: 0.75rem;
   }
 }
 
 @media (max-width: 480px) {
-  .category-name {
-    font-size: 1.75rem;
+  .scelta-page {
+    padding: 1rem 0.625rem 1.5rem;
   }
+
+  .category-name {
+    font-size: 1.5rem;
+  }
+
   .header-top {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .scelta-card {
+    padding: 1rem;
   }
 }
 
@@ -1224,15 +1360,34 @@ function selezionaCategoria(cat) {
 @media (max-width: 600px) {
   .planning-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
   }
   .planning-day {
     min-height: 100px;
     padding: 0.75rem 0.625rem;
+    border-radius: 12px;
   }
 }
 @media (max-width: 400px) {
   .planning-grid {
     grid-template-columns: 1fr;
+  }
+  .planning-day {
+    min-height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  .planning-day .day-header {
+    flex: 0 0 auto;
+    min-width: 55px;
+  }
+  .planning-day .day-divider {
+    display: none;
+  }
+  .planning-day .day-content {
+    flex: 1;
   }
 }
 
@@ -1373,5 +1528,84 @@ function selezionaCategoria(cat) {
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ── Infortunati Section ── */
+.infortuni-section {
+  margin-bottom: 2rem;
+}
+
+.infortuni-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+.infortunato-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 44px;
+}
+
+.infortunato-card:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+}
+
+.infortunato-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.infortunato-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.infortunato-name {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #e5e7eb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.infortunato-tipo {
+  font-size: 0.75rem;
+  color: #f87171;
+  opacity: 0.8;
+}
+
+.infortunato-date {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .infortuni-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

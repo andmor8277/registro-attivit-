@@ -137,6 +137,7 @@ class ConvocazioneGiocatore(Base):
     gara_id = Column(Integer, ForeignKey("convocazione_gare.id", ondelete="CASCADE"))
     persona_id = Column(Integer, ForeignKey("persone.id", ondelete="CASCADE"))
     posizione = Column(Integer, nullable=False)
+    non_presente = Column(Integer, default=0)
 
 class Allenatore(Base):
     __tablename__ = "allenatori"
@@ -196,6 +197,7 @@ class AllenamentoElemento(Base):
     rotazione = Column(Float, default=0)
     colore = Column(String(20), nullable=True)
     numero = Column(Integer, nullable=True)
+    size = Column(Float, nullable=True)
 
 class PresenzaAllenatore(Base):
     __tablename__ = "presenze_allenatori"

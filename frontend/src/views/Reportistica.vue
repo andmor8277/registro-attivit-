@@ -49,6 +49,10 @@
               <path d="M4 11l3-3"/>
               <path d="M20 7l-3-3"/>
             </svg>
+            <svg v-if="report.key === 'individuale'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
           </div>
           <div class="report-label">{{ report.title }}</div>
           <div class="report-desc">{{ report.desc }}</div>
@@ -235,6 +239,173 @@
       </div>
     </div>
 
+    <!-- Report: Individuale -->
+    <div v-if="activeReport === 'individuale'" class="report-view report-indiv-view">
+      <!-- Player selector -->
+      <div class="player-selector">
+        <label class="selector-label">Seleziona Giocatore</label>
+        <select v-model="indivSelectedPlayerId" class="selector-dropdown" @change="indivOnPlayerChange">
+          <option value="">-- Scegli giocatore --</option>
+          <option v-for="p in indivGiocatori" :key="p.id" :value="p.id">{{ p.cognome }} {{ p.nome }}</option>
+        </select>
+      </div>
+
+      <div v-if="!indivSelectedPlayerId" class="empty-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+          <circle cx="12" cy="7" r="4"/><path d="M5.5 21c0-4.5 3-6.5 6.5-6.5s6.5 2 6.5 6.5"/>
+        </svg>
+        <p>Seleziona un giocatore per visualizzare il report</p>
+      </div>
+
+      <div v-else class="report-indiv-content">
+        <!-- Player header -->
+        <div class="indiv-player-header">
+          <div class="indiv-player-avatar">{{ indivSelectedPlayer?.cognome?.charAt(0) || '?' }}</div>
+          <div class="indiv-player-info">
+            <h2 class="indiv-player-name">{{ indivSelectedPlayer?.cognome }} {{ indivSelectedPlayer?.nome }}</h2>
+            <p class="indiv-player-meta">{{ indivSelectedPlayer?.matricola ? 'Matricola: ' + indivSelectedPlayer.matricola : '' }}</p>
+          </div>
+        </div>
+
+        <!-- Seasonal summary cards -->
+        <div class="indiv-summary-cards">
+          <div class="indiv-summary-card card-presenze">
+            <div class="indiv-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div class="indiv-card-value">{{ indivStats.presenze }}</div>
+            <div class="indiv-card-label">Presenze</div>
+          </div>
+          <div class="indiv-summary-card card-assenze">
+            <div class="indiv-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </div>
+            <div class="indiv-card-value">{{ indivStats.assenze }}</div>
+            <div class="indiv-card-label">Assenze</div>
+          </div>
+          <div class="indiv-summary-card card-doppie">
+            <div class="indiv-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+                <path d="M8 7V3m8 4V3"/><path d="M4 21l16-16"/>
+              </svg>
+            </div>
+            <div class="indiv-card-value">{{ indivStats.doppie }}</div>
+            <div class="indiv-card-label">Doppie</div>
+          </div>
+          <div class="indiv-summary-card card-weekend">
+            <div class="indiv-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+                <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+              </svg>
+            </div>
+            <div class="indiv-card-value">{{ indivStats.weekendMancati }}</div>
+            <div class="indiv-card-label">Weekend Mancati</div>
+          </div>
+        </div>
+
+        <!-- Monthly breakdown -->
+        <div class="indiv-section-block">
+          <h3 class="indiv-section-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Dettaglio Mensile
+          </h3>
+          <div class="table-glass">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Mese</th>
+                  <th>Allenamenti</th>
+                  <th>Presenze</th>
+                  <th>Assenze</th>
+                  <th>% Presenza</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="m in indivMonthlyData" :key="m.mese">
+                  <td>{{ m.mese }}</td>
+                  <td>{{ m.totali }}</td>
+                  <td class="cell-ok">{{ m.presenze }}</td>
+                  <td class="cell-danger">{{ m.assenze }}</td>
+                  <td class="cell-pct">{{ m.percentuale }}%</td>
+                </tr>
+                <tr v-if="indivMonthlyData.length === 0">
+                  <td colspan="5" class="no-data">Nessun dato disponibile</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Doppie -->
+        <div class="indiv-section-block">
+          <h3 class="indiv-section-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M8 7V3m8 4V3"/><path d="M4 21l16-16"/>
+            </svg>
+            Doppie Convocazioni
+          </h3>
+          <div class="table-glass">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Gare</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="d in indivPlayerDoppie" :key="d.key">
+                  <td>{{ d.data }}</td>
+                  <td class="cell-warning">{{ d.numGare }}</td>
+                </tr>
+                <tr v-if="indivPlayerDoppie.length === 0">
+                  <td colspan="2" class="no-data">Nessuna doppia convocazione</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Weekend absences -->
+        <div class="indiv-section-block">
+          <h3 class="indiv-section-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+            </svg>
+            Partite Weekend
+          </h3>
+          <div class="table-glass">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Partita</th>
+                  <th>Stato</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="w in indivPlayerWeekend" :key="w.key">
+                  <td>{{ w.data }}</td>
+                  <td>{{ w.gara }}</td>
+                  <td :class="w.convocato ? 'cell-ok' : 'cell-danger'">
+                    {{ w.convocato ? (w.non_presente ? 'Convocato (non presente)' : 'Convocato') : 'Non convocato' }}
+                  </td>
+                </tr>
+                <tr v-if="indivPlayerWeekend.length === 0">
+                  <td colspan="3" class="no-data">Nessuna partita weekend registrata</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Report: Doppie -->
     <div v-if="activeReport === 'doppie'" class="report-view">
       <div class="report-toolbar">
@@ -294,7 +465,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../store.js'
 import { getPersone, getRegistroMese, getConvocazioni, getConvocazione, getAllCategorie } from '../api/index.js'
@@ -316,16 +487,37 @@ const mesi = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Lug
 const convocatiPerGiornata = ref([])
 const personeMap = ref(new Map())
 
+// Individuale report state
+const indivGiocatori = ref([])
+const indivSelectedPlayerId = ref('')
+const indivStats = ref({ presenze: 0, assenze: 0, doppie: 0, weekendMancati: 0 })
+const indivMonthlyData = ref([])
+const indivPlayerDoppie = ref([])
+const indivPlayerWeekend = ref([])
+const indivSelectedPlayer = computed(() => indivGiocatori.value.find(p => p.id === indivSelectedPlayerId.value))
+
+watch(activeReport, (newVal) => {
+  if (newVal !== 'individuale') {
+    indivSelectedPlayerId.value = ''
+    indivStats.value = { presenze: 0, assenze: 0, doppie: 0, weekendMancati: 0 }
+    indivMonthlyData.value = []
+    indivPlayerDoppie.value = []
+    indivPlayerWeekend.value = []
+  }
+})
+
 const reportMeta = {
   mensile: { title: 'Report Mensile', desc: '' },
   annuale: { title: 'Report Annuale', desc: '' },
-  doppie: { title: 'Doppie Convocazioni', desc: '' }
+  doppie: { title: 'Doppie Convocazioni', desc: '' },
+  individuale: { title: 'Report Individuale', desc: '' }
 }
 
 const availableReports = [
   { key: 'mensile', title: 'Mensile', desc: 'Assenze dettagliate per mese', cardClass: 'card-blue' },
   { key: 'annuale', title: 'Annuale', desc: 'Assenze totali stagione', cardClass: 'card-red' },
-  { key: 'doppie', title: 'Doppie', desc: 'Giocatori in gare multiple stesso giorno', cardClass: 'card-yellow' }
+  { key: 'doppie', title: 'Doppie', desc: 'Giocatori in gare multiple stesso giorno', cardClass: 'card-yellow' },
+  { key: 'individuale', title: 'Individuale', desc: 'Report dettagliato per giocatore', cardClass: 'card-orange' }
 ]
 
 function goBack() {
@@ -351,11 +543,12 @@ async function ricalcolaDati() {
     giocatoriMap.set(id, { id, cognome: p.cognome, nome: p.nome, assenze: 0 })
   }
 
-  const oggi = new Date()
-  for (let m = 0; m < 12; m++) {
-    const d = new Date(oggi.getFullYear(), oggi.getMonth() - m, 1)
-    const anno = d.getFullYear()
-    const mese = d.getMonth() + 1
+  const start = new Date(dataInizio.value)
+  const end = new Date(dataFine.value)
+  const current = new Date(start.getFullYear(), start.getMonth(), 1)
+  while (current <= end) {
+    const anno = current.getFullYear()
+    const mese = current.getMonth() + 1
 
     try {
       const regRes = await getRegistroMese(categoriaId, anno, mese)
@@ -364,13 +557,15 @@ async function ricalcolaDati() {
       for (const e of entries) {
         if (!e.data || e.data < dataInizio.value || e.data > dataFine.value) continue
         giorniTotali.add(e.data)
-        if (e.codice === 'AG' || e.codice === 'AI') {
+        if (e.codice === 'AG' || e.codice === 'AI' || e.codice === 'I') {
           if (giocatoriMap.has(e.persona_id)) {
             giocatoriMap.get(e.persona_id).assenze++
           }
         }
       }
     } catch (e) {}
+
+    current.setMonth(current.getMonth() + 1)
   }
 
   const tot = giorniTotali.size
@@ -398,7 +593,7 @@ async function ricalcolaAssenzeMensili() {
     for (const e of entries) {
       if (!e.data) continue
       giorniTotali.add(e.data)
-      if (e.codice === 'AG' || e.codice === 'AI') {
+      if (e.codice === 'AG' || e.codice === 'AI' || e.codice === 'I') {
         if (giocatoriMap.has(e.persona_id)) {
           giocatoriMap.get(e.persona_id).assenze++
         }
@@ -526,6 +721,140 @@ function printReport() {
   })
 }
 
+// ── Individuale report functions ──
+async function indivOnPlayerChange() {
+  if (!indivSelectedPlayerId.value) {
+    indivStats.value = { presenze: 0, assenze: 0, doppie: 0, weekendMancati: 0 }
+    indivMonthlyData.value = []
+    indivPlayerDoppie.value = []
+    indivPlayerWeekend.value = []
+    return
+  }
+  await Promise.all([
+    indivCalcolaStatsStagionali(),
+    indivCalcolaDoppie(),
+    indivCalcolaWeekend()
+  ])
+}
+
+async function indivCalcolaStatsStagionali() {
+  const cat = categoria.value
+  const dataInizio = cat?.data_inizio_stagione || new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]
+  const dataFine = cat?.data_fine_stagione || new Date().toISOString().split('T')[0]
+  const pid = indivSelectedPlayerId.value
+  const mesiArr = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+
+  const monthly = []
+  const start = new Date(dataInizio)
+  const end = new Date(dataFine)
+  const current = new Date(start.getFullYear(), start.getMonth(), 1)
+  let totalPresenze = 0
+  let totalAssenze = 0
+
+  while (current <= end) {
+    const anno = current.getFullYear()
+    const mese = current.getMonth() + 1
+    try {
+      const regRes = await getRegistroMese(categoriaId, anno, mese)
+      const entries = regRes.data || []
+      const giorni = new Set()
+      let presenze = 0
+      let assenze = 0
+      for (const e of entries) {
+        if (!e.data || e.data < dataInizio || e.data > dataFine) continue
+        if (e.persona_id !== pid) continue
+        giorni.add(e.data)
+        if (e.codice === 'AG' || e.codice === 'AI' || e.codice === 'I') {
+          assenze++
+        } else {
+          presenze++
+        }
+      }
+      const totali = giorni.size
+      monthly.push({
+        mese: mesiArr[mese - 1] + ' ' + anno,
+        totali,
+        presenze,
+        assenze,
+        percentuale: totali > 0 ? Math.round((presenze / totali) * 100) : 0
+      })
+      totalPresenze += presenze
+      totalAssenze += assenze
+    } catch (e) {}
+    current.setMonth(current.getMonth() + 1)
+  }
+
+  indivMonthlyData.value = monthly
+  indivStats.value.presenze = totalPresenze
+  indivStats.value.assenze = totalAssenze
+}
+
+async function indivCalcolaDoppie() {
+  const pid = indivSelectedPlayerId.value
+  try {
+    const convRes = await getConvocazioni(categoriaId)
+    const convsList = convRes.data || []
+    const dataMap = new Map()
+    for (const conv of convsList) {
+      try {
+        const convDetailRes = await getConvocazione(conv.id)
+        const convDetail = convDetailRes.data
+        if (!convDetail) continue
+        for (const gara of convDetail.gare || []) {
+          const dataGara = gara.data
+          if (!dataGara) continue
+          if (!dataMap.has(dataGara)) dataMap.set(dataGara, 0)
+          for (const g of gara.giocatori || []) {
+            if (g.persona_id === pid) {
+              dataMap.set(dataGara, dataMap.get(dataGara) + 1)
+            }
+          }
+        }
+      } catch (e) {}
+    }
+    const result = []
+    for (const [data, count] of dataMap) {
+      if (count >= 2) {
+        result.push({ key: data, data: formatData(data), numGare: count })
+      }
+    }
+    indivPlayerDoppie.value = result.sort((a, b) => a.data.localeCompare(b.data))
+    indivStats.value.doppie = result.length
+  } catch (e) {}
+}
+
+async function indivCalcolaWeekend() {
+  const pid = indivSelectedPlayerId.value
+  try {
+    const convRes = await getConvocazioni(categoriaId)
+    const convsList = convRes.data || []
+    const allGare = []
+    for (const conv of convsList) {
+      try {
+        const convDetailRes = await getConvocazione(conv.id)
+        const convDetail = convDetailRes.data
+        if (!convDetail) continue
+        for (const gara of convDetail.gare || []) {
+          if (!gara.data) continue
+          const giorno = new Date(gara.data).getDay()
+          if (giorno !== 0 && giorno !== 6) continue
+          const convocato = (gara.giocatori || []).some(g => g.persona_id === pid)
+          const nonPresente = (gara.giocatori || []).find(g => g.persona_id === pid)?.non_presente
+          allGare.push({
+            key: gara.data + '_' + gara.gara,
+            data: formatData(gara.data),
+            gara: gara.gara || 'Partita',
+            convocato,
+            non_presente: nonPresente || false
+          })
+        }
+      } catch (e) {}
+    }
+    indivPlayerWeekend.value = allGare.sort((a, b) => a.data.localeCompare(b.data))
+    indivStats.value.weekendMancati = allGare.filter(g => !g.convocato).length
+  } catch (e) {}
+}
+
 onMounted(async () => {
   try {
     const societaId = societaAttiva.value?.id || null
@@ -544,6 +873,7 @@ onMounted(async () => {
 
     const ppl = personeRes.data || []
     for (const p of ppl) personeMap.value.set(p.id, p)
+    indivGiocatori.value = ppl.sort((a, b) => a.cognome.localeCompare(b.cognome))
 
     await Promise.all([
       ricalcolaDati(),
@@ -1311,6 +1641,200 @@ tr:last-child td { border-bottom: none; }
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
+  }
+}
+
+/* ── Individuale Report ── */
+.report-indiv-view {
+  padding: 0;
+}
+
+.player-selector {
+  margin-bottom: 1.5rem;
+}
+
+.selector-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.5rem;
+}
+
+.selector-dropdown {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: #e4e4e4;
+  font-size: 0.95rem;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s;
+  appearance: none;
+  cursor: pointer;
+}
+
+.selector-dropdown:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.empty-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  color: #555;
+  gap: 1rem;
+}
+
+.empty-hint svg {
+  opacity: 0.3;
+}
+
+.empty-hint p {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.report-indiv-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.indiv-player-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.indiv-player-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.indiv-player-info {
+  flex: 1;
+}
+
+.indiv-player-name {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #e4e4e4;
+}
+
+.indiv-player-meta {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.indiv-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.indiv-summary-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: all 0.2s;
+}
+
+.indiv-summary-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.15);
+}
+
+.indiv-card-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-presenze .indiv-card-icon { color: #22c55e; }
+.card-assenze .indiv-card-icon { color: #ef4444; }
+.card-doppie .indiv-card-icon { color: #f59e0b; }
+.card-weekend .indiv-card-icon { color: #3b82f6; }
+
+.indiv-card-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #e4e4e4;
+  line-height: 1;
+}
+
+.indiv-card-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.indiv-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.indiv-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.indiv-section-title svg {
+  color: #555;
+}
+
+@media (max-width: 768px) {
+  .indiv-summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .indiv-summary-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+  .indiv-player-header {
+    padding: 1rem;
   }
 }
 </style>
