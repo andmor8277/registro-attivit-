@@ -34,6 +34,7 @@ class Gruppo(Base):
     nome = Column(String(100), nullable=False)
     categoria_id = Column(Integer, ForeignKey("categorie.id"))
     societa_id = Column(Integer, ForeignKey("societa.id"), nullable=True)
+    is_misto = Column(Boolean, default=False)
 
 class Persona(Base):
     __tablename__ = "persone"

@@ -768,6 +768,46 @@ def run_migrations():
                 print(f"Migration warning (resize tel): {e}")
                 conn.rollback()
 
+            # Add is_misto to gruppi
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'gruppi' AND column_name = 'is_misto'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text("ALTER TABLE gruppi ADD COLUMN is_misto BOOLEAN DEFAULT FALSE"))
+                    conn.commit()
+                    print("Migration: Added is_misto to gruppi")
+            except Exception as e:
+                print(f"Migration warning (is_misto): {e}")
+                conn.rollback()
+
+            # Create default 1°Gruppo for active categories missing it
+            try:
+                cats = conn.execute(text("""
+                    SELECT c.id, c.societa_id FROM categorie c
+                    WHERE c.is_portieri = 0 AND c.is_archiviata = 0
+                    AND NOT EXISTS (
+                        SELECT 1 FROM gruppi g
+                        WHERE g.categoria_id = c.id AND g.nome LIKE '°Gruppo'
+                    )
+                """)).fetchall()
+                created = 0
+                for cat in cats:
+                    try:
+                        conn.execute(text("""
+                            INSERT INTO gruppi (nome, categoria_id, societa_id, is_misto)
+                            VALUES ('1°Gruppo', :cid, :sid, FALSE)
+                        """), {"cid": cat.id, "sid": cat.societa_id})
+                        created += 1
+                    except Exception:
+                        pass
+                conn.commit()
+                print(f"Migration: Created default 1°Gruppo for {created} categories")
+            except Exception as e:
+                print(f"Migration warning (default groups): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 

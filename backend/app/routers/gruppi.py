@@ -14,15 +14,18 @@ class GruppoOut(BaseModel):
     nome: str
     categoria_id: Optional[int] = None
     societa_id: Optional[int] = None
+    is_misto: bool = False
     class Config:
         from_attributes = True
 
 class GruppoIn(BaseModel):
-    nome: str
+    nome: Optional[str] = None
     categoria_id: Optional[int] = None
+    is_misto: bool = False
 
 class GruppoUpdate(BaseModel):
-    nome: str
+    nome: Optional[str] = None
+    is_misto: Optional[bool] = None
 
 def get_societa_filter(current_user: Utente):
     if current_user.is_super_admin:
@@ -46,6 +49,20 @@ def get_gruppi(categoria_id: Optional[int] = None, db: Session = Depends(get_db)
 @router.post("/", response_model=GruppoOut)
 def create_gruppo(data: GruppoIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     societa_id = get_societa_filter(current_user) or current_user.societa_id
+    # Auto-generate nome if not provided
+    if not data.nome:
+        existing = db.query(Gruppo).filter(
+            Gruppo.categoria_id == data.categoria_id,
+            Gruppo.societa_id == societa_id
+        ).all()
+        nums = []
+        for g in existing:
+            import re
+            m = re.match(r'^(\d+)°Gruppo$', g.nome)
+            if m:
+                nums.append(int(m.group(1)))
+        next_num = (max(nums) if nums else 0) + 1
+        data.nome = f"{next_num}°Gruppo"
     existing = db.query(Gruppo).filter(
         Gruppo.nome == data.nome,
         Gruppo.categoria_id == data.categoria_id,
@@ -53,7 +70,7 @@ def create_gruppo(data: GruppoIn, db: Session = Depends(get_db), current_user: U
     ).first()
     if existing:
         return existing
-    gruppo = Gruppo(nome=data.nome, categoria_id=data.categoria_id, societa_id=societa_id)
+    gruppo = Gruppo(nome=data.nome, categoria_id=data.categoria_id, societa_id=societa_id, is_misto=data.is_misto)
     db.add(gruppo)
     db.commit()
     db.refresh(gruppo)
@@ -67,7 +84,10 @@ def update_gruppo(gruppo_id: int, data: GruppoUpdate, db: Session = Depends(get_
     societa_id = get_societa_filter(current_user)
     if societa_id and gruppo.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
-    gruppo.nome = data.nome
+    if data.nome is not None:
+        gruppo.nome = data.nome
+    if data.is_misto is not None:
+        gruppo.is_misto = data.is_misto
     db.commit()
     db.refresh(gruppo)
     return gruppo
