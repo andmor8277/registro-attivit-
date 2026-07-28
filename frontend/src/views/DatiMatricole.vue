@@ -90,7 +90,7 @@
               </template>
               <td v-if="!isDirigente" class="cell-gruppo">
                 <span class="badge" :class="'badge-g' + p.gruppo_id">
-                  {{ p.gruppo_id === 1 ? '1°' : p.gruppo_id === 2 ? '2°' : p.gruppo_id === 3 ? '3°' : p.gruppo_id === 4 ? 'P' : '-' }}
+                  {{ p.gruppo_nome || '-' }}
                 </span>
               </td>
               <td class="cell-action">
@@ -349,7 +349,7 @@ function apriNuovo() {
     tel_mamma: '',
     matricola: '',
     scadenza_certificato: '',
-    gruppo_id: 1
+    gruppo_id: gruppiList.value.length > 0 ? gruppiList.value[0].id : null
   }
 }
 
@@ -388,6 +388,7 @@ async function salva() {
     modal.value.show = false
     const res = await getPersone(categoriaId)
     persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
+    enrichGruppoNome(persone.value)
   } catch (e) {
     console.error('Errore salvataggio:', e)
     alert('Errore durante il salvataggio')
@@ -448,10 +449,24 @@ async function reloadData() {
   persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
 }
 
+function enrichGruppoNome(personeList) {
+  const idToNome = Object.fromEntries(gruppiList.value.map(g => [g.id, g.nome]))
+  personeList.forEach(p => {
+    p.gruppo_nome = idToNome[p.gruppo_id] || ''
+  })
+}
+
+async function reloadData() {
+  const res = await getPersone(categoriaId)
+  persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
+  enrichGruppoNome(persone.value)
+}
+
 onMounted(async () => {
   await loadGruppi()
   const res = await getPersone(categoriaId)
   persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
+  enrichGruppoNome(persone.value)
 })
 </script>
 
