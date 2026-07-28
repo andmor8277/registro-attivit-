@@ -185,8 +185,15 @@
         <h3>Gestione Gruppi</h3>
         <div class="gruppi-list">
           <div v-for="g in gruppiList" :key="g.id" class="gruppo-row">
-            <span class="gruppo-nome">{{ g.nome }}</span>
+            <div class="gruppo-info">
+              <span class="gruppo-nome">{{ g.nome }}</span>
+              <span v-if="g.is_misto" class="badge-misto">MISTO</span>
+            </div>
             <div class="gruppo-row-actions">
+              <label class="checkbox-misto" @click.stop>
+                <input type="checkbox" :checked="g.is_misto" @change="toggleMisto(g)" />
+                <span>Misto</span>
+              </label>
               <button class="btn-gruppo-edit" @click="apriModificaGruppo(g)" title="Modifica">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                   <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
@@ -204,13 +211,12 @@
           <div v-if="gruppiList.length === 0" class="no-gruppi">Nessun gruppo configurato</div>
         </div>
         <div class="gruppi-add-row">
-          <input v-model="gruppiModal.nome" placeholder="Nome nuovo gruppo..." @keyup.enter="creaGruppo" class="gruppo-add-input" />
           <button class="btn-gruppo-add" @click="creaGruppo">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
               <line x1="12" y1="5" x2="12" y2="19"/>
               <line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
-            Aggiungi
+            Aggiungi Gruppo
           </button>
         </div>
         <div class="modal-actions">
@@ -228,6 +234,12 @@
         <div class="form-field">
           <label>Nome</label>
           <input v-model="gruppoEditModal.nome" @keyup.enter="salvaModificaGruppo" />
+        </div>
+        <div class="form-field">
+          <label class="checkbox-misto">
+            <input type="checkbox" v-model="gruppoEditModal.is_misto" />
+            <span>Gruppo Misto</span>
+          </label>
         </div>
         <div class="modal-actions">
           <button class="btn-annulla" @click="gruppoEditModal.show = false">Annulla</button>
@@ -349,7 +361,7 @@ function apriNuovo() {
     tel_mamma: '',
     matricola: '',
     scadenza_certificato: '',
-    gruppo_id: gruppiList.value.length > 0 ? gruppiList.value[0].id : null
+    gruppo_id: gruppiList.value.length > 0 ? (gruppiList.value.find(g => !g.nome.toLowerCase().includes('portieri')) || gruppiList.value[0]).id : null
   }
 }
 
@@ -404,36 +416,39 @@ async function elimina() {
 
 // ── Gruppi management ──
 const gruppiList = ref([])
-const gruppiModal = ref({ show: false, nome: '' })
-const gruppoEditModal = ref({ show: false, id: null, nome: '' })
+const gruppiModal = ref({ show: false })
+const gruppoEditModal = ref({ show: false, id: null, nome: '', is_misto: false })
 
 async function loadGruppi() {
   try {
     const res = await getGruppi(categoriaId)
     gruppiList.value = (res.data || []).map(item =>
-      typeof item === 'string' ? { id: null, nome: item } : { id: item.id, nome: item.nome }
+      typeof item === 'string' ? { id: null, nome: item, is_misto: false } : { id: item.id, nome: item.nome, is_misto: item.is_misto || false }
     )
   } catch(e) { console.error('Error loading gruppi:', e) }
 }
 
 function apriGestisciGruppi() {
-  gruppiModal.value = { show: true, nome: '' }
+  gruppiModal.value = { show: true }
 }
 
 function apriModificaGruppo(g) {
-  gruppoEditModal.value = { show: true, id: g.id, nome: g.nome }
+  gruppoEditModal.value = { show: true, id: g.id, nome: g.nome, is_misto: g.is_misto || false }
 }
 
 async function creaGruppo() {
-  if (!gruppiModal.value.nome.trim()) return
-  await createGruppo({ nome: gruppiModal.value.nome.trim(), categoria_id: categoriaId })
-  gruppiModal.value.nome = ''
+  await createGruppo({ categoria_id: categoriaId })
   await loadGruppi()
+}
+
+async function toggleMisto(g) {
+  g.is_misto = !g.is_misto
+  await updateGruppo(g.id, { is_misto: g.is_misto })
 }
 
 async function salvaModificaGruppo() {
   if (!gruppoEditModal.value.nome.trim()) return
-  await updateGruppo(gruppoEditModal.value.id, { nome: gruppoEditModal.value.nome.trim() })
+  await updateGruppo(gruppoEditModal.value.id, { nome: gruppoEditModal.value.nome.trim(), is_misto: gruppoEditModal.value.is_misto })
   gruppoEditModal.value.show = false
   await loadGruppi()
 }
@@ -1090,6 +1105,7 @@ tr:last-child td { border-bottom: none; }
 
 .gruppi-add-row {
   display: flex;
+  justify-content: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
 }
@@ -1139,6 +1155,41 @@ tr:last-child td { border-bottom: none; }
   padding: 1.5rem;
   color: var(--color-text-muted);
   font-size: 0.8125rem;
+}
+
+.gruppo-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.badge-misto {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.checkbox-misto {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-misto input[type="checkbox"] {
+  accent-color: #a78bfa;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
 }
 
 /* ── Responsive ── */
