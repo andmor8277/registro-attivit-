@@ -150,6 +150,11 @@ input, select, textarea {
   font-family: inherit;
 }
 
+select option {
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
