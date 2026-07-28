@@ -24,8 +24,8 @@ def safe_encrypt(db: Session, value: str) -> str:
         return value
     try:
         result = db.execute(
-            text("SELECT encode(encrypt(:value::bytea, :key, 'aes'), 'hex')"),
-            {"value": value, "key": ENCRYPTION_KEY}
+            text("SELECT encode(encrypt(:val::bytea, :enc_key, 'aes'), 'hex')"),
+            {"val": value, "enc_key": ENCRYPTION_KEY}
         ).scalar()
         return result
     except Exception as e:
@@ -42,8 +42,8 @@ def safe_decrypt(db: Session, value: str) -> str:
     try:
         db.rollback()
         decrypted = db.execute(
-            text("SELECT convert_from(decrypt(decode(:value, 'hex'), :key, 'aes'), 'UTF8')"),
-            {"value": value, "key": ENCRYPTION_KEY}
+            text("SELECT convert_from(decrypt(decode(:val, 'hex'), :enc_key, 'aes'), 'UTF8')"),
+            {"val": value, "enc_key": ENCRYPTION_KEY}
         ).scalar()
         return decrypted if decrypted else value
     except Exception as e:
@@ -60,8 +60,8 @@ def safe_decrypt_with_key(db: Session, value: str, key: str) -> str:
     try:
         db.rollback()
         decrypted = db.execute(
-            text("SELECT convert_from(decrypt(decode(:value, 'hex'), :key, 'aes'), 'UTF8')"),
-            {"value": value, "key": key}
+            text("SELECT convert_from(decrypt(decode(:val, 'hex'), :enc_key, 'aes'), 'UTF8')"),
+            {"val": value, "enc_key": key}
         ).scalar()
         return decrypted
     except Exception:
@@ -74,8 +74,8 @@ def safe_encrypt_with_key(db: Session, value: str, key: str) -> str:
         return value
     try:
         result = db.execute(
-            text("SELECT encode(encrypt(:value::bytea, :key, 'aes'), 'hex')"),
-            {"value": value, "key": key}
+            text("SELECT encode(encrypt(:val::bytea, :enc_key, 'aes'), 'hex')"),
+            {"val": value, "enc_key": key}
         ).scalar()
         return result
     except Exception as e:
