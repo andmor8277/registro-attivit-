@@ -63,9 +63,19 @@ registro_presenze/
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v5.3.0**.
+La versione attuale è **v5.4.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
+
+### Novità v5.4.0
+
+- **Report Individuale in Reportistica**: Nuovo report dettagliato per giocatore con selezione giocatore, stats stagionali (presenze/assenze/doppie/weekend mancati), dettaglio mensile, doppie convocazioni, partite weekend con stato convocato/non convocato/non presente
+- **Non Presente in Convocazioni**: Toggle per segnare un giocatore come "non presente" nella convocazione, con persistenza DB, visualizzazione UI (rosso barrato), e PDF export
+- **Stagione Dinamica da DB**: La stagione è letta dal database (`categoria.stagione`) invece che calcolata dalla data corrente, in tutte le pagine (Allenatori, Home, Infermeria, Scelta, SchedaGiocatore, FormOnlineIscrizione)
+- **Parent Categories Escluse**: Le categorie genitore (Agonistica, Scuola Calcio) sono escluse dai conteggi attivi e dalle liste categorie dove solo i figli contano
+- **Renaming**: "Gestione Squadra" → "Gestione Squadre", sezioni Home aggiornate (Allenatori→Gestione Squadra, Segreteria→Gestione Segreteria, Responsabili→Gestione Responsabili, Infermeria→Gestione Infermeria)
+- **Report Annuale**: Usa `data_inizio_stagione` / `data_fine_stagione` invece degli ultimi 12 mesi
+- **Endpoint Pubblico**: `GET /persone/public/categoria/{id}` per accesso pubblico alla stagione della categoria
 
 ### Novità v5.3.0
 
