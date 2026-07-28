@@ -1629,6 +1629,11 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.05);
 }
 
+.form-group select option {
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
 .giorni-grid {
   display: flex;
   flex-wrap: wrap;
