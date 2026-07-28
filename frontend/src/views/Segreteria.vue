@@ -188,7 +188,7 @@ async function loadDati() {
   try {
     const response = await getCategorie()
     let cats = Array.isArray(response) ? response : (response?.data || [])
-    cats = cats.filter(c => c.societa_id === societaId.value && !c.is_portieri)
+    cats = cats.filter(c => c.societa_id === societaId.value && !c.is_portieri && c.parent_id !== null)
     categorie.value = cats
 
     let all = []

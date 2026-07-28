@@ -188,10 +188,14 @@
                   <span class="giocatori-count">{{ countAssigned(gara) }}</span>
                 </div>
                 <div class="giocatori-grid">
-                  <div v-for="(pid, pos) in gara.giocatori" :key="'slot-' + pos" class="giocatore-slot" :class="{ filled: !!pid }" @click="openPicker(gi, pos)">
+                  <div v-for="(pid, pos) in gara.giocatori" :key="'slot-' + pos" class="giocatore-slot" :class="{ filled: !!pid, non_presente: !!pid && gara.nonPresenti?.has(pid) }" @click="openPicker(gi, pos)">
                     <span class="pos-badge">{{ pos + 1 }}</span>
                     <span v-if="pid" class="slot-name">{{ getPlayerCognome(pid) }}</span>
                     <span v-else class="slot-empty">+ tap</span>
+                    <label v-if="pid" class="slot-np-toggle" @click.stop>
+                      <input type="checkbox" :checked="gara.nonPresenti?.has(pid)" @change="toggleNonPresente(gi, pid, $event)" />
+                      <span class="slot-np-label">NP</span>
+                    </label>
                     <span v-if="pid" class="slot-remove" @click.stop="rimuoviGiocatore(gi, pos)">×</span>
                   </div>
                   <div class="giocatore-slot add-slot" @click="aggiungiSlot(gi)">
@@ -304,7 +308,7 @@ function getGiocatoriSettimanaPrecedente() {
   const assenzeCount = {}
   registro.value.filter(r => r.data >= range.monday && r.data <= range.friday).forEach(r => {
     if (['X', 'P', 'R'].includes(r.codice)) presenzeCount[r.persona_id] = (presenzeCount[r.persona_id] || 0) + 1
-    if (['AI', 'AG'].includes(r.codice)) assenzeCount[r.persona_id] = (assenzeCount[r.persona_id] || 0) + 1
+    if (['I', 'AI', 'AG'].includes(r.codice)) assenzeCount[r.persona_id] = (assenzeCount[r.persona_id] || 0) + 1
   })
   return persone.value.filter(p => presenzeCount[p.id] >= 2 && (assenzeCount[p.id] || 0) < 2)
 }
@@ -340,7 +344,7 @@ function getAllEsclusi() {
   const range = getWeekDateRange(convocazione.value.data_inizio)
   if (!range) return []
   const assenzeCount = {}
-  registro.value.filter(r => r.data >= range.monday && r.data <= range.friday && ['AI', 'AG'].includes(r.codice)).forEach(r => {
+  registro.value.filter(r => r.data >= range.monday && r.data <= range.friday && ['I', 'AI', 'AG'].includes(r.codice)).forEach(r => {
     assenzeCount[r.persona_id] = (assenzeCount[r.persona_id] || 0) + 1
   })
   return persone.value.filter(p => assenzeCount[p.id] >= 2).sort((a, b) => a.cognome.localeCompare(b.cognome))
@@ -413,11 +417,23 @@ function selectPlayer(garaIdx, pos, playerId) {
 
 function rimuoviGiocatore(garaIdx, pos) {
   const gara = convocazione.value.gare[garaIdx]
+  const pid = gara.giocatori[pos]
+  if (pid && gara.nonPresenti) gara.nonPresenti.delete(pid)
   gara.giocatori.splice(pos, 1)
 }
 
 function aggiungiSlot(garaIdx) {
   convocazione.value.gare[garaIdx].giocatori.push(null)
+}
+
+function toggleNonPresente(garaIdx, personaId, event) {
+  const gara = convocazione.value.gare[garaIdx]
+  if (!gara.nonPresenti) gara.nonPresenti = new Set()
+  if (event.target.checked) {
+    gara.nonPresenti.add(personaId)
+  } else {
+    gara.nonPresenti.delete(personaId)
+  }
 }
 
 function aggiustaGare() {
@@ -445,7 +461,7 @@ function formatDataShort(d) {
 }
 
 function garaVuota(numero) {
-  return { numero, gara: '', data: '', campo: '', indirizzo: '', appuntamento: '', inizio_gara: '', allenatore: '', giocatori: Array(10).fill(null) }
+  return { numero, gara: '', data: '', campo: '', indirizzo: '', appuntamento: '', inizio_gara: '', allenatore: '', giocatori: Array(10).fill(null), nonPresenti: new Set() }
 }
 
 async function caricaPartiteWeekend(dataInizio, dataFine) {
@@ -477,7 +493,7 @@ async function popolaConvocazione(dataInizio, dataFine) {
   const gare = partite.length > 0 ? partite.map((p, idx) => ({
     numero: idx + 1, gara: `${nomeSocieta} vs ${p.avversario || 'TBD'}`, data: p.data_partite, campo: p.campo || '',
     indirizzo: p.indirizzo || '', appuntamento: '', inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
-    allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null)
+    allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null), nonPresenti: new Set()
   })) : [garaVuota(1)]
   numPartite.value = gare.length
   convocazione.value = {
@@ -498,7 +514,7 @@ async function caricaPartiteEsistenti() {
   const gare = partite.map((p, idx) => ({
     numero: idx + 1, gara: `${nomeSocieta} vs ${p.avversario || 'TBD'}`, data: p.data_partite, campo: p.campo || '',
     indirizzo: p.indirizzo || '', appuntamento: '', inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
-    allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null)
+    allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null), nonPresenti: new Set()
   }))
   convocazione.value.gare = gare
   numPartite.value = gare.length
@@ -519,10 +535,14 @@ async function caricaConvocazione(id) {
   convocazione.value = {
     data_inizio: d.data_inizio, data_fine: d.data_fine || '', esclusioni: d.esclusioni || [],
     note: d.note || '',
-    gare: d.gare.map((g, idx) => ({
-      ...g, numero: g.numero || idx + 1, data: g.data || '',
-       giocatori: padGiocatori((g.giocatori || []).sort((a, b) => a.posizione - b.posizione).map(x => x.persona_id))
-    }))
+    gare: d.gare.map((g, idx) => {
+      const giocatoriArr = (g.giocatori || []).sort((a, b) => a.posizione - b.posizione)
+      const nonPresenti = new Set(giocatoriArr.filter(x => x.non_presente).map(x => x.persona_id))
+      return {
+        ...g, numero: g.numero || idx + 1, data: g.data || '',
+        giocatori: padGiocatori(giocatoriArr.map(x => x.persona_id)), nonPresenti
+      }
+    })
   }
   numPartite.value = convocazione.value.gare.length
 }
@@ -566,7 +586,7 @@ function creaConvocazioneDaWeekend(weekend) {
     numero: idx + 1,
     gara: p.casa_fuori === 'fuori' ? `${p.avversario || 'TBD'} vs ${nomeSocieta}` : `${nomeSocieta} vs ${p.avversario || 'TBD'}`,
     data: p.data_partite, campo: p.campo || '', indirizzo: p.indirizzo || '', appuntamento: '',
-    inizio_gara: p.ora ? p.ora.slice(0, 5) : '', allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null)
+    inizio_gara: p.ora ? p.ora.slice(0, 5) : '', allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null), nonPresenti: new Set()
   }))
   numPartite.value = gare.length
   convocazione.value = {
@@ -586,7 +606,7 @@ async function salva() {
     gare: convocazione.value.gare.map((g, gi) => ({
       numero: gi + 1, gara: g.gara, data: g.data || null, campo: g.campo, indirizzo: g.indirizzo,
       appuntamento: g.appuntamento, inizio_gara: g.inizio_gara, allenatore: g.allenatore,
-      giocatori: g.giocatori.map((pid, i) => pid ? { persona_id: pid, posizione: i + 1 } : null).filter(Boolean)
+      giocatori: g.giocatori.map((pid, i) => pid ? { persona_id: pid, posizione: i + 1, non_presente: g.nonPresenti?.has(pid) || false } : null).filter(Boolean)
     }))
   }
   if (convocazioneId.value) await axios.put(base + '/convocazioni/' + convocazioneId.value, payload, { headers: headers() })
@@ -617,9 +637,10 @@ async function esportaPDF() {
     const giocatoriRows = gara.giocatori.map((pid, i) => {
       const nome = getGiocatoreNome(pid)
       const filled = pid !== null
+      const np = filled && gara.nonPresenti?.has(pid)
       return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;${i < 13 ? 'border-bottom:1px solid #f0f0f0;' : ''}">
-        <span style="min-width:22px;height:22px;border-radius:50%;background:${filled ? '#dc2626' : '#f0f0f0'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;">${i + 1}</span>
-        <span style="font-size:12px;font-weight:${filled ? '700' : '400'};color:${filled ? '#1a1a1a' : '#ccc'};flex:1;">${esc(nome)}</span>
+        <span style="min-width:22px;height:22px;border-radius:50%;background:${np ? '#ef4444' : (filled ? '#dc2626' : '#f0f0f0')};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;">${i + 1}</span>
+        <span style="font-size:12px;font-weight:${filled ? '700' : '400'};color:${np ? '#ef4444' : (filled ? '#1a1a1a' : '#ccc')};flex:1;${np ? 'text-decoration:line-through;opacity:0.7;' : ''}">${esc(nome)}${np ? ' (NP)' : ''}</span>
       </div>`
     }).join('')
 
@@ -1497,6 +1518,49 @@ onMounted(async () => {
 
 .giocatore-slot:hover .slot-remove {
   opacity: 1;
+}
+
+.giocatore-slot.non_presente {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.giocatore-slot.non_presente .slot-name {
+  color: #ef4444;
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.slot-np-toggle {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+}
+
+.giocatore-slot:hover .slot-np-toggle {
+  opacity: 1;
+}
+
+.slot-np-toggle input[type="checkbox"] {
+  width: 10px;
+  height: 10px;
+  accent-color: #ef4444;
+  cursor: pointer;
+}
+
+.slot-np-label {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: #ef4444;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .giocatore-slot {

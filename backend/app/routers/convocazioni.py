@@ -24,6 +24,7 @@ def get_societa_filter(current_user: Utente):
 class GiocatoreIn(BaseModel):
     persona_id: int
     posizione: int
+    non_presente: bool = False
 
 class GaraIn(BaseModel):
     numero: int
@@ -64,7 +65,7 @@ def dettaglio(cid: int, db: Session = Depends(get_db), current_user: Utente = De
         persone = []
         for gk in giocatori:
             p = db.query(Persona).filter(Persona.id == gk.persona_id).first()
-            persone.append({"persona_id": gk.persona_id, "posizione": gk.posizione, "nome": p.nome if p else "", "cognome": p.cognome if p else ""})
+            persone.append({"persona_id": gk.persona_id, "posizione": gk.posizione, "nome": p.nome if p else "", "cognome": p.cognome if p else "", "non_presente": bool(gk.non_presente)})
         result_gare.append({
             "id": g.id, "numero": g.numero, "gara": g.gara, "data": g.data,
             "campo": g.campo, "indirizzo": g.indirizzo, "appuntamento": g.appuntamento,
@@ -85,7 +86,7 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
         db.add(gara)
         db.flush()
         for gk in g.giocatori:
-            db.add(ConvocazioneGiocatore(gara_id=gara.id, persona_id=gk.persona_id, posizione=gk.posizione))
+            db.add(ConvocazioneGiocatore(gara_id=gara.id, persona_id=gk.persona_id, posizione=gk.posizione, non_presente=1 if gk.non_presente else 0))
     db.commit()
     return {"id": c.id}
 
@@ -113,7 +114,7 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
         db.add(gara)
         db.flush()
         for gk in g.giocatori:
-            db.add(ConvocazioneGiocatore(gara_id=gara.id, persona_id=gk.persona_id, posizione=gk.posizione))
+            db.add(ConvocazioneGiocatore(gara_id=gara.id, persona_id=gk.persona_id, posizione=gk.posizione, non_presente=1 if gk.non_presente else 0))
     db.commit()
     return {"ok": True}
 

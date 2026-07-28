@@ -125,7 +125,7 @@ const giorniNomi = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"]
 const meseLabel = computed(() => mesiNomi[mese.value - 1])
 
 const codiciOrdinati = computed(() => {
-  const order = ['X', 'AG', 'AI', 'P', 'R']
+  const order = ['X', 'AG', 'AI', 'I', 'R']
   return [...codici.value].sort((a, b) => order.indexOf(a.codice) - order.indexOf(b.codice))
 })
 
