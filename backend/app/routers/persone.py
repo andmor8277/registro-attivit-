@@ -24,7 +24,7 @@ def safe_encrypt(db: Session, value: str) -> str:
         return value
     try:
         result = db.execute(
-            text("SELECT encode(encrypt(:val::bytea, :enc_key, 'aes'), 'hex')"),
+            text("SELECT encode(encrypt(CAST(:val AS bytea), :enc_key, 'aes'), 'hex')"),
             {"val": value, "enc_key": ENCRYPTION_KEY}
         ).scalar()
         return result
@@ -74,7 +74,7 @@ def safe_encrypt_with_key(db: Session, value: str, key: str) -> str:
         return value
     try:
         result = db.execute(
-            text("SELECT encode(encrypt(:val::bytea, :enc_key, 'aes'), 'hex')"),
+            text("SELECT encode(encrypt(CAST(:val AS bytea), :enc_key, 'aes'), 'hex')"),
             {"val": value, "enc_key": key}
         ).scalar()
         return result
