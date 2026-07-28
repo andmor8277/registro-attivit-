@@ -444,11 +444,6 @@ async function eliminaGruppo(g) {
   await loadGruppi()
 }
 
-async function reloadData() {
-  const res = await getPersone(categoriaId)
-  persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
-}
-
 function enrichGruppoNome(personeList) {
   const idToNome = Object.fromEntries(gruppiList.value.map(g => [g.id, g.nome]))
   personeList.forEach(p => {
