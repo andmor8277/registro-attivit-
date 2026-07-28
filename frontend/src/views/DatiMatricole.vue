@@ -359,7 +359,7 @@ async function salva() {
     return
   }
   
-  if (!gdprSbloccato.value && (modal.value.codice_fiscale || modal.value.tel_papa || modal.value.tel_mamma)) {
+  if (!modal.value.isNuovo && !gdprSbloccato.value && (modal.value.codice_fiscale || modal.value.tel_papa || modal.value.tel_mamma)) {
     alert('Sblocca i dati GDPR prima di modificare CF o telefoni')
     return
   }
