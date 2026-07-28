@@ -758,6 +758,16 @@ def run_migrations():
                 print(f"Migration warning (non_presente): {e}")
                 conn.rollback()
 
+            # Resize tel_papa/tel_mamma for encrypted values
+            try:
+                conn.execute(text("ALTER TABLE persone ALTER COLUMN tel_papa TYPE VARCHAR(255)"))
+                conn.execute(text("ALTER TABLE persone ALTER COLUMN tel_mamma TYPE VARCHAR(255)"))
+                conn.commit()
+                print("Migration: Resized tel_papa/tel_mamma to VARCHAR(255)")
+            except Exception as e:
+                print(f"Migration warning (resize tel): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 
