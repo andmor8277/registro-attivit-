@@ -4,7 +4,7 @@
       <div class="form-header">
         <h1 v-if="isNew">PREISCRIZIONA ONLINE</h1>
         <h1 v-else>MODULO ISCRIZIONE SCUOLA CALCIO</h1>
-        <h2>STAGIONE SPORTIVA 2025-2026</h2>
+        <h2>STAGIONE SPORTIVA {{ stagione ? stagione + '/' + (stagione + 1) : '---' }}</h2>
       </div>
 
       <div v-if="error" class="error-banner">{{ error }}</div>
@@ -144,7 +144,7 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPublicPersona, updatePublicPersona, createPublicPersona } from '../api'
+import { getPublicPersona, updatePublicPersona, createPublicPersona, getPublicCategoria } from '../api'
 
 const route = useRoute()
 const router = useRouter()
@@ -153,6 +153,7 @@ const saving = ref(false)
 const saved = ref(false)
 const error = ref('')
 const isNew = ref(false)
+const stagione = ref(null)
 
 const form = reactive({
   cognome: '',
@@ -185,6 +186,10 @@ onMounted(async () => {
   if (catId) {
     isNew.value = true
     form.categoria_id = catId
+    try {
+      const catRes = await getPublicCategoria(catId)
+      stagione.value = catRes.data?.stagione
+    } catch(e) {}
     loading.value = false
     return
   }
@@ -216,6 +221,12 @@ onMounted(async () => {
     form.taglia = data.taglia || ''
     form.note = data.note || ''
     form.scadenza_certificato = data.scadenza_certificato || ''
+    if (data.categoria_id) {
+      try {
+        const catRes = await getPublicCategoria(data.categoria_id)
+        stagione.value = catRes.data?.stagione
+      } catch(e) {}
+    }
   } catch (e) {
     error.value = 'Errore nel caricamento dei dati: ' + (e.response?.data?.detail || e.message)
   } finally {

@@ -29,7 +29,7 @@
       </div>
       <div class="header-main">
         <h1 class="page-title">
-          <span class="title-gradient">Allenatori</span>
+          <span class="title-gradient">Gestione Squadre</span>
         </h1>
         <p class="header-subtitle">Gestisci categorie, allenamenti e presenze</p>
       </div>
@@ -99,109 +99,110 @@
         </div>
         <div>
           <h2 class="section-title">Categorie</h2>
-          <p class="section-subtitle">{{ categorie.length }} categorie attive</p>
+          <p class="section-subtitle">{{ categorieFiglie.length }} categorie attive</p>
+        </div>
+      </div>
+
+      <div class="categorie-legend">
+        <div class="legend-item">
+          <span class="legend-badge scuola">SC</span>
+          <span class="legend-text">Scuola Calcio</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-badge agonistica">AG</span>
+          <span class="legend-text">Agonistica</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-badge portieri">POR</span>
+          <span class="legend-text">Portieri</span>
         </div>
       </div>
 
       <div class="categorie-grid">
-        <template v-for="group in categorieGruppo" :key="group.parentId">
-          <div v-if="group.parent" class="parent-category-header" @click="toggleParent(group.parentId)">
-            <div class="parent-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16"/>
-                <polyline points="1 10 5 10 11 14"/>
-                <polyline points="15 10 21 10 21 14"/>
-              </svg>
+        <div
+          v-for="(cat, index) in categorieFlat"
+          :key="cat.id"
+          class="categoria-card"
+          :class="{ 'cat-scuola': cat.is_scuola, 'cat-agonistica': cat.is_agonistica }"
+          :style="{ animationDelay: index * 50 + 'ms' }"
+          @click="apriRegistro(cat)"
+        >
+          <div class="card-glow"></div>
+          <div class="card-pattern"></div>
+          <div class="card-top">
+            <div class="card-left">
+              <div class="card-icon-wrap" :class="{ portieri: cat.is_portieri }">
+                <svg v-if="cat.is_portieri" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+                  <rect x="3" y="10" width="5" height="14" rx="2.5" stroke-linecap="round"/>
+                  <rect x="10" y="6" width="5" height="18" rx="2.5" stroke-linecap="round"/>
+                  <rect x="17" y="8" width="5" height="16" rx="2.5" stroke-linecap="round"/>
+                  <rect x="24" y="11" width="5" height="13" rx="2.5" stroke-linecap="round"/>
+                  <path d="M3 24 C3 30 8 33 12 33 L24 33 C28 33 29 30 29 24" stroke-linecap="round"/>
+                  <rect x="40" y="10" width="5" height="14" rx="2.5" stroke-linecap="round"/>
+                  <rect x="33" y="6" width="5" height="18" rx="2.5" stroke-linecap="round"/>
+                  <rect x="26" y="8" width="5" height="16" rx="2.5" stroke-linecap="round"/>
+                  <rect x="19" y="11" width="5" height="13" rx="2.5" stroke-linecap="round"/>
+                  <path d="M45 24 C45 30 40 33 36 33 L24 33 C20 33 19 30 19 24" stroke-linecap="round"/>
+                </svg>
+                <span v-else class="card-year">{{ cat.anno }}</span>
+              </div>
+              <div class="card-badge" :class="cat.is_portieri ? 'portieri' : (cat.is_scuola ? 'scuola' : 'agonistica')">
+                {{ cat.is_portieri ? 'POR' : (cat.is_scuola ? 'SC' : 'AG') }}
+              </div>
             </div>
-            <div class="parent-info">
-              <h3 class="parent-title">{{ group.parent.nome }}</h3>
-              <span class="parent-count">{{ group.children.length }} categorie</span>
+            <div class="card-actions" v-if="utenteAttivo?.is_admin || utenteAttivo?.ruolo === 'mister'">
+              <button class="btn-action" @click.stop="apriModifica(cat)" title="Modifica">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              <button v-if="utenteAttivo?.is_admin" class="btn-action btn-danger" @click.stop="eliminaCategoria(cat.id)" title="Elimina">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+              </button>
             </div>
-            <svg class="parent-chevron" :class="{ expanded: isParentExpanded(group.parentId) }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-              <polyline points="6 9 12 15 18 9"/>
+          </div>
+          <div class="card-text">
+            <h3 class="card-title">{{ cat.nome }}</h3>
+            <div class="card-meta">
+              <div v-if="cat.giorni" class="meta-row">
+                <span class="meta-label">Giorni</span>
+                <div class="giorni-badges">
+                  <span class="giorno-badge" v-for="g in cat.giorni.split(',').slice(0, 3)" :key="g">
+                    {{ nomiBreviGiorni(parseInt(g)) }}
+                  </span>
+                  <span v-if="cat.giorni.split(',').length > 3" class="giorno-badge more">
+                    +{{ cat.giorni.split(',').length - 3 }}
+                  </span>
+                </div>
+              </div>
+              <div v-if="getMistersCat(cat.id).length > 0" class="meta-row">
+                <span class="meta-label">Mister</span>
+                <div class="people-badges">
+                  <span class="person-badge mister" v-for="m in getMistersCat(cat.id)" :key="m.id">
+                    {{ m.cognome }}
+                  </span>
+                </div>
+              </div>
+              <div v-if="getDirigentiCat(cat.id).length > 0" class="meta-row">
+                <span class="meta-label">Dirigente</span>
+                <div class="people-badges">
+                  <span class="person-badge dirigente" v-for="d in getDirigentiCat(cat.id)" :key="d.id">
+                    {{ d.cognome }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </div>
-          <template v-if="isParentExpanded(group.parentId)">
-            <div
-              v-for="(cat, index) in group.children"
-              :key="cat.id"
-              class="categoria-card child-card"
-              :style="{ animationDelay: index * 50 + 'ms' }"
-              @click="apriRegistro(cat)"
-            >
-              <div class="card-glow"></div>
-              <div class="card-pattern"></div>
-              <div class="card-top">
-                <div class="card-icon-wrap" :class="{ portieri: cat.is_portieri }">
-                  <svg v-if="cat.is_portieri" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
-                    <rect x="3" y="10" width="5" height="14" rx="2.5" stroke-linecap="round"/>
-                    <rect x="10" y="6" width="5" height="18" rx="2.5" stroke-linecap="round"/>
-                    <rect x="17" y="8" width="5" height="16" rx="2.5" stroke-linecap="round"/>
-                    <rect x="24" y="11" width="5" height="13" rx="2.5" stroke-linecap="round"/>
-                    <path d="M3 24 C3 30 8 33 12 33 L24 33 C28 33 29 30 29 24" stroke-linecap="round"/>
-                    <rect x="40" y="10" width="5" height="14" rx="2.5" stroke-linecap="round"/>
-                    <rect x="33" y="6" width="5" height="18" rx="2.5" stroke-linecap="round"/>
-                    <rect x="26" y="8" width="5" height="16" rx="2.5" stroke-linecap="round"/>
-                    <rect x="19" y="11" width="5" height="13" rx="2.5" stroke-linecap="round"/>
-                    <path d="M45 24 C45 30 40 33 36 33 L24 33 C20 33 19 30 19 24" stroke-linecap="round"/>
-                  </svg>
-                  <span v-else class="card-year">{{ cat.anno }}</span>
-                </div>
-                <div class="card-actions" v-if="utenteAttivo?.is_admin || utenteAttivo?.ruolo === 'mister'">
-                  <button class="btn-action" @click.stop="apriModifica(cat)" title="Modifica">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                  </button>
-                  <button v-if="utenteAttivo?.is_admin" class="btn-action btn-danger" @click.stop="eliminaCategoria(cat.id)" title="Elimina">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <div class="card-text">
-                <h3 class="card-title">{{ cat.nome }}</h3>
-                <div class="card-meta">
-                  <div v-if="cat.giorni" class="meta-row">
-                    <span class="meta-label">Giorni</span>
-                    <div class="giorni-badges">
-                      <span class="giorno-badge" v-for="g in cat.giorni.split(',').slice(0, 3)" :key="g">
-                        {{ nomiBreviGiorni(parseInt(g)) }}
-                      </span>
-                      <span v-if="cat.giorni.split(',').length > 3" class="giorno-badge more">
-                        +{{ cat.giorni.split(',').length - 3 }}
-                      </span>
-                    </div>
-                  </div>
-                  <div v-if="getMistersCat(cat.id).length > 0" class="meta-row">
-                    <span class="meta-label">Mister</span>
-                    <div class="people-badges">
-                      <span class="person-badge mister" v-for="m in getMistersCat(cat.id)" :key="m.id">
-                        {{ m.cognome }}
-                      </span>
-                    </div>
-                  </div>
-                  <div v-if="getDirigentiCat(cat.id).length > 0" class="meta-row">
-                    <span class="meta-label">Dirigente</span>
-                    <div class="people-badges">
-                      <span class="person-badge dirigente" v-for="d in getDirigentiCat(cat.id)" :key="d.id">
-                        {{ d.cognome }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="card-arrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-              </div>
-            </div>
-          </template>
-        </template>
+        </div>
 
         <div v-if="utenteAttivo?.is_admin" class="categoria-card nuova" @click="apriNuova">
           <div class="nuova-icon">
@@ -330,11 +331,7 @@ const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === '
 const listaSocieta = ref([])
 const societaIdSelezionata = ref(null)
 
-const currentSeason = computed(() => {
-  const m = new Date().getMonth()
-  const y = new Date().getFullYear()
-  return m >= 7 ? `${y}/${y + 1}` : `${y - 1}/${y}`
-})
+const currentSeason = ref('2025/2026')
 
 watch(societaIdSelezionata, (newVal) => {
   if (newVal && isSuperAdmin.value) {
@@ -390,6 +387,47 @@ const categorieGruppo = computed(() => {
   }
 
   return result
+})
+
+const categorieFiglie = computed(() => {
+  return categorie.value.filter(c => c.parent_id !== null && c.parent_id !== undefined)
+})
+
+const categorieFlat = computed(() => {
+  const parents = categorie.value.filter(c => c.parent_id === null || c.parent_id === undefined)
+  const children = categorie.value.filter(c => c.parent_id !== null && c.parent_id !== undefined)
+  
+  const result = []
+  
+  // Aggiungi genitori che sono portieri (categoria a sé stante)
+  parents.forEach(p => {
+    if (p.is_portieri) {
+      result.push({
+        ...p,
+        is_scuola: false,
+        is_agonistica: false,
+        is_portieri: true
+      })
+    }
+  })
+  
+  // Aggiungi figli
+  children.forEach(c => {
+    const parent = parents.find(p => p.id === c.parent_id)
+    result.push({
+      ...c,
+      is_scuola: parent?.nome?.toLowerCase().includes('scuola') || false,
+      is_agonistica: parent?.nome?.toLowerCase().includes('agonistica') || false,
+      is_portieri: c.is_portieri
+    })
+  })
+  
+  // Ordina: prima i portieri, poi per anno
+  return result.sort((a, b) => {
+    if (a.is_portieri && !b.is_portieri) return -1
+    if (!a.is_portieri && b.is_portieri) return 1
+    return (b.anno || 0) - (a.anno || 0)
+  })
 })
 
 const categoriePadre = computed(() => {
@@ -481,6 +519,9 @@ async function loadCategorie() {
 
     const allRes = await getAllCategorie(societaIdForApi)
     allCategories.value = allRes.data
+
+    const activeCat = categorie.value.find(c => c.parent_id !== null && c.stagione)
+    currentSeason.value = activeCat ? `${activeCat.stagione}/${activeCat.stagione + 1}` : currentSeason.value
 
     for (const cat of categorie.value) {
       try {
@@ -1115,11 +1156,6 @@ onMounted(() => {
   transform: rotate(180deg);
 }
 
-.child-card {
-  margin-left: 0.5rem;
-  margin-right: 0.5rem;
-}
-
 .categoria-card {
   position: relative;
   display: flex;
@@ -1166,6 +1202,113 @@ onMounted(() => {
 
 .categoria-card:hover .card-actions {
   opacity: 1;
+}
+
+.categoria-card.cat-scuola {
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.categoria-card.cat-scuola::before {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.03) 100%);
+}
+
+.categoria-card.cat-scuola:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15), 0 0 0 1px rgba(59, 130, 246, 0.1);
+}
+
+.categoria-card.cat-agonistica {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.categoria-card.cat-agonistica::before {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.03) 100%);
+}
+
+.categoria-card.cat-agonistica:hover {
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.15), 0 0 0 1px rgba(239, 68, 68, 0.1);
+}
+
+.card-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.card-badge {
+  padding: 0.2rem 0.45rem;
+  border-radius: 5px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.card-badge.scuola {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.card-badge.agonistica {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.card-badge.portieri {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.categorie-legend {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legend-badge {
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.legend-badge.scuola {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.legend-badge.agonistica {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.legend-badge.portieri {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.legend-text {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
 }
 
 .card-glow {

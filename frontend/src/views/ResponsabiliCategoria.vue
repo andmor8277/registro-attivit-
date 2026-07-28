@@ -140,7 +140,7 @@ async function refreshResponsabili(catId) {
 async function load() {
   const societaId = societaAttiva.value?.id || null
   const catRes = await getCategorie(societaId)
-  categorie.value = catRes.data || []
+  categorie.value = (catRes.data || []).filter(c => c.parent_id !== null)
 
   const utentiRes = await getUtenti(societaId)
   tuttiUtenti.value = (utentiRes.data || []).filter(u => ['mister', 'dirigente'].includes(u.ruolo))

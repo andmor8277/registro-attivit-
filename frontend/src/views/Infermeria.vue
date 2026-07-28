@@ -103,11 +103,7 @@ const categorie = ref([])
 const tuttiGiocatori = ref([])
 const infortunatiAttivi = ref(0)
 
-const currentSeason = computed(() => {
-  const m = new Date().getMonth()
-  const y = new Date().getFullYear()
-  return m >= 7 ? `${y}/${y + 1}` : `${y - 1}/${y}`
-})
+const currentSeason = ref('2025/2026')
 
 const societaId = computed(() => {
   return utenteAttivo.value?.societa_id || parseInt(localStorage.getItem('societa_id')) || 1
@@ -142,7 +138,9 @@ onMounted(async () => {
   try {
     const res = await getCategorie()
     let cats = Array.isArray(res) ? res : (res?.data || [])
-    categorie.value = cats.filter(c => c.societa_id === societaId.value && !c.is_archiviata)
+    categorie.value = cats.filter(c => c.societa_id === societaId.value && !c.is_archiviata && c.parent_id !== null)
+    const activeCat = categorie.value.find(c => c.stagione)
+    currentSeason.value = activeCat ? `${activeCat.stagione}/${activeCat.stagione + 1}` : currentSeason.value
 
     for (const cat of categorie.value) {
       const pRes = await getPersone(cat.id)

@@ -4,8 +4,7 @@ ON CONFLICT DO NOTHING;
 INSERT INTO codici (codice, descrizione, tipo) VALUES
   ('X',  'Presenza',             'presenza'),
   ('AG', 'Assente giustificato', 'assenza'),
-  ('Ai', 'Infortunio',           'assenza'),
-  ('AS', 'Assente',              'assenza'),
-  ('R',  'Recupero',             'extra'),
-  ('P',  'Permesso',             'extra')
+  ('AI', 'Assente ingiustificato', 'assenza'),
+  ('I', 'Infortunato',           'assenza'),
+  ('R',  'Recupero altra cat.',  'extra')
 ON CONFLICT DO NOTHING;

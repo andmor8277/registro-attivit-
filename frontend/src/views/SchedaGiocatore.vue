@@ -30,7 +30,7 @@
     <div class="scheda-container" ref="schedaContainer">
       <div class="scheda-header">
         <h1>MODULO ISCRIZIONE SCUOLA CALCIO</h1>
-        <h2>STAGIONE SPORTIVA 2025-2026</h2>
+        <h2>STAGIONE SPORTIVA {{ categoriaStagione ? categoriaStagione + '/' + (categoriaStagione + 1) : '---' }}</h2>
       </div>
 
       <div class="scheda-top">
@@ -261,6 +261,7 @@ const giocatore = ref(null)
 const isNuovo = ref(false)
 const categoriaIdNuovo = ref(null)
 const categoriaNome = ref('')
+const categoriaStagione = ref(null)
 
 const giocatoreEdit = reactive({
   cognome: '',
@@ -340,6 +341,17 @@ onMounted(async () => {
     isNuovo.value = true
     categoriaIdNuovo.value = catId ? parseInt(catId) : null
     editMode.value = true
+    if (catId) {
+      try {
+        const res = await getCategorie()
+        const lista = Array.isArray(res) ? res : (res?.data || [])
+        const cat = lista.find(c => c.id === parseInt(catId))
+        if (cat) {
+          categoriaNome.value = cat.nome || ''
+          categoriaStagione.value = cat.stagione || null
+        }
+      } catch(e) {}
+    }
     return
   }
   
@@ -400,7 +412,10 @@ async function caricaNomeCategoria(catId) {
     const res = await getCategorie()
     const lista = Array.isArray(res) ? res : (res?.data || [])
     const cat = lista.find(c => c.id === catId)
-    if (cat) categoriaNome.value = cat.nome || ''
+    if (cat) {
+      categoriaNome.value = cat.nome || ''
+      categoriaStagione.value = cat.stagione || null
+    }
   } catch (e) {
     console.error('Errore caricamento categoria:', e)
   }

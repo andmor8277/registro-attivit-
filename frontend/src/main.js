@@ -1,6 +1,14 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import './global.css'
+
+// Disinstalla eventuali Service Worker vecchi (PWA disabilitata)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    for (const reg of regs) reg.unregister()
+  })
+}
+
 import { createRouter, createWebHistory } from 'vue-router'
 import { useStore } from './store.js'
 import Home from './views/Home.vue'

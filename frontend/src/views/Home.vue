@@ -110,7 +110,7 @@
             </svg>
           </div>
           <div class="card-text">
-            <h3 class="card-title">Allenatori</h3>
+            <h3 class="card-title">Gestione Squadre</h3>
             <p class="card-desc">Allenamenti · Categorie · Presenze</p>
           </div>
           <div class="card-arrow">
@@ -131,7 +131,7 @@
             </svg>
           </div>
           <div class="card-text">
-            <h3 class="card-title">Segreteria</h3>
+            <h3 class="card-title">Gestione Segreteria</h3>
             <p class="card-desc">Tesseramenti · Documenti · Rate</p>
           </div>
           <div class="card-arrow">
@@ -153,7 +153,7 @@
             </svg>
           </div>
           <div class="card-text">
-            <h3 class="card-title">Responsabili</h3>
+            <h3 class="card-title">Gestione Responsabili</h3>
             <p class="card-desc">Mister · Dirigenti · Partite</p>
           </div>
           <div class="card-arrow">
@@ -174,7 +174,7 @@
             </svg>
           </div>
           <div class="card-text">
-            <h3 class="card-title">Infermeria</h3>
+            <h3 class="card-title">Gestione Infermeria</h3>
             <p class="card-desc">Certificati medici · Infortuni</p>
           </div>
           <div class="card-arrow">
@@ -201,11 +201,7 @@ const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === '
 const allCategories = ref([])
 const responsabileMap = ref({})
 
-const currentSeason = computed(() => {
-  const m = new Date().getMonth()
-  const y = new Date().getFullYear()
-  return m >= 7 ? `${y}/${y + 1}` : `${y - 1}/${y}`
-})
+const currentSeason = ref('2025/2026')
 
 const tuttiGiorni = [
   { val: 1, nome: "Lunedì" },
@@ -245,6 +241,8 @@ async function loadPlanning() {
   try {
     const res = await getAllCategorie(societaId)
     allCategories.value = res.data || []
+    const activeCat = allCategories.value.find(c => c.parent_id !== null && c.stagione)
+    currentSeason.value = activeCat ? `${activeCat.stagione}/${activeCat.stagione + 1}` : currentSeason.value
     for (const cat of allCategories.value) {
       try {
         const respRes = await getCategoriaResponsabili(cat.id)
@@ -862,32 +860,124 @@ onMounted(async () => {
 
 @media (max-width: 768px) {
   .home {
-    padding: 1.5rem 1rem 3rem;
+    padding: 1.25rem 0.75rem 2rem;
   }
+
+  .page-header {
+    margin-bottom: 1.5rem;
+  }
+
   .planning-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
   }
+
   .planning-day {
     padding: 0.75rem 0.625rem;
-    min-height: 110px;
+    min-height: 100px;
+    border-radius: 12px;
   }
+
+  .day-name {
+    font-size: 0.8rem;
+  }
+
+  .chip-name {
+    font-size: 0.65rem;
+  }
+
   .sections-grid {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .section-card {
+    padding: 1.125rem;
+    border-radius: 16px;
+    min-height: 48px;
+  }
+
+  .card-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+  }
+
+  .card-title {
+    font-size: 1rem;
+  }
+
+  .card-desc {
+    font-size: 0.7rem;
+  }
+
+  .section-title {
+    font-size: 1.15rem;
+  }
+
+  .section-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+
+  .header-badge {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.75rem;
+  }
+
+  .planning-section {
+    margin-bottom: 2rem;
   }
 }
 
 @media (max-width: 480px) {
+  .home {
+    padding: 1rem 0.625rem 1.5rem;
+  }
+
   .planning-grid {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
+
+  .planning-day {
+    min-height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .day-header {
+    flex: 0 0 auto;
+    min-width: 60px;
+  }
+
+  .day-divider {
+    display: none;
+  }
+
+  .day-content {
+    flex: 1;
+  }
+
   .society-name {
-    font-size: 2rem;
+    font-size: 1.75rem;
   }
+
   .header-top {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .header-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .section-card {
+    padding: 1rem;
   }
 }
 </style>

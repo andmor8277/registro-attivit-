@@ -21,6 +21,9 @@ class EsercizioElemento(BaseModel):
     wavy: Optional[bool] = None
     size: Optional[float] = None
     w: Optional[float] = None
+    h: Optional[float] = None
+    scaleX: Optional[float] = None
+    scaleY: Optional[float] = None
     x1: Optional[float] = None
     y1: Optional[float] = None
     x2: Optional[float] = None
@@ -118,6 +121,9 @@ def save_allenamento(data: AllenamentoJson, db: Session = Depends(get_db), curre
                     "wavy": el.wavy,
                     "size": el.size,
                     "w": el.w,
+                    "h": el.h,
+                    "scaleX": el.scaleX,
+                    "scaleY": el.scaleY,
                     "x1": el.x1,
                     "y1": el.y1,
                     "x2": el.x2,

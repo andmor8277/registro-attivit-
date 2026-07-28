@@ -163,6 +163,48 @@
       <router-view />
     </main>
 
+    <nav v-if="token && !hideTopbar" class="bottom-nav">
+      <router-link v-if="!isSuperAdmin" to="/" class="bottom-nav-item" :class="{ active: route.path === '/' }">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>Home</span>
+      </router-link>
+      <button v-else class="bottom-nav-item" @click="vaiSelezioneSocieta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>Home</span>
+      </button>
+      <router-link v-if="utenteAttivo?.is_admin || utenteAttivo?.is_super_admin || utenteAttivo?.ruolo === 'super_admin'" to="/admin" class="bottom-nav-item" :class="{ active: route.path.startsWith('/admin') }">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+        <span>Admin</span>
+      </router-link>
+      <a href="/guida.html" target="_blank" rel="noopener,noreferrer" class="bottom-nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <span>Guida</span>
+      </a>
+      <button @click="mobileMenuOpen = true" class="bottom-nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+        <span>Menu</span>
+      </button>
+    </nav>
+
     <Teleport to="body">
       <div v-if="showPasswordModal" class="modal-overlay" @click.self="showPasswordModal = false">
         <div class="modal">
@@ -207,11 +249,12 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStore } from './store.js'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { getMe, getStagioni, changePassword } from './api/index.js'
 
 const { token, utenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva, hideTopbar } = useStore()
 const router = useRouter()
+const route = useRoute()
 
 const showPasswordModal = ref(false)
 const passwordForm = ref({ attuale: '', nuova: '', conferma: '' })
@@ -475,77 +518,64 @@ watch(societaAttiva, async (newVal) => {
 
 @media (max-width: 768px) {
   .topbar {
-    padding: 0.75rem 1rem;
-    flex-wrap: wrap;
-    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
     position: sticky;
     top: 0;
+    min-height: 52px;
   }
-  
-  .topbar-actions {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  
-  .user-badge span:last-child,
-  .btn-nav span,
-  .btn-logout span {
+
+  .topbar-season {
     display: none;
   }
-  
+
+  .topbar-actions {
+    display: none;
+  }
+
   .brand-text {
-    font-size: 1.1rem;
+    font-size: 1rem;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  
+
   .logo-img {
-    height: 36px;
+    height: 32px;
   }
-  
-  .btn-nav,
-  .btn-logout {
-    padding: 0.5rem 0.75rem;
+
+  .hamburger {
+    display: none;
+  }
+
+  .main-content {
+    padding-bottom: 72px;
   }
 }
 
 @media (max-width: 768px) and (orientation: landscape) {
   .topbar {
-    padding: 0.5rem 0.75rem;
-    min-height: 48px;
+    padding: 0.35rem 0.5rem;
+    min-height: 44px;
   }
-  
+
   .topbar-brand {
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
-  
+
   .brand-text {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    max-width: 100px;
   }
-  
+
   .logo-img {
-    height: 28px;
+    height: 26px;
   }
-  
-  .topbar-season {
-    display: none;
-  }
-  
-  .topbar-actions {
-    gap: 0.25rem;
-  }
-  
-  .btn-nav,
-  .btn-logout {
-    padding: 0.4rem;
-  }
-  
-  .btn-nav svg,
-  .btn-logout svg {
-    width: 18px;
-    height: 18px;
-  }
-  
-  .btn-admin {
-    display: none;
+
+  .main-content {
+    padding-bottom: 56px;
   }
 }
 
@@ -747,6 +777,77 @@ watch(societaAttiva, async (newVal) => {
   height: 28px;
 }
 
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: stretch;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 150;
+    background: #0a0a0a;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+    height: 56px;
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.625rem;
+    font-weight: 600;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    transition: color 0.2s;
+    text-decoration: none;
+    padding: 0.25rem 0;
+  }
+
+  .bottom-nav-item svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .bottom-nav-item.active,
+  .bottom-nav-item:hover {
+    color: #ffffff;
+  }
+
+  .bottom-nav-item.active {
+    color: var(--color-primary);
+  }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+  .bottom-nav {
+    height: 44px;
+  }
+
+  .bottom-nav-item {
+    font-size: 0.5625rem;
+  }
+
+  .bottom-nav-item svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
 .mobile-menu-overlay {
   position: fixed;
   inset: 0;
@@ -857,18 +958,6 @@ watch(societaAttiva, async (newVal) => {
   }
   to {
     transform: translateX(0);
-  }
-}
-
-@media (max-width: 768px) {
-  .hamburger {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .topbar-actions {
-    display: none;
   }
 }
 

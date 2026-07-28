@@ -678,13 +678,91 @@ h1 {
   to { transform: rotate(360deg); }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .login-wrapper {
     padding: 1rem;
+    align-items: flex-start;
+    padding-top: 2rem;
   }
-  
+
   .login-card {
     padding: 1.5rem;
+    max-width: 100%;
+    border-radius: var(--radius-lg);
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  .societa-grid {
+    gap: 0.75rem;
+    margin: 1rem 0;
+  }
+
+  .societa-card {
+    padding: 0.875rem;
+  }
+
+  .societa-logo {
+    width: 42px;
+    height: 42px;
+    font-size: 1.2rem;
+  }
+
+  .selected-societa-preview {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .preview-logo,
+  .preview-logo-placeholder {
+    width: 48px;
+    height: 48px;
+    font-size: 1.2rem;
+  }
+
+  .create-modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .create-modal-content {
+    max-width: 100%;
+    max-height: 85vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .btn-create,
+  .btn-gestione {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-wrapper {
+    padding: 0.75rem;
+    padding-top: 1rem;
+  }
+
+  .login-card {
+    padding: 1.25rem;
+  }
+
+  h1 {
+    font-size: 1.3rem;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
   }
 }
 

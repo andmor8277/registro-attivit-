@@ -95,14 +95,7 @@
               </svg>
               Catalogo
             </button>
-            <button class="btn-action" @click="saveCurrentExercise">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
-                <polyline points="17 21 17 13 7 13 7 21"/>
-                <polyline points="7 3 7 8 15 8"/>
-              </svg>
-              Salva Allenamento
-            </button>
+            
             <button class="btn-action" @click="openSaveToCatalogoDialog">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                 <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
@@ -127,7 +120,7 @@
           <div v-for="(ex, idx) in esercizi" :key="ex.id" class="esercizio-card" :class="{ active: selectedExercise?.id === ex.id }" :data-ex-id="ex.id" @click="selectExercise(ex)">
             <div class="esercizio-header">
               <span class="esercizio-num">{{ idx + 1 }}</span>
-              <input v-model="ex.titolo" class="esercizio-titolo" placeholder="Titolo esercizio..." @change="saveEsercizio(ex)" />
+              <input v-model="ex.titolo" class="esercizio-titolo" placeholder="Titolo esercizio..." @change="saveEsercizio(ex)" :id="'titolo-' + idx" name="titolo" />
 
               <button class="btn-delete" @click="deleteEsercizio(ex)">×</button>
             </div>
@@ -153,19 +146,20 @@
               </div>
               <div class="meta-row">
                 <div class="meta-field">
-                  <label>Spazio:</label>
-                  <input type="text" v-model="ex.spazio" placeholder="es. 20x30m" @change="saveEsercizio(ex)" />
+                  <label :for="'spazio-' + idx">Spazio:</label>
+                  <input type="text" v-model="ex.spazio" placeholder="es. 20x30m" @change="saveEsercizio(ex)" :id="'spazio-' + idx" name="spazio" />
                 </div>
                 <div class="meta-field">
-                  <label>Tempo:</label>
-                  <input type="text" v-model="ex.tempo" placeholder="es. 3x4'" @change="saveEsercizio(ex)" />
+                  <label :for="'tempo-' + idx">Tempo:</label>
+                  <input type="text" v-model="ex.tempo" placeholder="es. 3x4'" @change="saveEsercizio(ex)" :id="'tempo-' + idx" name="tempo" />
                 </div>
               </div>
-              <textarea v-model="ex.descrizione" placeholder="Descrizione dell'esercizio..." @change="saveEsercizio(ex)"></textarea>
+              <textarea v-model="ex.descrizione" placeholder="Descrizione dell'esercizio..." @change="saveEsercizio(ex)" :id="'desc-' + idx" name="descrizione"></textarea>
             </div>
 
-            <div class="board-area">
+            <div class="board-area" ref="boardArea">
               <TacticalBoard
+                :ref="(el) => { if (el) tacticalBoardRefs[idx] = el }"
                 :elements="ex.elementi"
                 :field-mode="ex.campo_con_righe === false ? 'blank' : (ex.campo_con_righe === 'half' ? 'half' : 'full')"
                 @update:elements="(newElements) => updateElementi(ex, newElements)"
@@ -239,7 +233,7 @@
           <p>Seleziona gli esercizi da condividere:</p>
           <div class="esercizi-selezione">
               <label class="esercizio-checkbox" v-for="ex in eserciziConTitolo" :key="ex.id">
-              <input type="checkbox" v-model="selectedForCatalogo[ex.id]" :disabled="!ex.titolo || !ex.titolo.trim()" />
+              <input type="checkbox" v-model="selectedForCatalogo[ex.id]" :disabled="!ex.titolo || !ex.titolo.trim()" name="esercizio-selezione" />
               <span class="checkbox-titolo" :class="{ 'no-titolo': !ex.titolo || !ex.titolo.trim() }">{{ ex.titolo || 'Esercizio senza titolo' }}</span>
             </label>
             <div v-if="eserciziConTitolo.length === 0" class="no-esercizi-selezione">
@@ -269,6 +263,7 @@ import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useStore } from '../store.js'
 import { getAllCategorie, getAllenamentiGiornoByData, saveAllenamenti, getCatalogoEsercizi, getCatalogoEserciziNew, saveEsercizioToCatalogo, deleteEsercizioFromCatalogo, getFocusList } from '../api/index.js'
 import { jsPDF } from 'jspdf'
+import html2canvas from 'html2canvas'
 import TacticalBoard from '../components/TacticalBoard.vue'
 
 const router = useRouter()
@@ -302,6 +297,7 @@ const saveError = ref('')
 const hasChanges = ref(false)
 let saveDebounceTimer = null
 const saveLoading = ref(false)
+const tacticalBoardRefs = ref([])
 let idCounter = 0
 function generateId(prefix = '') {
   idCounter++
@@ -441,13 +437,16 @@ function loadEsercizi(data) {
         id: e.id || generateId('loaded_'),
         fromCatalogo: false,
         elementi: (e.elementi || []).map(el => ({
-          type: el.tipo ?? el.type,
+          tipo: el.tipo ?? el.type ?? 'unknown',
           x: el.x ?? null,
           y: el.y ?? null,
-          color: el.colore ?? el.color ?? '#3b82f6',
-          num: el.numero ?? el.num ?? null,
+          colore: el.colore ?? el.color ?? '#3b82f6',
+          numero: el.numero ?? el.num ?? null,
           size: el.size ?? 28,
           w: el.w ?? null,
+          h: el.h ?? null,
+          scaleX: el.scaleX ?? null,
+          scaleY: el.scaleY ?? null,
           rotazione: el.rotazione ?? 0,
           length: el.length ?? null,
           wavy: el.wavy ?? false,
@@ -504,7 +503,7 @@ function drawCatalogoPreviews() {
     const isBlank = !ex.campo_con_righe
 
     if (isBlank) {
-      ctx.fillStyle = '#1a2535'
+      ctx.fillStyle = '#2d8a4e'
       ctx.fillRect(0, 0, W, H)
       return
     }
@@ -533,9 +532,9 @@ function drawCatalogoPreviews() {
     ctx.moveTo(fx + fw / 2, fy)
     ctx.lineTo(fx + fw / 2, fy + fh)
     ctx.stroke()
-    ctx.beginPath()
-    ctx.arc(fx + fw / 2, fy + fh / 2, fh * 0.146, 0, Math.PI * 2)
-    ctx.stroke()
+ctx.beginPath()
+        ctx.arc(fx + fw / 2, fy + fh / 2, fh * 0.1346, 0, Math.PI * 2)
+        ctx.stroke()
     ctx.beginPath()
     ctx.arc(fx + fw / 2, fy + fh / 2, H * 0.012, 0, Math.PI * 2)
     ctx.fillStyle = 'rgba(255,255,255,0.88)'
@@ -716,6 +715,9 @@ function selezionaDaCatalogo(ex) {
       num: el.numero ?? el.num ?? null,
       size: el.size ?? 28,
       w: el.w ?? null,
+      h: el.h ?? null,
+      scaleX: el.scaleX ?? null,
+      scaleY: el.scaleY ?? null,
       rotazione: el.rotazione ?? 0,
       length: el.length ?? null,
       wavy: el.wavy ?? false,
@@ -734,9 +736,10 @@ function selezionaDaCatalogo(ex) {
 }
 
 function addEsercizio() {
-  esercizi.value.push({ id: generateId(), ordine: esercizi.value.length + 1, titolo: '', descrizione: '', focus: '', campo_con_righe: true, elementi: [] })
+  esercizi.value.push({ id: generateId(), ordine: esercizi.value.length + 1, titolo: '', descrizione: '', focus: '', campo_con_righe: false, elementi: [] })
   selectedExercise.value = esercizi.value[esercizi.value.length - 1]
   hasChanges.value = true
+  debouncedSave()
 }
 
 function deleteEsercizio(ex) { 
@@ -748,16 +751,9 @@ function deleteEsercizio(ex) {
   saveDataToServer()
 }
 
-function saveCurrentExercise() {
-  if (esercizi.value.length === 0) return
-  if (saveDebounceTimer) {
-    clearTimeout(saveDebounceTimer)
-    saveDebounceTimer = null
-  }
-  saveDataToServer()
-}
 
-function exportPdf() {
+
+async function exportPdf() {
   const doc = new jsPDF('portrait', 'mm', 'a4')
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -841,28 +837,367 @@ function exportPdf() {
       y += descLines.length * 5.5
     }
 
-    // Canvas snapshot - immagine grande
+    // Canvas snapshot - disegna il campo su un canvas nascosto
     y += 5
-    if (ex.elementi && ex.elementi.length > 0) {
-      const card = document.querySelector(`.esercizio-card[data-ex-id="${ex.id}"]`)
-      if (card) {
-        const canvas = card.querySelector('canvas')
-        if (canvas) {
-          try {
-            const imgData = canvas.toDataURL('image/png')
-            const availableH = pageHeight - y - 10
-            const maxW = pageWidth - (margin * 2)
-            const maxH = availableH
-            const ratio = Math.min(maxW / canvas.width, maxH / canvas.height, 1)
-            const imgW = canvas.width * ratio
-            const imgH = canvas.height * ratio
-            doc.addImage(imgData, 'PNG', margin, y, imgW, imgH)
-          } catch (e) {
-            console.warn('Errore rendering canvas nel PDF:', e)
-          }
-        }
+    await nextTick()
+    
+    const canvasWidth = 800
+    const canvasHeight = Math.round(canvasWidth * 68 / 105)
+    const exportCanvas = document.createElement('canvas')
+    exportCanvas.width = canvasWidth
+    exportCanvas.height = canvasHeight
+    const ctx = exportCanvas.getContext('2d')
+    
+    // Sfondo
+    const isBlank = ex.campo_con_righe === false
+    ctx.fillStyle = isBlank ? '#2d8a4e' : '#1a2535'
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+    
+    // Campo da calcio
+    const fieldMode = ex.campo_con_righe === 'half' ? 'half' : (ex.campo_con_righe === false ? 'blank' : 'full')
+    const pad = canvasHeight * 0.06
+    const fw = canvasWidth - pad * 2
+    const fh = canvasHeight - pad * 2
+    const fx = pad
+    const fy = pad
+
+    if (!isBlank) {
+      // Strisce verdi
+      const stripeCount = 11
+      const sw = canvasWidth / stripeCount
+      for (let i = 0; i < stripeCount; i++) {
+        ctx.fillStyle = i % 2 === 0 ? '#2d5a1b' : '#346b20'
+        ctx.fillRect(i * sw, 0, sw, canvasHeight)
+      }
+      
+      ctx.strokeStyle = 'rgba(255,255,255,0.88)'
+      ctx.lineWidth = Math.max(2, canvasHeight * 0.005)
+      ctx.lineCap = 'round'
+      ctx.strokeRect(fx, fy, fw, fh)
+      
+      // Linea di metà campo
+      ctx.beginPath()
+      ctx.moveTo(fx + fw / 2, fy)
+      ctx.lineTo(fx + fw / 2, fy + fh)
+      ctx.stroke()
+      
+      // Cerchio di centrocampo
+      ctx.beginPath()
+      ctx.arc(fx + fw / 2, fy + fh / 2, fh * 0.146, 0, Math.PI * 2)
+      ctx.stroke()
+      
+      // Punto di centrocampo
+      ctx.beginPath()
+      ctx.arc(fx + fw / 2, fy + fh / 2, canvasHeight * 0.008, 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(255,255,255,0.88)'
+      ctx.fill()
+      
+      // Area grande e piccola (solo campo intero)
+      if (fieldMode === 'full') {
+        const paH = fh * 0.384
+        const paW = fw * 0.157
+        const paY = fy + (fh - paH) / 2
+        const gaH = fh * 0.27
+        const gaW = fw * 0.052
+        const gaY = fy + (fh - gaH) / 2
+        
+        ctx.strokeRect(fx, paY, paW, paH)
+        ctx.strokeRect(fx, gaY, gaW, gaH)
+        ctx.strokeRect(fx + fw - paW, paY, paW, paH)
+        ctx.strokeRect(fx + fw - gaW, gaY, gaW, gaH)
+        
+        // Arci di rigore
+        ctx.beginPath()
+        ctx.arc(fx + fw * 0.105, fy + fh / 2, fh * 0.1346, -0.93, 0.93)
+        ctx.stroke()
+        ctx.beginPath()
+        ctx.arc(fx + fw * 0.895, fy + fh / 2, fh * 0.1346, Math.PI - 0.93, Math.PI + 0.93)
+        ctx.stroke()
+        
+        // Punti di rigore
+        ctx.beginPath()
+        ctx.arc(fx + fw * 0.105, fy + fh / 2, canvasHeight * 0.006, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.beginPath()
+        ctx.arc(fx + fw * 0.895, fy + fh / 2, canvasHeight * 0.006, 0, Math.PI * 2)
+        ctx.fill()
+        
+        // Porte
+        const gH = fh * 0.11
+        const gW = fw * 0.024
+        const gY = fy + (fh - gH) / 2
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)'
+        ctx.lineWidth = 2
+        ctx.strokeRect(fx - gW, gY, gW, gH)
+        ctx.strokeRect(fx + fw, gY, gW, gH)
+      } else {
+        // Metà campo
+        const paH2 = fh * 0.384
+        const paW2 = fw * 0.157
+        const paY2 = fy + (fh - paH2) / 2
+        const gaH2 = fh * 0.27
+        const gaW2 = fw * 0.052
+        const gaY2 = fy + (fh - gaH2) / 2
+        
+        ctx.strokeRect(fx + fw - paW2, paY2, paW2, paH2)
+        ctx.strokeRect(fx + fw - gaW2, gaY2, gaW2, gaH2)
+        
+        const gH2 = fh * 0.11
+        const gW2 = fw * 0.024
+        const gY2 = fy + (fh - gH2) / 2
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)'
+        ctx.lineWidth = 2
+        ctx.strokeRect(fx + fw, gY2, gW2, gH2)
       }
     }
+    
+    // Disegna elementi - coordinate percentuali relative al campo da gioco (0-100%)
+    const elementi = ex.elementi || []
+    if (elementi.length > 0) {
+      const pdfFx = isBlank ? 0 : fx
+      const pdfFy = isBlank ? 0 : fy
+      const pdfFw = isBlank ? canvasWidth : fw
+      const pdfFh = isBlank ? canvasHeight : fh
+const toPdfX = (xp) => pdfFx + (xp / 100) * pdfFw
+       const toPdfY = (yp) => pdfFy + (yp / 100) * pdfFh
+       const baseScale = pdfFw / 650
+       elementi.forEach(el => {
+        const ex_ = toPdfX(el.x || 0)
+        const ey = toPdfY(el.y || 0)
+        const ex1 = toPdfX(el.x1 || 0)
+        const ey1 = toPdfY(el.y1 || 0)
+        const ex2 = toPdfX(el.x2 || 0)
+        const ey2 = toPdfY(el.y2 || 0)
+        const color = el.colore || el.color || '#3b82f6'
+        const rotation = el.rotazione || 0
+const sX = (el.scaleX || 1) * baseScale
+         const sY = (el.scaleY || 1) * baseScale
+        
+        if (el.tipo === 'player' || el.tipo === 'player-bib' || el.tipo === 'player-jolly' || el.tipo === 'gk') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          const r = 16
+          if (el.tipo === 'player-jolly') {
+            // Diamante
+            ctx.beginPath()
+            ctx.moveTo(0, -r)
+            ctx.lineTo(r, 0)
+            ctx.lineTo(0, r)
+            ctx.lineTo(-r, 0)
+            ctx.closePath()
+            ctx.strokeStyle = color
+            ctx.lineWidth = 2.5
+            ctx.stroke()
+          } else {
+            // Cerchio
+            ctx.beginPath()
+            ctx.arc(0, 0, r, 0, Math.PI * 2)
+            ctx.strokeStyle = color
+            ctx.lineWidth = 2.5
+            ctx.stroke()
+            if (el.tipo === 'player-bib') {
+              ctx.fillStyle = color
+              ctx.fill()
+            }
+          }
+          // Portiere: lettera P
+          if (el.tipo === 'gk') {
+            ctx.fillStyle = color
+            ctx.font = 'bold 12px sans-serif'
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.fillText('P', 0, 1)
+          }
+          ctx.restore()
+        } else if (el.tipo === 'ball') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          ctx.beginPath()
+          ctx.arc(0, 0, 10, 0, Math.PI * 2)
+          ctx.strokeStyle = color
+          ctx.lineWidth = 2
+          ctx.stroke()
+          ctx.beginPath()
+          ctx.arc(0, 0, 3, 0, Math.PI * 2)
+          ctx.fillStyle = color
+          ctx.fill()
+          ctx.restore()
+        } else if (el.tipo === 'cone') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          // Triangolo equilatero
+          const s = 14
+          ctx.beginPath()
+          ctx.moveTo(0, -s)
+          ctx.lineTo(-s * Math.cos(Math.PI / 6), s * Math.sin(Math.PI / 6))
+          ctx.lineTo(s * Math.cos(Math.PI / 6), s * Math.sin(Math.PI / 6))
+          ctx.closePath()
+          ctx.fillStyle = color
+          ctx.fill()
+          ctx.restore()
+        } else if (el.tipo === 'coord') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          // Rettangolo giallo
+          ctx.fillStyle = color
+          ctx.beginPath()
+          ctx.roundRect(-16, -3, 32, 6, 2)
+          ctx.fill()
+          // Cerchi ai lati
+          ctx.fillStyle = color
+          ctx.beginPath()
+          ctx.arc(-16, 0, 4, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.beginPath()
+          ctx.arc(16, 0, 4, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.restore()
+        } else if (el.tipo === 'pole') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          // Ombra
+          ctx.fillStyle = color
+          ctx.beginPath()
+          ctx.ellipse(0, 12, 6, 3, 0, 0, Math.PI * 2)
+          ctx.fill()
+          // Asta rossa
+          ctx.fillStyle = color
+          ctx.fillRect(-2.5, -12, 5, 24)
+          ctx.restore()
+        } else if (el.tipo === 'goal') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          const w = 28, h = 14
+          ctx.strokeStyle = '#fff'
+          ctx.lineWidth = 3
+          // Linea di porta
+          ctx.beginPath()
+          ctx.moveTo(-w, -h)
+          ctx.lineTo(-w, h)
+          ctx.stroke()
+          ctx.beginPath()
+          ctx.moveTo(w, -h)
+          ctx.lineTo(w, h)
+          ctx.stroke()
+          // Attraverso
+          ctx.beginPath()
+          ctx.moveTo(-w, -h)
+          ctx.lineTo(w, -h)
+          ctx.stroke()
+          // Rete (linee orizzontali)
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+          ctx.lineWidth = 0.8
+          for (let i = -h + 5; i < h; i += 5) {
+            ctx.beginPath()
+            ctx.moveTo(-w, i)
+            ctx.lineTo(w, i)
+            ctx.stroke()
+          }
+          // Linee verticali rete
+          for (let i = -w + 9; i < w; i += 9) {
+            ctx.beginPath()
+            ctx.moveTo(i, -h)
+            ctx.lineTo(i, h)
+            ctx.stroke()
+          }
+          ctx.restore()
+        } else if (['pass', 'dribble', 'wallpass', 'shot', 'movement', 'line'].includes(el.tipo)) {
+          ctx.save()
+          const dx = ex2 - ex1
+          const dy = ey2 - ey1
+          const len = Math.sqrt(dx * dx + dy * dy)
+          if (len > 0) {
+            const angle = Math.atan2(dy, dx)
+            ctx.translate(ex1, ey1)
+            ctx.rotate(angle)
+            ctx.scale(baseScale, baseScale)
+
+            ctx.strokeStyle = color
+            ctx.lineWidth = Math.max(2.5, (el.w || 2) * 0.7)
+            if (el.tipo === 'dribble' || el.tipo === 'movement') {
+              ctx.setLineDash([6 / baseScale, 4 / baseScale])
+            } else {
+              ctx.setLineDash([])
+            }
+
+            // Linea
+            ctx.beginPath()
+            ctx.moveTo(-len / 2 / baseScale, 0)
+            ctx.lineTo(len / 2 / baseScale, 0)
+            ctx.stroke()
+            ctx.setLineDash([])
+
+            // Freccia
+            const aLen = 14
+            const halfLen = len / 2 / baseScale
+            ctx.fillStyle = color
+            ctx.beginPath()
+            ctx.moveTo(halfLen, 0)
+            ctx.lineTo(halfLen - aLen, -aLen / 2)
+            ctx.lineTo(halfLen - aLen, aLen / 2)
+            ctx.closePath()
+            ctx.fill()
+
+            // Wallpass: seconda freccia
+            if (el.tipo === 'wallpass') {
+              ctx.beginPath()
+              ctx.moveTo(-halfLen, 0)
+              ctx.lineTo(-halfLen + aLen, -aLen / 2)
+              ctx.lineTo(-halfLen + aLen, aLen / 2)
+              ctx.closePath()
+              ctx.fill()
+            }
+
+            // Shot: linea verticale alla fine
+            if (el.tipo === 'shot') {
+              ctx.strokeStyle = color
+              ctx.lineWidth = 2.5
+              ctx.beginPath()
+              ctx.moveTo(halfLen + 6, -10)
+              ctx.lineTo(halfLen + 6, 10)
+              ctx.stroke()
+            }
+          }
+          ctx.restore()
+        } else if (el.tipo === 'text') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          ctx.fillStyle = color
+          ctx.font = '16px sans-serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText(el.text || 'Testo', 0, 0)
+          ctx.restore()
+        }
+      })
+    }
+    
+    // Aggiungi immagine al PDF
+    const imgData = exportCanvas.toDataURL('image/png')
+    const availableH = pageHeight - y - 10
+    const maxW = pageWidth - (margin * 2)
+    const imgWidth = canvasWidth
+    const imgHeight = canvasHeight
+    const ratio = Math.min(maxW / imgWidth, availableH / imgHeight, 1)
+    const imgW = imgWidth * ratio
+    const imgH = imgHeight * ratio
+    const imgX = margin + (maxW - imgW) / 2
+    doc.addImage(imgData, 'PNG', imgX, y, imgW, imgH)
+    console.log('Export: added image to PDF for idx', idx, 'size:', imgW.toFixed(1) + 'x' + imgH.toFixed(1))
   }
 
   const categoriaNome = categoriaAttiva.value?.nome || 'Categoria'
@@ -880,6 +1215,9 @@ function saveEsercizio(ex) {
 function updateElementi(ex, newElements) {
   const idx = esercizi.value.findIndex(e => e.id === ex.id)
   if (idx !== -1) {
+    const current = JSON.stringify(esercizi.value[idx].elementi || [])
+    const incoming = JSON.stringify(newElements || [])
+    if (current === incoming) return
     esercizi.value[idx].elementi = newElements
   }
   hasChanges.value = true
@@ -897,37 +1235,49 @@ function debouncedSave() {
 
 function saveDataToServer() {
   if (!selectedDay.value) return
+  
+  if (saveLoading.value) {
+    console.log('[Allenamenti] Salvataggio in corso, skip')
+    return
+  }
+  
+  saveLoading.value = true
 
   const payload = {
     categoria_id: categoriaId,
     data: selectedDay.value.data,
-    esercizi: esercizi.value.map((e, idx) => ({
-      ordine: idx + 1,
-      titolo: e.titolo || '',
-      descrizione: e.descrizione || '',
-      focus: e.focus || '',
-      spazio: e.spazio || '',
-      tempo: e.tempo || '',
-      campo_con_righe: e.campo_con_righe !== false,
-      elementi: (e.elementi || []).map(el => ({
-        tipo:      el.tipo      ?? el.type   ?? '',
-        x:         el.x        ?? null,
-        y:         el.y        ?? null,
-        rotazione: el.rotazione ?? 0,
-        colore:    el.colore    ?? el.color  ?? null,
-        numero:    el.numero    ?? el.num    ?? null,
-        size:      el.size      ?? null,
-        w:         el.w        ?? null,
-        x1:        el.x1       ?? null,
-        y1:        el.y1       ?? null,
-        x2:        el.x2       ?? null,
-        y2:        el.y2       ?? null,
-        points:    el.points   ?? null,
-        text:      el.text     ?? null,
-        length:    el.length   ?? null,
-        wavy:      el.wavy     ?? false,
-      }))
-    }))
+    esercizi: esercizi.value.map((e, idx) => {
+      return {
+        ordine: idx + 1,
+        titolo: e.titolo || '',
+        descrizione: e.descrizione || '',
+        focus: e.focus || '',
+        spazio: e.spazio || '',
+        tempo: e.tempo || '',
+        campo_con_righe: e.campo_con_righe !== false,
+        elementi: (e.elementi || []).map(el => ({
+          tipo:      el.tipo      ?? el.type   ?? '',
+          x:         el.x        ?? null,
+          y:         el.y        ?? null,
+          rotazione: el.rotazione ?? 0,
+          colore:    el.colore    ?? el.color  ?? null,
+          numero:    el.numero    ?? el.num    ?? null,
+          size:      el.size      ?? null,
+          w:         el.w        ?? null,
+          h:         el.h        ?? null,
+          scaleX:    el.scaleX   ?? null,
+          scaleY:    el.scaleY   ?? null,
+          x1:        el.x1       ?? null,
+          y1:        el.y1       ?? null,
+          x2:        el.x2       ?? null,
+          y2:        el.y2       ?? null,
+          points:    el.points   ?? null,
+          text:      el.text     ?? null,
+          length:    el.length   ?? null,
+          wavy:      el.wavy     ?? false,
+        }))
+      }
+    })
   }
 
   saveAllenamenti(categoriaId, payload)
@@ -939,7 +1289,9 @@ function saveDataToServer() {
       hasChanges.value = true
       const detail = err.response?.data?.detail || 'Errore durante il salvataggio. Riprova.'
       saveError.value = detail
-      console.error('Errore salvataggio:', err)
+    })
+    .finally(() => {
+      saveLoading.value = false
     })
 }
 
@@ -996,6 +1348,9 @@ function confirmSaveSelectedToCatalogo() {
         numero: el.numero ?? el.num ?? null,
         size: el.size ?? null,
         w: el.w ?? null,
+        h: el.h ?? null,
+        scaleX: el.scaleX ?? null,
+        scaleY: el.scaleY ?? null,
         x1: el.x1 ?? null,
         y1: el.y1 ?? null,
         x2: el.x2 ?? null,
@@ -1046,8 +1401,25 @@ onMounted(async () => {
   window.addEventListener('resize', checkRotate)
 })
 
-onBeforeRouteLeave(() => {
+onBeforeRouteLeave(async () => {
   if (hasChanges.value) {
+    // Recupera elementi freschi dall'iframe prima di salvare
+    const selectedIndex = esercizi.value.findIndex(ex => ex.id === selectedExercise.value?.id)
+    if (selectedIndex !== -1 && tacticalBoardRefs.value[selectedIndex]) {
+      try {
+        const elements = await tacticalBoardRefs.value[selectedIndex].requestElements()
+        if (elements) {
+          esercizi.value[selectedIndex].elementi = elements
+        }
+      } catch (err) {
+        console.error('[Allenamenti] Errore recupero elementi:', err)
+      }
+    }
+    // Cancella debounce e salva subito
+    if (saveDebounceTimer) {
+      clearTimeout(saveDebounceTimer)
+      saveDebounceTimer = null
+    }
     saveDataToServer()
   }
 })
@@ -1414,7 +1786,7 @@ onUnmounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 .esercizi-list { display: flex; flex-direction: column; gap: 2rem; }
-.esercizio-card { background: #1a1a1a; border-radius: 12px; padding: 1rem; width: 100%; box-sizing: border-box; }
+.esercizio-card { background: #1a1a1a; border-radius: 12px; padding: 0; width: 100%; box-sizing: border-box; }
 .esercizio-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; flex-shrink: 0; }
 .esercizio-num { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--color-primary); border-radius: 50%; color: white; font-weight: bold; font-size: 1rem; flex-shrink: 0; }
 .esercizio-titolo { flex: 1; min-width: 200px; background: #252525; border: 1px solid #333; border-radius: 8px; padding: 0.6rem 0.8rem; color: #fff; font-size: 1rem; }
@@ -1438,11 +1810,12 @@ onUnmounted(() => {
 .meta-field input::placeholder { color: #555; }
 
 .board-area {
-  margin-top: 0.75rem;
-  border-radius: 8px;
+  margin-top: 0;
   overflow: hidden;
-  border: 1px solid #333;
-  min-height: 300px;
+  height: 95vh;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
 }
 
 .no-esercizi { text-align: center; padding: 2rem; color: #666; }
