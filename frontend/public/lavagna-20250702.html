@@ -917,6 +917,13 @@
         var selected=transformer.nodes();
         if(selected.length){
           selected.forEach(function(node){
+            var tipo=node.getAttr('dataElement');
+            var oldColor=null;
+            if(tipo==='player'||tipo==='player-bib'||tipo==='player-jolly'){
+              node.children.forEach(function(ch){
+                if(!oldColor&&ch.stroke){var s=ch.stroke();if(s&&s!=='transparent'&&typeof s==='string'&&s.indexOf('rgba')===-1){oldColor=s;}}
+              });
+            }
             var shapes=node.children?node.children:[node];
             shapes.forEach(function(shape){
               if(!shape.stroke)return;
@@ -925,15 +932,33 @@
               if(stroke&&stroke!=='transparent'&&!(typeof stroke==='string'&&stroke.indexOf('rgba')!==-1))shape.stroke(c);
               if(fill&&fill!=='transparent'&&typeof fill==='string'&&fill.indexOf('rgba')===-1)shape.fill(c);
             });
-            // Assegna il prossimo numero disponibile per il nuovo colore
-            var tipo=node.getAttr('dataElement');
             if(tipo==='player'||tipo==='player-bib'||tipo==='player-jolly'){
               var ck=tipo+'_'+c;
               var nextNum=(playerCounters[ck]||0)+1;
               playerCounters[ck]=nextNum;
               node.children.forEach(function(ch){
-                if(ch.getClassName&&ch.getClassName()==='Text'&&!ch.getAttr('fixedFill')){ch.text(String(nextNum))}
+                if(ch.getClassName&&ch.getClassName()==='Text'){ch.text(String(nextNum))}
               });
+              if(oldColor&&oldColor!==c){
+                var oldCk=tipo+'_'+oldColor;
+                var maxNum=0;
+                for(var ei=0;ei<elementLayer.children.length;ei++){
+                  var child=elementLayer.children[ei];
+                  if(child===transformer||child===node)continue;
+                  if(child.getAttr('dataElement')!==tipo)continue;
+                  var cc=null;
+                  child.children.forEach(function(ch){
+                    if(!cc&&ch.stroke){var s=ch.stroke();if(s&&s!=='transparent'&&typeof s==='string'&&s.indexOf('rgba')===-1){cc=s;}}
+                  });
+                  if(cc!==oldColor)continue;
+                  child.children.forEach(function(ch){
+                    if(ch.getClassName&&ch.getClassName()==='Text'){
+                      var n=parseInt(ch.text());if(n>maxNum)maxNum=n;
+                    }
+                  });
+                }
+                playerCounters[oldCk]=maxNum;
+              }
             }
           });
           elementLayer.batchDraw();
