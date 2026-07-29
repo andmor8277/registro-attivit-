@@ -192,7 +192,7 @@ const colonneDisponibili = [
   { key: 'gruppo', label: 'Gruppo', gdpr: false },
 ]
 
-const colonneSelezionate = ref(['matricola', 'numero_maglia', 'gruppo'])
+const colonneSelezionate = ref([])
 
 const colonneVisibili = computed(() => {
   const keys = colonneSelezionate.value
