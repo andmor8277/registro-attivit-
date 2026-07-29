@@ -38,7 +38,7 @@
     </header>
 
     <div class="allenamenti-body">
-      <div class="month-nav-pill">
+      <div v-if="!selectedDay" class="month-nav-pill">
         <button class="btn-nav-mese" @click="prevMonth">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
             <polyline points="15 18 9 12 15 6"/>
@@ -52,7 +52,7 @@
         </button>
       </div>
 
-      <div class="weeks-grid">
+      <div v-if="!selectedDay" class="weeks-grid">
         <div v-for="week in weeksInMonth" :key="week.num" class="week-card" :class="{ active: selectedWeek?.num === week.num }" @click="selectWeek(week)">
           <div class="week-header">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
