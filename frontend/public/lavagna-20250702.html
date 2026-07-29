@@ -344,34 +344,34 @@
         if(fieldX==null||fieldY==null){var fp=toField(child.x(),child.y());fieldX=fp.x;fieldY=fp.y}
         var el={tipo:tipo||'unknown',x:fieldX,y:fieldY,rotazione:child.rotation()||0,colore:elColor,scaleX:child.scaleX(),scaleY:child.scaleY()};
         if(tipo==='player'||tipo==='player-bib'||tipo==='player-jolly'||tipo==='gk'){
-          el.size=32;
+          el.size=44;
           child.children.forEach(function(ch){
             if(ch.getClassName&&ch.getClassName()==='Text'&&tipo!=='gk'){var n=parseInt(ch.text());if(n)el.numero=n}
           });
         }else if(tipo==='ball'){
-          el.size=20;
+          el.size=28;
         }else if(tipo==='cone'){
-          el.size=28;
+          el.size=36;
         }else if(tipo==='disc'){
-          el.w=28;el.h=18;
+          el.w=36;el.h=24;
         }else if(tipo==='flag'){
-          el.h=32;
+          el.h=38;
         }else if(tipo==='ring'){
-          el.size=28;
+          el.size=36;
         }else if(tipo==='ladder'){
-          el.w=44;el.h=14;
+          el.w=56;el.h=17;
         }else if(tipo==='hurdle'){
-          el.w=34;el.h=14;
+          el.w=44;el.h=16;
         }else if(tipo==='mannequin'){
-          el.w=18;el.h=47;
+          el.w=23;el.h=60;
         }else if(tipo==='zone'){
-          el.w=120;el.h=80;
+          el.w=150;el.h=100;
         }else if(tipo==='coord'){
-          el.w=32;el.h=6;
+          el.w=40;el.h=8;
         }else if(tipo==='pole'){
-          el.w=5;el.h=36;
+          el.w=6;el.h=36;
         }else if(tipo==='goal'){
-          el.w=56;el.h=28;
+          el.w=72;el.h=36;
         }else if(tipo==='pass'||tipo==='dribble'||tipo==='wallpass'||tipo==='shot'||tipo==='movement'){
           var ox1=child.getAttr('origX1'),ox2=child.getAttr('origX2');
           if(ox1!=null&&ox2!=null){el.x1=ox1;el.y1=child.getAttr('origY1');el.x2=ox2;el.y2=child.getAttr('origY2');el.length=Math.sqrt((ox2-ox1)*(ox2-ox1)+(child.getAttr('origY2')-child.getAttr('origY1'))*(child.getAttr('origY2')-child.getAttr('origY1')))}
@@ -630,42 +630,42 @@
   }
 
   function createPlayer(type,x,y,num,counterColor){
-    var g=new Konva.Group({x:x,y:y,draggable:true}),r=16,isFilled=type==='player-bib',isDiamond=type==='player-jolly',isGK=type==='gk';
+    var g=new Konva.Group({x:x,y:y,draggable:true}),r=22,isFilled=type==='player-bib',isDiamond=type==='player-jolly',isGK=type==='gk';
     g.setAttr('dataElement',type);
     var ck=type+'_'+(counterColor||currentColor);
     if(num==null){playerCounters[ck]=(playerCounters[ck]||0)+1;num=playerCounters[ck]}
     else{playerCounters[ck]=Math.max(playerCounters[ck]||0,num)}
     if(isDiamond){g.add(new Konva.RegularPolygon({sides:4,radius:r,rotation:45,stroke:currentColor,strokeWidth:2.5}))}
     else{g.add(new Konva.Circle({radius:r,stroke:currentColor,strokeWidth:2.5,fill:isFilled?currentColor:'transparent'}))}
-    if(isGK){g.add(new Konva.Text({text:'P',width:r*2,height:r*2,fontFamily:'Arial',fontSize:18,fontWeight:'bold',fill:currentColor,x:-r,y:-r,align:'center',verticalAlign:'middle',listening:false}))}
+    if(isGK){g.add(new Konva.Text({text:'P',width:r*2,height:r*2,fontFamily:'Arial',fontSize:22,fontWeight:'bold',fill:currentColor,x:-r,y:-r,align:'center',verticalAlign:'middle',listening:false}))}
     else{
-      var txt=new Konva.Text({text:String(num),width:r*2,height:r*2,fontFamily:'Arial',fontSize:14,fontWeight:'bold',fill:isFilled?'#ffffff':currentColor,x:-r,y:-r,align:'center',verticalAlign:'middle',listening:false});
+      var txt=new Konva.Text({text:String(num),width:r*2,height:r*2,fontFamily:'Arial',fontSize:18,fontWeight:'bold',fill:isFilled?'#ffffff':currentColor,x:-r,y:-r,align:'center',verticalAlign:'middle',listening:false});
       if(isFilled)txt.setAttr('fixedFill',true);
       g.add(txt);
     }
     return g;
   }
-  function createBall(x,y){var g=new Konva.Group({x:x,y:y,draggable:true});g.setAttr('dataElement','ball');g.add(new Konva.Circle({radius:10,stroke:currentColor,strokeWidth:2}));g.add(new Konva.Circle({radius:3,fill:currentColor}));return g}
+function createBall(x,y){var g=new Konva.Group({x:x,y:y,draggable:true});g.setAttr('dataElement','ball');g.add(new Konva.Circle({radius:14,stroke:currentColor,strokeWidth:2}));g.add(new Konva.Circle({radius:4,fill:currentColor}));return g}
   function createCone(x,y){
     var g=new Konva.Group({x:x,y:y,draggable:true});
     g.setAttr('dataElement','cone');
-    g.add(new Konva.Ellipse({radiusX:12,radiusY:4,y:6,fill:currentColor}));
-    g.add(new Konva.Line({points:[-8,6,-3,-10,3,-10,8,6],closed:true,fill:currentColor}));
-    g.add(new Konva.Line({points:[-5,-2,5,-2],stroke:'rgba(255,255,255,0.35)',strokeWidth:2,listening:false}));
+    g.add(new Konva.Ellipse({radiusX:16,radiusY:5,y:7,fill:currentColor}));
+    g.add(new Konva.Line({points:[-10,7,-4,-12,4,-12,10,7],closed:true,fill:currentColor}));
+    g.add(new Konva.Line({points:[-6,-3,6,-3],stroke:'rgba(255,255,255,0.35)',strokeWidth:2,listening:false}));
     return g;
   }
   function createDisc(x,y){
     var g=new Konva.Group({x:x,y:y,draggable:true});
     g.setAttr('dataElement','disc');
-    g.add(new Konva.Ellipse({radiusX:14,radiusY:9,fill:currentColor}));
-    g.add(new Konva.Ellipse({radiusX:4.5,radiusY:2.5,y:-4.5,fill:'rgba(0,0,0,0.3)',listening:false}));
+    g.add(new Konva.Ellipse({radiusX:18,radiusY:12,fill:currentColor}));
+    g.add(new Konva.Ellipse({radiusX:6,radiusY:3,y:-6,fill:'rgba(0,0,0,0.3)',listening:false}));
     return g;
   }
   function createFlag(x,y){
     var g=new Konva.Group({x:x,y:y,draggable:true});
     g.setAttr('dataElement','flag');
-    g.add(new Konva.Line({points:[1.5,-30,16,-25.5,1.5,-21],closed:true,fill:currentColor}));
-    var poleRect=new Konva.Rect({x:-1.5,y:-30,width:3,height:30,fill:'#cbd5e1'});
+    g.add(new Konva.Line({points:[1.5,-36,20,-30,1.5,-24],closed:true,fill:currentColor}));
+    var poleRect=new Konva.Rect({x:-1.5,y:-36,width:3,height:36,fill:'#cbd5e1'});
     poleRect.setAttr('fixedFill',true);
     g.add(poleRect);
     return g;
@@ -673,59 +673,58 @@
   function createRing(x,y){
     var g=new Konva.Group({x:x,y:y,draggable:true});
     g.setAttr('dataElement','ring');
-    g.add(new Konva.Circle({radius:14,stroke:currentColor,strokeWidth:4}));
+    g.add(new Konva.Circle({radius:18,stroke:currentColor,strokeWidth:5}));
     return g;
   }
   function createLadder(x,y){
     var g=new Konva.Group({x:x,y:y,draggable:true});
     g.setAttr('dataElement','ladder');
-    g.add(new Konva.Rect({x:-22,y:-7,width:44,height:2,fill:currentColor}));
-    g.add(new Konva.Rect({x:-22,y:5,width:44,height:2,fill:currentColor}));
-    [-16.5,-5.5,5.5,16.5].forEach(function(rx){g.add(new Konva.Rect({x:rx-1,y:-7,width:2,height:14,fill:currentColor}))});
+    g.add(new Konva.Rect({x:-28,y:-8.5,width:56,height:3,fill:currentColor}));
+    g.add(new Konva.Rect({x:-28,y:5.5,width:56,height:3,fill:currentColor}));
+    [-21,-7,7,21].forEach(function(rx){g.add(new Konva.Rect({x:rx-1.5,y:-8.5,width:3,height:17,fill:currentColor}))});
     return g;
   }
   function createHurdle(x,y){
     var g=new Konva.Group({x:x,y:y,draggable:true});
     g.setAttr('dataElement','hurdle');
-    g.add(new Konva.Rect({x:-17,y:-10,width:34,height:2.5,fill:currentColor}));
-    g.add(new Konva.Rect({x:-17,y:-7.5,width:2.5,height:10,fill:currentColor}));
-    g.add(new Konva.Rect({x:14.5,y:-7.5,width:2.5,height:10,fill:currentColor}));
-    g.add(new Konva.Ellipse({x:-15.75,y:3.5,radiusX:4,radiusY:1.5,fill:currentColor}));
-    g.add(new Konva.Ellipse({x:15.75,y:3.5,radiusX:4,radiusY:1.5,fill:currentColor}));
+    g.add(new Konva.Rect({x:-22,y:-13,width:44,height:3,fill:currentColor}));
+    g.add(new Konva.Rect({x:-22,y:-10,width:3,height:13,fill:currentColor}));
+    g.add(new Konva.Rect({x:19,y:-10,width:3,height:13,fill:currentColor}));
+    g.add(new Konva.Ellipse({x:-20.5,y:4.5,radiusX:5,radiusY:2,fill:currentColor}));
+    g.add(new Konva.Ellipse({x:20.5,y:4.5,radiusX:5,radiusY:2,fill:currentColor}));
     return g;
   }
-  var MANNEQUIN_PATH='M120 1280 L60 700 L40 400 A100 100 0 0 1 130 300 A80 80 0 0 0 190 180 L170 140 A86 86 0 1 1 330 140 L310 180 A80 80 0 0 0 370 300 A100 100 0 0 1 460 400 L440 700 L380 1280 Z';
   function createMannequin(x,y){
     var g=new Konva.Group({x:x,y:y,draggable:true});
     g.setAttr('dataElement','mannequin');
-    g.add(new Konva.Path({data:MANNEQUIN_PATH,fill:currentColor,scaleX:0.036,scaleY:0.036,x:-9,y:-23.4}));
+    g.add(new Konva.Path({data:MANNEQUIN_PATH,fill:currentColor,scaleX:0.046,scaleY:0.046,x:-11.5,y:-29.9}));
     return g;
   }
   function createZone(x,y){
     var g=new Konva.Group({x:x,y:y,draggable:true});
     g.setAttr('dataElement','zone');
-    g.add(new Konva.Rect({x:-60,y:-40,width:120,height:80,fill:currentColor,opacity:0.25,stroke:currentColor,strokeWidth:1.5,dash:[6,4]}));
+    g.add(new Konva.Rect({x:-75,y:-50,width:150,height:100,fill:currentColor,opacity:0.25,stroke:currentColor,strokeWidth:1.5,dash:[6,4]}));
     return g;
   }
-  function createCoord(x,y){var g=new Konva.Group({x:x,y:y,draggable:true});g.setAttr('dataElement','coord');g.add(new Konva.Rect({width:32,height:6,fill:'#eab308',cornerRadius:2,x:-16,y:-3}));g.add(new Konva.Circle({x:-16,y:0,radius:4,fill:'#ca8a04'}));g.add(new Konva.Circle({x:16,y:0,radius:4,fill:'#ca8a04'}));return g}
-  function createPole(x,y){var g=new Konva.Group({x:x,y:y,draggable:true});g.setAttr('dataElement','pole');g.add(new Konva.Ellipse({radiusX:6,radiusY:3,fill:'#94a3b8',y:12}));g.add(new Konva.Rect({width:5,height:24,fill:'#ef4444',x:-2.5,y:-12}));return g}
+  function createCoord(x,y){var g=new Konva.Group({x:x,y:y,draggable:true});g.setAttr('dataElement','coord');g.add(new Konva.Rect({width:40,height:8,fill:'#eab308',cornerRadius:2,x:-20,y:-4}));g.add(new Konva.Circle({x:-20,y:0,radius:5,fill:'#ca8a04'}));g.add(new Konva.Circle({x:20,y:0,radius:5,fill:'#ca8a04'}));return g}
+  function createPole(x,y){var g=new Konva.Group({x:x,y:y,draggable:true});g.setAttr('dataElement','pole');g.add(new Konva.Ellipse({radiusX:8,radiusY:4,fill:'#94a3b8',y:15}));g.add(new Konva.Rect({width:6,height:30,fill:'#ef4444',x:-3,y:-15}));return g}
   function createGoal(x,y){
-    var g=new Konva.Group({x:x,y:y,draggable:true}),w=28,h=14;
+    var g=new Konva.Group({x:x,y:y,draggable:true}),w=36,h=18;
     g.setAttr('dataElement','goal');
     g.add(new Konva.Rect({x:-w-5,y:-h-5,width:(w+5)*2,height:(h+5)*2,fill:'transparent',listening:true}));
     g.add(new Konva.Line({points:[-w,-h,-w,h],stroke:'#fff',strokeWidth:3}));
     g.add(new Konva.Line({points:[w,-h,w,h],stroke:'#fff',strokeWidth:3}));
     g.add(new Konva.Line({points:[-w,-h,w,-h],stroke:'#fff',strokeWidth:3}));
-    g.add(new Konva.Line({points:[-w,-h+5,w,-h+5],stroke:'rgba(255,255,255,0.3)',strokeWidth:0.8}));
+    g.add(new Konva.Line({points:[-w,-h+6,w,-h+6],stroke:'rgba(255,255,255,0.3)',strokeWidth:0.8}));
     g.add(new Konva.Line({points:[-w,0,w,0],stroke:'rgba(255,255,255,0.3)',strokeWidth:0.8}));
-    g.add(new Konva.Line({points:[-w,h-5,w,h-5],stroke:'rgba(255,255,255,0.3)',strokeWidth:0.8}));
-    g.add(new Konva.Line({points:[-w+9,-h,-w+9,h],stroke:'rgba(255,255,255,0.3)',strokeWidth:0.8}));
+    g.add(new Konva.Line({points:[-w,h-6,w,h-6],stroke:'rgba(255,255,255,0.3)',strokeWidth:0.8}));
+    g.add(new Konva.Line({points:[-w+12,-h,-w+12,h],stroke:'rgba(255,255,255,0.3)',strokeWidth:0.8}));
     g.add(new Konva.Line({points:[0,-h,0,h],stroke:'rgba(255,255,255,0.3)',strokeWidth:0.8}));
-    g.add(new Konva.Line({points:[w-9,-h,w-9,h],stroke:'rgba(255,255,255,0.3)',strokeWidth:0.8}));
+    g.add(new Konva.Line({points:[w-12,-h,w-12,h],stroke:'rgba(255,255,255,0.3)',strokeWidth:0.8}));
     return g;
   }
   function createArrow(x1,y1,x2,y2,dashed){
-    var angle=Math.atan2(y2-y1,x2-x1)*180/Math.PI,len=Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1)),aLen=14;
+    var angle=Math.atan2(y2-y1,x2-x1)*180/Math.PI,len=Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1)),aLen=18;
     var g=new Konva.Group({x:(x1+x2)/2,y:(y1+y2)/2,draggable:true,rotation:angle});
     g.setAttr('dataElement',dashed?'dribble':'pass');
     var f1=toField(x1,y1),f2=toField(x2,y2);
@@ -736,7 +735,7 @@
     return g;
   }
   function createWallPass(x1,y1,x2,y2){
-    var angle=Math.atan2(y2-y1,x2-x1),len=Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1)),aLen=14;
+    var angle=Math.atan2(y2-y1,x2-x1),len=Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1)),aLen=18;
     var g=new Konva.Group({x:(x1+x2)/2,y:(y1+y2)/2,draggable:true,rotation:angle*180/Math.PI});
     g.setAttr('dataElement','wallpass');
     var f1=toField(x1,y1),f2=toField(x2,y2);
@@ -748,7 +747,7 @@
     return g;
   }
   function createShot(x1,y1,x2,y2){
-    var angle=Math.atan2(y2-y1,x2-x1),len=Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1)),aLen=14;
+    var angle=Math.atan2(y2-y1,x2-x1),len=Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1)),aLen=18;
     var g=new Konva.Group({x:(x1+x2)/2,y:(y1+y2)/2,draggable:true,rotation:angle*180/Math.PI});
     g.setAttr('dataElement','shot');
     var f1=toField(x1,y1),f2=toField(x2,y2);
