@@ -25,7 +25,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:elements'])
+const emit = defineEmits(['update:elements', 'update:fieldMode'])
 
 const boardIframe = ref(null)
 const iframeSrc = ref('/lavagna-20250702.html')
@@ -73,6 +73,11 @@ onUnmounted(() => {
 
 function handleMessage(event) {
   if (!boardIframe.value || event.source !== boardIframe.value.contentWindow) return
+
+  if (event.data && event.data.type === 'fieldModeChanged') {
+    emit('update:fieldMode', event.data.mode)
+    return
+  }
 
   if (event.data && event.data.type === 'elementsUpdated') {
     if (isRequesting.value) return

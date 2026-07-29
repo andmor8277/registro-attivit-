@@ -185,7 +185,7 @@ class AllenamentoEsercizio(Base):
     ordine = Column(Integer, nullable=False)
     titolo = Column(String(200), nullable=True)
     descrizione = Column(Text, nullable=True)
-    campo_con_righe = Column(Boolean, default=True)
+    campo_con_righe = Column(String(10), default='full')
     created_at = Column(Date, nullable=True)
 
 class AllenamentoElemento(Base):
@@ -216,7 +216,7 @@ class CatalogoEsercizio(Base):
     spazio = Column(String(50), nullable=True)
     tempo = Column(String(50), nullable=True)
     descrizione = Column(Text, nullable=True)
-    campo_con_righe = Column(Boolean, default=True)
+    campo_con_righe = Column(String(10), default='full')
     elementi = Column(JSONB, default=[])
     creato_da = Column(Integer, nullable=True)
     creato_il = Column(DateTime, nullable=True)

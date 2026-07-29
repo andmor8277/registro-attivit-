@@ -834,6 +834,27 @@ def run_migrations():
                 print(f"Migration warning (liste_torneo): {e}")
                 conn.rollback()
 
+            try:
+                conn.execute(text("""
+                    ALTER TABLE allenamenti_esercizio ALTER COLUMN campo_con_righe TYPE VARCHAR(10)
+                        USING CASE WHEN campo_con_righe IS TRUE THEN 'full' ELSE 'blank' END
+                """))
+                conn.execute(text("""
+                    ALTER TABLE allenamenti_esercizio ALTER COLUMN campo_con_righe SET DEFAULT 'full'
+                """))
+                conn.execute(text("""
+                    ALTER TABLE catalogo_esercizi ALTER COLUMN campo_con_righe TYPE VARCHAR(10)
+                        USING CASE WHEN campo_con_righe IS TRUE THEN 'full' ELSE 'blank' END
+                """))
+                conn.execute(text("""
+                    ALTER TABLE catalogo_esercizi ALTER COLUMN campo_con_righe SET DEFAULT 'full'
+                """))
+                conn.commit()
+                print("Migration: campo_con_righe converted to VARCHAR(10)")
+            except Exception as e:
+                print(f"Migration warning (campo_con_righe): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 

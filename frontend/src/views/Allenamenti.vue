@@ -161,8 +161,9 @@
               <TacticalBoard
                 :ref="(el) => { if (el) tacticalBoardRefs[idx] = el }"
                 :elements="ex.elementi"
-                :field-mode="ex.campo_con_righe === false ? 'blank' : (ex.campo_con_righe === 'half' ? 'half' : 'full')"
+                :field-mode="ex.campo_con_righe === 'blank' ? 'blank' : (ex.campo_con_righe === 'half' ? 'half' : 'full')"
                 @update:elements="(newElements) => updateElementi(ex, newElements)"
+                @update:field-mode="handleFieldModeChange(ex, $event)"
               />
             </div>
           </div>
@@ -500,7 +501,7 @@ function drawCatalogoPreviews() {
     const ctx = canvas.getContext('2d')
     const W = canvas.width
     const H = canvas.height
-    const isBlank = !ex.campo_con_righe
+    const isBlank = ex.campo_con_righe === 'blank'
 
     if (isBlank) {
       ctx.fillStyle = '#2d8a4e'
@@ -705,7 +706,7 @@ function selezionaDaCatalogo(ex) {
     titolo: ex.titolo,
     descrizione: ex.descrizione || '',
     focus: ex.focus || '',
-    campo_con_righe: ex.campo_con_righe !== false,
+    campo_con_righe: ex.campo_con_righe,
     elementi: (ex.elementi || []).map(el => ({
       id: generateId('el_'),
       type: el.tipo ?? el.type ?? '',
@@ -736,7 +737,7 @@ function selezionaDaCatalogo(ex) {
 }
 
 function addEsercizio() {
-  esercizi.value.push({ id: generateId(), ordine: esercizi.value.length + 1, titolo: '', descrizione: '', focus: '', campo_con_righe: false, elementi: [] })
+  esercizi.value.push({ id: generateId(), ordine: esercizi.value.length + 1, titolo: '', descrizione: '', focus: '', campo_con_righe: 'full', elementi: [] })
   selectedExercise.value = esercizi.value[esercizi.value.length - 1]
   hasChanges.value = true
   debouncedSave()
@@ -849,12 +850,12 @@ async function exportPdf() {
     const ctx = exportCanvas.getContext('2d')
     
     // Sfondo
-    const isBlank = ex.campo_con_righe === false
+    const isBlank = ex.campo_con_righe === 'blank'
     ctx.fillStyle = isBlank ? '#2d8a4e' : '#1a2535'
     ctx.fillRect(0, 0, canvasWidth, canvasHeight)
-    
+
     // Campo da calcio
-    const fieldMode = ex.campo_con_righe === 'half' ? 'half' : (ex.campo_con_righe === false ? 'blank' : 'full')
+    const fieldMode = ex.campo_con_righe === 'half' ? 'half' : (ex.campo_con_righe === 'blank' ? 'blank' : 'full')
     const pad = canvasHeight * 0.06
     const fw = canvasWidth - pad * 2
     const fh = canvasHeight - pad * 2
@@ -1224,6 +1225,15 @@ function updateElementi(ex, newElements) {
   debouncedSave()
 }
 
+function handleFieldModeChange(ex, mode) {
+  const idx = esercizi.value.findIndex(e => e.id === ex.id)
+  if (idx !== -1) {
+    esercizi.value[idx].campo_con_righe = mode
+  }
+  hasChanges.value = true
+  debouncedSave()
+}
+
 function debouncedSave() {
   if (saveDebounceTimer) {
     clearTimeout(saveDebounceTimer)
@@ -1254,7 +1264,7 @@ function saveDataToServer() {
         focus: e.focus || '',
         spazio: e.spazio || '',
         tempo: e.tempo || '',
-        campo_con_righe: e.campo_con_righe !== false,
+        campo_con_righe: e.campo_con_righe,
         elementi: (e.elementi || []).map(el => ({
           tipo:      el.tipo      ?? el.type   ?? '',
           x:         el.x        ?? null,
