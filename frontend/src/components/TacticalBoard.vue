@@ -1,5 +1,5 @@
 <template>
-  <div class="tactical-board-container">
+  <div class="tactical-board-container" :style="containerStyle">
     <iframe
       ref="boardIframe"
       :src="iframeSrc"
@@ -12,7 +12,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 
 const props = defineProps({
   elements: {
@@ -29,6 +29,10 @@ const emit = defineEmits(['update:elements', 'update:fieldMode'])
 
 const boardIframe = ref(null)
 const iframeSrc = ref('/lavagna-20250702.html')
+const boardHeight = ref(0)
+const containerStyle = computed(() => ({
+  height: boardHeight.value > 0 ? boardHeight.value + 'px' : '60vh'
+}))
 const lastSentElements = ref(null)
 const lastCanvasTs = ref(0)
 const isProcessingUpdate = ref(false)
@@ -46,6 +50,10 @@ onMounted(() => {
     if (boardIframe.value) {
       unloadHandler = () => {
         window.addEventListener('message', handleMessage)
+        // Chiedi all'iframe l'altezza ideale per il campo a piena larghezza
+        try {
+          boardIframe.value.contentWindow.postMessage({type:'requestSize'}, '*')
+        } catch(e) {}
         // Invia elementi via postMessage dopo il load
         const hasElements = props.elements && props.elements.length > 0
         if (hasElements) {
@@ -73,6 +81,12 @@ onUnmounted(() => {
 
 function handleMessage(event) {
   if (!boardIframe.value || event.source !== boardIframe.value.contentWindow) return
+
+  if (event.data && event.data.type === 'requestHeight') {
+    const h = Math.round(event.data.height || 0)
+    if (h > 0) boardHeight.value = Math.max(240, h)
+    return
+  }
 
   if (event.data && event.data.type === 'fieldModeChanged') {
     emit('update:fieldMode', event.data.mode)

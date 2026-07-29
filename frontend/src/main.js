@@ -38,6 +38,7 @@ import Infortunati from './views/Infortunati.vue'
 import Openday from './views/Openday.vue'
 import SchedaAllenamento from './views/SchedaAllenamento.vue'
 import ListeTornei from './views/ListeTornei.vue'
+import PresenzeSegreteria from './views/PresenzeSegreteria.vue'
 
 const store = useStore()
 
@@ -70,6 +71,7 @@ const router = createRouter({
     { path: '/infermeria/certificati', component: CertificatoMedico, name: 'certificati', meta: { requiresAuth: true } },
     { path: '/infermeria/infortunati', component: Infortunati, name: 'infortunati', meta: { requiresAuth: true } },
     { path: '/segreteria/openday', component: Openday, name: 'openday', meta: { requiresAuth: true } },
+    { path: '/segreteria/presenze', component: PresenzeSegreteria, name: 'presenze-segreteria', meta: { requiresAuth: true } },
     { path: '/form-iscrizione', component: FormOnlineIscrizione, name: 'form-iscrizione' }
   ]
 })

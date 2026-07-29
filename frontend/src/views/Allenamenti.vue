@@ -841,72 +841,74 @@ async function exportPdf() {
     // Canvas snapshot - disegna il campo su un canvas nascosto
     y += 5
     await nextTick()
-    
-    const canvasWidth = 800
-    const canvasHeight = Math.round(canvasWidth * 68 / 105)
+
+    const fieldMode = ex.campo_con_righe === 'half' ? 'half' : (ex.campo_con_righe === 'blank' ? 'blank' : 'full')
+    const isBlank = fieldMode === 'blank'
+    const isHalf = fieldMode === 'half'
+    // Canvas con lo stesso rapporto del campo (105:68 intero, 52.5:68 metà)
+    const canvasWidth = isHalf ? 500 : 800
+    const canvasHeight = Math.round(canvasWidth * 68 / (isHalf ? 52.5 : 105))
     const exportCanvas = document.createElement('canvas')
     exportCanvas.width = canvasWidth
     exportCanvas.height = canvasHeight
     const ctx = exportCanvas.getContext('2d')
-    
+
     // Sfondo
-    const isBlank = ex.campo_con_righe === 'blank'
     ctx.fillStyle = isBlank ? '#2d8a4e' : '#1a2535'
     ctx.fillRect(0, 0, canvasWidth, canvasHeight)
 
-    // Campo da calcio
-    const fieldMode = ex.campo_con_righe === 'half' ? 'half' : (ex.campo_con_righe === 'blank' ? 'blank' : 'full')
-    const pad = canvasHeight * 0.06
+    // Campo da calcio (stessa geometria della lavagna: pad 2%)
+    const pad = canvasHeight * 0.02
     const fw = canvasWidth - pad * 2
     const fh = canvasHeight - pad * 2
     const fx = pad
     const fy = pad
 
     if (!isBlank) {
-      // Strisce verdi
+      // Strisce verdi dentro il campo
       const stripeCount = 11
-      const sw = canvasWidth / stripeCount
+      const sw = fw / stripeCount
       for (let i = 0; i < stripeCount; i++) {
         ctx.fillStyle = i % 2 === 0 ? '#2d5a1b' : '#346b20'
-        ctx.fillRect(i * sw, 0, sw, canvasHeight)
+        ctx.fillRect(fx + i * sw, fy, sw, fh)
       }
-      
+
       ctx.strokeStyle = 'rgba(255,255,255,0.88)'
       ctx.lineWidth = Math.max(2, canvasHeight * 0.005)
       ctx.lineCap = 'round'
       ctx.strokeRect(fx, fy, fw, fh)
-      
-      // Linea di metà campo
-      ctx.beginPath()
-      ctx.moveTo(fx + fw / 2, fy)
-      ctx.lineTo(fx + fw / 2, fy + fh)
-      ctx.stroke()
-      
-      // Cerchio di centrocampo
-      ctx.beginPath()
-      ctx.arc(fx + fw / 2, fy + fh / 2, fh * 0.146, 0, Math.PI * 2)
-      ctx.stroke()
-      
-      // Punto di centrocampo
-      ctx.beginPath()
-      ctx.arc(fx + fw / 2, fy + fh / 2, canvasHeight * 0.008, 0, Math.PI * 2)
-      ctx.fillStyle = 'rgba(255,255,255,0.88)'
-      ctx.fill()
-      
-      // Area grande e piccola (solo campo intero)
+
       if (fieldMode === 'full') {
+        // Linea di metà campo
+        ctx.beginPath()
+        ctx.moveTo(fx + fw / 2, fy)
+        ctx.lineTo(fx + fw / 2, fy + fh)
+        ctx.stroke()
+
+        // Cerchio di centrocampo
+        ctx.beginPath()
+        ctx.arc(fx + fw / 2, fy + fh / 2, fh * 0.1346, 0, Math.PI * 2)
+        ctx.stroke()
+
+        // Punto di centrocampo
+        ctx.beginPath()
+        ctx.arc(fx + fw / 2, fy + fh / 2, canvasHeight * 0.008, 0, Math.PI * 2)
+        ctx.fillStyle = 'rgba(255,255,255,0.88)'
+        ctx.fill()
+
+        // Aree grandi e piccole
         const paH = fh * 0.384
         const paW = fw * 0.157
         const paY = fy + (fh - paH) / 2
         const gaH = fh * 0.27
         const gaW = fw * 0.052
         const gaY = fy + (fh - gaH) / 2
-        
+
         ctx.strokeRect(fx, paY, paW, paH)
         ctx.strokeRect(fx, gaY, gaW, gaH)
         ctx.strokeRect(fx + fw - paW, paY, paW, paH)
         ctx.strokeRect(fx + fw - gaW, gaY, gaW, gaH)
-        
+
         // Arci di rigore
         ctx.beginPath()
         ctx.arc(fx + fw * 0.105, fy + fh / 2, fh * 0.1346, -0.93, 0.93)
@@ -914,7 +916,7 @@ async function exportPdf() {
         ctx.beginPath()
         ctx.arc(fx + fw * 0.895, fy + fh / 2, fh * 0.1346, Math.PI - 0.93, Math.PI + 0.93)
         ctx.stroke()
-        
+
         // Punti di rigore
         ctx.beginPath()
         ctx.arc(fx + fw * 0.105, fy + fh / 2, canvasHeight * 0.006, 0, Math.PI * 2)
@@ -922,7 +924,7 @@ async function exportPdf() {
         ctx.beginPath()
         ctx.arc(fx + fw * 0.895, fy + fh / 2, canvasHeight * 0.006, 0, Math.PI * 2)
         ctx.fill()
-        
+
         // Porte
         const gH = fh * 0.11
         const gW = fw * 0.024
@@ -932,17 +934,17 @@ async function exportPdf() {
         ctx.strokeRect(fx - gW, gY, gW, gH)
         ctx.strokeRect(fx + fw, gY, gW, gH)
       } else {
-        // Metà campo
+        // Metà campo: area e porta solo sul lato destro (come in lavagna)
         const paH2 = fh * 0.384
         const paW2 = fw * 0.157
         const paY2 = fy + (fh - paH2) / 2
         const gaH2 = fh * 0.27
         const gaW2 = fw * 0.052
         const gaY2 = fy + (fh - gaH2) / 2
-        
+
         ctx.strokeRect(fx + fw - paW2, paY2, paW2, paH2)
         ctx.strokeRect(fx + fw - gaW2, gaY2, gaW2, gaH2)
-        
+
         const gH2 = fh * 0.11
         const gW2 = fw * 0.024
         const gY2 = fy + (fh - gH2) / 2
@@ -961,7 +963,9 @@ async function exportPdf() {
       const pdfFh = isBlank ? canvasHeight : fh
 const toPdfX = (xp) => pdfFx + (xp / 100) * pdfFw
        const toPdfY = (yp) => pdfFy + (yp / 100) * pdfFh
-       const baseScale = pdfFw / 650
+       // Elementi proporzionati al campo: riferimento = larghezza reale della lavagna a schermo
+       const boardW = (document.querySelector('.board-area')?.clientWidth) || 650
+       const baseScale = pdfFw / boardW
        elementi.forEach(el => {
         const ex_ = toPdfX(el.x || 0)
         const ey = toPdfY(el.y || 0)
@@ -1822,7 +1826,6 @@ onUnmounted(() => {
 .board-area {
   margin-top: 0;
   overflow: hidden;
-  height: 95vh;
   width: 100%;
   max-width: 100%;
   padding: 0;
