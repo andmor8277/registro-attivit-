@@ -115,12 +115,9 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPersone, getCategorie } from '../api/index.js'
-import axios from 'axios'
+import { getPersone, getCategorie, getListeTorneo, creaListaTorneo, eliminaListaTorneo, getGiocatoriLista, aggiungiGiocatoreLista, rimuoviGiocatoreLista } from '../api/index.js'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
-
-const VITE_API_URL = import.meta.env.VITE_API_URL || '/api'
 const route = useRoute()
 const router = useRouter()
 
@@ -155,7 +152,7 @@ async function loadCategoria() {
 
 async function loadListe() {
   try {
-    const res = await axios.get(VITE_API_URL + `/liste-torneo/?categoria_id=${categoriaId}`)
+    const res = await getListeTorneo(categoriaId)
     listeList.value = res.data
     if (listeList.value.length > 0 && selectedListaId.value === null) {
       selectLista(listeList.value[0].id)
@@ -173,7 +170,7 @@ async function loadGiocatori() {
 async function selectLista(id) {
   selectedListaId.value = id
   try {
-    const res = await axios.get(VITE_API_URL + `/liste-torneo/${id}/giocatori`)
+    const res = await getGiocatoriLista(id)
     giocatoriLista.value = res.data
   } catch(e) { console.error(e) }
 }
@@ -181,7 +178,7 @@ async function selectLista(id) {
 async function creaLista() {
   if (!nuovaListaModal.value.nome.trim()) return
   try {
-    await axios.post(VITE_API_URL + '/liste-torneo/', {
+    await creaListaTorneo({
       nome: nuovaListaModal.value.nome.trim(),
       categoria_id: categoriaId
     })
@@ -193,7 +190,7 @@ async function creaLista() {
 async function eliminaLista(lista) {
   if (!confirm(`Eliminare la lista "${lista.nome}"?`)) return
   try {
-    await axios.delete(VITE_API_URL + `/liste-torneo/${lista.id}`)
+    await eliminaListaTorneo(lista.id)
     if (selectedListaId.value === lista.id) {
       selectedListaId.value = null
       giocatoriLista.value = []
@@ -204,16 +201,14 @@ async function eliminaLista(lista) {
 
 async function aggiungiGiocatore(personaId) {
   try {
-    await axios.post(VITE_API_URL + `/liste-torneo/${selectedListaId.value}/giocatori`, null, {
-      params: { persona_id: personaId }
-    })
+    await aggiungiGiocatoreLista(selectedListaId.value, personaId)
     await selectLista(selectedListaId.value)
   } catch(e) { console.error(e) }
 }
 
 async function rimuoviGiocatore(personaId) {
   try {
-    await axios.delete(VITE_API_URL + `/liste-torneo/${selectedListaId.value}/giocatori/${personaId}`)
+    await rimuoviGiocatoreLista(selectedListaId.value, personaId)
     await selectLista(selectedListaId.value)
   } catch(e) { console.error(e) }
 }
