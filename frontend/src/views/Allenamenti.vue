@@ -499,172 +499,11 @@ function drawCatalogoPreviews() {
     const canvas = document.getElementById('cat-canvas-' + idx)
     if (!canvas) return
     const ctx = canvas.getContext('2d')
-    const W = canvas.width
-    const H = canvas.height
-    const isBlank = ex.campo_con_righe === 'blank'
-
-    if (isBlank) {
-      ctx.fillStyle = '#2d8a4e'
-      ctx.fillRect(0, 0, W, H)
-      return
-    }
-
-    ctx.fillStyle = '#1a2535'
-    ctx.fillRect(0, 0, W, H)
-
-    const stripeCount = 11
-    const sw = W / stripeCount
-    for (let i = 0; i < stripeCount; i++) {
-      ctx.fillStyle = i % 2 === 0 ? '#2d5a1b' : '#346b20'
-      ctx.fillRect(i * sw, 0, sw, H)
-    }
-
-    const pad = H * 0.06
-    const fw = W - pad * 2
-    const fh = H - pad * 2
-    const fx = pad
-    const fy = pad
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.88)'
-    ctx.lineWidth = Math.max(1, H * 0.008)
-    ctx.lineCap = 'round'
-    ctx.strokeRect(fx, fy, fw, fh)
-    ctx.beginPath()
-    ctx.moveTo(fx + fw / 2, fy)
-    ctx.lineTo(fx + fw / 2, fy + fh)
-    ctx.stroke()
-ctx.beginPath()
-        ctx.arc(fx + fw / 2, fy + fh / 2, fh * 0.1346, 0, Math.PI * 2)
-        ctx.stroke()
-    ctx.beginPath()
-    ctx.arc(fx + fw / 2, fy + fh / 2, H * 0.012, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(255,255,255,0.88)'
-    ctx.fill()
-
-    const paH = fh * 0.384
-    const paW = fw * 0.157
-    const paY = fy + (fh - paH) / 2
-    const gaH = fh * 0.27
-    const gaW = fw * 0.052
-    const gaY = fy + (fh - gaH) / 2
-
-    ctx.strokeRect(fx, paY, paW, paH)
-    ctx.strokeRect(fx, gaY, gaW, gaH)
-    ctx.beginPath()
-    ctx.arc(fx + fw * 0.105, fy + fh / 2, H * 0.008, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(fx + fw * 0.105, fy + fh / 2, fh * 0.146, -0.93, 0.93)
-    ctx.stroke()
-    ctx.strokeRect(fx + fw - paW, paY, paW, paH)
-    ctx.strokeRect(fx + fw - gaW, gaY, gaW, gaH)
-    ctx.beginPath()
-    ctx.arc(fx + fw * 0.895, fy + fh / 2, H * 0.008, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(fx + fw * 0.895, fy + fh / 2, fh * 0.146, Math.PI - 0.93, Math.PI + 0.93)
-    ctx.stroke()
-
-    const gH = fh * 0.11
-    const gW = fw * 0.024
-    const gY = fy + (fh - gH) / 2
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)'
-    ctx.lineWidth = 2
-    ctx.strokeRect(fx - gW, gY, gW, gH)
-    ctx.strokeRect(fx + fw, gY, gW, gH)
-
-    const elementi = ex.elementi || []
-    if (elementi.length > 0) {
-      elementi.forEach(el => {
-        const ex_ = (el.x / 100) * W
-        const ey = (el.y / 100) * H
-        const ex1 = (el.x1 / 100) * W
-        const ey1 = (el.y1 / 100) * H
-        const ex2 = (el.x2 / 100) * W
-        const ey2 = (el.y2 / 100) * H
-        if (el.tipo === 'player-home' || el.tipo === 'player-away' || el.tipo === 'player-gk') {
-          const cols = { 'player-home': '#3b82f6', 'player-away': '#ef4444', 'player-gk': '#f59e0b' }
-          ctx.beginPath()
-          ctx.arc(ex_, ey, 3, 0, Math.PI * 2)
-          ctx.fillStyle = cols[el.tipo]
-          ctx.fill()
-        } else if (el.tipo === 'ball') {
-          ctx.beginPath()
-          ctx.arc(ex_, ey, 2, 0, Math.PI * 2)
-          ctx.fillStyle = '#fff'
-          ctx.fill()
-        } else if (el.tipo === 'cone') {
-          ctx.beginPath()
-          ctx.moveTo(ex_, ey - 4)
-          ctx.lineTo(ex_ - 3, ey + 3)
-          ctx.lineTo(ex_ + 3, ey + 3)
-          ctx.closePath()
-          ctx.fillStyle = '#f97316'
-          ctx.fill()
-        } else if (el.tipo === 'disc') {
-          ctx.beginPath()
-          ctx.ellipse(ex_, ey, 4, 2, 0, 0, Math.PI * 2)
-          ctx.fillStyle = '#a78bfa'
-          ctx.fill()
-        } else if (el.tipo === 'goal') {
-          ctx.strokeStyle = '#fff'
-          ctx.lineWidth = 1.5
-          ctx.strokeRect(ex_ - 4, ey - 3, 8, 6)
-        } else if (el.tipo === 'mannequin') {
-          ctx.beginPath()
-          ctx.arc(ex_, ey - 4, 2, 0, Math.PI * 2)
-          ctx.fillStyle = '#e2e8f0'
-          ctx.fill()
-        } else if (['arrow', 'arrow-dash', 'arrow-curve', 'arrow-curve-dash'].includes(el.tipo)) {
-          ctx.strokeStyle = el.colore || '#3b82f6'
-          ctx.lineWidth = Math.max(1, (el.w || 2) * 0.7)
-          if (el.tipo === 'arrow-dash' || el.tipo === 'arrow-curve-dash') {
-            ctx.setLineDash([3, 2])
-          } else {
-            ctx.setLineDash([])
-          }
-          ctx.beginPath()
-          ctx.moveTo(ex1, ey1)
-          ctx.lineTo(ex2, ey2)
-          ctx.stroke()
-          ctx.setLineDash([])
-          const dx = ex2 - ex1
-          const dy = ey2 - ey1
-          const len = Math.sqrt(dx * dx + dy * dy)
-          if (len > 1) {
-            const nx = dx / len
-            const ny = dy / len
-            const size = 5
-            ctx.fillStyle = el.colore || '#3b82f6'
-            ctx.beginPath()
-            ctx.moveTo(ex2, ey2)
-            ctx.lineTo(ex2 - size * nx + size * 0.4 * (-ny), ey2 - size * ny + size * 0.4 * nx)
-            ctx.lineTo(ex2 - size * nx - size * 0.4 * (-ny), ey2 - size * ny - size * 0.4 * nx)
-            ctx.closePath()
-            ctx.fill()
-          }
-        } else if (el.tipo === 'zone') {
-          ctx.strokeStyle = el.colore || '#3b82f6'
-          ctx.lineWidth = 1
-          ctx.setLineDash([3, 2])
-          const rx = Math.min(ex1, ex2)
-          const ry = Math.min(ey1, ey2)
-          const rw = Math.abs(ex2 - ex1)
-          const rh = Math.abs(ey2 - ey1)
-          ctx.strokeRect(rx, ry, rw, rh)
-          ctx.setLineDash([])
-        } else if (el.tipo === 'free') {
-          if (el.points && el.points.length > 1) {
-            ctx.strokeStyle = el.colore || '#3b82f6'
-            ctx.lineWidth = Math.max(1, (el.w || 2) * 0.7)
-            ctx.beginPath()
-            ctx.moveTo((el.points[0].x / 100) * W, (el.points[0].y / 100) * H)
-            el.points.forEach(p => ctx.lineTo((p.x / 100) * W, (p.y / 100) * H))
-            ctx.stroke()
-          }
-        }
-      })
-    }
+    const fieldMode = ex.campo_con_righe === 'half' ? 'half' : (ex.campo_con_righe === 'blank' ? 'blank' : 'full')
+    // Stesso rendering del PDF, in miniatura (elementi leggermente ingranditi per leggibilità)
+    const rect = drawFieldCanvas(ctx, canvas.width, canvas.height, fieldMode)
+    const boardW = (document.querySelector('.board-area')?.clientWidth) || 650
+    drawElementsCanvas(ctx, ex.elementi, rect, rect.fw / boardW, 1.8)
   })
 }
 
@@ -753,6 +592,483 @@ function deleteEsercizio(ex) {
 }
 
 
+
+// ── Rendering campo + elementi condiviso (export PDF e anteprime catalogo) ──
+const MANNEQUIN_SVG_PATH = 'M120 1280 L60 700 L40 400 A100 100 0 0 1 130 300 A80 80 0 0 0 190 180 L170 140 A86 86 0 1 1 330 140 L310 180 A80 80 0 0 0 370 300 A100 100 0 0 1 460 400 L440 700 L380 1280 Z'
+
+// Disegna il campo su un canvas 2D e ritorna il rettangolo utile {fx, fy, fw, fh}
+function drawFieldCanvas(ctx, W, H, fieldMode) {
+  if (fieldMode === 'blank') {
+    ctx.fillStyle = '#2d8a4e'
+    ctx.fillRect(0, 0, W, H)
+    return { fx: 0, fy: 0, fw: W, fh: H }
+  }
+  ctx.fillStyle = '#1a2535'
+  ctx.fillRect(0, 0, W, H)
+
+  // Stessa geometria della lavagna: rapporto 105:68 (intero) o 52.5:68 (metà), pad 2%
+  const ratio = fieldMode === 'half' ? (105 / 2) / 68 : 105 / 68
+  const pad = H * 0.02
+  const availW = W - pad * 2
+  const availH = H - pad * 2
+  let fw, fh
+  if (availW / availH > ratio) { fh = availH; fw = fh * ratio } else { fw = availW; fh = fw / ratio }
+  const fx = (W - fw) / 2
+  const fy = (H - fh) / 2
+
+  // Strisce verdi dentro il campo
+  const stripeCount = 11
+  const sw = fw / stripeCount
+  for (let i = 0; i < stripeCount; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#2d5a1b' : '#346b20'
+    ctx.fillRect(fx + i * sw, fy, sw, fh)
+  }
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.88)'
+  ctx.lineWidth = Math.max(2, H * 0.005)
+  ctx.lineCap = 'round'
+  ctx.strokeRect(fx, fy, fw, fh)
+
+  if (fieldMode === 'full') {
+    // Linea di metà campo
+    ctx.beginPath()
+    ctx.moveTo(fx + fw / 2, fy)
+    ctx.lineTo(fx + fw / 2, fy + fh)
+    ctx.stroke()
+    // Cerchio di centrocampo
+    ctx.beginPath()
+    ctx.arc(fx + fw / 2, fy + fh / 2, fh * 0.1346, 0, Math.PI * 2)
+    ctx.stroke()
+    // Punto di centrocampo
+    ctx.beginPath()
+    ctx.arc(fx + fw / 2, fy + fh / 2, H * 0.008, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(255,255,255,0.88)'
+    ctx.fill()
+    // Aree grandi e piccole
+    const paH = fh * 0.384
+    const paW = fw * 0.157
+    const paY = fy + (fh - paH) / 2
+    const gaH = fh * 0.27
+    const gaW = fw * 0.052
+    const gaY = fy + (fh - gaH) / 2
+    ctx.strokeRect(fx, paY, paW, paH)
+    ctx.strokeRect(fx, gaY, gaW, gaH)
+    ctx.strokeRect(fx + fw - paW, paY, paW, paH)
+    ctx.strokeRect(fx + fw - gaW, gaY, gaW, gaH)
+    // Arci di rigore
+    ctx.beginPath()
+    ctx.arc(fx + fw * 0.105, fy + fh / 2, fh * 0.1346, -0.93, 0.93)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(fx + fw * 0.895, fy + fh / 2, fh * 0.1346, Math.PI - 0.93, Math.PI + 0.93)
+    ctx.stroke()
+    // Punti di rigore
+    ctx.beginPath()
+    ctx.arc(fx + fw * 0.105, fy + fh / 2, H * 0.006, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(fx + fw * 0.895, fy + fh / 2, H * 0.006, 0, Math.PI * 2)
+    ctx.fill()
+    // Porte
+    const gH = fh * 0.11
+    const gW = fw * 0.024
+    const gY = fy + (fh - gH) / 2
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'
+    ctx.lineWidth = 2
+    ctx.strokeRect(fx - gW, gY, gW, gH)
+    ctx.strokeRect(fx + fw, gY, gW, gH)
+  } else {
+    // Metà campo: area e porta solo sul lato destro (come in lavagna)
+    const paH = fh * 0.384
+    const paW = fw * 0.157
+    const paY = fy + (fh - paH) / 2
+    const gaH = fh * 0.27
+    const gaW = fw * 0.052
+    const gaY = fy + (fh - gaH) / 2
+    ctx.strokeRect(fx + fw - paW, paY, paW, paH)
+    ctx.strokeRect(fx + fw - gaW, gaY, gaW, gaH)
+    const gH = fh * 0.11
+    const gW = fw * 0.024
+    const gY = fy + (fh - gH) / 2
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'
+    ctx.lineWidth = 2
+    ctx.strokeRect(fx + fw, gY, gW, gH)
+  }
+  return { fx, fy, fw, fh }
+}
+
+// Disegna gli elementi della lavagna (coordinate % 0-100 sul campo) scalati con baseScale
+function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
+  const sb = baseScale * sizeBoost
+  const toX = (xp) => rect.fx + (xp / 100) * rect.fw
+  const toY = (yp) => rect.fy + (yp / 100) * rect.fh
+  const legacyColors = { 'player-home': '#3b82f6', 'player-away': '#ef4444', 'player-gk': '#f59e0b' }
+  ;(elementi || []).forEach(el => {
+    // Normalizza tipi legacy (vecchia lavagna)
+    let tipo = el.tipo
+    if (tipo === 'player-home') tipo = 'player'
+    else if (tipo === 'player-away') tipo = 'player-bib'
+    else if (tipo === 'player-gk') tipo = 'gk'
+    else if (tipo === 'arrow' || tipo === 'arrow-curve') tipo = 'pass'
+    else if (tipo === 'arrow-dash' || tipo === 'arrow-curve-dash') tipo = 'dribble'
+
+    const ex_ = toX(el.x || 0)
+    const ey = toY(el.y || 0)
+    const ex1 = toX(el.x1 || 0)
+    const ey1 = toY(el.y1 || 0)
+    const ex2 = toX(el.x2 || 0)
+    const ey2 = toY(el.y2 || 0)
+    const color = el.colore || el.color || legacyColors[el.tipo] || '#3b82f6'
+    const rotation = el.rotazione || 0
+    const sX = (el.scaleX || 1) * sb
+    const sY = (el.scaleY || 1) * sb
+    const fontVisible = 14 * sX >= 5
+
+    if (tipo === 'player' || tipo === 'player-bib' || tipo === 'player-jolly' || tipo === 'gk') {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX, sY)
+      const r = 16
+      if (tipo === 'player-jolly') {
+        // Diamante
+        ctx.beginPath()
+        ctx.moveTo(0, -r)
+        ctx.lineTo(r, 0)
+        ctx.lineTo(0, r)
+        ctx.lineTo(-r, 0)
+        ctx.closePath()
+        ctx.strokeStyle = color
+        ctx.lineWidth = 2.5
+        ctx.stroke()
+      } else {
+        // Cerchio
+        ctx.beginPath()
+        ctx.arc(0, 0, r, 0, Math.PI * 2)
+        ctx.strokeStyle = color
+        ctx.lineWidth = 2.5
+        ctx.stroke()
+        if (tipo === 'player-bib') {
+          ctx.fillStyle = color
+          ctx.fill()
+        }
+      }
+      // Numero progressivo giocatore
+      if (el.numero && tipo !== 'gk' && fontVisible) {
+        ctx.fillStyle = tipo === 'player-bib' ? '#ffffff' : color
+        ctx.font = 'bold 14px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(String(el.numero), 0, 1)
+      }
+      // Portiere: lettera P
+      if (tipo === 'gk' && fontVisible) {
+        ctx.fillStyle = color
+        ctx.font = 'bold 12px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText('P', 0, 1)
+      }
+      ctx.restore()
+    } else if (tipo === 'ball') {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX, sY)
+      ctx.beginPath()
+      ctx.arc(0, 0, 10, 0, Math.PI * 2)
+      ctx.strokeStyle = color
+      ctx.lineWidth = 2
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(0, 0, 3, 0, Math.PI * 2)
+      ctx.fillStyle = color
+      ctx.fill()
+      ctx.restore()
+    } else if (tipo === 'cone') {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX, sY)
+      // Base del cono
+      ctx.beginPath()
+      ctx.ellipse(0, 6, 12, 4, 0, 0, Math.PI * 2)
+      ctx.fillStyle = color
+      ctx.fill()
+      // Corpo trapezoidale
+      ctx.beginPath()
+      ctx.moveTo(-8, 6)
+      ctx.lineTo(-3, -10)
+      ctx.lineTo(3, -10)
+      ctx.lineTo(8, 6)
+      ctx.closePath()
+      ctx.fill()
+      // Banda riflettente
+      ctx.beginPath()
+      ctx.moveTo(-5, -2)
+      ctx.lineTo(5, -2)
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'
+      ctx.lineWidth = 2
+      ctx.stroke()
+      ctx.restore()
+    } else if (tipo === 'disc') {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX, sY)
+      // Disco piatto con cupoletta centrale
+      ctx.beginPath()
+      ctx.ellipse(0, 0, 14, 9, 0, 0, Math.PI * 2)
+      ctx.fillStyle = color
+      ctx.fill()
+      ctx.beginPath()
+      ctx.ellipse(0, -4.5, 4.5, 2.5, 0, 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'
+      ctx.fill()
+      ctx.restore()
+    } else if (tipo === 'flag') {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX, sY)
+      // Asta
+      ctx.fillStyle = '#cbd5e1'
+      ctx.fillRect(-1.5, -30, 3, 30)
+      // Bandierina triangolare
+      ctx.beginPath()
+      ctx.moveTo(1.5, -30)
+      ctx.lineTo(16, -25.5)
+      ctx.lineTo(1.5, -21)
+      ctx.closePath()
+      ctx.fillStyle = color
+      ctx.fill()
+      ctx.restore()
+    } else if (tipo === 'ring') {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX, sY)
+      ctx.beginPath()
+      ctx.arc(0, 0, 14, 0, Math.PI * 2)
+      ctx.strokeStyle = color
+      ctx.lineWidth = 4
+      ctx.stroke()
+      ctx.restore()
+    } else if (tipo === 'ladder') {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX, sY)
+      ctx.fillStyle = color
+      ctx.fillRect(-22, -7, 44, 2)
+      ctx.fillRect(-22, 5, 44, 2)
+      for (const rx of [-16.5, -5.5, 5.5, 16.5]) {
+        ctx.fillRect(rx - 1, -7, 2, 14)
+      }
+      ctx.restore()
+    } else if (tipo === 'hurdle') {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX, sY)
+      ctx.fillStyle = color
+      ctx.fillRect(-17, -10, 34, 2.5)
+      ctx.fillRect(-17, -7.5, 2.5, 10)
+      ctx.fillRect(14.5, -7.5, 2.5, 10)
+      ctx.beginPath()
+      ctx.ellipse(-15.75, 3.5, 4, 1.5, 0, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.beginPath()
+      ctx.ellipse(15.75, 3.5, 4, 1.5, 0, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+    } else if (tipo === 'mannequin') {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX * 0.036, sY * 0.036)
+      ctx.translate(-250, -650)
+      ctx.fillStyle = color
+      ctx.fill(new Path2D(MANNEQUIN_SVG_PATH))
+      ctx.restore()
+    } else if (tipo === 'zone' && el.x1 != null) {
+      // Zona legacy (definita dagli angoli)
+      ctx.save()
+      ctx.strokeStyle = color
+      ctx.lineWidth = 1
+      ctx.setLineDash([3, 2])
+      ctx.strokeRect(Math.min(ex1, ex2), Math.min(ey1, ey2), Math.abs(ex2 - ex1), Math.abs(ey2 - ey1))
+      ctx.setLineDash([])
+      ctx.restore()
+    } else if (tipo === 'zone') {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX, sY)
+      ctx.globalAlpha = 0.25
+      ctx.fillStyle = color
+      ctx.fillRect(-60, -40, 120, 80)
+      ctx.globalAlpha = 1
+      ctx.strokeStyle = color
+      ctx.lineWidth = 1.5
+      ctx.setLineDash([6, 4])
+      ctx.strokeRect(-60, -40, 120, 80)
+      ctx.setLineDash([])
+      ctx.restore()
+    } else if (tipo === 'free' && Array.isArray(el.points) && el.points.length > 1) {
+      // Tratto libero legacy (punti {x, y} in %)
+      ctx.save()
+      ctx.strokeStyle = color
+      ctx.lineWidth = Math.max(1, (el.w || 2) * 0.7)
+      ctx.beginPath()
+      ctx.moveTo(toX(el.points[0].x || 0), toY(el.points[0].y || 0))
+      el.points.forEach(p => ctx.lineTo(toX(p.x || 0), toY(p.y || 0)))
+      ctx.stroke()
+      ctx.restore()
+    } else if (tipo === 'coord') {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX, sY)
+      // Rettangolo giallo
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.roundRect(-16, -3, 32, 6, 2)
+      ctx.fill()
+      // Cerchi ai lati
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.arc(-16, 0, 4, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(16, 0, 4, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+    } else if (tipo === 'pole') {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX, sY)
+      // Ombra
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.ellipse(0, 12, 6, 3, 0, 0, Math.PI * 2)
+      ctx.fill()
+      // Asta rossa
+      ctx.fillStyle = color
+      ctx.fillRect(-2.5, -12, 5, 24)
+      ctx.restore()
+    } else if (tipo === 'goal') {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX, sY)
+      const w = 28, h = 14
+      ctx.strokeStyle = '#fff'
+      ctx.lineWidth = 3
+      // Linea di porta
+      ctx.beginPath()
+      ctx.moveTo(-w, -h)
+      ctx.lineTo(-w, h)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.moveTo(w, -h)
+      ctx.lineTo(w, h)
+      ctx.stroke()
+      // Attraverso
+      ctx.beginPath()
+      ctx.moveTo(-w, -h)
+      ctx.lineTo(w, -h)
+      ctx.stroke()
+      // Rete (linee orizzontali)
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+      ctx.lineWidth = 0.8
+      for (let i = -h + 5; i < h; i += 5) {
+        ctx.beginPath()
+        ctx.moveTo(-w, i)
+        ctx.lineTo(w, i)
+        ctx.stroke()
+      }
+      // Linee verticali rete
+      for (let i = -w + 9; i < w; i += 9) {
+        ctx.beginPath()
+        ctx.moveTo(i, -h)
+        ctx.lineTo(i, h)
+        ctx.stroke()
+      }
+      ctx.restore()
+    } else if (['pass', 'dribble', 'wallpass', 'shot', 'movement', 'line'].includes(tipo)) {
+      ctx.save()
+      const dx = ex2 - ex1
+      const dy = ey2 - ey1
+      const len = Math.sqrt(dx * dx + dy * dy)
+      if (len > 0) {
+        const angle = Math.atan2(dy, dx)
+        ctx.translate(ex1, ey1)
+        ctx.rotate(angle)
+        ctx.scale(sb, sb)
+
+        ctx.strokeStyle = color
+        ctx.lineWidth = Math.max(2.5, (el.w || 2) * 0.7)
+        if (tipo === 'dribble' || tipo === 'movement') {
+          ctx.setLineDash([6 / sb, 4 / sb])
+        } else {
+          ctx.setLineDash([])
+        }
+
+        // Linea
+        ctx.beginPath()
+        ctx.moveTo(-len / 2 / sb, 0)
+        ctx.lineTo(len / 2 / sb, 0)
+        ctx.stroke()
+        ctx.setLineDash([])
+
+        // Freccia
+        const aLen = 14
+        const halfLen = len / 2 / sb
+        ctx.fillStyle = color
+        ctx.beginPath()
+        ctx.moveTo(halfLen, 0)
+        ctx.lineTo(halfLen - aLen, -aLen / 2)
+        ctx.lineTo(halfLen - aLen, aLen / 2)
+        ctx.closePath()
+        ctx.fill()
+
+        // Wallpass: seconda freccia
+        if (tipo === 'wallpass') {
+          ctx.beginPath()
+          ctx.moveTo(-halfLen, 0)
+          ctx.lineTo(-halfLen + aLen, -aLen / 2)
+          ctx.lineTo(-halfLen + aLen, aLen / 2)
+          ctx.closePath()
+          ctx.fill()
+        }
+
+        // Shot: linea verticale alla fine
+        if (tipo === 'shot') {
+          ctx.strokeStyle = color
+          ctx.lineWidth = 2.5
+          ctx.beginPath()
+          ctx.moveTo(halfLen + 6, -10)
+          ctx.lineTo(halfLen + 6, 10)
+          ctx.stroke()
+        }
+      }
+      ctx.restore()
+    } else if (tipo === 'text' && fontVisible) {
+      ctx.save()
+      ctx.translate(ex_, ey)
+      ctx.rotate((rotation * Math.PI) / 180)
+      ctx.scale(sX, sY)
+      ctx.fillStyle = color
+      ctx.font = '16px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(el.text || 'Testo', 0, 0)
+      ctx.restore()
+    }
+  })
+}
 
 async function exportPdf() {
   const doc = new jsPDF('portrait', 'mm', 'a4')
@@ -843,7 +1159,6 @@ async function exportPdf() {
     await nextTick()
 
     const fieldMode = ex.campo_con_righe === 'half' ? 'half' : (ex.campo_con_righe === 'blank' ? 'blank' : 'full')
-    const isBlank = fieldMode === 'blank'
     const isHalf = fieldMode === 'half'
     // Canvas con lo stesso rapporto del campo (105:68 intero, 52.5:68 metà)
     const canvasWidth = isHalf ? 500 : 800
@@ -853,461 +1168,13 @@ async function exportPdf() {
     exportCanvas.height = canvasHeight
     const ctx = exportCanvas.getContext('2d')
 
-    // Sfondo
-    ctx.fillStyle = isBlank ? '#2d8a4e' : '#1a2535'
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+    // Campo da calcio (stessa geometria della lavagna)
+    const rect = drawFieldCanvas(ctx, canvasWidth, canvasHeight, fieldMode)
 
-    // Campo da calcio (stessa geometria della lavagna: pad 2%)
-    const pad = canvasHeight * 0.02
-    const fw = canvasWidth - pad * 2
-    const fh = canvasHeight - pad * 2
-    const fx = pad
-    const fy = pad
+    // Elementi proporzionati al campo: riferimento = larghezza reale della lavagna a schermo
+    const boardW = (document.querySelector('.board-area')?.clientWidth) || 650
+    drawElementsCanvas(ctx, ex.elementi, rect, rect.fw / boardW)
 
-    if (!isBlank) {
-      // Strisce verdi dentro il campo
-      const stripeCount = 11
-      const sw = fw / stripeCount
-      for (let i = 0; i < stripeCount; i++) {
-        ctx.fillStyle = i % 2 === 0 ? '#2d5a1b' : '#346b20'
-        ctx.fillRect(fx + i * sw, fy, sw, fh)
-      }
-
-      ctx.strokeStyle = 'rgba(255,255,255,0.88)'
-      ctx.lineWidth = Math.max(2, canvasHeight * 0.005)
-      ctx.lineCap = 'round'
-      ctx.strokeRect(fx, fy, fw, fh)
-
-      if (fieldMode === 'full') {
-        // Linea di metà campo
-        ctx.beginPath()
-        ctx.moveTo(fx + fw / 2, fy)
-        ctx.lineTo(fx + fw / 2, fy + fh)
-        ctx.stroke()
-
-        // Cerchio di centrocampo
-        ctx.beginPath()
-        ctx.arc(fx + fw / 2, fy + fh / 2, fh * 0.1346, 0, Math.PI * 2)
-        ctx.stroke()
-
-        // Punto di centrocampo
-        ctx.beginPath()
-        ctx.arc(fx + fw / 2, fy + fh / 2, canvasHeight * 0.008, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(255,255,255,0.88)'
-        ctx.fill()
-
-        // Aree grandi e piccole
-        const paH = fh * 0.384
-        const paW = fw * 0.157
-        const paY = fy + (fh - paH) / 2
-        const gaH = fh * 0.27
-        const gaW = fw * 0.052
-        const gaY = fy + (fh - gaH) / 2
-
-        ctx.strokeRect(fx, paY, paW, paH)
-        ctx.strokeRect(fx, gaY, gaW, gaH)
-        ctx.strokeRect(fx + fw - paW, paY, paW, paH)
-        ctx.strokeRect(fx + fw - gaW, gaY, gaW, gaH)
-
-        // Arci di rigore
-        ctx.beginPath()
-        ctx.arc(fx + fw * 0.105, fy + fh / 2, fh * 0.1346, -0.93, 0.93)
-        ctx.stroke()
-        ctx.beginPath()
-        ctx.arc(fx + fw * 0.895, fy + fh / 2, fh * 0.1346, Math.PI - 0.93, Math.PI + 0.93)
-        ctx.stroke()
-
-        // Punti di rigore
-        ctx.beginPath()
-        ctx.arc(fx + fw * 0.105, fy + fh / 2, canvasHeight * 0.006, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.beginPath()
-        ctx.arc(fx + fw * 0.895, fy + fh / 2, canvasHeight * 0.006, 0, Math.PI * 2)
-        ctx.fill()
-
-        // Porte
-        const gH = fh * 0.11
-        const gW = fw * 0.024
-        const gY = fy + (fh - gH) / 2
-        ctx.strokeStyle = 'rgba(255,255,255,0.7)'
-        ctx.lineWidth = 2
-        ctx.strokeRect(fx - gW, gY, gW, gH)
-        ctx.strokeRect(fx + fw, gY, gW, gH)
-      } else {
-        // Metà campo: area e porta solo sul lato destro (come in lavagna)
-        const paH2 = fh * 0.384
-        const paW2 = fw * 0.157
-        const paY2 = fy + (fh - paH2) / 2
-        const gaH2 = fh * 0.27
-        const gaW2 = fw * 0.052
-        const gaY2 = fy + (fh - gaH2) / 2
-
-        ctx.strokeRect(fx + fw - paW2, paY2, paW2, paH2)
-        ctx.strokeRect(fx + fw - gaW2, gaY2, gaW2, gaH2)
-
-        const gH2 = fh * 0.11
-        const gW2 = fw * 0.024
-        const gY2 = fy + (fh - gH2) / 2
-        ctx.strokeStyle = 'rgba(255,255,255,0.7)'
-        ctx.lineWidth = 2
-        ctx.strokeRect(fx + fw, gY2, gW2, gH2)
-      }
-    }
-    
-    // Disegna elementi - coordinate percentuali relative al campo da gioco (0-100%)
-    const elementi = ex.elementi || []
-    if (elementi.length > 0) {
-      const pdfFx = isBlank ? 0 : fx
-      const pdfFy = isBlank ? 0 : fy
-      const pdfFw = isBlank ? canvasWidth : fw
-      const pdfFh = isBlank ? canvasHeight : fh
-const toPdfX = (xp) => pdfFx + (xp / 100) * pdfFw
-       const toPdfY = (yp) => pdfFy + (yp / 100) * pdfFh
-       // Elementi proporzionati al campo: riferimento = larghezza reale della lavagna a schermo
-       const boardW = (document.querySelector('.board-area')?.clientWidth) || 650
-       const baseScale = pdfFw / boardW
-       elementi.forEach(el => {
-        const ex_ = toPdfX(el.x || 0)
-        const ey = toPdfY(el.y || 0)
-        const ex1 = toPdfX(el.x1 || 0)
-        const ey1 = toPdfY(el.y1 || 0)
-        const ex2 = toPdfX(el.x2 || 0)
-        const ey2 = toPdfY(el.y2 || 0)
-        const color = el.colore || el.color || '#3b82f6'
-        const rotation = el.rotazione || 0
-const sX = (el.scaleX || 1) * baseScale
-         const sY = (el.scaleY || 1) * baseScale
-        
-        if (el.tipo === 'player' || el.tipo === 'player-bib' || el.tipo === 'player-jolly' || el.tipo === 'gk') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          const r = 16
-          if (el.tipo === 'player-jolly') {
-            // Diamante
-            ctx.beginPath()
-            ctx.moveTo(0, -r)
-            ctx.lineTo(r, 0)
-            ctx.lineTo(0, r)
-            ctx.lineTo(-r, 0)
-            ctx.closePath()
-            ctx.strokeStyle = color
-            ctx.lineWidth = 2.5
-            ctx.stroke()
-          } else {
-            // Cerchio
-            ctx.beginPath()
-            ctx.arc(0, 0, r, 0, Math.PI * 2)
-            ctx.strokeStyle = color
-            ctx.lineWidth = 2.5
-            ctx.stroke()
-            if (el.tipo === 'player-bib') {
-              ctx.fillStyle = color
-              ctx.fill()
-            }
-          }
-          // Numero progressivo giocatore
-          if (el.numero && el.tipo !== 'gk') {
-            ctx.fillStyle = el.tipo === 'player-bib' ? '#ffffff' : color
-            ctx.font = 'bold 14px sans-serif'
-            ctx.textAlign = 'center'
-            ctx.textBaseline = 'middle'
-            ctx.fillText(String(el.numero), 0, 1)
-          }
-          // Portiere: lettera P
-          if (el.tipo === 'gk') {
-            ctx.fillStyle = color
-            ctx.font = 'bold 12px sans-serif'
-            ctx.textAlign = 'center'
-            ctx.textBaseline = 'middle'
-            ctx.fillText('P', 0, 1)
-          }
-          ctx.restore()
-        } else if (el.tipo === 'ball') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          ctx.beginPath()
-          ctx.arc(0, 0, 10, 0, Math.PI * 2)
-          ctx.strokeStyle = color
-          ctx.lineWidth = 2
-          ctx.stroke()
-          ctx.beginPath()
-          ctx.arc(0, 0, 3, 0, Math.PI * 2)
-          ctx.fillStyle = color
-          ctx.fill()
-          ctx.restore()
-        } else if (el.tipo === 'cone') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          // Base del cono
-          ctx.beginPath()
-          ctx.ellipse(0, 6, 12, 4, 0, 0, Math.PI * 2)
-          ctx.fillStyle = color
-          ctx.fill()
-          // Corpo trapezoidale
-          ctx.beginPath()
-          ctx.moveTo(-8, 6)
-          ctx.lineTo(-3, -10)
-          ctx.lineTo(3, -10)
-          ctx.lineTo(8, 6)
-          ctx.closePath()
-          ctx.fill()
-          // Banda riflettente
-          ctx.beginPath()
-          ctx.moveTo(-5, -2)
-          ctx.lineTo(5, -2)
-          ctx.strokeStyle = 'rgba(255,255,255,0.35)'
-          ctx.lineWidth = 2
-          ctx.stroke()
-          ctx.restore()
-        } else if (el.tipo === 'disc') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          ctx.beginPath()
-          ctx.ellipse(0, 0, 14, 5, 0, 0, Math.PI * 2)
-          ctx.fillStyle = color
-          ctx.fill()
-          ctx.beginPath()
-          ctx.ellipse(0, -1, 9, 3, 0, 0, Math.PI * 2)
-          ctx.fillStyle = 'rgba(255,255,255,0.25)'
-          ctx.fill()
-          ctx.restore()
-        } else if (el.tipo === 'flag') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          // Asta
-          ctx.fillStyle = '#cbd5e1'
-          ctx.fillRect(-1.5, -30, 3, 30)
-          // Bandierina triangolare
-          ctx.beginPath()
-          ctx.moveTo(1.5, -30)
-          ctx.lineTo(16, -25.5)
-          ctx.lineTo(1.5, -21)
-          ctx.closePath()
-          ctx.fillStyle = color
-          ctx.fill()
-          ctx.restore()
-        } else if (el.tipo === 'ring') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          ctx.beginPath()
-          ctx.arc(0, 0, 14, 0, Math.PI * 2)
-          ctx.strokeStyle = color
-          ctx.lineWidth = 4
-          ctx.stroke()
-          ctx.restore()
-        } else if (el.tipo === 'ladder') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          ctx.fillStyle = color
-          ctx.fillRect(-18, -8, 36, 2.5)
-          ctx.fillRect(-18, 5.5, 36, 2.5)
-          for (const rx of [-9, 0, 9]) {
-            ctx.fillRect(rx - 1.25, -8, 2.5, 16)
-          }
-          ctx.restore()
-        } else if (el.tipo === 'hurdle') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          ctx.fillStyle = color
-          ctx.fillRect(-11, -15, 22, 3)
-          ctx.fillRect(-11, -12, 3, 12)
-          ctx.fillRect(8, -12, 3, 12)
-          ctx.restore()
-        } else if (el.tipo === 'mannequin') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          ctx.fillStyle = color
-          // Testa
-          ctx.beginPath()
-          ctx.arc(0, -13, 3.5, 0, Math.PI * 2)
-          ctx.fill()
-          // Corpo
-          ctx.beginPath()
-          ctx.roundRect(-3.5, -9.5, 7, 25, 3)
-          ctx.fill()
-          // Base
-          ctx.beginPath()
-          ctx.ellipse(0, 16, 8, 3, 0, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.restore()
-        } else if (el.tipo === 'zone') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          ctx.globalAlpha = 0.25
-          ctx.fillStyle = color
-          ctx.fillRect(-60, -40, 120, 80)
-          ctx.globalAlpha = 1
-          ctx.strokeStyle = color
-          ctx.lineWidth = 1.5
-          ctx.setLineDash([6, 4])
-          ctx.strokeRect(-60, -40, 120, 80)
-          ctx.setLineDash([])
-          ctx.restore()
-        } else if (el.tipo === 'coord') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          // Rettangolo giallo
-          ctx.fillStyle = color
-          ctx.beginPath()
-          ctx.roundRect(-16, -3, 32, 6, 2)
-          ctx.fill()
-          // Cerchi ai lati
-          ctx.fillStyle = color
-          ctx.beginPath()
-          ctx.arc(-16, 0, 4, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.beginPath()
-          ctx.arc(16, 0, 4, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.restore()
-        } else if (el.tipo === 'pole') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          // Ombra
-          ctx.fillStyle = color
-          ctx.beginPath()
-          ctx.ellipse(0, 12, 6, 3, 0, 0, Math.PI * 2)
-          ctx.fill()
-          // Asta rossa
-          ctx.fillStyle = color
-          ctx.fillRect(-2.5, -12, 5, 24)
-          ctx.restore()
-        } else if (el.tipo === 'goal') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          const w = 28, h = 14
-          ctx.strokeStyle = '#fff'
-          ctx.lineWidth = 3
-          // Linea di porta
-          ctx.beginPath()
-          ctx.moveTo(-w, -h)
-          ctx.lineTo(-w, h)
-          ctx.stroke()
-          ctx.beginPath()
-          ctx.moveTo(w, -h)
-          ctx.lineTo(w, h)
-          ctx.stroke()
-          // Attraverso
-          ctx.beginPath()
-          ctx.moveTo(-w, -h)
-          ctx.lineTo(w, -h)
-          ctx.stroke()
-          // Rete (linee orizzontali)
-          ctx.strokeStyle = 'rgba(255,255,255,0.3)'
-          ctx.lineWidth = 0.8
-          for (let i = -h + 5; i < h; i += 5) {
-            ctx.beginPath()
-            ctx.moveTo(-w, i)
-            ctx.lineTo(w, i)
-            ctx.stroke()
-          }
-          // Linee verticali rete
-          for (let i = -w + 9; i < w; i += 9) {
-            ctx.beginPath()
-            ctx.moveTo(i, -h)
-            ctx.lineTo(i, h)
-            ctx.stroke()
-          }
-          ctx.restore()
-        } else if (['pass', 'dribble', 'wallpass', 'shot', 'movement', 'line'].includes(el.tipo)) {
-          ctx.save()
-          const dx = ex2 - ex1
-          const dy = ey2 - ey1
-          const len = Math.sqrt(dx * dx + dy * dy)
-          if (len > 0) {
-            const angle = Math.atan2(dy, dx)
-            ctx.translate(ex1, ey1)
-            ctx.rotate(angle)
-            ctx.scale(baseScale, baseScale)
-
-            ctx.strokeStyle = color
-            ctx.lineWidth = Math.max(2.5, (el.w || 2) * 0.7)
-            if (el.tipo === 'dribble' || el.tipo === 'movement') {
-              ctx.setLineDash([6 / baseScale, 4 / baseScale])
-            } else {
-              ctx.setLineDash([])
-            }
-
-            // Linea
-            ctx.beginPath()
-            ctx.moveTo(-len / 2 / baseScale, 0)
-            ctx.lineTo(len / 2 / baseScale, 0)
-            ctx.stroke()
-            ctx.setLineDash([])
-
-            // Freccia
-            const aLen = 14
-            const halfLen = len / 2 / baseScale
-            ctx.fillStyle = color
-            ctx.beginPath()
-            ctx.moveTo(halfLen, 0)
-            ctx.lineTo(halfLen - aLen, -aLen / 2)
-            ctx.lineTo(halfLen - aLen, aLen / 2)
-            ctx.closePath()
-            ctx.fill()
-
-            // Wallpass: seconda freccia
-            if (el.tipo === 'wallpass') {
-              ctx.beginPath()
-              ctx.moveTo(-halfLen, 0)
-              ctx.lineTo(-halfLen + aLen, -aLen / 2)
-              ctx.lineTo(-halfLen + aLen, aLen / 2)
-              ctx.closePath()
-              ctx.fill()
-            }
-
-            // Shot: linea verticale alla fine
-            if (el.tipo === 'shot') {
-              ctx.strokeStyle = color
-              ctx.lineWidth = 2.5
-              ctx.beginPath()
-              ctx.moveTo(halfLen + 6, -10)
-              ctx.lineTo(halfLen + 6, 10)
-              ctx.stroke()
-            }
-          }
-          ctx.restore()
-        } else if (el.tipo === 'text') {
-          ctx.save()
-          ctx.translate(ex_, ey)
-          ctx.rotate((rotation * Math.PI) / 180)
-          ctx.scale(sX, sY)
-          ctx.fillStyle = color
-          ctx.font = '16px sans-serif'
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(el.text || 'Testo', 0, 0)
-          ctx.restore()
-        }
-      })
-    }
-    
     // Aggiungi immagine al PDF
     const imgData = exportCanvas.toDataURL('image/png')
     const availableH = pageHeight - y - 10
