@@ -10,6 +10,7 @@ from .rate_limit import limiter
 from .database import Base, engine
 from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni, infortuni, openday, planning_eventi, schede_allenamento
 from .routers.gruppi import router as gruppi_router
+from .routers.liste_tornei import router as liste_tornei_router
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
 
@@ -808,6 +809,31 @@ def run_migrations():
                 print(f"Migration warning (default groups): {e}")
                 conn.rollback()
 
+            # Create liste_torneo tables
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS liste_torneo (
+                        id SERIAL PRIMARY KEY,
+                        nome VARCHAR(100) NOT NULL,
+                        categoria_id INTEGER NOT NULL REFERENCES categorie(id),
+                        societa_id INTEGER NOT NULL REFERENCES societa(id),
+                        creato_il TIMESTAMP DEFAULT NOW()
+                    )
+                """))
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS liste_torneo_giocatori (
+                        id SERIAL PRIMARY KEY,
+                        lista_id INTEGER NOT NULL REFERENCES liste_torneo(id) ON DELETE CASCADE,
+                        persona_id INTEGER NOT NULL REFERENCES persone(id),
+                        ordine INTEGER DEFAULT 0
+                    )
+                """))
+                conn.commit()
+                print("Migration: Created liste_torneo tables")
+            except Exception as e:
+                print(f"Migration warning (liste_torneo): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 
@@ -834,6 +860,7 @@ app.include_router(infortuni.router, dependencies=[Depends(get_current_user)])
 app.include_router(openday.router, prefix="/openday", dependencies=[Depends(get_current_user)])
 app.include_router(planning_eventi.router, dependencies=[Depends(get_current_user)])
 app.include_router(schede_allenamento.router, dependencies=[Depends(get_current_user)])
+app.include_router(liste_tornei_router, dependencies=[Depends(get_current_user)])
 
 @app.get("/")
 def root():

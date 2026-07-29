@@ -104,6 +104,15 @@
           </tbody>
         </table>
       </div>
+
+      <div class="liste-tornei-link">
+        <router-link :to="'/liste-tornei/' + categoriaId" class="btn-liste-tornei">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+          Liste Tornei
+        </router-link>
+      </div>
     </div>
 
     <!-- Modal sblocco GDPR -->
@@ -1240,5 +1249,32 @@ tr:last-child td { border-bottom: none; }
   .filters {
     flex-direction: column;
   }
+}
+
+.liste-tornei-link {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.btn-liste-tornei {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 12px;
+  background: rgba(168, 85, 247, 0.1);
+  color: #a78bfa;
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.btn-liste-tornei:hover {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.5);
+  transform: translateY(-1px);
 }
 </style>

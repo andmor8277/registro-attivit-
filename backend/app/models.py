@@ -304,3 +304,18 @@ class SchedaAllenamento(Base):
     rpe = Column(Integer, nullable=True)  # 1-10, Rate of Perceived Exertion
     note = Column(Text, nullable=True)
     creato_il = Column(DateTime, nullable=True)
+
+class ListaTorneo(Base):
+    __tablename__ = "liste_torneo"
+    id = Column(Integer, primary_key=True)
+    nome = Column(String(100), nullable=False)
+    categoria_id = Column(Integer, ForeignKey("categorie.id"), nullable=False)
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
+    creato_il = Column(DateTime, nullable=True)
+
+class ListaTorneoGiocatore(Base):
+    __tablename__ = "liste_torneo_giocatori"
+    id = Column(Integer, primary_key=True)
+    lista_id = Column(Integer, ForeignKey("liste_torneo.id"), nullable=False)
+    persona_id = Column(Integer, ForeignKey("persone.id"), nullable=False)
+    ordine = Column(Integer, default=0)
