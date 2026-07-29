@@ -820,13 +820,15 @@ tr:last-child td { border-bottom: none; }
   font-weight: 700;
 }
 
-.cell-gruppo { text-align: center; }
+.cell-gruppo { text-align: center; min-width: 80px; }
 
 .badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
+  gap: 0.25rem;
+  min-width: 28px;
+  padding: 0 0.375rem;
   height: 28px;
   border-radius: 10px;
   font-size: 0.75rem;
@@ -1187,7 +1189,7 @@ tr:last-child td { border-bottom: none; }
 
 .badge-misto-inline {
   display: inline-block;
-  padding: 0.0625rem 0.375rem;
+  padding: 0.0625rem 0.3rem;
   border-radius: 4px;
   background: rgba(251, 191, 36, 0.2);
   border: 1px solid rgba(251, 191, 36, 0.35);
@@ -1195,8 +1197,7 @@ tr:last-child td { border-bottom: none; }
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  margin-left: 0.375rem;
-  vertical-align: middle;
+  white-space: nowrap;
 }
 
 .checkbox-misto {
