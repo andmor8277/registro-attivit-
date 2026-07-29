@@ -172,7 +172,7 @@
     var cw=stage.width(),ch=stage.height();
     var isHalf=fieldMode==='half',isBlank=fieldMode==='blank';
     var ratio=isHalf?(105/2)/68:105/68;
-    var pad=ch*0.04;
+    var pad=ch*0.02;
     var availW=cw-pad*2,availH=ch-pad*2;
     var fw,fh,fx,fy;
     if(availW/availH>ratio){fh=availH;fw=fh*ratio}else{fw=availW;fh=fw/ratio}
@@ -470,18 +470,29 @@
       fieldMode=e.data.mode;
       drawField();
       repositionElements();
+    }else if(e.data&&e.data.type==='requestSize'){
+      reportSize();
     }
   });
 
   var transformer=new Konva.Transformer({anchorFillColor:'#3b82f6',anchorStrokeColor:'#fff',anchorSize:14,borderStroke:'#3b82f6',anchorCornerRadius:7,rotateAnchorOffset:10});
   elementLayer.add(transformer);
 
+  function reportSize(){
+    if(!wrap)return;
+    if(!window.parent||window.parent===window)return;
+    var ratio=fieldMode==='half'?(105/2)/68:105/68;
+    var chrome=window.innerHeight-wrap.clientHeight;
+    var needed=Math.round(wrap.clientWidth/ratio+chrome);
+    if(needed>0){parent.postMessage({type:'requestHeight',height:needed},'*')}
+  }
+
   function drawField(){
     fieldGroup.destroyChildren();
     var cw=stage.width(),ch=stage.height();
     var isHalf=fieldMode==='half',isBlank=fieldMode==='blank';
     var ratio=isHalf?(105/2)/68:105/68;
-    var pad=ch*0.04;
+    var pad=ch*0.02;
     var availW=cw-pad*2,availH=ch-pad*2;
     var fw,fh,fx,fy;
     if(availW/availH>ratio){fh=availH;fw=fh*ratio}else{fw=availW;fh=fw/ratio}
@@ -523,6 +534,7 @@
       }
     }
     fieldLayer.batchDraw();
+    reportSize();
   }
 
   function createPlayer(type,x,y){

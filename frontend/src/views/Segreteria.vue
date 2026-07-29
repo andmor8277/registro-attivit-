@@ -88,6 +88,32 @@
       </div>
 
       <div class="cat-grid">
+        <div class="cat-card presenze-card" @click="router.push('/segreteria/presenze')">
+          <div class="cat-card-header presenze-header">
+            <span class="cat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                <path d="M9 14l2 2 4-4"/>
+              </svg>
+            </span>
+            <span class="cat-nome">Presenze</span>
+          </div>
+          <div class="cat-card-body presenze-body">
+            <div class="cat-stat">
+              <span class="cat-stat-value">{{ categorieOrdinate.length }}</span>
+              <span class="cat-stat-label">categorie</span>
+            </div>
+            <div class="cat-stat">
+              <span class="cat-stat-value">{{ totaleIscritti }}</span>
+              <span class="cat-stat-label">giocatori</span>
+            </div>
+          </div>
+          <div class="cat-card-footer">
+            <span class="cat-arrow">→</span>
+          </div>
+        </div>
+
         <div class="cat-card openday-card" @click="router.push('/segreteria/openday')">
           <div class="cat-card-header openday-header">
             <span class="cat-icon">
@@ -519,6 +545,24 @@ async function sbloccaGdpr() {
 }
 
 .openday-card .cat-card-body.openday-body {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.presenze-card .cat-card-header.presenze-header {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.presenze-card:hover {
+  border-color: #2563eb;
+}
+
+.presenze-card .cat-icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.9;
+}
+
+.presenze-card .cat-card-body.presenze-body {
   grid-template-columns: repeat(2, 1fr);
 }
 
