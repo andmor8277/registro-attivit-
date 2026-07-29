@@ -89,9 +89,9 @@
                 </td>
               </template>
               <td v-if="!isDirigente" class="cell-gruppo">
-                <span class="badge" :class="'badge-g' + (p.gruppo_id % 4 || 4)">
-                  {{ getGruppoShort(p) }}
-                  <span v-if="p.gruppo_is_misto" class="badge-misto-inline">MISTO</span>
+                <span class="badge-badge-row">
+                  <span class="badge" :class="'badge-g' + (p.gruppo_id % 4 || 4)">{{ getGruppoShort(p) }}</span>
+                  <span v-if="p.gruppo_is_misto" class="badge badge-misto-badge">MISTO</span>
                 </span>
               </td>
               <td class="cell-action">
@@ -822,13 +822,17 @@ tr:last-child td { border-bottom: none; }
 
 .cell-gruppo { text-align: center; min-width: 80px; }
 
+.badge-badge-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  min-width: 28px;
-  padding: 0 0.375rem;
+  width: 28px;
   height: 28px;
   border-radius: 10px;
   font-size: 0.75rem;
@@ -1187,17 +1191,14 @@ tr:last-child td { border-bottom: none; }
   letter-spacing: 0.05em;
 }
 
-.badge-misto-inline {
-  display: inline-block;
-  padding: 0.0625rem 0.3rem;
-  border-radius: 4px;
-  background: rgba(251, 191, 36, 0.2);
-  border: 1px solid rgba(251, 191, 36, 0.35);
+.badge-misto-badge {
+  width: auto;
+  padding: 0 0.5rem;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
   color: #fbbf24;
-  font-size: 0.625rem;
-  font-weight: 700;
+  font-size: 0.6875rem;
   letter-spacing: 0.05em;
-  white-space: nowrap;
 }
 
 .checkbox-misto {
