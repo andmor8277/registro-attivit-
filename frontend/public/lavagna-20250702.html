@@ -326,7 +326,11 @@
           var bc=child.find('Konva.Circle')[0];
           if(bc&&bc.stroke())elColor=bc.stroke();
         }else if(tipo==='cone'){
-          if(child.fill())elColor=child.fill();
+          var cf=firstFill(child);if(cf)elColor=cf;
+        }else if(tipo==='disc'||tipo==='flag'||tipo==='ladder'||tipo==='hurdle'||tipo==='mannequin'||tipo==='zone'){
+          var nf=firstFill(child);if(nf)elColor=nf;
+        }else if(tipo==='ring'){
+          var rs=firstStroke(child);if(rs)elColor=rs;
         }else if(tipo==='coord'){
           var rc=child.find('Konva.Rect')[0];
           if(rc&&rc.fill())elColor=rc.fill();
@@ -341,10 +345,27 @@
         var el={tipo:tipo||'unknown',x:fieldX,y:fieldY,rotazione:child.rotation()||0,colore:elColor,scaleX:child.scaleX(),scaleY:child.scaleY()};
         if(tipo==='player'||tipo==='player-bib'||tipo==='player-jolly'||tipo==='gk'){
           el.size=32;
+          child.children.forEach(function(ch){
+            if(ch.getClassName&&ch.getClassName()==='Text'&&tipo!=='gk'){var n=parseInt(ch.text());if(n)el.numero=n}
+          });
         }else if(tipo==='ball'){
           el.size=20;
         }else if(tipo==='cone'){
           el.size=28;
+        }else if(tipo==='disc'){
+          el.w=28;el.h=10;
+        }else if(tipo==='flag'){
+          el.h=32;
+        }else if(tipo==='ring'){
+          el.size=28;
+        }else if(tipo==='ladder'){
+          el.w=36;el.h=16;
+        }else if(tipo==='hurdle'){
+          el.w=24;el.h=16;
+        }else if(tipo==='mannequin'){
+          el.w=16;el.h=36;
+        }else if(tipo==='zone'){
+          el.w=120;el.h=80;
         }else if(tipo==='coord'){
           el.w=32;el.h=6;
         }else if(tipo==='pole'){
@@ -409,11 +430,12 @@
     var sX=el.scaleX||1,sY=el.scaleY||1;
     if(el.tipo==='player'||el.tipo==='player-bib'||el.tipo==='player-jolly'||el.tipo==='gk'){
       var c=toCanvas(el.x||0,el.y||0);
-      newEl=createPlayer(el.tipo,c.x,c.y);
+      newEl=createPlayer(el.tipo,c.x,c.y,el.numero);
       newEl.setAttr('fieldX',el.x);newEl.setAttr('fieldY',el.y);
       newEl.children.forEach(function(ch){
+        if(ch.getAttr&&ch.getAttr('fixedFill'))return;
         if(ch.stroke){var s=ch.stroke();if(s&&s!=='transparent')ch.stroke(col)}
-        if(ch.fill){var f=ch.fill();if(f&&f!=='transparent'){if(el.tipo==='player-bib'||(el.tipo==='gk'&&ch.getClassName()==='Text'))ch.fill(col)}}
+        if(ch.fill){var f=ch.fill();if(f&&f!=='transparent'&&typeof f==='string'&&f.indexOf('rgba')===-1)ch.fill(col)}
       });
       if(sX!==1||sY!==1){newEl.scaleX(sX);newEl.scaleY(sY)}
     }else if(el.tipo==='ball'){
@@ -424,8 +446,39 @@
       if(sX!==1||sY!==1){newEl.scaleX(sX);newEl.scaleY(sY)}
     }else if(el.tipo==='cone'){
       var c=toCanvas(el.x||0,el.y||0);
-      var cone=new Konva.RegularPolygon({x:c.x,y:c.y,sides:3,radius:14,rotation:0,fill:col});cone.setAttr('dataElement','cone');cone.draggable(true);newEl=cone;
+      newEl=createCone(c.x,c.y);
       newEl.setAttr('fieldX',el.x);newEl.setAttr('fieldY',el.y);
+      newEl.children.forEach(function(ch){if(ch.fill){var f=ch.fill();if(f&&f!=='transparent'&&typeof f==='string'&&f.indexOf('rgba')===-1)ch.fill(col)}});
+      if(sX!==1||sY!==1){newEl.scaleX(sX);newEl.scaleY(sY)}
+    }else if(el.tipo==='disc'||el.tipo==='ladder'||el.tipo==='hurdle'||el.tipo==='mannequin'){
+      var c=toCanvas(el.x||0,el.y||0);
+      newEl=el.tipo==='disc'?createDisc(c.x,c.y):el.tipo==='ladder'?createLadder(c.x,c.y):el.tipo==='hurdle'?createHurdle(c.x,c.y):createMannequin(c.x,c.y);
+      newEl.setAttr('fieldX',el.x);newEl.setAttr('fieldY',el.y);
+      newEl.children.forEach(function(ch){if(ch.fill){var f=ch.fill();if(f&&f!=='transparent'&&typeof f==='string'&&f.indexOf('rgba')===-1)ch.fill(col)}});
+      if(sX!==1||sY!==1){newEl.scaleX(sX);newEl.scaleY(sY)}
+    }else if(el.tipo==='flag'){
+      var c=toCanvas(el.x||0,el.y||0);
+      newEl=createFlag(c.x,c.y);
+      newEl.setAttr('fieldX',el.x);newEl.setAttr('fieldY',el.y);
+      newEl.children.forEach(function(ch){
+        if(ch.getAttr&&ch.getAttr('fixedFill'))return;
+        if(ch.fill){var f=ch.fill();if(f&&f!=='transparent'&&typeof f==='string'&&f.indexOf('rgba')===-1)ch.fill(col)}
+      });
+      if(sX!==1||sY!==1){newEl.scaleX(sX);newEl.scaleY(sY)}
+    }else if(el.tipo==='ring'){
+      var c=toCanvas(el.x||0,el.y||0);
+      newEl=createRing(c.x,c.y);
+      newEl.setAttr('fieldX',el.x);newEl.setAttr('fieldY',el.y);
+      newEl.children.forEach(function(ch){if(ch.stroke){var s=ch.stroke();if(s&&s!=='transparent')ch.stroke(col)}});
+      if(sX!==1||sY!==1){newEl.scaleX(sX);newEl.scaleY(sY)}
+    }else if(el.tipo==='zone'){
+      var c=toCanvas(el.x||0,el.y||0);
+      newEl=createZone(c.x,c.y);
+      newEl.setAttr('fieldX',el.x);newEl.setAttr('fieldY',el.y);
+      newEl.children.forEach(function(ch){
+        if(ch.fill){var f=ch.fill();if(f&&f!=='transparent')ch.fill(col)}
+        if(ch.stroke){var s=ch.stroke();if(s&&s!=='transparent')ch.stroke(col)}
+      });
       if(sX!==1||sY!==1){newEl.scaleX(sX);newEl.scaleY(sY)}
     }else if(el.tipo==='coord'){
       var c=toCanvas(el.x||0,el.y||0);
@@ -865,8 +918,9 @@
             var shapes=node.children?node.children:[node];
             shapes.forEach(function(shape){
               if(!shape.stroke)return;
+              if(shape.getAttr&&shape.getAttr('fixedFill'))return;
               var stroke=shape.stroke(),fill=shape.fill();
-              if(stroke&&stroke!=='transparent')shape.stroke(c);
+              if(stroke&&stroke!=='transparent'&&!(typeof stroke==='string'&&stroke.indexOf('rgba')!==-1))shape.stroke(c);
               if(fill&&fill!=='transparent'&&typeof fill==='string'&&fill.indexOf('rgba')===-1)shape.fill(c);
             });
           });
