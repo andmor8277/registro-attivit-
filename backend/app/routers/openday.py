@@ -37,13 +37,20 @@ def get_openday(current_user: Utente = Depends(get_current_user), db: Session = 
         result.append(d)
     return result
 
+def format_cognome(val):
+    return val.upper() if val else val
+
+def format_nome(val):
+    if not val: return val
+    return ' '.join(w[:1].upper() + w[1:].lower() for w in val.split())
+
 @router.post("/")
 def create_openday(entry: dict, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     o = models.Openday(
         societa_id=societa_id,
-        nome=entry["nome"],
-        cognome=entry["cognome"],
+        nome=format_nome(entry["nome"]),
+        cognome=format_cognome(entry["cognome"]),
         data_nascita=entry["data_nascita"],
         date_prova=entry.get("date_prova", []),
         nulla_osta=entry.get("nulla_osta", False),
@@ -75,12 +82,15 @@ def update_openday(entry_id: int, entry: dict, current_user: Utente = Depends(ge
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     if o.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
-    updatable = ["nome", "cognome", "data_nascita", "date_prova", "nulla_osta",
-                 "certificato_medico", "scadenza_certificato", "tel_papa", "tel_mamma",
-                 "email_papa", "email_mamma"]
+updatable = ["nome", "cognome", "data_nascita", "date_prova", "nulla_osta",
+                  "certificato_medico", "scadenza_certificato", "tel_papa", "tel_mamma",
+                  "email_papa", "email_mamma"]
     for field in updatable:
         if field in entry:
-            setattr(o, field, entry[field])
+            val = entry[field]
+            if field == "cognome": val = format_cognome(val)
+            if field == "nome": val = format_nome(val)
+            setattr(o, field, val)
     db.commit()
     db.refresh(o)
     return {
