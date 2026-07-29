@@ -924,6 +924,13 @@
               if(stroke&&stroke!=='transparent'&&!(typeof stroke==='string'&&stroke.indexOf('rgba')!==-1))shape.stroke(c);
               if(fill&&fill!=='transparent'&&typeof fill==='string'&&fill.indexOf('rgba')===-1)shape.fill(c);
             });
+            // Numero riparte da 1 quando il giocatore cambia colore
+            var tipo=node.getAttr('dataElement');
+            if(tipo==='player'||tipo==='player-bib'||tipo==='player-jolly'){
+              node.children.forEach(function(ch){
+                if(ch.getClassName&&ch.getClassName()==='Text'&&!ch.getAttr('fixedFill')){ch.text('1')}
+              });
+            }
           });
           elementLayer.batchDraw();
           canvasModifiedAt=Date.now();sendElements();
