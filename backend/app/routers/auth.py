@@ -7,7 +7,7 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta, date, timezone
 from pydantic import BaseModel
 from typing import Optional, List
-from ..database import SessionLocal
+from ..database import get_db
 from ..models import Utente, UtenteCategoria, Categoria
 from ..rate_limit import limiter
 import os
@@ -32,13 +32,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 def verify_password(plain, hashed):
     return pwd_context.verify(plain, hashed)

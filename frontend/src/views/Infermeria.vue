@@ -103,7 +103,8 @@ const categorie = ref([])
 const tuttiGiocatori = ref([])
 const infortunatiAttivi = ref(0)
 
-const currentSeason = ref('2025/2026')
+const m = new Date().getMonth() + 1
+const currentSeason = ref(`${m >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1}/${m >= 8 ? new Date().getFullYear() + 1 : new Date().getFullYear()}`)
 
 const societaId = computed(() => {
   return utenteAttivo.value?.societa_id || parseInt(localStorage.getItem('societa_id')) || 1

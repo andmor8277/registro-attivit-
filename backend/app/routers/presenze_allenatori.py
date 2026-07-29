@@ -3,18 +3,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import extract
 from typing import Optional
 from pydantic import BaseModel
-from ..database import SessionLocal
+from ..database import get_db
 from ..models import PresenzaAllenatore, Utente, UtenteCategoria, Categoria
 from .auth import get_current_user
 
 router = APIRouter(prefix="/presenze-allenatori", tags=["presenze-allenatori"])
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 def get_societa_filter(current_user: Utente):
     if current_user.is_super_admin:
