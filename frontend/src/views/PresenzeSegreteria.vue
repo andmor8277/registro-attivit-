@@ -61,10 +61,6 @@
               <span class="cat-stat-value">{{ getGiocatoriCat(cat.id).length }}</span>
               <span class="cat-stat-label">giocatori</span>
             </div>
-            <div class="cat-stat">
-              <span class="cat-stat-value">{{ getGiorniAllenamento(cat.id) }}</span>
-              <span class="cat-stat-label">giorni</span>
-            </div>
           </div>
           <div class="cat-card-footer">
             <span class="cat-label">Vai al registro</span>
@@ -119,11 +115,7 @@ function getGiocatoriCat(catId) {
   return persone.value.filter(p => p.categoria_id === catId)
 }
 
-function getGiorniAllenamento(catId) {
-  const giorni = categorie.value.find(c => c.id === catId)?.giorni
-  if (!giorni) return 0
-  return giorni.split(',').filter(g => g.trim()).length
-}
+
 
 onMounted(async () => {
   await loadDati()
