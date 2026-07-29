@@ -31,8 +31,10 @@
     .field-toggle{display:flex;gap:6px;padding:6px 12px;border-top:1px solid #334155}
     .field-chip{padding:6px 12px;background:#334155;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;color:#fff;border:none}
     .field-chip.active{background:#3b82f6}
-    .toolbar{display:flex;flex-wrap:nowrap;gap:4px;padding:4px 8px;border-top:1px solid #334155;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch}
-    .tool-btn{width:calc(25% - 5px);height:50px;border:2px solid transparent;background:#334155;color:#fff;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;font-size:9px;font-weight:500;line-height:1.1}
+    .toolbar{display:flex;flex-direction:column;flex-wrap:nowrap;gap:6px;padding:6px 8px;border-top:1px solid #334155;overflow-y:auto;flex-shrink:0;-webkit-overflow-scrolling:touch}
+    .tool-section-title{font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;padding-left:2px}
+    .tool-grid{display:flex;flex-wrap:wrap;gap:4px}
+    .tool-btn{width:calc(25% - 4px);height:50px;border:2px solid transparent;background:#334155;color:#fff;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;font-size:9px;font-weight:500;line-height:1.1}
     .tool-btn.active{border-color:#3b82f6;background:#1d4ed8}
     .tool-btn:active{transform:scale(0.95)}
     @media(max-width:768px){
@@ -55,8 +57,8 @@
       .drawer-content{overflow:visible}
       .fab-btn{display:none}
       .drawer-overlay{display:none!important}
-      .toolbar{flex-wrap:nowrap;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch}
-      .tool-btn{min-width:52px;width:auto;height:52px}
+      .toolbar{flex-wrap:nowrap;overflow-y:auto;flex-shrink:0;-webkit-overflow-scrolling:touch}
+      .tool-btn{width:calc(12.5% - 4px);min-width:58px;height:52px}
     }
   </style>
 </head>
@@ -109,7 +111,14 @@
     if(tipo==='gk')return '#f97316';
     if(tipo==='ball')return '#ffffff';
     if(tipo==='cone')return '#f97316';
+    if(tipo==='disc')return '#a78bfa';
+    if(tipo==='flag')return '#eab308';
     if(tipo==='coord')return '#eab308';
+    if(tipo==='ring')return '#06b6d4';
+    if(tipo==='ladder')return '#eab308';
+    if(tipo==='hurdle')return '#f97316';
+    if(tipo==='mannequin')return '#f59e0b';
+    if(tipo==='zone')return '#3b82f6';
     if(tipo==='pole')return '#ef4444';
     if(tipo==='goal')return '#ffffff';
     if(tipo==='text')return '#ffffff';
@@ -130,24 +139,41 @@
   var lineTools=['pass','dribble','wallpass','shot','movement','line'];
   var drawerOpen=false;
 
-  var tools=[
-    {type:'select',label:'Seleziona',icon:'⊹'},
-    {type:'player',label:'Giocatore',icon:'○'},
-    {type:'player-bib',label:'Fratinato',icon:'●'},
-    {type:'player-jolly',label:'Jolly',icon:'◆'},
-    {type:'gk',label:'Portiere',icon:'P'},
-    {type:'ball',label:'Pallone',icon:'⊙'},
-    {type:'cone',label:'Coni',icon:'△'},
-    {type:'coord',label:'Coordinativo',icon:'▬'},
-    {type:'pole',label:'Aste',icon:'⫼'},
-    {type:'goal',label:'Porte',icon:'▭'},
-    {type:'pass',label:'Passaggio',icon:'→'},
-    {type:'dribble',label:'Conduzione',icon:'⇢'},
-    {type:'wallpass',label:'A muro',icon:'↬'},
-    {type:'shot',label:'Tiro',icon:'⤴'},
-    {type:'movement',label:'Movimento',icon:'⤷'},
-    {type:'line',label:'Linea',icon:'─'},
-    {type:'text',label:'Testo',icon:'T'}
+  var toolSections=[
+    {title:'',tools:[
+      {type:'select',label:'Seleziona',icon:'⊹'}
+    ]},
+    {title:'Giocatori',tools:[
+      {type:'player',label:'Giocatore',icon:'○'},
+      {type:'player-bib',label:'Fratinato',icon:'●'},
+      {type:'player-jolly',label:'Jolly',icon:'◆'},
+      {type:'gk',label:'Portiere',icon:'P'}
+    ]},
+    {title:'Attrezzatura',tools:[
+      {type:'ball',label:'Pallone',icon:'⊙'},
+      {type:'cone',label:'Cono',icon:'▲'},
+      {type:'disc',label:'Disco',icon:'🥏'},
+      {type:'flag',label:'Bandierina',icon:'⚑'},
+      {type:'pole',label:'Asta',icon:'⫼'},
+      {type:'coord',label:'Coordinativo',icon:'▬'},
+      {type:'ring',label:'Anello',icon:'◎'},
+      {type:'ladder',label:'Scala',icon:'🪜'},
+      {type:'hurdle',label:'Ostacolo',icon:'Π'},
+      {type:'mannequin',label:'Manichino',icon:'🧍'},
+      {type:'goal',label:'Porta',icon:'▭'}
+    ]},
+    {title:'Linee',tools:[
+      {type:'pass',label:'Passaggio',icon:'→'},
+      {type:'dribble',label:'Conduzione',icon:'⇢'},
+      {type:'wallpass',label:'A muro',icon:'↬'},
+      {type:'shot',label:'Tiro',icon:'⤴'},
+      {type:'movement',label:'Movimento',icon:'⤷'},
+      {type:'line',label:'Linea',icon:'─'}
+    ]},
+    {title:'Altro',tools:[
+      {type:'zone',label:'Zona',icon:'▦'},
+      {type:'text',label:'Testo',icon:'T'}
+    ]}
   ];
 
   var wrap=document.getElementById('canvasWrap');
@@ -263,6 +289,19 @@
 
   window.addEventListener('resize',function(){stage.width(wrap.clientWidth);stage.height(wrap.clientHeight);drawField();repositionElements()});
   setInterval(function(){var w=wrap.clientWidth,h=wrap.clientHeight;if(stage.width()!==w||stage.height()!==h){stage.width(w);stage.height(h);drawField();repositionElements()}},100);
+
+  function firstFill(node){
+    var c=null;
+    var kids=node.children||[];
+    for(var i=0;i<kids.length;i++){var ch=kids[i];if(ch.fill){var f=ch.fill();if(f&&f!=='transparent'&&typeof f==='string'&&f.indexOf('rgba')===-1){c=f;break}}}
+    return c;
+  }
+  function firstStroke(node){
+    var c=null;
+    var kids=node.children||[];
+    for(var i=0;i<kids.length;i++){var ch=kids[i];if(ch.stroke){var s=ch.stroke();if(s&&s!=='transparent'){c=s;break}}}
+    return c;
+  }
 
   function getElements(){
     var elements=[];
@@ -537,17 +576,82 @@
     reportSize();
   }
 
-  function createPlayer(type,x,y){
+  function createPlayer(type,x,y,num){
     var g=new Konva.Group({x:x,y:y,draggable:true}),r=16,isFilled=type==='player-bib',isDiamond=type==='player-jolly',isGK=type==='gk';
     g.setAttr('dataElement',type);
-    playerCounters[type]=(playerCounters[type]||0)+1;
+    if(num==null){playerCounters[type]=(playerCounters[type]||0)+1;num=playerCounters[type]}
+    else{playerCounters[type]=Math.max(playerCounters[type]||0,num)}
     if(isDiamond){g.add(new Konva.RegularPolygon({sides:4,radius:r,rotation:45,stroke:currentColor,strokeWidth:2.5}))}
     else{g.add(new Konva.Circle({radius:r,stroke:currentColor,strokeWidth:2.5,fill:isFilled?currentColor:'transparent'}))}
-    if(isGK){g.add(new Konva.Text({text:'P',width:r*2,height:r*2,fontFamily:'Arial',fontSize:18,fontWeight:'bold',fill:currentColor,x:-r/2,y:-r/2,align:'center',verticalAlign:'middle'}))}
+    if(isGK){g.add(new Konva.Text({text:'P',width:r*2,height:r*2,fontFamily:'Arial',fontSize:18,fontWeight:'bold',fill:currentColor,x:-r,y:-r,align:'center',verticalAlign:'middle',listening:false}))}
+    else{
+      var txt=new Konva.Text({text:String(num),width:r*2,height:r*2,fontFamily:'Arial',fontSize:14,fontWeight:'bold',fill:isFilled?'#ffffff':currentColor,x:-r,y:-r,align:'center',verticalAlign:'middle',listening:false});
+      if(isFilled)txt.setAttr('fixedFill',true);
+      g.add(txt);
+    }
     return g;
   }
   function createBall(x,y){var g=new Konva.Group({x:x,y:y,draggable:true});g.setAttr('dataElement','ball');g.add(new Konva.Circle({radius:10,stroke:currentColor,strokeWidth:2}));g.add(new Konva.Circle({radius:3,fill:currentColor}));return g}
-  function createCone(x,y){var n=new Konva.RegularPolygon({x:x,y:y,sides:3,radius:14,rotation:0,fill:'#f97316'});n.setAttr('dataElement','cone');n.draggable(true);return n}
+  function createCone(x,y){
+    var g=new Konva.Group({x:x,y:y,draggable:true});
+    g.setAttr('dataElement','cone');
+    g.add(new Konva.Ellipse({rx:12,ry:4,y:6,fill:currentColor}));
+    g.add(new Konva.Line({points:[-8,6,-3,-10,3,-10,8,6],closed:true,fill:currentColor}));
+    g.add(new Konva.Line({points:[-5,-2,5,-2],stroke:'rgba(255,255,255,0.35)',strokeWidth:2,listening:false}));
+    return g;
+  }
+  function createDisc(x,y){
+    var g=new Konva.Group({x:x,y:y,draggable:true});
+    g.setAttr('dataElement','disc');
+    g.add(new Konva.Ellipse({rx:14,ry:5,fill:currentColor}));
+    g.add(new Konva.Ellipse({rx:9,ry:3,y:-1,fill:'rgba(255,255,255,0.25)',listening:false}));
+    return g;
+  }
+  function createFlag(x,y){
+    var g=new Konva.Group({x:x,y:y,draggable:true});
+    g.setAttr('dataElement','flag');
+    g.add(new Konva.Line({points:[1.5,-30,16,-25.5,1.5,-21],closed:true,fill:currentColor}));
+    var poleRect=new Konva.Rect({x:-1.5,y:-30,width:3,height:30,fill:'#cbd5e1'});
+    poleRect.setAttr('fixedFill',true);
+    g.add(poleRect);
+    return g;
+  }
+  function createRing(x,y){
+    var g=new Konva.Group({x:x,y:y,draggable:true});
+    g.setAttr('dataElement','ring');
+    g.add(new Konva.Circle({radius:14,stroke:currentColor,strokeWidth:4}));
+    return g;
+  }
+  function createLadder(x,y){
+    var g=new Konva.Group({x:x,y:y,draggable:true});
+    g.setAttr('dataElement','ladder');
+    g.add(new Konva.Rect({x:-18,y:-8,width:36,height:2.5,fill:currentColor}));
+    g.add(new Konva.Rect({x:-18,y:5.5,width:36,height:2.5,fill:currentColor}));
+    [-9,0,9].forEach(function(rx){g.add(new Konva.Rect({x:rx-1.25,y:-8,width:2.5,height:16,fill:currentColor}))});
+    return g;
+  }
+  function createHurdle(x,y){
+    var g=new Konva.Group({x:x,y:y,draggable:true});
+    g.setAttr('dataElement','hurdle');
+    g.add(new Konva.Rect({x:-11,y:-15,width:22,height:3,fill:currentColor}));
+    g.add(new Konva.Rect({x:-11,y:-12,width:3,height:12,fill:currentColor}));
+    g.add(new Konva.Rect({x:8,y:-12,width:3,height:12,fill:currentColor}));
+    return g;
+  }
+  function createMannequin(x,y){
+    var g=new Konva.Group({x:x,y:y,draggable:true});
+    g.setAttr('dataElement','mannequin');
+    g.add(new Konva.Circle({radius:3.5,y:-13,fill:currentColor}));
+    g.add(new Konva.Rect({x:-3.5,y:-9.5,width:7,height:25,cornerRadius:3,fill:currentColor}));
+    g.add(new Konva.Ellipse({rx:8,ry:3,y:16,fill:currentColor}));
+    return g;
+  }
+  function createZone(x,y){
+    var g=new Konva.Group({x:x,y:y,draggable:true});
+    g.setAttr('dataElement','zone');
+    g.add(new Konva.Rect({x:-60,y:-40,width:120,height:80,fill:currentColor,opacity:0.25,stroke:currentColor,strokeWidth:1.5,dash:[6,4]}));
+    return g;
+  }
   function createCoord(x,y){var g=new Konva.Group({x:x,y:y,draggable:true});g.setAttr('dataElement','coord');g.add(new Konva.Rect({width:32,height:6,fill:'#eab308',cornerRadius:2,x:-16,y:-3}));g.add(new Konva.Circle({x:-16,y:0,radius:4,fill:'#ca8a04'}));g.add(new Konva.Circle({x:16,y:0,radius:4,fill:'#ca8a04'}));return g}
   function createPole(x,y){var g=new Konva.Group({x:x,y:y,draggable:true});g.setAttr('dataElement','pole');g.add(new Konva.Ellipse({rx:6,ry:3,fill:'#94a3b8',y:12}));g.add(new Konva.Rect({width:5,height:24,fill:'#ef4444',x:-2.5,y:-12}));return g}
   function createGoal(x,y){
@@ -610,6 +714,13 @@
     if(['player','player-bib','player-jolly','gk'].indexOf(currentTool)>=0)el=createPlayer(currentTool,x,y);
     else if(currentTool==='ball')el=createBall(x,y);
     else if(currentTool==='cone')el=createCone(x,y);
+    else if(currentTool==='disc')el=createDisc(x,y);
+    else if(currentTool==='flag')el=createFlag(x,y);
+    else if(currentTool==='ring')el=createRing(x,y);
+    else if(currentTool==='ladder')el=createLadder(x,y);
+    else if(currentTool==='hurdle')el=createHurdle(x,y);
+    else if(currentTool==='mannequin')el=createMannequin(x,y);
+    else if(currentTool==='zone')el=createZone(x,y);
     else if(currentTool==='coord')el=createCoord(x,y);
     else if(currentTool==='pole')el=createPole(x,y);
     else if(currentTool==='goal')el=createGoal(x,y);
@@ -710,20 +821,34 @@
   }
   window.addEventListener('resize',resizeStage);
 
-  for(var i=0;i<tools.length;i++){
-    (function(tool){
-      var btn=document.createElement('button');
-      btn.className='tool-btn'+(tool.type===currentTool?' active':'');
-      btn.innerHTML='<span style="font-size:20px;line-height:1">'+tool.icon+'</span><span>'+tool.label+'</span>';
-      btn.onclick=function(){
-        document.querySelectorAll('.tool-btn').forEach(function(b){b.classList.remove('active')});
-        btn.classList.add('active');currentTool=tool.type;transformer.nodes([]);
-        if(tool.type!=='select'){currentColor=getDefaultColor(tool.type);document.querySelectorAll('.color-swatch').forEach(function(s){s.classList.toggle('active',s.style.background===currentColor||rgbToHex(s.style.background)===currentColor)})}
-        stage.container().style.cursor=tool.type==='select'?'default':'crosshair';
-        elementLayer.batchDraw();
-      };
-      toolbar.appendChild(btn);
-    })(tools[i]);
+  for(var si=0;si<toolSections.length;si++){
+    (function(section){
+      var secDiv=document.createElement('div');
+      secDiv.className='tool-section';
+      if(section.title){
+        var lbl=document.createElement('div');
+        lbl.className='tool-section-title';
+        lbl.textContent=section.title;
+        secDiv.appendChild(lbl);
+      }
+      var grid=document.createElement('div');
+      grid.className='tool-grid';
+      section.tools.forEach(function(tool){
+        var btn=document.createElement('button');
+        btn.className='tool-btn'+(tool.type===currentTool?' active':'');
+        btn.innerHTML='<span style="font-size:20px;line-height:1">'+tool.icon+'</span><span>'+tool.label+'</span>';
+        btn.onclick=function(){
+          document.querySelectorAll('.tool-btn').forEach(function(b){b.classList.remove('active')});
+          btn.classList.add('active');currentTool=tool.type;transformer.nodes([]);
+          if(tool.type!=='select'){currentColor=getDefaultColor(tool.type);document.querySelectorAll('.color-swatch').forEach(function(s){s.classList.toggle('active',s.style.background===currentColor||rgbToHex(s.style.background)===currentColor)})}
+          stage.container().style.cursor=tool.type==='select'?'default':'crosshair';
+          elementLayer.batchDraw();
+        };
+        grid.appendChild(btn);
+      });
+      secDiv.appendChild(grid);
+      toolbar.appendChild(secDiv);
+    })(toolSections[si]);
   }
 
   for(var j=0;j<colors.length;j++){
