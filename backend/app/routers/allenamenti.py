@@ -4,7 +4,7 @@ from sqlalchemy import text, or_, and_
 from .. import models
 from ..database import get_db
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import date, datetime
 from .auth import get_current_user
 
@@ -38,7 +38,7 @@ class EsercizioCreate(BaseModel):
     focus: Optional[str] = None
     spazio: Optional[str] = None
     tempo: Optional[str] = None
-    campo_con_righe: bool = True
+    campo_con_righe: Any = True
     elementi: List[EsercizioElemento] = []
 
 class GiornoCreate(BaseModel):
@@ -239,7 +239,7 @@ class CatalogoEsercizioIn(BaseModel):
     spazio: Optional[str] = ''
     tempo: Optional[str] = ''
     descrizione: Optional[str] = ''
-    campo_con_righe: bool = True
+    campo_con_righe: Any = True
     elementi: List[EsercizioElemento] = []
     visibilita: str = 'pubblico'
 
