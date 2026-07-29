@@ -744,7 +744,7 @@
   document.querySelectorAll('.field-chip').forEach(function(chip){
     chip.onclick=function(){
       document.querySelectorAll('.field-chip').forEach(function(c){c.classList.remove('active')});
-      chip.classList.add('active');fieldMode=chip.dataset.mode;drawField();repositionElements();
+      chip.classList.add('active');fieldMode=chip.dataset.mode;drawField();repositionElements();parent.postMessage({type:'fieldModeChanged', mode:fieldMode}, '*');
     };
   });
 
