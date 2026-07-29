@@ -931,6 +931,7 @@
               node.children.forEach(function(ch){
                 if(ch.getClassName&&ch.getClassName()==='Text'&&!ch.getAttr('fixedFill')){ch.text('1')}
               });
+              var ck=tipo+'_'+c;playerCounters[ck]=Math.max(playerCounters[ck]||0,1);
             }
           });
           elementLayer.batchDraw();
