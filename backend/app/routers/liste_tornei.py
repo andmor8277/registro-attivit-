@@ -61,13 +61,32 @@ def get_giocatori_lista(lista_id: int, db: Session = Depends(get_db), current_us
     if societa_id and lista.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     result = db.execute(text("""
-        SELECT p.id as persona_id, p.nome, p.cognome, lg.id, lg.ordine
+        SELECT p.id as persona_id, p.nome, p.cognome, p.data_nascita, p.codice_fiscale,
+               p.matricola, p.numero_maglia, p.scadenza_certificato,
+               p.tel_papa, p.tel_mamma, p.email1,
+               g.nome as gruppo_nome, g.is_misto as gruppo_is_misto,
+               lg.id, lg.ordine
         FROM liste_torneo_giocatori lg
         JOIN persone p ON p.id = lg.persona_id
+        LEFT JOIN gruppi g ON g.id = p.gruppo_id
         WHERE lg.lista_id = :lid
         ORDER BY lg.ordine, p.cognome
     """), {"lid": lista_id}).fetchall()
-    return [{"id": r.id, "persona_id": r.persona_id, "nome": r.nome, "cognome": r.cognome, "ordine": r.ordine} for r in result]
+    return [{
+        "id": r.id, "persona_id": r.persona_id,
+        "nome": r.nome, "cognome": r.cognome,
+        "data_nascita": str(r.data_nascita) if r.data_nascita else None,
+        "codice_fiscale": r.codice_fiscale,
+        "matricola": r.matricola,
+        "numero_maglia": r.numero_maglia,
+        "scadenza_certificato": str(r.scadenza_certificato) if r.scadenza_certificato else None,
+        "tel_papa": r.tel_papa,
+        "tel_mamma": r.tel_mamma,
+        "email1": r.email1,
+        "gruppo_nome": r.gruppo_nome,
+        "gruppo_is_misto": r.gruppo_is_misto,
+        "ordine": r.ordine
+    } for r in result]
 
 @router.post("/{lista_id}/giocatori")
 def add_giocatore_lista(lista_id: int, persona_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):

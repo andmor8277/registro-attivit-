@@ -42,12 +42,34 @@
             <div class="search-box">
               <input v-model="searchPlayer" placeholder="Cerca giocatore..." class="search-input" />
             </div>
-            <button class="btn-export-pdf" @click="exportPdf">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
-              </svg>
-              Esporta PDF
-            </button>
+            <div class="toolbar-actions">
+              <button v-if="utenteAttivo?.is_admin || utenteAttivo?.ruolo === 'mister'" class="btn-icon-pill" @click="gdprModal.show = true" :title="gdprSbloccato ? 'Dati sbloccati' : 'Sblocca Dati Sensibili'" :class="{ 'gdpr-unlocked': gdprSbloccato }">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                </svg>
+              </button>
+              <div class="colonne-dropdown" @click="colonneMenu = !colonneMenu">
+                <button class="btn-colonne-trigger">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                  </svg>
+                  Colonne
+                </button>
+                <div v-if="colonneMenu" class="colonne-menu">
+                  <label v-for="col in colonneDisponibili" :key="col.key" class="colonne-item" :class="{ 'col-gdpr': col.gdpr && !gdprSbloccato }">
+                    <input type="checkbox" :checked="colonneSelezionate.includes(col.key) && !(col.gdpr && !gdprSbloccato)" @change="toggleColonna(col.key)" :disabled="col.gdpr && !gdprSbloccato" />
+                    <span>{{ col.label }}</span>
+                    <span v-if="col.gdpr" class="col-gdpr-badge">🔒</span>
+                  </label>
+                </div>
+              </div>
+              <button class="btn-export-pdf" @click="exportPdf">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                </svg>
+                Esporta PDF
+              </button>
+            </div>
           </div>
 
           <div class="giocatori-selezionati">
@@ -60,6 +82,7 @@
                     <th>#</th>
                     <th>Cognome</th>
                     <th>Nome</th>
+                    <th v-for="col in colonneVisibili" :key="col.key">{{ col.label }}</th>
                     <th>Azione</th>
                   </tr>
                 </thead>
@@ -68,6 +91,12 @@
                     <td>{{ idx + 1 }}</td>
                     <td>{{ g.cognome }}</td>
                     <td>{{ g.nome }}</td>
+                    <td v-for="col in colonneVisibili" :key="col.key">
+                      <template v-if="col.key === 'data_nascita'">{{ formattaData(g.data_nascita) }}</template>
+                      <template v-else-if="col.key === 'scadenza_certificato'">{{ formattaData(g.scadenza_certificato) }}</template>
+                      <template v-else-if="col.key === 'gruppo'">{{ g.gruppo_nome || '-' }}</template>
+                      <template v-else>{{ g[col.key] || '-' }}</template>
+                    </td>
                     <td>
                       <button class="btn-rimuovi" @click="rimuoviGiocatore(g.persona_id)" title="Rimuovi">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -109,6 +138,22 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal sblocco GDPR -->
+    <div v-if="gdprModal.show" class="modal-overlay" @click.self="gdprModal.show = false">
+      <div class="modal modal-small">
+        <h3>Sblocca Dati Sensibili</h3>
+        <p class="gdpr-hint">Inserisci la password di accesso per visualizzare i dati protetti GDPR.</p>
+        <div class="form-field">
+          <label>Password</label>
+          <input v-model="gdprModal.password" type="password" @keyup.enter="sbloccaGdpr" placeholder="Password" />
+        </div>
+        <div class="modal-actions">
+          <button class="btn-annulla" @click="gdprModal.show = false">Annulla</button>
+          <button class="btn-salva" @click="sbloccaGdpr">Sblocca</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -118,6 +163,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getPersone, getCategorie, getListeTorneo, creaListaTorneo, eliminaListaTorneo, getGiocatoriLista, aggiungiGiocatoreLista, rimuoviGiocatoreLista } from '../api/index.js'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
+import { utenteAttivo } from '../store.js'
 const route = useRoute()
 const router = useRouter()
 
@@ -129,6 +175,65 @@ const giocatoriLista = ref([])
 const tuttiGiocatori = ref([])
 const searchPlayer = ref('')
 const nuovaListaModal = ref({ show: false, nome: '' })
+const gdprSbloccato = ref(false)
+const gdprModal = ref({ show: false, password: '' })
+const colonneMenu = ref(false)
+
+const colonneDisponibili = [
+  { key: 'data_nascita', label: 'Data Nascita', gdpr: true },
+  { key: 'codice_fiscale', label: 'Codice Fiscale', gdpr: true },
+  { key: 'matricola', label: 'Matricola', gdpr: false },
+  { key: 'numero_maglia', label: 'Nr. Maglia', gdpr: false },
+  { key: 'tel_papa', label: 'Tel. Papà', gdpr: true },
+  { key: 'tel_mamma', label: 'Tel. Mamma', gdpr: true },
+  { key: 'email1', label: 'Email', gdpr: true },
+  { key: 'scadenza_certificato', label: 'Scad. Cert.', gdpr: true },
+  { key: 'gruppo', label: 'Gruppo', gdpr: false },
+]
+
+const colonneSelezionate = ref(['matricola', 'numero_maglia', 'gruppo'])
+
+const colonneVisibili = computed(() => {
+  const keys = colonneSelezionate.value
+  return colonneDisponibili.filter(c => {
+    if (c.gdpr && !gdprSbloccato.value) return false
+    return keys.includes(c.key)
+  })
+})
+
+const isDirigente = computed(() => utenteAttivo.value?.ruolo === 'dirigente')
+
+function toggleColonna(key) {
+  const idx = colonneSelezionate.value.indexOf(key)
+  if (idx > -1) {
+    colonneSelezionate.value.splice(idx, 1)
+  } else {
+    colonneSelezionate.value.push(key)
+  }
+}
+
+async function sbloccaGdpr() {
+  if (!gdprModal.value.password) return
+  try {
+    const res = await fetch('/api/auth/gdpr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+      body: JSON.stringify({ password: gdprModal.value.password })
+    })
+    if (res.ok) {
+      gdprSbloccato.value = true
+      sessionStorage.setItem('gdpr_sbloccato', 'true')
+    } else {
+      alert('Password errata')
+    }
+  } catch(e) { alert('Errore di connessione') }
+  gdprModal.value = { show: false, password: '' }
+}
+
+function formattaData(d) {
+  if (!d) return '-'
+  return new Date(d).toLocaleDateString('it-IT')
+}
 
 const giocatoriDisponibili = computed(() => {
   const idsInLista = new Set(giocatoriLista.value.map(g => g.persona_id))
@@ -242,15 +347,22 @@ function exportPdf() {
   doc.setFontSize(10)
   doc.text(`Categoria: ${categoriaNome.value}`, pageWidth / 2, 34, { align: 'center' })
 
+  const headers = ['#', 'Cognome', 'Nome', ...colonneVisibili.value.map(c => c.label)]
   const tableData = giocatoriLista.value.map((g, i) => [
     i + 1,
     g.cognome,
-    g.nome
+    g.nome,
+    ...colonneVisibili.value.map(c => {
+      if (c.key === 'data_nascita') return formattaData(g.data_nascita)
+      if (c.key === 'scadenza_certificato') return formattaData(g.scadenza_certificato)
+      if (c.key === 'gruppo') return g.gruppo_nome || '-'
+      return g[c.key] || '-'
+    })
   ])
 
   doc.autoTable({
     startY: 40,
-    head: [['#', 'Cognome', 'Nome']],
+    head: [headers],
     body: tableData,
     theme: 'grid',
     headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold' },
@@ -265,6 +377,7 @@ function exportPdf() {
 }
 
 onMounted(async () => {
+  gdprSbloccato.value = sessionStorage.getItem('gdpr_sbloccato') === 'true'
   await Promise.all([loadCategoria(), loadListe(), loadGiocatori()])
 })
 </script>
@@ -443,6 +556,113 @@ onMounted(async () => {
   justify-content: space-between;
   margin-bottom: 1rem;
   gap: 1rem;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.colonne-dropdown {
+  position: relative;
+}
+
+.btn-colonne-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--color-border, rgba(255,255,255,0.1));
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  color: var(--color-text, #f3f4f6);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.btn-colonne-trigger:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.colonne-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.25rem;
+  background: var(--color-surface, #1f2937);
+  border: 1px solid var(--color-border, rgba(255,255,255,0.1));
+  border-radius: 10px;
+  padding: 0.5rem;
+  min-width: 180px;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.colonne-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: var(--color-text, #f3f4f6);
+  transition: all 0.1s;
+}
+
+.colonne-item:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+.colonne-item input[type="checkbox"] {
+  accent-color: #dc2626;
+}
+
+.colonne-item.col-gdpr {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.col-gdpr-badge {
+  margin-left: auto;
+  font-size: 0.75rem;
+}
+
+.btn-icon-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border, rgba(255,255,255,0.1));
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  color: var(--color-text, #f3f4f6);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-icon-pill:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.btn-icon-pill.gdpr-unlocked {
+  border-color: rgba(220, 38, 38, 0.5);
+  background: rgba(220, 38, 38, 0.15);
+  color: #f87171;
+}
+
+.gdpr-hint {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted, #6b7280);
+  margin-bottom: 1rem;
+  line-height: 1.4;
 }
 
 .search-input {
@@ -698,6 +918,12 @@ onMounted(async () => {
   .lista-toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+  .toolbar-actions {
+    flex-wrap: wrap;
+  }
+  .search-input {
+    width: 100%;
   }
 }
 </style>
