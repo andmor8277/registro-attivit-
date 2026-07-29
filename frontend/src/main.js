@@ -37,6 +37,7 @@ import CertificatoMedico from './views/CertificatoMedico.vue'
 import Infortunati from './views/Infortunati.vue'
 import Openday from './views/Openday.vue'
 import SchedaAllenamento from './views/SchedaAllenamento.vue'
+import ListeTornei from './views/ListeTornei.vue'
 
 const store = useStore()
 
@@ -55,6 +56,7 @@ const router = createRouter({
     { path: '/registro/:id', component: Registro, name: 'registro', meta: { requiresAuth: true } },
     { path: '/convocazioni/:id', component: Convocazioni, name: 'convocazioni', meta: { requiresAuth: true } },
     { path: '/dati/:id', component: DatiMatricole, name: 'dati-matricole', meta: { requiresAuth: true } },
+    { path: '/liste-tornei/:id', component: ListeTornei, name: 'liste-tornei', meta: { requiresAuth: true } },
     { path: '/allenamenti/:id', component: Allenamenti, name: 'allenamenti', meta: { requiresAuth: true } },
     { path: '/scheda-allenamento/:id', component: SchedaAllenamento, name: 'scheda-allenamento', meta: { requiresAuth: true } },
     { path: '/admin', component: Admin, name: 'admin', meta: { requiresAuth: true, requiresAdmin: true } },
