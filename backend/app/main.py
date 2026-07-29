@@ -790,7 +790,7 @@ def run_migrations():
                     WHERE c.is_portieri = 0 AND c.is_archiviata = 0
                     AND NOT EXISTS (
                         SELECT 1 FROM gruppi g
-                        WHERE g.categoria_id = c.id AND g.nome LIKE '°Gruppo'
+                        WHERE g.categoria_id = c.id AND g.nome LIKE '%°Gruppo'
                     )
                 """)).fetchall()
                 created = 0
@@ -807,6 +807,30 @@ def run_migrations():
                 print(f"Migration: Created default 1°Gruppo for {created} categories")
             except Exception as e:
                 print(f"Migration warning (default groups): {e}")
+                conn.rollback()
+
+            # Cleanup duplicate 1°Gruppo per category (keep lowest id)
+            try:
+                deleted = conn.execute(text("""
+                    DELETE FROM gruppi WHERE id NOT IN (
+                        SELECT MIN(id) FROM gruppi
+                        WHERE nome LIKE '%°Gruppo'
+                        GROUP BY categoria_id, nome
+                    ) AND id IN (
+                        SELECT g.id FROM gruppi g
+                        WHERE EXISTS (
+                            SELECT 1 FROM gruppi g2
+                            WHERE g2.categoria_id = g.categoria_id
+                            AND g2.nome = g.nome
+                            AND g2.id < g.id
+                        )
+                    )
+                """)).rowcount
+                conn.commit()
+                if deleted:
+                    print(f"Migration: Cleaned up {deleted} duplicate groups")
+            except Exception as e:
+                print(f"Migration warning (cleanup duplicate groups): {e}")
                 conn.rollback()
 
             # Create liste_torneo tables
