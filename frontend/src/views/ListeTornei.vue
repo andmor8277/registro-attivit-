@@ -163,9 +163,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { getPersone, getCategorie, getListeTorneo, creaListaTorneo, eliminaListaTorneo, getGiocatoriLista, aggiungiGiocatoreLista, rimuoviGiocatoreLista } from '../api/index.js'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
-import { utenteAttivo } from '../store.js'
+import { useStore } from '../store.js'
 const route = useRoute()
 const router = useRouter()
+const { utenteAttivo } = useStore()
 
 const categoriaId = parseInt(route.params.id)
 const categoriaNome = ref('')
@@ -215,10 +216,11 @@ function toggleColonna(key) {
 async function sbloccaGdpr() {
   if (!gdprModal.value.password) return
   try {
-    const res = await fetch('/api/auth/gdpr', {
+    const apiUrl = import.meta.env.VITE_API_URL || '/api'
+    const res = await fetch(`${apiUrl}/auth/token`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ password: gdprModal.value.password })
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `username=${utenteAttivo.value?.username || ''}&password=${gdprModal.value.password}`
     })
     if (res.ok) {
       gdprSbloccato.value = true
