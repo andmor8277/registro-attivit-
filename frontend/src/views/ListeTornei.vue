@@ -56,8 +56,8 @@
                   Colonne
                 </button>
                 <div v-if="colonneMenu" class="colonne-menu">
-                  <label v-for="col in colonneDisponibili" :key="col.key" class="colonne-item" :class="{ 'col-gdpr': col.gdpr && !gdprSbloccato }">
-                    <input type="checkbox" :checked="colonneSelezionate.includes(col.key) && !(col.gdpr && !gdprSbloccato)" @change="toggleColonna(col.key)" :disabled="col.gdpr && !gdprSbloccato" />
+                  <label v-for="col in colonneDisponibili" :key="col.key" class="colonne-item" :class="{ 'col-gdpr': col.gdpr && !gdprSbloccato }" @click.stop>
+                    <input type="checkbox" :checked="colonneSelezionate.includes(col.key)" @change="toggleColonna(col.key)" :disabled="col.gdpr && !gdprSbloccato" />
                     <span>{{ col.label }}</span>
                     <span v-if="col.gdpr" class="col-gdpr-badge">🔒</span>
                   </label>
