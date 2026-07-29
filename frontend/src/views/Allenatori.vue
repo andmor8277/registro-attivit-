@@ -331,7 +331,8 @@ const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === '
 const listaSocieta = ref([])
 const societaIdSelezionata = ref(null)
 
-const currentSeason = ref('2025/2026')
+const m = new Date().getMonth() + 1
+const currentSeason = ref(`${m >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1}/${m >= 8 ? new Date().getFullYear() + 1 : new Date().getFullYear()}`)
 
 watch(societaIdSelezionata, (newVal) => {
   if (newVal && isSuperAdmin.value) {
