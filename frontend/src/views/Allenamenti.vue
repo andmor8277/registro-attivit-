@@ -1007,6 +1007,14 @@ const sX = (el.scaleX || 1) * baseScale
               ctx.fill()
             }
           }
+          // Numero progressivo giocatore
+          if (el.numero && el.tipo !== 'gk') {
+            ctx.fillStyle = el.tipo === 'player-bib' ? '#ffffff' : color
+            ctx.font = 'bold 14px sans-serif'
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.fillText(String(el.numero), 0, 1)
+          }
           // Portiere: lettera P
           if (el.tipo === 'gk') {
             ctx.fillStyle = color
@@ -1036,15 +1044,124 @@ const sX = (el.scaleX || 1) * baseScale
           ctx.translate(ex_, ey)
           ctx.rotate((rotation * Math.PI) / 180)
           ctx.scale(sX, sY)
-          // Triangolo equilatero
-          const s = 14
+          // Base del cono
           ctx.beginPath()
-          ctx.moveTo(0, -s)
-          ctx.lineTo(-s * Math.cos(Math.PI / 6), s * Math.sin(Math.PI / 6))
-          ctx.lineTo(s * Math.cos(Math.PI / 6), s * Math.sin(Math.PI / 6))
+          ctx.ellipse(0, 6, 12, 4, 0, 0, Math.PI * 2)
+          ctx.fillStyle = color
+          ctx.fill()
+          // Corpo trapezoidale
+          ctx.beginPath()
+          ctx.moveTo(-8, 6)
+          ctx.lineTo(-3, -10)
+          ctx.lineTo(3, -10)
+          ctx.lineTo(8, 6)
+          ctx.closePath()
+          ctx.fill()
+          // Banda riflettente
+          ctx.beginPath()
+          ctx.moveTo(-5, -2)
+          ctx.lineTo(5, -2)
+          ctx.strokeStyle = 'rgba(255,255,255,0.35)'
+          ctx.lineWidth = 2
+          ctx.stroke()
+          ctx.restore()
+        } else if (el.tipo === 'disc') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          ctx.beginPath()
+          ctx.ellipse(0, 0, 14, 5, 0, 0, Math.PI * 2)
+          ctx.fillStyle = color
+          ctx.fill()
+          ctx.beginPath()
+          ctx.ellipse(0, -1, 9, 3, 0, 0, Math.PI * 2)
+          ctx.fillStyle = 'rgba(255,255,255,0.25)'
+          ctx.fill()
+          ctx.restore()
+        } else if (el.tipo === 'flag') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          // Asta
+          ctx.fillStyle = '#cbd5e1'
+          ctx.fillRect(-1.5, -30, 3, 30)
+          // Bandierina triangolare
+          ctx.beginPath()
+          ctx.moveTo(1.5, -30)
+          ctx.lineTo(16, -25.5)
+          ctx.lineTo(1.5, -21)
           ctx.closePath()
           ctx.fillStyle = color
           ctx.fill()
+          ctx.restore()
+        } else if (el.tipo === 'ring') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          ctx.beginPath()
+          ctx.arc(0, 0, 14, 0, Math.PI * 2)
+          ctx.strokeStyle = color
+          ctx.lineWidth = 4
+          ctx.stroke()
+          ctx.restore()
+        } else if (el.tipo === 'ladder') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          ctx.fillStyle = color
+          ctx.fillRect(-18, -8, 36, 2.5)
+          ctx.fillRect(-18, 5.5, 36, 2.5)
+          for (const rx of [-9, 0, 9]) {
+            ctx.fillRect(rx - 1.25, -8, 2.5, 16)
+          }
+          ctx.restore()
+        } else if (el.tipo === 'hurdle') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          ctx.fillStyle = color
+          ctx.fillRect(-11, -15, 22, 3)
+          ctx.fillRect(-11, -12, 3, 12)
+          ctx.fillRect(8, -12, 3, 12)
+          ctx.restore()
+        } else if (el.tipo === 'mannequin') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          ctx.fillStyle = color
+          // Testa
+          ctx.beginPath()
+          ctx.arc(0, -13, 3.5, 0, Math.PI * 2)
+          ctx.fill()
+          // Corpo
+          ctx.beginPath()
+          ctx.roundRect(-3.5, -9.5, 7, 25, 3)
+          ctx.fill()
+          // Base
+          ctx.beginPath()
+          ctx.ellipse(0, 16, 8, 3, 0, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.restore()
+        } else if (el.tipo === 'zone') {
+          ctx.save()
+          ctx.translate(ex_, ey)
+          ctx.rotate((rotation * Math.PI) / 180)
+          ctx.scale(sX, sY)
+          ctx.globalAlpha = 0.25
+          ctx.fillStyle = color
+          ctx.fillRect(-60, -40, 120, 80)
+          ctx.globalAlpha = 1
+          ctx.strokeStyle = color
+          ctx.lineWidth = 1.5
+          ctx.setLineDash([6, 4])
+          ctx.strokeRect(-60, -40, 120, 80)
+          ctx.setLineDash([])
           ctx.restore()
         } else if (el.tipo === 'coord') {
           ctx.save()
