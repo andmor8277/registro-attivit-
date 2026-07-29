@@ -1186,7 +1186,7 @@ async function exportPdf() {
     const imgH = imgHeight * ratio
     const imgX = margin + (maxW - imgW) / 2
     doc.addImage(imgData, 'PNG', imgX, y, imgW, imgH)
-    console.log('Export: added image to PDF for idx', idx, 'size:', imgW.toFixed(1) + 'x' + imgH.toFixed(1))
+    
   }
 
   const categoriaNome = categoriaAttiva.value?.nome || 'Categoria'
@@ -1233,12 +1233,12 @@ function debouncedSave() {
 
 function saveDataToServer() {
   if (!selectedDay.value) return
-  
+
   if (saveLoading.value) {
-    console.log('[Allenamenti] Salvataggio in corso, skip')
+    hasChanges.value = true
     return
   }
-  
+
   saveLoading.value = true
 
   const payload = {
@@ -1290,6 +1290,9 @@ function saveDataToServer() {
     })
     .finally(() => {
       saveLoading.value = false
+      if (hasChanges.value) {
+        saveDataToServer()
+      }
     })
 }
 

@@ -2,18 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
-from ..database import SessionLocal
+from ..database import get_db
 from ..models import Allenatore
 from .auth import get_current_user
 
 router = APIRouter(prefix="/allenatori", tags=["allenatori"])
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 class AllenatoreIn(BaseModel):
     cognome: str

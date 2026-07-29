@@ -201,7 +201,8 @@ const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === '
 const allCategories = ref([])
 const responsabileMap = ref({})
 
-const currentSeason = ref('2025/2026')
+const m = new Date().getMonth() + 1
+const currentSeason = ref(`${m >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1}/${m >= 8 ? new Date().getFullYear() + 1 : new Date().getFullYear()}`)
 
 const tuttiGiorni = [
   { val: 1, nome: "Lunedì" },

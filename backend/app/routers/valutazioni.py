@@ -1,20 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from ..database import SessionLocal
+from ..database import get_db
 from ..models import Valutazione, Persona, Categoria
 from ..routers.auth import get_current_user, check_societa
 from pydantic import BaseModel
 from typing import Optional
 
 router = APIRouter(prefix="/valutazioni", tags=["valutazioni"])
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 class ValutazioneCreate(BaseModel):
     persona_id: int

@@ -3,18 +3,11 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import date
 from pydantic import BaseModel
-from ..database import SessionLocal
+from ..database import get_db
 from ..models import Convocazione, ConvocazioneGara, ConvocazioneGiocatore, Persona, Utente
 from .auth import get_current_user
 
 router = APIRouter(prefix="/convocazioni", tags=["convocazioni"])
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 def get_societa_filter(current_user: Utente):
     if current_user.is_super_admin:
@@ -46,7 +39,11 @@ class ConvocazioneIn(BaseModel):
 
 @router.get("/")
 def lista(categoria_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
-    convs = db.query(Convocazione).filter(Convocazione.categoria_id == categoria_id).order_by(Convocazione.data_inizio.desc()).all()
+    societa_id = get_societa_filter(current_user)
+    q = db.query(Convocazione).filter(Convocazione.categoria_id == categoria_id)
+    if societa_id:
+        q = q.filter(Convocazione.societa_id == societa_id)
+    convs = q.order_by(Convocazione.data_inizio.desc()).all()
     return [{"id": c.id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "categoria_id": c.categoria_id} for c in convs]
 
 @router.get("/{cid}")

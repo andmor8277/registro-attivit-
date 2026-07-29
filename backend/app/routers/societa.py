@@ -6,7 +6,7 @@ from typing import Optional
 import os
 from pathlib import Path
 from uuid import uuid4
-from ..database import SessionLocal
+from ..database import get_db
 from ..models import Societa
 from .auth import get_admin, get_current_user
 
@@ -14,13 +14,6 @@ UPLOAD_DIR = Path(__file__).parent.parent.parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 router = APIRouter(prefix="/societa", tags=["societa"])
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 class SocietaIn(BaseModel):
     nome: str
