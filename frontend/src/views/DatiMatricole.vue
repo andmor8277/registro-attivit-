@@ -90,7 +90,7 @@
               </template>
               <td v-if="!isDirigente" class="cell-gruppo">
                 <span class="badge" :class="'badge-g' + (p.gruppo_id % 4 || 4)">
-                  {{ p.gruppo_nome || '-' }}
+                  {{ getGruppoShort(p) }}
                   <span v-if="p.gruppo_is_misto" class="badge-misto-inline">MISTO</span>
                 </span>
               </td>
@@ -458,6 +458,13 @@ async function eliminaGruppo(g) {
   if (!confirm('Eliminare il gruppo "' + g.nome + '"?')) return
   await deleteGruppo(g.id)
   await loadGruppi()
+}
+
+function getGruppoShort(p) {
+  const nome = p.gruppo_nome || ''
+  if (nome.toLowerCase().includes('portieri')) return 'P'
+  const m = nome.match(/^(\d+)/)
+  return m ? m[1] : '-'
 }
 
 function enrichGruppoNome(personeList) {
