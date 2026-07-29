@@ -729,7 +729,7 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       ctx.translate(ex_, ey)
       ctx.rotate((rotation * Math.PI) / 180)
       ctx.scale(sX, sY)
-      const r = 16
+      const r = 22
       if (tipo === 'player-jolly') {
         // Diamante
         ctx.beginPath()
@@ -756,7 +756,7 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       // Numero progressivo giocatore
       if (el.numero && tipo !== 'gk' && fontVisible) {
         ctx.fillStyle = tipo === 'player-bib' ? '#ffffff' : color
-        ctx.font = 'bold 14px sans-serif'
+        ctx.font = 'bold 18px sans-serif'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(String(el.numero), 0, 1)
@@ -764,10 +764,10 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       // Portiere: lettera P
       if (tipo === 'gk' && fontVisible) {
         ctx.fillStyle = color
-        ctx.font = 'bold 12px sans-serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText('P', 0, 1)
+        ctx.font = 'bold 16px sans-serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillText('P', 0, 1)
       }
       ctx.restore()
     } else if (tipo === 'ball') {
@@ -776,12 +776,12 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       ctx.rotate((rotation * Math.PI) / 180)
       ctx.scale(sX, sY)
       ctx.beginPath()
-      ctx.arc(0, 0, 10, 0, Math.PI * 2)
+      ctx.arc(0, 0, 14, 0, Math.PI * 2)
       ctx.strokeStyle = color
       ctx.lineWidth = 2
       ctx.stroke()
       ctx.beginPath()
-      ctx.arc(0, 0, 3, 0, Math.PI * 2)
+      ctx.arc(0, 0, 4, 0, Math.PI * 2)
       ctx.fillStyle = color
       ctx.fill()
       ctx.restore()
@@ -792,21 +792,21 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       ctx.scale(sX, sY)
       // Base del cono
       ctx.beginPath()
-      ctx.ellipse(0, 6, 12, 4, 0, 0, Math.PI * 2)
+      ctx.ellipse(0, 7, 16, 5, 0, 0, Math.PI * 2)
       ctx.fillStyle = color
       ctx.fill()
       // Corpo trapezoidale
       ctx.beginPath()
-      ctx.moveTo(-8, 6)
-      ctx.lineTo(-3, -10)
-      ctx.lineTo(3, -10)
-      ctx.lineTo(8, 6)
+      ctx.moveTo(-10, 7)
+        ctx.lineTo(-4, -12)
+        ctx.lineTo(4, -12)
+        ctx.lineTo(10, 7)
       ctx.closePath()
       ctx.fill()
       // Banda riflettente
       ctx.beginPath()
-      ctx.moveTo(-5, -2)
-      ctx.lineTo(5, -2)
+      ctx.moveTo(-6, -3)
+        ctx.lineTo(6, -3)
       ctx.strokeStyle = 'rgba(255,255,255,0.35)'
       ctx.lineWidth = 2
       ctx.stroke()
@@ -818,11 +818,11 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       ctx.scale(sX, sY)
       // Disco piatto con cupoletta centrale
       ctx.beginPath()
-      ctx.ellipse(0, 0, 14, 9, 0, 0, Math.PI * 2)
+      ctx.ellipse(0, 0, 18, 12, 0, 0, Math.PI * 2)
       ctx.fillStyle = color
       ctx.fill()
       ctx.beginPath()
-      ctx.ellipse(0, -4.5, 4.5, 2.5, 0, 0, Math.PI * 2)
+      ctx.ellipse(0, -6, 6, 3, 0, 0, Math.PI * 2)
       ctx.fillStyle = 'rgba(0,0,0,0.3)'
       ctx.fill()
       ctx.restore()
@@ -833,12 +833,12 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       ctx.scale(sX, sY)
       // Asta
       ctx.fillStyle = '#cbd5e1'
-      ctx.fillRect(-1.5, -30, 3, 30)
+      ctx.fillRect(-1.5, -36, 3, 36)
       // Bandierina triangolare
       ctx.beginPath()
-      ctx.moveTo(1.5, -30)
-      ctx.lineTo(16, -25.5)
-      ctx.lineTo(1.5, -21)
+      ctx.moveTo(1.5, -36)
+        ctx.lineTo(20, -30)
+        ctx.lineTo(1.5, -24)
       ctx.closePath()
       ctx.fillStyle = color
       ctx.fill()
@@ -849,9 +849,9 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       ctx.rotate((rotation * Math.PI) / 180)
       ctx.scale(sX, sY)
       ctx.beginPath()
-      ctx.arc(0, 0, 14, 0, Math.PI * 2)
+      ctx.arc(0, 0, 18, 0, Math.PI * 2)
       ctx.strokeStyle = color
-      ctx.lineWidth = 4
+      ctx.lineWidth = 5
       ctx.stroke()
       ctx.restore()
     } else if (tipo === 'ladder') {
@@ -860,10 +860,10 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       ctx.rotate((rotation * Math.PI) / 180)
       ctx.scale(sX, sY)
       ctx.fillStyle = color
-      ctx.fillRect(-22, -7, 44, 2)
-      ctx.fillRect(-22, 5, 44, 2)
-      for (const rx of [-16.5, -5.5, 5.5, 16.5]) {
-        ctx.fillRect(rx - 1, -7, 2, 14)
+      ctx.fillRect(-28, -8.5, 56, 3)
+      ctx.fillRect(-28, 5.5, 56, 3)
+      for (const rx of [-21, -7, 7, 21]) {
+          ctx.fillRect(rx - 1.5, -8.5, 3, 17)
       }
       ctx.restore()
     } else if (tipo === 'hurdle') {
@@ -872,21 +872,21 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       ctx.rotate((rotation * Math.PI) / 180)
       ctx.scale(sX, sY)
       ctx.fillStyle = color
-      ctx.fillRect(-17, -10, 34, 2.5)
-      ctx.fillRect(-17, -7.5, 2.5, 10)
-      ctx.fillRect(14.5, -7.5, 2.5, 10)
+      ctx.fillRect(-22, -13, 44, 3)
+      ctx.fillRect(-22, -10, 3, 13)
+      ctx.fillRect(19, -10, 3, 13)
       ctx.beginPath()
-      ctx.ellipse(-15.75, 3.5, 4, 1.5, 0, 0, Math.PI * 2)
+      ctx.ellipse(-20.5, 4.5, 5, 2, 0, 0, Math.PI * 2)
       ctx.fill()
       ctx.beginPath()
-      ctx.ellipse(15.75, 3.5, 4, 1.5, 0, 0, Math.PI * 2)
+      ctx.ellipse(20.5, 4.5, 5, 2, 0, 0, Math.PI * 2)
       ctx.fill()
       ctx.restore()
     } else if (tipo === 'mannequin') {
       ctx.save()
       ctx.translate(ex_, ey)
       ctx.rotate((rotation * Math.PI) / 180)
-      ctx.scale(sX * 0.036, sY * 0.036)
+      ctx.scale(sX * 0.046, sY * 0.046)
       ctx.translate(-250, -650)
       ctx.fillStyle = color
       ctx.fill(new Path2D(MANNEQUIN_SVG_PATH))
@@ -907,12 +907,12 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       ctx.scale(sX, sY)
       ctx.globalAlpha = 0.25
       ctx.fillStyle = color
-      ctx.fillRect(-60, -40, 120, 80)
+      ctx.fillRect(-75, -50, 150, 100)
       ctx.globalAlpha = 1
       ctx.strokeStyle = color
       ctx.lineWidth = 1.5
       ctx.setLineDash([6, 4])
-      ctx.strokeRect(-60, -40, 120, 80)
+      ctx.strokeRect(-75, -50, 150, 100)
       ctx.setLineDash([])
       ctx.restore()
     } else if (tipo === 'free' && Array.isArray(el.points) && el.points.length > 1) {
@@ -933,15 +933,15 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       // Rettangolo giallo
       ctx.fillStyle = color
       ctx.beginPath()
-      ctx.roundRect(-16, -3, 32, 6, 2)
+      ctx.roundRect(-20, -4, 40, 8, 2)
       ctx.fill()
       // Cerchi ai lati
       ctx.fillStyle = color
       ctx.beginPath()
-      ctx.arc(-16, 0, 4, 0, Math.PI * 2)
+      ctx.arc(-20, 0, 5, 0, Math.PI * 2)
       ctx.fill()
       ctx.beginPath()
-      ctx.arc(16, 0, 4, 0, Math.PI * 2)
+      ctx.arc(20, 0, 5, 0, Math.PI * 2)
       ctx.fill()
       ctx.restore()
     } else if (tipo === 'pole') {
@@ -952,18 +952,18 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       // Ombra
       ctx.fillStyle = color
       ctx.beginPath()
-      ctx.ellipse(0, 12, 6, 3, 0, 0, Math.PI * 2)
+      ctx.ellipse(0, 15, 8, 4, 0, 0, Math.PI * 2)
       ctx.fill()
       // Asta rossa
       ctx.fillStyle = color
-      ctx.fillRect(-2.5, -12, 5, 24)
+      ctx.fillRect(-3, -15, 6, 30)
       ctx.restore()
     } else if (tipo === 'goal') {
       ctx.save()
       ctx.translate(ex_, ey)
       ctx.rotate((rotation * Math.PI) / 180)
       ctx.scale(sX, sY)
-      const w = 28, h = 14
+      const w = 36, h = 18
       ctx.strokeStyle = '#fff'
       ctx.lineWidth = 3
       // Linea di porta
@@ -983,14 +983,14 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       // Rete (linee orizzontali)
       ctx.strokeStyle = 'rgba(255,255,255,0.3)'
       ctx.lineWidth = 0.8
-      for (let i = -h + 5; i < h; i += 5) {
+      for (let i = -h + 6; i < h; i += 6) {
         ctx.beginPath()
         ctx.moveTo(-w, i)
         ctx.lineTo(w, i)
         ctx.stroke()
       }
       // Linee verticali rete
-      for (let i = -w + 9; i < w; i += 9) {
+      for (let i = -w + 12; i < w; i += 12) {
         ctx.beginPath()
         ctx.moveTo(i, -h)
         ctx.lineTo(i, h)
@@ -1024,7 +1024,7 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
         ctx.setLineDash([])
 
         // Freccia
-        const aLen = 14
+        const aLen = 18
         const halfLen = len / 2 / sb
         ctx.fillStyle = color
         ctx.beginPath()
@@ -1049,8 +1049,8 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
           ctx.strokeStyle = color
           ctx.lineWidth = 2.5
           ctx.beginPath()
-          ctx.moveTo(halfLen + 6, -10)
-          ctx.lineTo(halfLen + 6, 10)
+          ctx.moveTo(halfLen + 8, -13)
+          ctx.lineTo(halfLen + 8, 13)
           ctx.stroke()
         }
       }
@@ -1061,7 +1061,7 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       ctx.rotate((rotation * Math.PI) / 180)
       ctx.scale(sX, sY)
       ctx.fillStyle = color
-      ctx.font = '16px sans-serif'
+      ctx.font = '20px sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(el.text || 'Testo', 0, 0)
