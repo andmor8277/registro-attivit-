@@ -82,7 +82,7 @@ def update_openday(entry_id: int, entry: dict, current_user: Utente = Depends(ge
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     if o.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
-updatable = ["nome", "cognome", "data_nascita", "date_prova", "nulla_osta",
+    updatable = ["nome", "cognome", "data_nascita", "date_prova", "nulla_osta",
                   "certificato_medico", "scadenza_certificato", "tel_papa", "tel_mamma",
                   "email_papa", "email_mamma"]
     for field in updatable:
