@@ -13,6 +13,13 @@ from ..rate_limit import limiter
 import os
 import re
 
+def format_cognome(val):
+    return val.upper() if val else val
+
+def format_nome(val):
+    if not val: return val
+    return ' '.join(w[:1].upper() + w[1:].lower() for w in val.split())
+
 SECRET_KEY = os.environ.get("SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY environment variable is required")
@@ -177,8 +184,8 @@ def crea_utente(data: UtenteCreate, current_user: Utente = Depends(get_admin), d
         is_admin=is_admin,
         is_super_admin=is_super,
         societa_id=data.societa_id,
-        nome=data.nome,
-        cognome=data.cognome,
+        nome=format_nome(data.nome),
+        cognome=format_cognome(data.cognome),
         data_nascita=data.data_nascita,
         codice_fiscale=data.codice_fiscale,
         cellulare=data.cellulare,
@@ -200,8 +207,8 @@ def modifica_utente(uid: int, data: UtenteUpdate, current_user: Utente = Depends
     # Non super_admin non può modificare super_admin
     if utente.is_super_admin and not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="Non autorizzato a modificare super admin")
-    utente.nome = data.nome
-    utente.cognome = data.cognome
+    utente.nome = format_nome(data.nome)
+    utente.cognome = format_cognome(data.cognome)
     utente.data_nascita = data.data_nascita
     utente.codice_fiscale = data.codice_fiscale
     utente.cellulare = data.cellulare

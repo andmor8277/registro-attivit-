@@ -85,6 +85,14 @@ def safe_encrypt_with_key(db: Session, value: str, key: str) -> str:
 
 router = APIRouter(prefix="/persone", tags=["persone"])
 
+def format_cognome(val: str) -> str:
+    if not val: return val
+    return val.upper()
+
+def format_nome(val: str) -> str:
+    if not val: return val
+    return ' '.join(w[:1].upper() + w[1:].lower() for w in val.split())
+
 def get_societa_filter(current_user: Utente):
     if current_user.is_super_admin:
         return None
@@ -171,6 +179,8 @@ def create_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db), curr
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     data = p.model_dump()
     data["societa_id"] = societa_id
+    data["cognome"] = format_cognome(data.get("cognome") or "")
+    data["nome"] = format_nome(data.get("nome") or "")
     
     if data.get("codice_fiscale"):
         data["codice_fiscale"] = safe_encrypt(db, data["codice_fiscale"])
@@ -190,6 +200,8 @@ def update_persona(persona_id: int, p: schemas.PersonaCreate, db: Session = Depe
     if societa_id and persona.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     data = p.dict(exclude_none=True)
+    if "cognome" in data: data["cognome"] = format_cognome(data["cognome"])
+    if "nome" in data: data["nome"] = format_nome(data["nome"])
 
     if data.get("codice_fiscale"):
         data["codice_fiscale"] = safe_encrypt(db, data["codice_fiscale"])
@@ -257,6 +269,8 @@ def update_public_persona(request: Request, persona_id: int, p: schemas.PersonaC
         raise HTTPException(status_code=404, detail="Persona non trovata")
     allowed_fields = {"nome", "cognome", "residenza", "indirizzo", "cittadinanza", "email1", "email2", "tel_papa", "tel_mamma", "anamnesi", "taglia", "note"}
     data = {k: v for k, v in p.dict(exclude_none=True).items() if k in allowed_fields}
+    if "cognome" in data: data["cognome"] = format_cognome(data["cognome"])
+    if "nome" in data: data["nome"] = format_nome(data["nome"])
     if data.get("tel_papa"):
         data["tel_papa"] = safe_encrypt(db, data["tel_papa"])
     if data.get("tel_mamma"):
@@ -271,6 +285,8 @@ def update_public_persona(request: Request, persona_id: int, p: schemas.PersonaC
 def create_public_persona(request: Request, p: schemas.PersonaCreate, db: Session = Depends(get_db)):
     allowed_fields = {"nome", "cognome", "categoria_id", "residenza", "indirizzo", "cittadinanza", "email1", "email2", "tel_papa", "tel_mamma", "anamnesi", "taglia", "note", "data_nascita", "matricola", "numero_maglia", "scadenza_certificato"}
     data = {k: v for k, v in p.dict(exclude_none=True).items() if k in allowed_fields}
+    data["cognome"] = format_cognome(data.get("cognome") or "")
+    data["nome"] = format_nome(data.get("nome") or "")
     if not data.get("nome") or not data.get("cognome"):
         raise HTTPException(status_code=400, detail="Nome e cognome sono obbligatori")
     if not data.get("categoria_id"):
