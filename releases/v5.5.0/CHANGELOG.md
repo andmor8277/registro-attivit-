@@ -165,8 +165,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Report Individuale in Reportistica, non_presente in Convocazioni, stagione dinamica da DB, parent categories escluse, Renaming Gestione Squadre
-
-## [5.5.0] - 2026-07-31
-
-### Added
-- Fix bug medi: sicurezza multi-tenant societa/auth, esclusioni convocazioni, upsert registro/presenze_allenatori, migrazioni idempotenti, validazioni frontend
