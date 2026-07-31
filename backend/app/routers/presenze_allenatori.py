@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import extract
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from typing import Optional
 from pydantic import BaseModel
 from ..database import get_db
@@ -42,23 +43,23 @@ def get_mese(anno: int, mese: int, db: Session = Depends(get_db), current_user: 
 @router.post("/", response_model=PresenzaAllenatoreOut)
 def upsert_presenza(entry: PresenzaAllenatoreIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     societa_id = get_societa_filter(current_user) or current_user.societa_id
-    existing = db.query(PresenzaAllenatore).filter(
+    data = entry.model_dump()
+    data["societa_id"] = societa_id
+    data.pop("id", None)
+    stmt = pg_insert(PresenzaAllenatore).values(**data)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[PresenzaAllenatore.utente_id, PresenzaAllenatore.data],
+        set_={
+            "codice": stmt.excluded.codice,
+            "societa_id": stmt.excluded.societa_id,
+        }
+    )
+    db.execute(stmt)
+    db.commit()
+    r = db.query(PresenzaAllenatore).filter(
         PresenzaAllenatore.utente_id == entry.utente_id,
         PresenzaAllenatore.data == entry.data
     ).first()
-    if existing:
-        existing.codice = entry.codice
-        if societa_id:
-            existing.societa_id = societa_id
-        db.commit()
-        db.refresh(existing)
-        return existing
-    data = entry.model_dump()
-    data["societa_id"] = societa_id
-    r = PresenzaAllenatore(**data)
-    db.add(r)
-    db.commit()
-    db.refresh(r)
     return r
 
 @router.get("/mister")

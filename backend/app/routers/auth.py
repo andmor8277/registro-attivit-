@@ -266,6 +266,11 @@ def lista_utenti(
 
 @router.put("/utenti/{uid}/categorie")
 def assegna_categorie(uid: int, data: AssegnaCategorie, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
+    utente = db.query(Utente).filter(Utente.id == uid).first()
+    if not utente:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if not current_user.is_super_admin and utente.societa_id != current_user.societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato a operare su utenti di altre società")
     db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == uid).delete()
     for cid in data.categoria_ids:
         db.add(UtenteCategoria(utente_id=uid, categoria_id=cid))
@@ -277,6 +282,9 @@ def elimina_utente(uid: int, current_user: Utente = Depends(get_admin), db: Sess
     utente = db.query(Utente).filter(Utente.id == uid).first()
     if not utente:
         raise HTTPException(status_code=404, detail="Utente non trovato")
+    # Non super_admin può eliminare solo utenti della propria società
+    if not current_user.is_super_admin and utente.societa_id != current_user.societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato a eliminare utenti di altre società")
     # Non super_admin non può eliminare super_admin
     if utente.is_super_admin and not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="Non autorizzato a eliminare super admin")
@@ -291,6 +299,12 @@ def reset_password(request: Request, uid: int, current_user: Utente = Depends(ge
     utente = db.query(Utente).filter(Utente.id == uid).first()
     if not utente:
         raise HTTPException(status_code=404, detail="Utente non trovato")
+    # Non super_admin può resettare solo utenti della propria società
+    if not current_user.is_super_admin and utente.societa_id != current_user.societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato a resettare utenti di altre società")
+    # Non super_admin non può resettare super_admin
+    if utente.is_super_admin and not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Non autorizzato a resettare super admin")
     utente.password_hash = hash_password(DEFAULT_PASSWORD)
     db.commit()
     return {"ok": True, "message": "Password reimpostata"}
@@ -306,6 +320,8 @@ def cambia_password(uid: int, data: PasswordChange, current_user: Utente = Depen
     if not current_user.is_admin:
         if not data.vecchia or not verify_password(data.vecchia, utente.password_hash):
             raise HTTPException(status_code=400, detail="Password attuale errata")
+    elif not current_user.is_super_admin and utente.societa_id != current_user.societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato a operare su utenti di altre società")
     utente.password_hash = hash_password(data.nuova)
     db.commit()
     return {"ok": True}

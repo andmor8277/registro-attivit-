@@ -279,8 +279,8 @@ def apply_default_week(data_inizio: str, db=Depends(get_db), user=Depends(get_cu
         db.execute(text("DELETE FROM spogliatoi_assegnazioni WHERE data_inizio = :di AND is_default = FALSE"), {"di": data_inizio})
     db.execute(
         text("""
-            INSERT INTO spogliatoi_assegnazioni (spogliatoio_id, categoria_id, nome_squadra_esterna, tipo, data_inizio, data, weekend_id, societa_id, metacampo)
-            SELECT spogliatoio_id, categoria_id, nome_squadra_esterna, tipo, :data_inizio, data, weekend_id, societa_id, NULL
+            INSERT INTO spogliatoi_assegnazioni (spogliatoio_id, categoria_id, nome_squadra_esterna, tipo, data_inizio, data, weekend_id, societa_id)
+            SELECT spogliatoio_id, categoria_id, nome_squadra_esterna, tipo, :data_inizio, data, weekend_id, societa_id
             FROM spogliatoi_assegnazioni
             WHERE is_default = TRUE
               AND (:sid IS NULL OR societa_id = :sid)
