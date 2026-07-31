@@ -242,6 +242,7 @@
       <div v-if="editMode" class="save-bar">
         <button class="btn-annulla" @click="toggleEdit">Annulla</button>
         <button class="btn-salva" @click="salvaDati">Salva Modifiche</button>
+        <span v-if="saveError" class="save-error">{{ saveError }}</span>
       </div>
     </div>
   </div>
@@ -257,6 +258,7 @@ const route = useRoute()
 const router = useRouter()
 
 const editMode = ref(false)
+const saveError = ref('')
 const giocatore = ref(null)
 const isNuovo = ref(false)
 const categoriaIdNuovo = ref(null)
@@ -432,15 +434,16 @@ function stampaPDF() {
 }
 
 async function salvaDati() {
+  saveError.value = ''
   try {
     const data = {
       nome: giocatoreEdit.nome,
       cognome: giocatoreEdit.cognome,
-      data_nascita: giocatoreEdit.data_nascita,
-      matricola: giocatoreEdit.matricola,
-      numero_maglia: giocatoreEdit.numero_maglia,
-      codice_fiscale: giocatoreEdit.codice_fiscale,
-      scadenza_certificato: giocatoreEdit.scadenza_certificato,
+      data_nascita: giocatoreEdit.data_nascita || null,
+      matricola: giocatoreEdit.matricola || null,
+      numero_maglia: giocatoreEdit.numero_maglia !== '' && giocatoreEdit.numero_maglia != null ? giocatoreEdit.numero_maglia : null,
+      codice_fiscale: giocatoreEdit.codice_fiscale || null,
+      scadenza_certificato: giocatoreEdit.scadenza_certificato || null,
       categoria_id: isNuovo.value ? categoriaIdNuovo.value : giocatore.value.categoria_id,
       residenza: scheda.residenza,
       indirizzo: scheda.indirizzo,
@@ -468,7 +471,8 @@ async function salvaDati() {
     
     if (isNuovo.value) {
       const result = await createPersona(data)
-      if (result?.id) router.push('/segreteria/scheda/' + result.id)
+      const newId = result?.data?.id ?? result?.id
+      if (newId) router.push('/segreteria/scheda/' + newId)
       else router.push('/segreteria')
     } else {
       await updatePersona(giocatore.value.id, data)
@@ -479,7 +483,7 @@ async function salvaDati() {
       caricaDatiGiocatore()
     }
   } catch(e) {
-    console.error('Error saving:', e)
+    saveError.value = e.response?.data?.detail || 'Errore durante il salvataggio. Riprova.'
   }
 }
 
@@ -896,9 +900,16 @@ onBeforeUnmount(() => {
 .save-bar {
   display: flex;
   gap: 8px;
+  align-items: center;
   margin-top: 3mm;
   padding-top: 3mm;
   border-top: 1px solid #e8ecf1;
+}
+
+.save-error {
+  color: #dc2626;
+  font-size: 13px;
+  margin-left: 8px;
 }
 
 .btn-annulla {

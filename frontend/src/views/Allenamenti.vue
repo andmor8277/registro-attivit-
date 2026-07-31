@@ -578,7 +578,7 @@ function selezionaDaCatalogo(ex) {
 function addEsercizio() {
   esercizi.value.push({ id: generateId(), ordine: esercizi.value.length + 1, titolo: '', descrizione: '', focus: '', campo_con_righe: 'full', elementi: [] })
   selectedExercise.value = esercizi.value[esercizi.value.length - 1]
-  hasChanges.value = true
+  markDirty()
   debouncedSave()
 }
 
@@ -587,7 +587,7 @@ function deleteEsercizio(ex) {
   if (esercizi.value.length > 0) {
     selectedExercise.value = esercizi.value[0]
   }
-  hasChanges.value = true
+  markDirty()
   saveDataToServer()
 }
 
@@ -1197,7 +1197,7 @@ async function exportPdf() {
 
 function saveEsercizio(ex) {
   if (!selectedDay.value) return
-  hasChanges.value = true
+  markDirty()
   debouncedSave()
 }
 
@@ -1209,7 +1209,7 @@ function updateElementi(ex, newElements) {
     if (current === incoming) return
     esercizi.value[idx].elementi = newElements
   }
-  hasChanges.value = true
+  markDirty()
   debouncedSave()
 }
 
@@ -1218,7 +1218,7 @@ function handleFieldModeChange(ex, mode) {
   if (idx !== -1) {
     esercizi.value[idx].campo_con_righe = mode
   }
-  hasChanges.value = true
+  markDirty()
   debouncedSave()
 }
 
@@ -1231,15 +1231,23 @@ function debouncedSave() {
   }, 800)
 }
 
+let saveRevision = 0
+
+function markDirty() {
+  hasChanges.value = true
+  saveRevision++
+}
+
 function saveDataToServer() {
   if (!selectedDay.value) return
 
   if (saveLoading.value) {
-    hasChanges.value = true
+    markDirty()
     return
   }
 
   saveLoading.value = true
+  const revisionAtStart = saveRevision
 
   const payload = {
     categoria_id: categoriaId,
@@ -1280,17 +1288,17 @@ function saveDataToServer() {
 
   saveAllenamenti(categoriaId, payload)
     .then(() => {
-      hasChanges.value = false
+      if (saveRevision === revisionAtStart) {
+        hasChanges.value = false
+      }
       saveError.value = ''
     })
     .catch(err => {
-      hasChanges.value = true
-      const detail = err.response?.data?.detail || 'Errore durante il salvataggio. Riprova.'
-      saveError.value = detail
+      saveError.value = err.response?.data?.detail || 'Errore durante il salvataggio. Riprova.'
     })
     .finally(() => {
       saveLoading.value = false
-      if (hasChanges.value) {
+      if (saveRevision !== revisionAtStart) {
         saveDataToServer()
       }
     })

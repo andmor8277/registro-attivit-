@@ -35,6 +35,7 @@ class ConvocazioneIn(BaseModel):
     data_inizio: date
     data_fine: Optional[date] = None
     note: Optional[str] = None
+    esclusioni: Optional[List[dict]] = []
     gare: List[GaraIn] = []
 
 @router.get("/")
@@ -68,12 +69,18 @@ def dettaglio(cid: int, db: Session = Depends(get_db), current_user: Utente = De
             "campo": g.campo, "indirizzo": g.indirizzo, "appuntamento": g.appuntamento,
             "inizio_gara": g.inizio_gara, "allenatore": g.allenatore, "giocatori": persone
         })
-    return {"id": c.id, "categoria_id": c.categoria_id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "note": c.note, "gare": result_gare}
+    return {"id": c.id, "categoria_id": c.categoria_id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "note": c.note, "esclusioni": c.esclusioni or [], "gare": result_gare}
 
 @router.post("/")
 def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    from ..models import Categoria
+    cat = db.query(Categoria).filter(Categoria.id == data.categoria_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Categoria non trovata")
+    if not current_user.is_super_admin and cat.societa_id != current_user.societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato a operare su questa categoria")
     societa_id = get_societa_filter(current_user) or current_user.societa_id
-    c = Convocazione(societa_id=societa_id, categoria_id=data.categoria_id, data_inizio=data.data_inizio, data_fine=data.data_fine, note=data.note)
+    c = Convocazione(societa_id=societa_id, categoria_id=data.categoria_id, data_inizio=data.data_inizio, data_fine=data.data_fine, note=data.note, esclusioni=data.esclusioni)
     db.add(c)
     db.flush()
     for g in data.gare:
@@ -99,6 +106,7 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
     c.data_inizio = data.data_inizio
     c.data_fine = data.data_fine
     c.note = data.note
+    c.esclusioni = data.esclusioni
     # Elimina e ricrea gare
     gare_old = db.query(ConvocazioneGara).filter(ConvocazioneGara.convocazione_id == cid).all()
     for g in gare_old:
@@ -132,7 +140,12 @@ from datetime import timedelta
 
 @router.get("/presenze-settimana/{categoria_id}")
 def presenze_settimana(categoria_id: int, data_gara: date, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    from ..models import Registro, CodicePresenza
+    from ..models import Registro, CodicePresenza, Categoria
+    cat = db.query(Categoria).filter(Categoria.id == categoria_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Categoria non trovata")
+    if not current_user.is_super_admin and cat.societa_id != current_user.societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato a operare su questa categoria")
     # Settimana precedente: lun-dom prima del weekend di gara
     giorno_settimana = data_gara.weekday()  # 0=lun, 6=dom
     inizio_sett = data_gara - timedelta(days=giorno_settimana + 7)

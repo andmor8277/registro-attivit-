@@ -61,8 +61,13 @@ class AllenamentoJson(BaseModel):
     esercizi: List[EsercizioCreate] = []
 
 @router.get("/giorno-by-data/{categoria_id}/{data}")
-def get_giorno_by_data(categoria_id: int, data: str, db: Session = Depends(get_db)):
+def get_giorno_by_data(categoria_id: int, data: str, db: Session = Depends(get_db), current_user: models.Utente = Depends(get_current_user)):
     from datetime import datetime
+    cat = db.query(models.Categoria).filter(models.Categoria.id == categoria_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Categoria non trovata")
+    if not current_user.is_super_admin and cat.societa_id != current_user.societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     data_date = datetime.strptime(data, "%Y-%m-%d").date()
     
     row = db.query(models.Allenamento).filter(

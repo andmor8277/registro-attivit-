@@ -118,6 +118,7 @@ class Convocazione(Base):
     data_inizio = Column(Date, nullable=False)
     data_fine = Column(Date, nullable=True)
     note = Column(String(1000), nullable=True)
+    esclusioni = Column(JSONB, nullable=True, default=list)
 
 class ConvocazioneGara(Base):
     __tablename__ = "convocazione_gare"
