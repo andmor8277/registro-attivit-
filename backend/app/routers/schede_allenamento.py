@@ -215,14 +215,14 @@ def get_team_stats(
         func.max(col).label('max'),
         func.sum(col).label('sum'),
         func.count(col).label('count')
-    ).join(models.Persone).filter(
+    ).join(models.Persona).filter(
         models.SchedaAllenamento.societa_id == current_user.societa_id,
         models.SchedaAllenamento.categoria_id == categoria_id,
         models.SchedaAllenamento.data >= _date_filter(period)
     ).group_by(
         models.SchedaAllenamento.persona_id,
-        models.Persone.nome,
-        models.Persone.cognome
+        models.Persona.nome,
+        models.Persona.cognome
     ).order_by(func.avg(col).desc()).all()
 
     return [{

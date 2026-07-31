@@ -285,9 +285,9 @@ def importa_giocatori(nuova_categoria_id: int, db: Session = Depends(get_db), cu
         nuovo_giocatore = models.Persona(
             nome=g.nome,
             cognome=g.cognome,
+            societa_id=nuova_cat.societa_id,
             categoria_id=nuova_categoria_id,
-            gruppo_id=g.gruppo_id,
-            gruppo_nome=g.gruppo_nome
+            gruppo_id=g.gruppo_id
         )
         db.add(nuovo_giocatore)
         importati += 1

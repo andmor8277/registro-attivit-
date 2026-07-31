@@ -142,7 +142,7 @@ def run_migrations():
                 pass
 
             try:
-                conn.execute(text(
+                result = conn.execute(text(
                     "SELECT column_name FROM information_schema.columns "
                     "WHERE table_name = 'catalogo_esercizi' AND column_name = 'spazio'"
                 ))
@@ -572,20 +572,28 @@ def run_migrations():
                 print(f"Migration warning (openday table): {e}")
                 conn.rollback()
 
-            try:
-                conn.execute(text("ALTER TABLE openday ADD COLUMN date_prova JSONB DEFAULT '[]'"))
-                conn.execute(text("ALTER TABLE openday ADD COLUMN nulla_osta BOOLEAN DEFAULT FALSE"))
-                conn.execute(text("ALTER TABLE openday ADD COLUMN certificato_medico BOOLEAN DEFAULT FALSE"))
-                conn.execute(text("ALTER TABLE openday ADD COLUMN scadenza_certificato DATE"))
-                conn.execute(text("ALTER TABLE openday ADD COLUMN tel_papa VARCHAR(20)"))
-                conn.execute(text("ALTER TABLE openday ADD COLUMN tel_mamma VARCHAR(20)"))
-                conn.execute(text("ALTER TABLE openday ADD COLUMN email_papa VARCHAR(100)"))
-                conn.execute(text("ALTER TABLE openday ADD COLUMN email_mamma VARCHAR(100)"))
-                conn.commit()
-                print("Migration: Added new columns to openday table")
-            except Exception as e:
-                print(f"Migration warning (openday new columns): {e}")
-                conn.rollback()
+            openday_columns = [
+                ("date_prova", "ALTER TABLE openday ADD COLUMN date_prova JSONB DEFAULT '[]'"),
+                ("nulla_osta", "ALTER TABLE openday ADD COLUMN nulla_osta BOOLEAN DEFAULT FALSE"),
+                ("certificato_medico", "ALTER TABLE openday ADD COLUMN certificato_medico BOOLEAN DEFAULT FALSE"),
+                ("scadenza_certificato", "ALTER TABLE openday ADD COLUMN scadenza_certificato DATE"),
+                ("tel_papa", "ALTER TABLE openday ADD COLUMN tel_papa VARCHAR(20)"),
+                ("tel_mamma", "ALTER TABLE openday ADD COLUMN tel_mamma VARCHAR(20)"),
+                ("email_papa", "ALTER TABLE openday ADD COLUMN email_papa VARCHAR(100)"),
+                ("email_mamma", "ALTER TABLE openday ADD COLUMN email_mamma VARCHAR(100)"),
+            ]
+            for col_name, col_sql in openday_columns:
+                try:
+                    result = conn.execute(text(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_name = 'openday' AND column_name = :col"
+                    ), {"col": col_name})
+                    if result.fetchone() is None:
+                        conn.execute(text(col_sql))
+                        conn.commit()
+                except Exception as e:
+                    print(f"Migration warning (openday {col_name}): {e}")
+                    conn.rollback()
 
             try:
                 result = conn.execute(text(
@@ -636,7 +644,8 @@ def run_migrations():
                     societa_result = conn.execute(text(
                         "SELECT DISTINCT societa_id FROM categorie LIMIT 1"
                     ))
-                    societa_id = societa_result.fetchone()[0] if societa_result.fetchone() else 1
+                    societa_row = societa_result.fetchone()
+                    societa_id = societa_row[0] if societa_row else 1
 
                     # Create Agonistica parent
                     conn.execute(text("""
@@ -856,6 +865,64 @@ def run_migrations():
                 print("Migration: Created liste_torneo tables")
             except Exception as e:
                 print(f"Migration warning (liste_torneo): {e}")
+                conn.rollback()
+
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'convocazioni' AND column_name = 'esclusioni'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text(
+                        "ALTER TABLE convocazioni ADD COLUMN esclusioni JSONB DEFAULT '[]'"
+                    ))
+                    conn.commit()
+                    print("Migration: Added esclusioni to convocazioni")
+            except Exception as e:
+                print(f"Migration warning (esclusioni): {e}")
+                conn.rollback()
+
+            try:
+                result = conn.execute(text(
+                    "SELECT constraint_name FROM information_schema.table_constraints "
+                    "WHERE table_name = 'registro' AND constraint_name = 'uq_registro'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text("""
+                        DELETE FROM registro a USING registro b
+                        WHERE a.id > b.id
+                          AND a.persona_id = b.persona_id
+                          AND a.data = b.data
+                          AND a.categoria_id IS NOT DISTINCT FROM b.categoria_id
+                    """))
+                    conn.execute(text("""
+                        ALTER TABLE registro ADD CONSTRAINT uq_registro UNIQUE (persona_id, data, categoria_id)
+                    """))
+                    conn.commit()
+                    print("Migration: Added UNIQUE constraint uq_registro")
+            except Exception as e:
+                print(f"Migration warning (uq_registro): {e}")
+                conn.rollback()
+
+            try:
+                result = conn.execute(text(
+                    "SELECT constraint_name FROM information_schema.table_constraints "
+                    "WHERE table_name = 'presenze_allenatori' AND constraint_name = 'uq_presenze_allenatori'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text("""
+                        DELETE FROM presenze_allenatori a USING presenze_allenatori b
+                        WHERE a.id > b.id
+                          AND a.utente_id = b.utente_id
+                          AND a.data = b.data
+                    """))
+                    conn.execute(text("""
+                        ALTER TABLE presenze_allenatori ADD CONSTRAINT uq_presenze_allenatori UNIQUE (utente_id, data)
+                    """))
+                    conn.commit()
+                    print("Migration: Added UNIQUE constraint uq_presenze_allenatori")
+            except Exception as e:
+                print(f"Migration warning (uq_presenze_allenatori): {e}")
                 conn.rollback()
 
             try:

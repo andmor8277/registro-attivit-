@@ -229,15 +229,14 @@ def segnala_scaduti(
 ):
     societa_id = get_societa_filter(current_user)
     params = {"sid": societa_id} if societa_id else {}
-    soc_filter = " WHERE i.societa_id = :sid" if societa_id else ""
+    soc_filter = " AND i.societa_id = :sid" if societa_id else ""
 
     rows = db.execute(
         text(f"""
             SELECT i.*, p.nome as persona_nome, p.cognome as persona_cognome
             FROM infortuni i
             LEFT JOIN persone p ON i.persona_id = p.id
-            {soc_filter}
-            WHERE i.data_fine IS NOT NULL AND i.data_fine < CURRENT_DATE AND i.data_fine >= CURRENT_DATE - INTERVAL '7 days'
+            WHERE i.data_fine IS NOT NULL AND i.data_fine < CURRENT_DATE AND i.data_fine >= CURRENT_DATE - INTERVAL '7 days'{soc_filter}
             ORDER BY i.data_fine DESC
         """),
         params

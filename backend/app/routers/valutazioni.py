@@ -67,9 +67,8 @@ def update_valutazione(id: int, data: ValutazioneCreate, db: Session = Depends(g
         raise HTTPException(status_code=404, detail="Valutazione non trovata")
     check_categoria_societa(db, v.categoria_id, user)
     for field in ["tecnica", "velocita", "resistenza", "attitudine", "posizione", "gioco_di_testa", "tiro", "passaggio", "dribbling", "disciplina", "note"]:
-        val = getattr(data, field, None)
-        if val is not None:
-            setattr(v, field, val)
+        if field in data.model_dump():
+            setattr(v, field, getattr(data, field))
     db.commit()
     return {"status": "ok"}
 

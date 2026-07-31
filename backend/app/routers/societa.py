@@ -8,7 +8,7 @@ from pathlib import Path
 from uuid import uuid4
 from ..database import get_db
 from ..models import Societa
-from .auth import get_admin, get_current_user
+from .auth import get_super_admin, get_admin, get_current_user
 
 UPLOAD_DIR = Path(__file__).parent.parent.parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -48,7 +48,7 @@ def get_societa(sid: int, db: Session = Depends(get_db)):
     return s
 
 @router.post("/", response_model=SocietaOut)
-def crea_societa(data: SocietaIn, db: Session = Depends(get_db), current_user=Depends(get_admin)):
+def crea_societa(data: SocietaIn, db: Session = Depends(get_db), current_user=Depends(get_super_admin)):
     s = Societa(**data.model_dump())
     db.add(s)
     db.commit()
@@ -56,7 +56,7 @@ def crea_societa(data: SocietaIn, db: Session = Depends(get_db), current_user=De
     return s
 
 @router.put("/{sid}", response_model=SocietaOut)
-def aggiorna_societa(sid: int, data: SocietaIn, db: Session = Depends(get_db), current_user=Depends(get_admin)):
+def aggiorna_societa(sid: int, data: SocietaIn, db: Session = Depends(get_db), current_user=Depends(get_super_admin)):
     s = db.query(Societa).filter(Societa.id == sid).first()
     if not s:
         raise HTTPException(status_code=404, detail="Società non trovata")
@@ -67,7 +67,7 @@ def aggiorna_societa(sid: int, data: SocietaIn, db: Session = Depends(get_db), c
     return s
 
 @router.delete("/{sid}")
-def elimina_societa(sid: int, db: Session = Depends(get_db), current_user=Depends(get_admin)):
+def elimina_societa(sid: int, db: Session = Depends(get_db), current_user=Depends(get_super_admin)):
     s = db.query(Societa).filter(Societa.id == sid).first()
     if not s:
         raise HTTPException(status_code=404, detail="Società non trovata")

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from .. import models, schemas
 from ..database import get_db
 from ..routers.auth import get_current_user
@@ -98,20 +99,23 @@ def upsert_registro(entry: schemas.RegistroEntry, db: Session = Depends(get_db),
                     if portieri_cat:
                         target_categoria_id = portieri_cat.id
 
-    existing = db.query(models.Registro).filter(
+    data = entry.model_dump()
+    data["societa_id"] = societa_id
+    data["categoria_id"] = target_categoria_id
+    data.pop("id", None)
+    stmt = pg_insert(models.Registro).values(**data)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[models.Registro.persona_id, models.Registro.data, models.Registro.categoria_id],
+        set_={
+            "codice": stmt.excluded.codice,
+            "societa_id": stmt.excluded.societa_id,
+        }
+    )
+    db.execute(stmt)
+    db.commit()
+    r = db.query(models.Registro).filter(
         models.Registro.persona_id == entry.persona_id,
         models.Registro.data == entry.data,
         models.Registro.categoria_id == target_categoria_id
     ).first()
-    if existing:
-        existing.codice = entry.codice
-        if societa_id:
-            existing.societa_id = societa_id
-        db.commit(); db.refresh(existing)
-        return existing
-    data = entry.model_dump()
-    data["societa_id"] = societa_id
-    data["categoria_id"] = target_categoria_id
-    r = models.Registro(**data)
-    db.add(r); db.commit(); db.refresh(r)
     return r
