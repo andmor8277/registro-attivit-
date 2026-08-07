@@ -91,7 +91,7 @@
         <div class="card-arrow">→</div>
       </div>
 
-      <div v-if="utenteAttivo?.is_admin && !isSuperAdmin" class="hub-card nuovo-utente" @click="apriNuovoUtente">
+      <div v-if="utenteAttivo?.is_admin" class="hub-card nuovo-utente" @click="apriNuovoUtente">
         <div class="card-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
@@ -249,6 +249,7 @@
               <label>Ruolo *</label>
               <select v-model="nuovoUtenteModal.ruolo">
                 <option value="">Seleziona ruolo...</option>
+                <option value="admin">Responsabile</option>
                 <option value="mister">Mister</option>
                 <option value="dirigente">Dirigente</option>
                 <option value="segreteria">Segreteria</option>
@@ -264,8 +265,20 @@
               <input v-model="nuovoUtenteModal.cognome" type="text" placeholder="Cognome" />
             </div>
             <div class="form-group">
+              <label>Data di Nascita</label>
+              <input v-model="nuovoUtenteModal.data_nascita" type="date" />
+            </div>
+            <div class="form-group">
+              <label>Codice Fiscale</label>
+              <input v-model="nuovoUtenteModal.codice_fiscale" type="text" maxlength="16" placeholder="Codice Fiscale" />
+            </div>
+            <div class="form-group">
               <label>Cellulare</label>
               <input v-model="nuovoUtenteModal.cellulare" type="text" placeholder="Numero Cellulare" />
+            </div>
+            <div class="form-group">
+              <label>Tesserino</label>
+              <input v-model="nuovoUtenteModal.tesserino" type="text" placeholder="Numero Tesserino" />
             </div>
           </div>
           <div class="modal-footer">
@@ -315,10 +328,10 @@ const gestioneStagioneModal = ref({ show: false })
 const stagioneModal = ref({ show: false, stagione: new Date().getFullYear(), data_inizio_stagione: '', data_fine_stagione: '', loading: false, errore: '' })
 const archiviaModal = ref({ show: false, loading: false, stagione: null })
 
-const nuovoUtenteModal = ref({ show: false, username: '', password: '', ruolo: '', nome: '', cognome: '', cellulare: '', loading: false, errore: '' })
+const nuovoUtenteModal = ref({ show: false, username: '', password: '', ruolo: '', nome: '', cognome: '', data_nascita: null, codice_fiscale: null, cellulare: '', tesserino: '', loading: false, errore: '' })
 
 function apriNuovoUtente() {
-  nuovoUtenteModal.value = { show: true, username: '', password: '', ruolo: '', nome: '', cognome: '', cellulare: '', loading: false, errore: '' }
+  nuovoUtenteModal.value = { show: true, username: '', password: '', ruolo: '', nome: '', cognome: '', data_nascita: null, codice_fiscale: null, cellulare: '', tesserino: '', loading: false, errore: '' }
 }
 
 async function creaNuovoUtente() {
@@ -327,7 +340,8 @@ async function creaNuovoUtente() {
     m.errore = 'Compila i campi obbligatori (*)'
     return
   }
-  if (!societaAttiva.value?.id) {
+  const targetSocieta = societaAttiva.value?.id || null
+  if (!targetSocieta) {
     m.errore = 'Società non disponibile'
     return
   }
@@ -339,10 +353,13 @@ async function creaNuovoUtente() {
       password: m.password,
       nome: m.nome,
       cognome: m.cognome,
+      data_nascita: m.data_nascita || null,
+      codice_fiscale: m.codice_fiscale ? m.codice_fiscale.toUpperCase() : null,
       cellulare: m.cellulare || null,
+      tesserino: m.tesserino || null,
       ruolo: m.ruolo,
-      societa_id: societaAttiva.value.id,
-      is_admin: 0,
+      societa_id: targetSocieta,
+      is_admin: m.ruolo === 'admin' ? 1 : 0,
       is_super_admin: 0
     })
     nuovoUtenteModal.value.show = false

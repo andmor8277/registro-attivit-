@@ -120,26 +120,6 @@
           </div>
         </div>
 
-        <div v-if="isSuperAdmin" class="section-card admin" @click="router.push('/admin')">
-          <div class="card-glow"></div>
-          <div class="card-pattern"></div>
-          <div class="card-icon-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
-            </svg>
-          </div>
-          <div class="card-text">
-            <h3 class="card-title">Gestione Utenti</h3>
-            <p class="card-desc">Account utenti · Società</p>
-          </div>
-          <div class="card-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
-          </div>
-        </div>
-
         <div v-if="utenteAttivo?.ruolo === 'segreteria' || utenteAttivo?.is_admin" class="section-card segreteria" @click="router.push('/segreteria')">
           <div class="card-glow"></div>
           <div class="card-pattern"></div>
@@ -216,7 +196,7 @@ import { getSocieta, getAllCategorie, getCategoriaResponsabili } from "../api/in
 
 const router = useRouter()
 const { utenteAttivo, societaAttiva, setSocietaAttiva } = useStore()
-const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === 'true')
+const isSuperAdmin = computed(() => utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'super_admin')
 
 const allCategories = ref([])
 const responsabileMap = ref({})
