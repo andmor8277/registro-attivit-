@@ -50,10 +50,7 @@ def get_schede(
 @router.post("/")
 def create_scheda(data: SchedaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     from sqlalchemy import func
-    result = db.execute(
-        func.now(),
-    )
-    now = result.scalar()
+    now = db.scalar(func.now())
     scheda = models.SchedaAllenamento(
         persona_id=data.persona_id,
         categoria_id=data.categoria_id,

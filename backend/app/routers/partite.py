@@ -6,7 +6,7 @@ from ..schemas import PartitaCreate, PartitaUpdate
 
 router = APIRouter(prefix="/partite", tags=["partite"])
 
-def check_partita_access(db, partita_id, user):
+def check_partite_access(db, partita_id, user):
     """Verifica che la partita appartenga alla societa dell'utente."""
     if user.is_super_admin:
         return
@@ -15,6 +15,17 @@ def check_partita_access(db, partita_id, user):
     if not row:
         raise HTTPException(404, "Partita non trovata")
     check_societa(user, row.societa_id)
+
+def check_categoria(db, user, categoria_id):
+    """Verifica che la categoria appartenga alla societa dell'utente."""
+    if user.is_super_admin or not categoria_id:
+        return
+    res = db.execute(text("SELECT societa_id FROM categorie WHERE id = :id"), {"id": categoria_id})
+    row = res.fetchone()
+    if not row:
+        raise HTTPException(404, "Categoria non trovata")
+    if row.societa_id != user.societa_id:
+        raise HTTPException(403, "Categoria di un'altra società")
 
 @router.get("/")
 def lista_partite(categoria_id: int = None, societa_id: int = None, db=Depends(get_db), user=Depends(get_current_user)):
@@ -39,6 +50,7 @@ def crea_partita(data: PartitaCreate, db=Depends(get_db), user=Depends(get_curre
     if not societa_id and not user.is_super_admin:
         societa_id = user.societa_id
     check_societa(user, societa_id)
+    check_categoria(db, user, data.categoria_id)
     res = db.execute(
         text("""
             INSERT INTO partite (categoria_id, data_partite, ora, ora_presentazione, avversario, campo, indirizzo, casa_fuori, mister_id, risultato, goal_punti, goal_contro, note, societa_id, weekend_id)
@@ -69,7 +81,8 @@ def crea_partita(data: PartitaCreate, db=Depends(get_db), user=Depends(get_curre
 
 @router.put("/{partita_id}")
 def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), user=Depends(get_current_user)):
-    check_partita_access(db, partita_id, user)
+    check_partite_access(db, partita_id, user)
+    check_categoria(db, user, data.categoria_id)
     res = db.execute(
         text("""
             UPDATE partite SET
@@ -116,7 +129,7 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
 
 @router.delete("/{partita_id}")
 def elimina_partita(partita_id: int, db=Depends(get_db), user=Depends(get_current_user)):
-    check_partita_access(db, partita_id, user)
+    check_partite_access(db, partita_id, user)
     db.execute(text("DELETE FROM partite WHERE id = :id"), {"id": partita_id})
     db.commit()
     return {"ok": True}

@@ -144,6 +144,7 @@ class ConvocazioneGiocatore(Base):
 class Allenatore(Base):
     __tablename__ = "allenatori"
     id = Column(Integer, primary_key=True)
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=True)
     cognome = Column(String(100), nullable=False)
     telefono = Column(String(30), nullable=True)
 

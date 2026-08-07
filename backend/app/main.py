@@ -946,6 +946,21 @@ def run_migrations():
                 print(f"Migration warning (campo_con_righe): {e}")
                 conn.rollback()
 
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'allenatori' AND column_name = 'societa_id'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text(
+                        "ALTER TABLE allenatori ADD COLUMN societa_id INTEGER REFERENCES societa(id)"
+                    ))
+                    conn.commit()
+                    print("Migration: Added societa_id to allenatori")
+            except Exception as e:
+                print(f"Migration warning (allenatori societa_id): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 
