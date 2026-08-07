@@ -196,14 +196,14 @@
         <div v-if="u.ruolo === 'mister' || u.ruolo === 'dirigente'" class="categorie-assegna">
           <span class="label">Assegna a categorie (come Mister):</span>
           <div class="categorie-grid">
-            <label v-for="cat in tutteCategorie" :key="cat.id" class="cat-check" :class="{ selected: isMister(u, cat.id) }">
+            <label v-for="cat in categorieAssegnabili" :key="cat.id" class="cat-check" :class="{ selected: isMister(u, cat.id) }">
               <input type="checkbox" :value="cat.id" @change="toggleMister(u, cat.id, $event)" />
               <span class="cat-anno">{{ cat.anno }}</span>
               <span class="cat-nome">{{ cat.nome }}</span>
               <span v-if="isMister(u, cat.id) && u.ruolo === 'dirigente'" class="badge-mister" style="background: #2563eb;">DIR</span>
               <span v-else-if="isMister(u, cat.id)" class="badge-mister">MISTER</span>
             </label>
-            <span v-if="tutteCategorie.length === 0" class="muted">Nessuna categoria presente</span>
+            <span v-if="categorieAssegnabili.length === 0" class="muted">Nessuna categoria presente</span>
           </div>
         </div>
         <div v-else class="admin-note">
@@ -231,6 +231,7 @@ const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === '
 
 const utenti = ref([])
 const tutteCategorie = ref([])
+const categorieAssegnabili = computed(() => tutteCategorie.value.filter(cat => cat.parent_id != null))
 const listaSocieta = ref([])
 const societaIdSelezionata = ref(null)
 

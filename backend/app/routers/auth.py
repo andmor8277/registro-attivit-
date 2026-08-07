@@ -271,6 +271,12 @@ def assegna_categorie(uid: int, data: AssegnaCategorie, current_user: Utente = D
         raise HTTPException(status_code=404, detail="Utente non trovato")
     if not current_user.is_super_admin and utente.societa_id != current_user.societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato a operare su utenti di altre società")
+    for cid in data.categoria_ids:
+        cat = db.query(Categoria).filter(Categoria.id == cid).first()
+        if not cat:
+            raise HTTPException(status_code=404, detail=f"Categoria {cid} non trovata")
+        if cat.parent_id is None:
+            raise HTTPException(status_code=400, detail=f"Non è possibile assegnare la categoria padre '{cat.nome}'")
     db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == uid).delete()
     for cid in data.categoria_ids:
         db.add(UtenteCategoria(utente_id=uid, categoria_id=cid))
