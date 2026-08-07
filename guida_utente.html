@@ -135,7 +135,7 @@
   <div class="role-header">
     <span class="role-tag">Introduzione</span>
     <h2>Benvenuto nel Sistema</h2>
-    <p>Registro Presenze e Gestione Società Sportive — versione 5.1.0</p>
+    <p>Registro Presenze e Gestione Società Sportive — versione 5.4.0</p>
   </div>
 
   <div class="feature">
@@ -156,6 +156,23 @@
         <li>Gestire più società sportive con un unico account (Super Admin)</li>
       </ul>
       <div class="note">Il sistema è accessibile da qualsiasi dispositivo con browser web. L'interfaccia è ottimizzata per tablet e smartphone per l'uso in campo.</div>
+    </div>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <div class="feature-icon" style="background:#fef9c3; color:#a16207;">✨</div>
+      <h3>Novità della versione 5.4.0</h3>
+    </div>
+    <div class="feature-body">
+      <p>Le principali novità recenti riguardano la gestione degli utenti e le pagine del Super Admin:</p>
+      <ul>
+        <li><strong>Pagina di scelta società ridisegnata:</strong> griglia di "club card" con logo e colori, preview della selezione e tre azioni rapide (Crea nuova società, Gestione Società, Gestione Utenti)</li>
+        <li><strong>Gestione Utenti solo per il Super Admin:</strong> spostata dalla Home alla pagina di scelta società (pulsante ✥ Gestione Utenti)</li>
+        <li><strong>Assegnazione società ai utenti:</strong> il Super Admin può ora assegnare o spostare un utente in una qualsiasi società (campo "Società" nel form)</li>
+        <li><strong>Creazione nuovi utenti in Area Responsabili:</strong> Admin e Super Admin possono creare un utente della propria società (la società è assegnata automaticamente, senza selettore)</li>
+        <li><strong>Divieto categorie madre:</strong> non è possibile assegnare categorie madre (Agonistica, Scuola Calcio) direttamente a un utente come responsabile</li>
+      </ul>
     </div>
   </div>
 
@@ -195,7 +212,7 @@
     </div>
   </div>
 
-  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+  <div class="page-footer">The Home of Football — Guida Utente v5.4.0</div>
 </div>
 
 <!-- ============ SUPER ADMIN ============ -->
@@ -213,13 +230,17 @@
       <span class="route">/login</span>
     </div>
     <div class="feature-body">
-      <p>Il Super Admin può gestire più società sportive con un unico account:</p>
+      <p>Il Super Admin può gestire più società sportive con un unico account. Al login apre la <strong>pagina di scelta società</strong>:</p>
       <ul>
-        <li>Al login viene presentata la <strong>griglia delle società</strong> disponibili</li>
-        <li>Clicca sulla società desiderata per selezionarla, poi premi <strong>Continua</strong></li>
+        <li>Le società sono presentate come una <strong>griglia di "club card"</strong> con logo, colori e nome. Clicca sulla card per selezionarla, poi premi <strong>Continua</strong></li>
+        <li>La card selezionata mette in evidenza il preview con logo e nome e una spunta di conferma</li>
         <li>In qualsiasi momento puoi cambiare società dal pulsante <strong>Cambia Società</strong> visibile nella Home o in Allenatori</li>
-        <li>Puoi <strong>creare una nuova società</strong> direttamente dalla schermata di login con il pulsante <strong>+ Crea nuova società</strong></li>
-        <li>Il pulsante <strong>⚙️ Gestione Società</strong> ti porta alla pagina di amministrazione completa</li>
+        <li>In fondo alla pagina sono disponibili <strong>tre azioni rapide</strong>:</li>
+        <ul>
+          <li><strong>＋ Crea nuova società</strong> — apre il modulo di creazione</li>
+          <li><strong>⚙ Gestione Società</strong> — pagina di amministrazione completa</li>
+          <li><strong>✥ Gestione Utenti</strong> — gestione account di tutti gli utenti</li>
+        </ul>
       </ul>
       <div class="note">La società selezionata diventa il contesto attivo: tutte le operazioni successive si riferiscono a quella società.</div>
     </div>
@@ -259,12 +280,13 @@
       <span class="route">/admin</span>
     </div>
     <div class="feature-body">
-      <p>Crea e gestisci gli account di tutti gli utenti del sistema:</p>
+      <p>Accessibile solo dal Super Admin tramite il pulsante <strong>✥ Gestione Utenti</strong> nella pagina di scelta società. Crea e gestisci gli account di <strong>tutte</strong> le società del sistema:</p>
       <ul>
-        <li><strong>Crea nuovo utente:</strong> Inserisci username, password, nome, cognome, ruolo e assegna la società</li>
-        <li><strong>Modifica utente:</strong> Cambia dati personali, ruolo, o società di appartenenza</li>
+        <li><strong>Crea nuovo utente:</strong> Inserisci username, password, nome, cognome, ruolo e scegli la <strong>società di appartenenza</strong></li>
+        <li><strong>Modifica utente:</strong> Cambia dati personali, ruolo o <strong>società</strong> (il Super Admin può ricollocare un utente in un'altra società)</li>
+        <li><strong>Assegna a categorie:</strong> Per mister e dirigenti, seleziona le categorie come responsabile (clic sugli spazi nella scheda utente)</li>
+        <li><strong>Reset password:</strong> Reimposta la password dell'utente</li>
         <li><strong>Elimina utente:</strong> Rimuovi un account (conferma richiesta)</li>
-        <li><strong>Cambia Società:</strong> Selettore per operare su una società diversa</li>
       </ul>
       <div class="sub-feature">
         <h4>Campi del form utente</h4>
@@ -275,10 +297,12 @@
           <li><strong>Data di Nascita</strong> — Opzionale</li>
           <li><strong>Codice Fiscale</strong> — Opzionale</li>
           <li><strong>Cellulare</strong> — Numero di telefono</li>
+          <li><strong>Tesserino</strong> — Numero tesserino (opzionale)</li>
           <li><strong>Ruolo</strong> — super_admin, admin, mister, dirigente, segreteria, infermeria</li>
-          <li><strong>Società</strong> — Assegnazione alla società (per Super Admin: selettore multipla)</li>
+          <li><strong>Società</strong> — Società di appartenenza (solo per Super Admin). Obbligatoria, perché ogni utente deve essere gestito all'interno di una società</li>
         </ul>
       </div>
+      <div class="note">Non è possibile assegnare a un utente una <strong>categoria madre</strong> (es. "Agonistica" o "Scuola Calcio"): a queste vengono assegnate automaticamente tutte le categorie figlie. Per i ruoli sopra le categorie non sono selezionabili.</div>
       <div class="note">La password deve contenere almeno 8 caratteri, una maiuscola, una minuscola, un numero e un carattere speciale (es. !@#$%).</div>
     </div>
   </div>
@@ -299,7 +323,7 @@
     </div>
   </div>
 
-  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+  <div class="page-footer">The Home of Football — Guida Utente v5.4.0</div>
 </div>
 
 <!-- ============ ADMIN / SEGRETERIA ============ -->
@@ -322,9 +346,9 @@
         <li><strong>Planning Allenamenti:</strong> Vista settimanale con le categorie che si allenano ogni giorno. Clicca su una categoria per accedere direttamente al registro presenze</li>
         <li><strong>Sezione Allenatori:</strong> Naviga alla pagina delle categorie e del planning settimanale</li>
         <li><strong>Sezione Segreteria:</strong> (visibile a Segreteria e Admin) Naviga alla gestione tesseramenti e rate</li>
-        <li><strong>Sezione Responsabili:</strong> (visibile solo ad Admin) Naviga alla gestione mister, dirigenti, partite e strutture</li>
+        <li><strong>Sezione Responsabili:</strong> (Admin e Super Admin) Naviga alla gestione mister, dirigenti, partite, strutture e alla creazione di nuovi utenti della società</li>
       </ul>
-      <div class="note">Il Super Admin vede un pulsante <strong>Cambia Società</strong> nell'header per passare da una società all'altra.</div>
+      <div class="note">Il Super Admin vede un pulsante <strong>Cambia Società</strong> nell'header per passare da una società all'altra. La <strong>Gestione Utenti</strong> globale non è più in questa pagina: si accede dal pulsante <strong>✥ Gestione Utenti</strong> nella pagina di scelta società.</div>
     </div>
   </div>
 
@@ -460,9 +484,10 @@
       <span class="route">/responsabili</span>
     </div>
     <div class="feature-body">
-      <p>Hub di gestione per le attività logistiche e organizzative (solo Admin):</p>
+      <p>Hub di gestione per le attività logistiche e organizzative (solo Admin e Super Admin):</p>
       <ul>
         <li><strong>Responsabili per Categoria:</strong> Assegna mister e dirigenti alle categorie</li>
+        <li><strong>Nuovo Utente:</strong> Crea un nuovo account per un utente <strong>della tua società</strong> (username, password, ruolo, dati anagrafici). La società è assegnata automaticamente: non serve selezionarla perché sei già dentro la tua società</li>
         <li><strong>Programmazione Partite:</strong> Gestisci weekend di gare e singole partite</li>
         <li><strong>Spogliatoi e Campi:</strong> Assegnazione settimanale e weekend delle strutture</li>
         <li><strong>Presenze Allenatori:</strong> Registro presenze allenatori e collaboratori</li>
@@ -569,7 +594,7 @@
     </div>
   </div>
 
-  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+  <div class="page-footer">The Home of Football — Guida Utente v5.4.0</div>
 </div>
 
 <!-- ============ MISTER ============ -->
@@ -738,7 +763,7 @@
     </div>
   </div>
 
-  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+  <div class="page-footer">The Home of Football — Guida Utente v5.4.0</div>
 </div>
 
 <!-- ============ DIRIGENTE ============ -->
@@ -803,7 +828,7 @@
     </div>
   </div>
 
-  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+  <div class="page-footer">The Home of Football — Guida Utente v5.4.0</div>
 </div>
 
 <!-- ============ INFERMERIA ============ -->
@@ -830,7 +855,7 @@
     </div>
   </div>
 
-  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+  <div class="page-footer">The Home of Football — Guida Utente v5.4.0</div>
 </div>
 
 <!-- ============ ESTERNI ============ -->
@@ -864,7 +889,7 @@
     </div>
   </div>
 
-  <div class="page-footer">The Home of Football — Guida Utente v5.1.0</div>
+  <div class="page-footer">The Home of Football — Guida Utente v5.4.0</div>
 </div>
 
 <!-- ============ APPENDICE ============ -->
@@ -915,12 +940,12 @@
         <tr><td>Segreteria</td><td><code>/segreteria</code></td><td>Segreteria, Admin</td></tr>
         <tr><td>Segreteria Categoria</td><td><code>/segreteria/:id</code></td><td>Segreteria, Admin</td></tr>
         <tr><td>Scheda Giocatore</td><td><code>/segreteria/scheda/:id</code></td><td>Segreteria, Admin</td></tr>
-        <tr><td>Responsabili</td><td><code>/responsabili</code></td><td>Admin</td></tr>
+        <tr><td>Responsabili</td><td><code>/responsabili</code></td><td>Admin, Super Admin</td></tr>
         <tr><td>Responsabili per Categoria</td><td><code>/responsabili/categorie</code></td><td>Admin</td></tr>
         <tr><td>Programmazione Partite</td><td><code>/responsabili/partite</code></td><td>Admin</td></tr>
         <tr><td>Spogliatoi e Campi</td><td><code>/responsabili/spogliatoi</code></td><td>Admin</td></tr>
         <tr><td>Presenze Allenatori</td><td><code>/responsabili/presenze-allenatori</code></td><td>Admin</td></tr>
-        <tr><td>Gestione Utenti</td><td><code>/admin</code></td><td>Admin, Super Admin</td></tr>
+        <tr><td>Gestione Utenti</td><td><code>/admin</code></td><td>Super Admin</td></tr>
         <tr><td>Gestione Società</td><td><code>/admin/societa</code></td><td>Super Admin</td></tr>
         <tr><td>Modulo Iscrizione</td><td><code>/form-iscrizione</code></td><td>Pubblico</td></tr>
       </table>
@@ -946,7 +971,7 @@
     </div>
   </div>
 
-  <div class="page-footer">The Home of Football — Guida Utente v5.1.0 — Documento riservato</div>
+  <div class="page-footer">The Home of Football — Guida Utente v5.4.0 — Documento riservato</div>
 </div>
 
 </body>
