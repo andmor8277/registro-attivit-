@@ -90,8 +90,13 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 
 ## Dev vs Prod
 - **Local Dev**: `start_dev.sh` → tmux panes `registro_backend` / `registro_frontend`. Vite proxies `/api` and `/uploads` to `localhost:8000`. PG on 5433, socket `/tmp/pgsocket`, data in `/tmp/pgdata`.
-- **Dev Server** (192.168.178.133): `deploy_dev.sh` → tar+ssh sync, build with `VITE_API_URL=/api`.
+- **Dev Server** (192.168.178.133): `deploy_dev.sh` → tar+ssh sync, build with `VITE_API_URL=/api`. **Il server ha accesso a internet** (la vecchia nota "senza internet" è obsoleta), ma la strategia tar resta valida.
 - **Prod** (192.168.178.132): `deploy.sh` → git fetch+reset, build --no-cache. External nginx on host. 4 uvicorn workers.
+
+## Git & GitHub
+- **Autenticazione**: HTTPS + token, memorizzato in `~/.git-credentials` (chmod 600, `credential.helper store`). **Mai** incorporare token negli URL dei remote (vedi hardening).
+- L'accesso SSH verso GitHub (porte 22/443) è **bloccato** dalla rete: usare HTTPS+token.
+- Remote `origin` e `github` puntano entrambi a `github.com/andmor8277/registro-attivit-.git`. `deploy.sh` (prod) e i push partono da `origin/master`.
 
 ## Migrations
 - **NO Alembic.** All migrations in `main.py:run_migrations()`, run on backend startup.
@@ -99,7 +104,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - To add a new table/column: append idempotent block to `run_migrations()`.
 
 ## Architecture Gotchas
-- **Multi-tenant**: every query filters by `societa_id` from the current user.
+- **Multi-tenant**: every query filters by `societa_id` from the current user. Resource with `societa_id` enforceable by convention — `Allenatore` ora ha `societa_id` (migrato) e rispetta il filtro multi-tenant.
 - **Portieri cross-category**: `is_portieri=1` categories read attendance across all categories.
 - **Category hierarchy**: `parent_id` self-referencing FK on `categorie`. "Agonistica" and "Scuola Calcio" are parent groups. Under categories belong to Agonistica.
 - **Catalogo esercizi visibility**: `visibilita` ('pubblico'/'societa') + `societa_id` for row-level filtering.
@@ -112,6 +117,8 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - File uploads: magic bytes validation, max 5MB, controlled extensions.
 - CORS: `thof.crickethouse.mywire.org`, `localhost:5173`, `localhost:3000`.
 - pgcrypto AES encryption for CF, tel_papa, tel_mamma.
+- `slowapi==0.1.9`, `passlib[bcrypt]==1.7.4` + `bcrypt==4.0.1` sono **pinati apposta** (compatibilità nota: passlib rompe con bcrypt ≥4.1; slowapi è legato alla vecchia starlette). Non alzare queste versioni senza test.
+- backend deps aggiornate (2026-02): fastapi 0.115, sqlalchemy 2.0.43, pydantic 2.11, uvicorn 0.34.
 
 ## ⚠️ Production Deploy Checklist
 - **External nginx** on host proxies to containers.
