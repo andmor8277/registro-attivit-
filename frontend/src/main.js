@@ -60,7 +60,7 @@ const router = createRouter({
     { path: '/liste-tornei/:id', component: ListeTornei, name: 'liste-tornei', meta: { requiresAuth: true } },
     { path: '/allenamenti/:id', component: Allenamenti, name: 'allenamenti', meta: { requiresAuth: true } },
     { path: '/scheda-allenamento/:id', component: SchedaAllenamento, name: 'scheda-allenamento', meta: { requiresAuth: true } },
-    { path: '/admin', component: Admin, name: 'admin', meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/admin', component: Admin, name: 'admin', meta: { requiresAuth: true, requiresSuperAdmin: true } },
     { path: '/admin/societa', component: Societa, name: 'societa', meta: { requiresAuth: true } },
     { path: '/reportistica/:id', component: Reportistica, name: 'reportistica', meta: { requiresAuth: true } },
     { path: '/segreteria', component: Segreteria, name: 'segreteria', meta: { requiresAuth: true } },

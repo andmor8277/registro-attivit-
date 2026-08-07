@@ -90,6 +90,22 @@
         </div>
         <div class="card-arrow">→</div>
       </div>
+
+      <div v-if="utenteAttivo?.is_admin && !isSuperAdmin" class="hub-card nuovo-utente" @click="apriNuovoUtente">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+            <circle cx="8.5" cy="7" r="4"/>
+            <line x1="20" y1="8" x2="20" y2="14"/>
+            <line x1="23" y1="11" x2="17" y2="11"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <span class="card-title">Nuovo Utente</span>
+          <span class="card-desc">Crea un utente della tua società</span>
+        </div>
+        <div class="card-arrow">→</div>
+      </div>
     </div>
 
     <Teleport to="body">
@@ -207,6 +223,62 @@
         </div>
       </div>
     </Teleport>
+
+    <Teleport to="body">
+      <div v-if="nuovoUtenteModal.show" class="modal-overlay" @click.self="nuovoUtenteModal.show = false">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>Crea nuovo utente</h3>
+            <button class="modal-close" @click="nuovoUtenteModal.show = false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Username *</label>
+              <input v-model="nuovoUtenteModal.username" type="text" placeholder="Username" />
+            </div>
+            <div class="form-group">
+              <label>Password *</label>
+              <input v-model="nuovoUtenteModal.password" type="password" placeholder="Password" />
+            </div>
+            <div class="form-group">
+              <label>Ruolo *</label>
+              <select v-model="nuovoUtenteModal.ruolo">
+                <option value="">Seleziona ruolo...</option>
+                <option value="mister">Mister</option>
+                <option value="dirigente">Dirigente</option>
+                <option value="segreteria">Segreteria</option>
+                <option value="infermeria">Infermeria</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Nome *</label>
+              <input v-model="nuovoUtenteModal.nome" type="text" placeholder="Nome" />
+            </div>
+            <div class="form-group">
+              <label>Cognome *</label>
+              <input v-model="nuovoUtenteModal.cognome" type="text" placeholder="Cognome" />
+            </div>
+            <div class="form-group">
+              <label>Cellulare</label>
+              <input v-model="nuovoUtenteModal.cellulare" type="text" placeholder="Numero Cellulare" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" @click="nuovoUtenteModal.show = false">Annulla</button>
+            <button class="btn-primary" @click="creaNuovoUtente" :disabled="nuovoUtenteModal.loading">
+              <span v-if="nuovoUtenteModal.loading" class="spinner-small"></span>
+              <template v-else>Crea</template>
+            </button>
+          </div>
+          <p v-if="nuovoUtenteModal.errore" class="errore-msg">{{ nuovoUtenteModal.errore }}</p>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -214,10 +286,11 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useStore } from "../store.js"
-import { getAllCategorie, updateCategoria, archiviaStagione } from "../api/index.js"
+import { getAllCategorie, updateCategoria, archiviaStagione, createUtente } from "../api/index.js"
 
 const router = useRouter()
 const { utenteAttivo, societaAttiva } = useStore()
+const isSuperAdmin = computed(() => utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'super_admin')
 
 const categorie = ref([])
 
@@ -241,6 +314,44 @@ const stagioniOptions = computed(() => {
 const gestioneStagioneModal = ref({ show: false })
 const stagioneModal = ref({ show: false, stagione: new Date().getFullYear(), data_inizio_stagione: '', data_fine_stagione: '', loading: false, errore: '' })
 const archiviaModal = ref({ show: false, loading: false, stagione: null })
+
+const nuovoUtenteModal = ref({ show: false, username: '', password: '', ruolo: '', nome: '', cognome: '', cellulare: '', loading: false, errore: '' })
+
+function apriNuovoUtente() {
+  nuovoUtenteModal.value = { show: true, username: '', password: '', ruolo: '', nome: '', cognome: '', cellulare: '', loading: false, errore: '' }
+}
+
+async function creaNuovoUtente() {
+  const m = nuovoUtenteModal.value
+  if (!m.username || !m.password || !m.nome || !m.cognome || !m.ruolo) {
+    m.errore = 'Compila i campi obbligatori (*)'
+    return
+  }
+  if (!societaAttiva.value?.id) {
+    m.errore = 'Società non disponibile'
+    return
+  }
+  m.loading = true
+  m.errore = ''
+  try {
+    await createUtente({
+      username: m.username,
+      password: m.password,
+      nome: m.nome,
+      cognome: m.cognome,
+      cellulare: m.cellulare || null,
+      ruolo: m.ruolo,
+      societa_id: societaAttiva.value.id,
+      is_admin: 0,
+      is_super_admin: 0
+    })
+    nuovoUtenteModal.value.show = false
+  } catch (e) {
+    m.errore = e.response?.data?.detail || 'Errore nella creazione'
+  } finally {
+    m.loading = false
+  }
+}
 
 async function loadCategorie() {
   try {
@@ -453,6 +564,10 @@ onMounted(() => {
 .hub-card.gestione-stagione .card-icon { background: rgba(59, 130, 246, 0.15); }
 .hub-card.gestione-stagione .card-icon svg { color: #3b82f6; }
 .hub-card.gestione-stagione:hover { border-color: rgba(59, 130, 246, 0.3); box-shadow: 0 8px 20px rgba(59, 130, 246, 0.12); }
+
+.hub-card.nuovo-utente .card-icon { background: rgba(16, 185, 129, 0.15); }
+.hub-card.nuovo-utente .card-icon svg { color: #10b981; }
+.hub-card.nuovo-utente:hover { border-color: rgba(16, 185, 129, 0.3); box-shadow: 0 8px 20px rgba(16, 185, 129, 0.12); }
 
 .hub-card .card-icon {
   width: 56px;
