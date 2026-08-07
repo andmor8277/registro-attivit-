@@ -4316,8 +4316,8 @@ Key changes in the conversation:
 1. Fixed `slowapi` integration: added `Request` param to rate-limited endpoints in `auth.py` and `persone.py`.
 2. Fixed middleware initialization: switched from `limiter._middleware_class` to `SlowAPIMiddleware` in `main.py`.
 3. Removed `mock-server.js` from git (contained hardcoded passwords).
-4. Cleaned git history using `git filter-repo` to remove hardcoded credentials (`***REMOVED***`, `***REMOVED***`, `***REMOVED***`) and force-pushed.
-5. Updated production `DEFAULT_PASSWORD` to `***REMOVED***`.
+4. Cleaned git history using `git filter-repo` to remove hardcoded credentials (`<DB_PASSWORD>`, `<OLD_PASSWORD>!`, `<OLD_KEY>`) and force-pushed.
+5. Updated production `DEFAULT_PASSWORD` to `<DEFAULT_PASSWORD>!`.
 6. Applied comprehensive public internet hardening:
    - `Dockerfile`: removed `--reload`, added non-root `appuser`, set 4 workers.
    - `main.py`: added security headers middleware (HSTS, CSP, X-Frame-Options, etc.), initially added `TrustedHostMiddleware` but later removed it because it blocked internal Docker network requests from the frontend container.
@@ -4340,7 +4340,7 @@ Progress Done:
 - Fixed `slowapi` integration (`Request` param, `SlowAPIMiddleware`).
 - Cleaned git history of hardcoded secrets (`filter-repo` + force push).
 - Removed `mock-server.js` (contained plaintext passwords).
-- Updated prod `DEFAULT_PASSWORD` to `***REMOVED***`.
+- Updated prod `DEFAULT_PASSWORD` to `<DEFAULT_PASSWORD>!`.
 - Hardened `Dockerfile`: removed `--reload`, added non-root `appuser`, 4 workers.
 - Hardened `main.py`: added security headers middleware, removed `TrustedHostMiddleware` (blocked internal Docker requests).
 - Hardened `docker-compose.yml`: removed `version`, removed `./backend:/app` mount, exposed backend on `0.0.0.0:8000`.
@@ -4387,9 +4387,9 @@ Output generation.
 ## Progress
 ### Done
 - Fixed `slowapi` integration: added `Request` param to rate-limited endpoints, switched to `SlowAPIMiddleware` in `main.py`.
-- Cleaned git history using `git filter-repo` to remove hardcoded credentials (`***REMOVED***`, `***REMOVED***`, `***REMOVED***`) and force-pushed.
+- Cleaned git history using `git filter-repo` to remove hardcoded credentials (`<DB_PASSWORD>`, `<OLD_PASSWORD>!`, `<OLD_KEY>`) and force-pushed.
 - Removed `frontend/mock-server.js` from repository (contained plaintext passwords).
-- Updated production `.env` `DEFAULT_PASSWORD` to `***REMOVED***`.
+- Updated production `.env` `DEFAULT_PASSWORD` to `<DEFAULT_PASSWORD>!`.
 - Hardened `backend/Dockerfile`: removed `--reload`, added non-root `appuser`, configured 4 uvicorn workers.
 - Hardened `backend/app/main.py`: added security headers middleware (HSTS, CSP, X-Frame-Options, Referrer/Permissions policies), removed `TrustedHostMiddleware` (blocked internal Docker network requests).
 - Hardened `docker-compose.yml`: removed obsolete `version: '3.9'`, removed `./backend:/app` volume mount (source code exposure risk), exposed backend on `0.0.0.0:8000` for nginx proxy compatibility.
@@ -4431,7 +4431,7 @@ Output generation.
 - `backend/Dockerfile`: Non-root user, 4 workers, removed `--reload`.
 - `docker-compose.yml`: Removed `version`, removed source volume mount, port exposure config.
 - `frontend/src/views/Admin.vue`: "Admin Locale" renamed to "Responsabile".
-- `.env` / `/opt/registro_presenze/.env`: Production secrets (`DEFAULT_PASSWORD=***REMOVED***`, `SECRET_KEY`, `ENCRYPTION_KEY`).
+- `.env` / `/opt/registro_presenze/.env`: Production secrets (`DEFAULT_PASSWORD=<DEFAULT_PASSWORD>!`, `SECRET_KEY`, `ENCRYPTION_KEY`).
 
 ---
 
