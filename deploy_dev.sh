@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy script - tar+ssh sync + rebuild on Dev LXC (192.168.178.133)
-# Server dev NON ha accesso a internet → usa tar pipe via SSH
+# Server dev (192.168.178.133) → tar pipe via SSH. NB: il server ora ha accesso a internet, la strategia tar resta comunque valida.
 
 set -e
 SSH_KEY="${SSH_KEY:-~/.ssh/id_ed25519_dev}"
