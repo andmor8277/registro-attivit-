@@ -16,7 +16,7 @@
 - Fixed `slowapi` integration: added `Request` param to rate-limited endpoints, switched to `SlowAPIMiddleware` in `main.py`.
 - Cleaned git history using `git filter-repo` to remove hardcoded credentials and force-pushed.
 - Removed `frontend/mock-server.js` from repository (contained plaintext passwords).
-- Updated production `.env` `DEFAULT_PASSWORD` to `***REMOVED***`.
+- Updated production `.env` `DEFAULT_PASSWORD` to `<DEFAULT_PASSWORD>!`.
 - Hardened `backend/Dockerfile`: removed `--reload`, added non-root `appuser`, configured 4 uvicorn workers.
 - Hardened `backend/app/main.py`: added security headers middleware, removed `TrustedHostMiddleware`.
 - Hardened `docker-compose.yml`: removed obsolete `version`, removed source volume mount, exposed backend on `0.0.0.0:8000`.
@@ -66,4 +66,4 @@
 - `docker-compose.yml`: Removed `version`, removed source volume mount, port exposure config.
 - `frontend/src/views/Admin.vue`: "Admin Locale" renamed to "Responsabile".
 - `frontend/src/views/Allenamenti.vue`: Training board UI, tools panel HTML, `drawBoard` canvas rendering function, element data structures, and PDF export logic. Currently being refactored for flat/professional tool rendering.
-- `.env` / `/opt/registro_presenze/.env`: Production secrets (`DEFAULT_PASSWORD=***REMOVED***`, `SECRET_KEY`, `ENCRYPTION_KEY`).
+- `.env` / `/opt/registro_presenze/.env`: Production secrets (`DEFAULT_PASSWORD=<DEFAULT_PASSWORD>!`, `SECRET_KEY`, `ENCRYPTION_KEY`).
