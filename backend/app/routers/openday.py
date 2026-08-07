@@ -6,6 +6,7 @@ from .. import models, schemas
 from ..database import get_db
 from ..routers.auth import get_current_user
 from ..models import Utente
+from ..schemas import OpendayCreate, OpendayUpdate
 from typing import Optional
 
 router = APIRouter()
@@ -45,21 +46,21 @@ def format_nome(val):
     return ' '.join(w[:1].upper() + w[1:].lower() for w in val.split())
 
 @router.post("/")
-def create_openday(entry: dict, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_openday(entry: OpendayCreate, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     o = models.Openday(
         societa_id=societa_id,
-        nome=format_nome(entry["nome"]),
-        cognome=format_cognome(entry["cognome"]),
-        data_nascita=entry["data_nascita"],
-        date_prova=entry.get("date_prova", []),
-        nulla_osta=entry.get("nulla_osta", False),
-        certificato_medico=entry.get("certificato_medico", False),
-        scadenza_certificato=entry.get("scadenza_certificato"),
-        tel_papa=entry.get("tel_papa"),
-        tel_mamma=entry.get("tel_mamma"),
-        email_papa=entry.get("email_papa"),
-        email_mamma=entry.get("email_mamma"),
+        nome=format_nome(entry.nome),
+        cognome=format_cognome(entry.cognome),
+        data_nascita=entry.data_nascita,
+        date_prova=entry.date_prova or [],
+        nulla_osta=entry.nulla_osta or False,
+        certificato_medico=entry.certificato_medico or False,
+        scadenza_certificato=entry.scadenza_certificato,
+        tel_papa=entry.tel_papa,
+        tel_mamma=entry.tel_mamma,
+        email_papa=entry.email_papa,
+        email_mamma=entry.email_mamma,
         creato_il=datetime.now()
     )
     db.add(o)
@@ -75,22 +76,18 @@ def create_openday(entry: dict, current_user: Utente = Depends(get_current_user)
     }
 
 @router.put("/{entry_id}")
-def update_openday(entry_id: int, entry: dict, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_openday(entry_id: int, entry: OpendayUpdate, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
     o = db.query(models.Openday).filter(models.Openday.id == entry_id).first()
     if not o:
         raise HTTPException(status_code=404, detail="Non trovato")
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     if o.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
-    updatable = ["nome", "cognome", "data_nascita", "date_prova", "nulla_osta",
-                  "certificato_medico", "scadenza_certificato", "tel_papa", "tel_mamma",
-                  "email_papa", "email_mamma"]
-    for field in updatable:
-        if field in entry:
-            val = entry[field]
-            if field == "cognome": val = format_cognome(val)
-            if field == "nome": val = format_nome(val)
-            setattr(o, field, val)
+    fields = entry.model_dump(exclude_unset=True)
+    for field, val in fields.items():
+        if field == "cognome" and val is not None: val = format_cognome(val)
+        if field == "nome" and val is not None: val = format_nome(val)
+        setattr(o, field, val)
     db.commit()
     db.refresh(o)
     return {
