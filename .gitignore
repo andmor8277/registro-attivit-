@@ -46,3 +46,6 @@ releases/
 .env.local
 .env.production
 *.local.env
+
+# Secret scan list per il pre-commit hook (mai committare)
+scripts/git-hooks/secrets.lst
