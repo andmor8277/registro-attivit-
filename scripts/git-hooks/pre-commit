@@ -1,0 +1,55 @@
+#!/bin/sh
+# The Home of Football — pre-commit security hook
+# Blocca i commit che contengono:
+#   - file di ambiente (*.env*) con credenziali (escluso .env.example)
+#   - stringhe di credenziali reali (letto da scripts/git-hooks/secrets.lst)
+#
+# Per installare:  ./scripts/install-hooks.sh
+# Per aggiungere un segreto da bloccare: righe in scripts/git-hooks/secrets.lst
+#   (questo file è in .gitignore: NON committarlo)
+# NOTA: i segreti non sono in chiaro dentro questo hook: vengono letti a runtime.
+
+set -e
+
+RED='\033[0;31m'
+NC='\033[0m'
+echo_red() { printf "${RED}%s${NC}\n" "$1"; }
+
+FAIL=0
+
+# ---- 1) Blocca file di ambiente con credenziali (tranne il placeholder) ----
+ENV_STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E '/?\.env.*$' | grep -v '\.env\.example$' || true)
+if [ -n "$ENV_STAGED" ]; then
+  echo_red "✗ Bloccato: file di ambiente con credenziali in staging (non committarli):"
+  printf '%s\n' "$ENV_STAGED" | sed 's/^/    /'
+  echo_red "Aggiungi i veri segreti a .gitignore e usa '.env.example' come placeholder."
+  FAIL=1
+fi
+
+# ---- 2) Blocca stringhe di segreti lette dalla lista (filesystem, non nel repo) ----
+# Risolve il percorso reale dello hook anche se invocato via symlink in .git/hooks
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+SECRETS_FILE="$REPO_ROOT/scripts/git-hooks/secrets.lst"
+if [ -f "$SECRETS_FILE" ] && [ -s "$SECRETS_FILE" ]; then
+  while IFS= read -r sec; do
+    [ -z "$sec" ] && continue
+    case "$sec" in \#*) continue ;; esac
+    HIT=$(git diff --cached --diff-filter=ACM --name-only -z | xargs -0 -r grep -lFI -- "$sec" 2>/dev/null || true)
+    if [ -n "$HIT" ]; then
+      echo_red "✗ Bloccato: trovata credenziale reale nei file in staging:"
+      printf '%s\n' "$HIT" | sed 's/^/    /'
+      echo_red "Rimuovi la credenziale (non committare password/chiavi reali)."
+      FAIL=1
+      break
+    fi
+  done < "$SECRETS_FILE"
+else
+  echo "⚠️  Attenzione: $SECRETS_FILE non trovato. Scan segreti disattivato (resta il blocco .env)."
+fi
+
+if [ "$FAIL" = "1" ]; then
+  echo_red "Commit annullato per motivi di sicurezza."
+  exit 1
+fi
+
+exit 0
