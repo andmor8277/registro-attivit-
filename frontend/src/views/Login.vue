@@ -1,65 +1,74 @@
 <template>
   <div class="login-wrapper">
     <div class="login-bg"></div>
-    <div class="login-card">
+    <div class="login-card" :class="{ 'login-card--selection': showSocietaSelection }">
         <!-- Selezione Società (per super_admin) -->
-        <div v-if="showSocietaSelection" class="societa-selection">
-          <div class="login-header">
-            <h1>The Home of <span class="home-text">Football</span></h1>
-            <p class="subtitle">Seleziona la società</p>
-          </div>
-          
-          <!-- Logo società selezionata -->
-          <div v-if="societaSelezionata" class="selected-societa-preview">
-            <img v-if="societaSelezionataObj?.logo" :src="`/uploads/${societaSelezionataObj.logo}`" :alt="societaSelezionataObj.nome" class="preview-logo" />
-            <div v-else class="preview-logo-placeholder" :style="{ background: societaSelezionataObj?.colore_primario }">
+        <div v-if="showSocietaSelection" class="soc-selection">
+          <header class="soc-header">
+            <span class="soc-eyebrow">SUPER ADMIN · PORTALE SOCIETÀ</span>
+            <h1 class="soc-title">The Home of <span>Football</span></h1>
+            <p class="soc-sub">Seleziona la società a cui accedere</p>
+          </header>
+
+          <!-- Società selezionata -->
+          <div v-if="societaSelezionata" class="soc-preview">
+            <img v-if="societaSelezionataObj?.logo" :src="`/uploads/${societaSelezionataObj.logo}`" :alt="societaSelezionataObj.nome" class="soc-preview-logo" />
+            <div v-else class="soc-preview-logo" :style="{ background: societaSelezionataObj?.colore_primario }">
               {{ societaSelezionataObj?.nome?.charAt(0) || 'S' }}
             </div>
-            <div class="preview-info">
+            <div class="soc-preview-info">
               <h3>{{ societaSelezionataObj?.nome }}</h3>
               <p>{{ societaSelezionataObj?.nome_breve }}</p>
             </div>
+            <span class="soc-preview-check">✓</span>
           </div>
-        
-        <div class="societa-grid">
-          <div 
-            v-for="s in societaOptions" 
-            :key="s.id"
-            :class="['societa-card', { selected: societaSelezionata === s.id }]"
-            @click="societaSelezionata = s.id"
-          >
-            <div class="societa-logo" :style="{ background: s.colore_primario }">
-              <img v-if="s.logo" :src="`/uploads/${s.logo}`" :alt="s.nome" />
-              <span v-else>{{ s.nome?.charAt(0) || 'S' }}</span>
+
+          <div class="soc-grid">
+            <div
+              v-for="s in societaOptions"
+              :key="s.id"
+              :class="['soc-card', { selected: societaSelezionata === s.id }]"
+              @click="societaSelezionata = s.id"
+            >
+              <div class="soc-logo" :style="{ background: s.colore_primario }">
+                <img v-if="s.logo" :src="`/uploads/${s.logo}`" :alt="s.nome" />
+                <span v-else>{{ s.nome?.charAt(0) || 'S' }}</span>
+              </div>
+              <div class="soc-card-info">
+                <h3>{{ s.nome }}</h3>
+              </div>
+              <span class="soc-arrow">→</span>
+              <button type="button" v-if="isSuperAdmin" class="soc-edit" @click.stop="modificaSocieta(s)" title="Modifica">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
             </div>
-            <div class="societa-info">
-              <h3>{{ s.nome }}</h3>
-            </div>
-            <button type="button" v-if="isSuperAdmin" class="btn-edit-societa" @click.stop="modificaSocieta(s)" title="Modifica">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
+          </div>
+
+          <button type="button" class="soc-continue" :disabled="!societaSelezionata" @click="confermaSocieta">
+            Continua
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </button>
+
+          <div v-if="isSuperAdmin" class="soc-actions">
+            <button type="button" class="soc-action" @click="showCreateSocieta = true">
+              <span class="soc-action-icon">＋</span>
+              <span>Crea nuova società</span>
+            </button>
+            <button type="button" class="soc-action" @click="vaiGestioneSocieta">
+              <span class="soc-action-icon">⚙</span>
+              <span>Gestione Società</span>
+            </button>
+            <button type="button" class="soc-action" @click="vaiGestioneUtenti">
+              <span class="soc-action-icon">✥</span>
+              <span>Gestione Utenti</span>
             </button>
           </div>
-        </div>
-        
-        <button type="button" class="btn-login" @click="confermaSocieta">
-          Continua
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="5" y1="12" x2="19" y2="12"/>
-            <polyline points="12 5 19 12 12 19"/>
-          </svg>
-        </button>
-        
-        <div class="create-societa" v-if="isSuperAdmin">
-          <button type="button" class="btn-create" @click="showCreateSocieta = true">
-            + Crea nuova società
-          </button>
-          <button type="button" class="btn-gestione" @click="vaiGestioneSocieta">
-            ⚙️ Gestione Società
-          </button>
-        </div>
         
         <!-- Modal creazione società -->
         <div v-if="showCreateSocieta" class="create-modal">
@@ -393,6 +402,10 @@ function vaiGestioneSocieta() {
   router.push('/admin/societa')
 }
 
+function vaiGestioneUtenti() {
+  router.push('/admin')
+}
+
 function modificaSocieta(s) {
   // Popola il form con i dati della società esistente
   newSocieta.value = { 
@@ -506,6 +519,16 @@ async function creaSocieta() {
   animation: scaleIn 0.4s ease-out, slideUp 0.4s ease-out;
   position: relative;
   z-index: 1;
+}
+
+.login-card--selection {
+  max-width: 860px;
+  padding: 3rem;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  background:
+    radial-gradient(1200px 500px at 15% -10%, rgba(220, 38, 38, 0.14) 0%, transparent 60%),
+    radial-gradient(900px 400px at 100% 110%, rgba(59, 130, 246, 0.1) 0%, transparent 55%),
+    rgba(16, 16, 18, 0.97);
 }
 
 .login-header {
@@ -693,33 +716,6 @@ h1 {
 
   h1 {
     font-size: 1.5rem;
-  }
-
-  .societa-grid {
-    gap: 0.75rem;
-    margin: 1rem 0;
-  }
-
-  .societa-card {
-    padding: 0.875rem;
-  }
-
-  .societa-logo {
-    width: 42px;
-    height: 42px;
-    font-size: 1.2rem;
-  }
-
-  .selected-societa-preview {
-    padding: 0.75rem;
-    gap: 0.75rem;
-  }
-
-  .preview-logo,
-  .preview-logo-placeholder {
-    width: 48px;
-    height: 48px;
-    font-size: 1.2rem;
   }
 
   .create-modal {
@@ -932,139 +928,332 @@ h1 {
   border-color: var(--color-primary);
 }
 
-.societa-selection {
+.soc-selection {
   animation: scaleIn 0.4s ease-out;
 }
 
-.societa-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin: 1.5rem 0;
+/* ── Header ── */
+.soc-header {
+  text-align: left;
+  margin-bottom: 2rem;
+  position: relative;
+  padding-bottom: 1.25rem;
 }
 
-.societa-card {
+.soc-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 72px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary), transparent);
+  border-radius: 2px;
+}
+
+.soc-eyebrow {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--color-primary);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+}
+
+.soc-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.4rem;
+}
+
+.soc-title span {
+  color: var(--color-primary);
+}
+
+.soc-sub {
+  color: #999;
+  font-size: 0.95rem;
+}
+
+/* ── Preview società selezionata ── */
+.soc-preview {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1rem;
-  padding-right: 3rem;
-  background: #1a1a1a;
-  border: 2px solid #333;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  padding: 0.9rem 1.1rem;
+  background: linear-gradient(90deg, rgba(220, 38, 38, 0.16), rgba(220, 38, 38, 0.04));
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.25rem;
+  animation: slideUp 0.3s ease-out;
+}
+
+.soc-preview-logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  object-fit: contain;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.12);
+}
+
+.soc-preview-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.soc-preview-info h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.15rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.soc-preview-info p {
+  font-size: 0.8rem;
+  color: #aaa;
+}
+
+.soc-preview-check {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ── Griglia società ── */
+.soc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.9rem;
+  margin: 0 0 1.5rem;
+}
+
+.soc-card {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: transform var(--transition-base), border-color var(--transition-base), background var(--transition-base), box-shadow var(--transition-base);
 }
 
-.societa-card:hover {
-  border-color: var(--color-primary);
-  transform: translateY(-2px);
+.soc-card:hover {
+  border-color: rgba(220, 38, 38, 0.5);
+  transform: translateY(-3px);
+  background: rgba(220, 38, 38, 0.06);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 }
 
-.societa-card.selected {
+.soc-card.selected {
   border-color: var(--color-primary);
   background: rgba(220, 38, 38, 0.1);
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.4), 0 10px 28px rgba(220, 38, 38, 0.12);
 }
 
-.btn-edit-societa {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  width: 32px;
-  height: 32px;
+.soc-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,0.1);
-  border: none;
-  border-radius: var(--radius-md);
-  color: #888;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-edit-societa:hover {
-  background: rgba(220, 38, 38, 0.3);
-  color: #fff;
-}
-
-.btn-edit-societa svg {
-  width: 16px;
-  height: 16px;
-}
-
-.societa-logo {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.3rem;
+  font-weight: 800;
   color: white;
   overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
 }
 
-.societa-logo img {
+.soc-logo img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-}
-
-.societa-info h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
-  margin-bottom: 0.25rem;
-}
-
-.societa-info p {
-  font-size: 0.875rem;
-  color: #888;
-}
-
-.selected-societa-preview {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: rgba(220, 38, 38, 0.1);
-  border: 2px solid rgba(220, 38, 38, 0.3);
-  border-radius: var(--radius-md);
-  margin-bottom: 1.5rem;
-}
-
-.preview-logo {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
   object-fit: contain;
   background: white;
 }
 
-.preview-logo-placeholder {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
+.soc-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.soc-card-info h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.soc-arrow {
+  color: #777;
+  font-size: 1.15rem;
+  transition: transform var(--transition-base), color var(--transition-base);
+  flex-shrink: 0;
+}
+
+.soc-card:hover .soc-arrow {
+  transform: translateX(3px);
+  color: var(--color-primary);
+}
+
+.soc-edit {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: white;
-}
-
-.preview-info h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
-  margin-bottom: 0.25rem;
-}
-
-.preview-info p {
-  font-size: 0.875rem;
+  background: rgba(255,255,255,0.07);
+  border: none;
+  border-radius: 8px;
   color: #888;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  opacity: 0;
+}
+
+.soc-card:hover .soc-edit {
+  opacity: 1;
+}
+
+.soc-edit:hover {
+  background: rgba(220, 38, 38, 0.35);
+  color: #fff;
+}
+
+.soc-edit svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ── Continua ── */
+.soc-continue {
+  width: 100%;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  border: none;
+  border-radius: var(--radius-lg);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-base);
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.3);
+  margin-bottom: 1.25rem;
+}
+
+.soc-continue:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(220, 38, 38, 0.4);
+}
+
+.soc-continue:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.soc-continue svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Azioni super admin ── */
+.soc-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.soc-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  color: #ccc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  font-family: inherit;
+}
+
+.soc-action:hover {
+  border-color: var(--color-primary);
+  border-style: solid;
+  color: #fff;
+  background: rgba(220, 38, 38, 0.08);
+  transform: translateY(-2px);
+}
+
+.soc-action-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(220, 38, 38, 0.14);
+  color: var(--color-primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 560px) {
+  .login-card--selection {
+    padding: 1.75rem;
+  }
+  .soc-title {
+    font-size: 1.5rem;
+  }
+  .soc-grid {
+    grid-template-columns: 1fr;
+  }
+  .soc-actions {
+    grid-template-columns: 1fr;
+  }
+  .soc-action {
+    flex-direction: row;
+    justify-content: flex-start;
+  }
 }
 </style>

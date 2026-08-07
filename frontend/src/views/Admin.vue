@@ -226,8 +226,8 @@ import { useStore } from '../store.js'
 import { getUtenti, createUtente, deleteUtente, updateUtente, resetPassword, assegnaCategorie, getCategorie, getCategoriaUtenti, getSocieta, api } from '../api/index.js'
 
 const router = useRouter()
-const { societaAttiva } = useStore()
-const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === 'true')
+const { societaAttiva, utenteAttivo } = useStore()
+const isSuperAdmin = computed(() => utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'super_admin')
 
 const utenti = ref([])
 const tutteCategorie = ref([])
@@ -455,8 +455,10 @@ async function salvaUtente() {
     return
   }
   try {
-    // Determina societa_id
-    let societaIdValue = societaAttiva.value?.id || null
+    // Determina societa_id: super admin usa il campo del form, admin locale la propria
+    let societaIdValue = isSuperAdmin.value
+      ? (n.societa_id || null)
+      : (societaAttiva.value?.id || null)
     
     const data = {
       nome: n.nome,
