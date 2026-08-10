@@ -111,24 +111,46 @@ def get_stagioni(
     }
 
 @router.post("/archivia/{stagione}")
-def archivia_stagione(stagione: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
+def archivia_stagione(
+    stagione: int,
+    societa_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Utente = Depends(get_admin)
+):
+    # Super admin DEVE specificare la società: le stagioni sono per-società
+    if current_user.is_super_admin and not societa_id:
+        raise HTTPException(status_code=400, detail="Super admin deve specificare la società")
+    if current_user.is_super_admin:
+        filter_id = societa_id
+    else:
+        filter_id = current_user.societa_id
     query = db.query(models.Categoria).filter(models.Categoria.stagione == stagione)
-    societa_id = get_societa_filter(current_user)
-    if societa_id:
-        query = query.filter(models.Categoria.societa_id == societa_id)
-    query.update({"is_archiviata": 1})
+    if filter_id:
+        query = query.filter(models.Categoria.societa_id == filter_id)
+    count = query.update({"is_archiviata": 1})
     db.commit()
-    return {"ok": True, "messaggio": f"Stagione {stagione}/{stagione+1} archiviata"}
+    return {"ok": True, "messaggio": f"Stagione {stagione}/{stagione+1} archiviata", "categorie_aggiornate": count}
 
 @router.post("/ripristina/{stagione}")
-def ripristina_stagione(stagione: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
+def ripristina_stagione(
+    stagione: int,
+    societa_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Utente = Depends(get_admin)
+):
+    # Super admin DEVE specificare la società: le stagioni sono per-società
+    if current_user.is_super_admin and not societa_id:
+        raise HTTPException(status_code=400, detail="Super admin deve specificare la società")
+    if current_user.is_super_admin:
+        filter_id = societa_id
+    else:
+        filter_id = current_user.societa_id
     query = db.query(models.Categoria).filter(models.Categoria.stagione == stagione)
-    societa_id = get_societa_filter(current_user)
-    if societa_id:
-        query = query.filter(models.Categoria.societa_id == societa_id)
-    query.update({"is_archiviata": 0})
+    if filter_id:
+        query = query.filter(models.Categoria.societa_id == filter_id)
+    count = query.update({"is_archiviata": 0})
     db.commit()
-    return {"ok": True, "messaggio": f"Stagione {stagione}/{stagione+1} ripristinata"}
+    return {"ok": True, "messaggio": f"Stagione {stagione}/{stagione+1} ripristinata", "categorie_aggiornate": count}
 
 @router.get("/by-stagione/{stagione}")
 def get_categorie_by_stagione(stagione: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):

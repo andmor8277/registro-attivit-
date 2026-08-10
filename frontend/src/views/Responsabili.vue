@@ -373,8 +373,12 @@ async function creaNuovoUtente() {
 async function loadCategorie() {
   try {
     const societaId = societaAttiva.value?.id || null
+    if (isSuperAdmin.value && !societaId) {
+      categorie.value = []
+      return
+    }
     const res = await getAllCategorie(societaId)
-    categorie.value = res.data || []
+    categorie.value = (res.data || []).filter(c => !societaId || c.societa_id === societaId)
   } catch (e) {
     console.error('Errore loadCategorie:', e)
   }
@@ -413,6 +417,11 @@ function apriImpostaStagione() {
 async function impostaStagioneTutte() {
   if (!stagioneModal.value.stagione) {
     stagioneModal.value.errore = 'Inserisci la stagione'
+    return
+  }
+  const societaId = societaAttiva.value?.id || null
+  if (!societaId) {
+    stagioneModal.value.errore = 'Seleziona prima la società'
     return
   }
 
@@ -460,9 +469,15 @@ function apriArchiviazione() {
 async function confermaArchiviazione() {
   if (!archiviaModal.value.stagione) return
 
+  const societaId = societaAttiva.value?.id || null
+  if (!societaId) {
+    alert('Seleziona prima la società')
+    return
+  }
+
   archiviaModal.value.loading = true
   try {
-    await archiviaStagione(archiviaModal.value.stagione)
+    await archiviaStagione(archiviaModal.value.stagione, societaId)
     archiviaModal.value.show = false
     await loadCategorie()
   } catch (e) {

@@ -58,8 +58,14 @@ export const getStagioni = (societaId) => {
 }
 export const getCategorieArchived = () => api.get('/categorie/archived')
 export const getCategorieByStagione = (stagione) => api.get('/categorie/by-stagione/' + stagione)
-export const archiviaStagione = (stagione) => api.post('/categorie/archivia/' + stagione)
-export const ripristinaStagione = (stagione) => api.post('/categorie/ripristina/' + stagione)
+export const archiviaStagione = (stagione, societaId) => {
+  const params = societaId ? `?societa_id=${societaId}` : ''
+  return api.post('/categorie/archivia/' + stagione + params)
+}
+export const ripristinaStagione = (stagione, societaId) => {
+  const params = societaId ? `?societa_id=${societaId}` : ''
+  return api.post('/categorie/ripristina/' + stagione + params)
+}
 export const getCategoriaUtenti = (categoriaId) => api.get('/categorie/' + categoriaId + '/utenti')
 export const getCategoriaResponsabili = (categoriaId) => api.get('/categorie/' + categoriaId + '/responsabili')
 export const assegnaCategoriaUtenti = (categoriaId, utenteIds) => api.put('/categorie/' + categoriaId + '/utenti', { utente_ids: utenteIds })
