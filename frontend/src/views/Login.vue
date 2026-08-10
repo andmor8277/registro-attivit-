@@ -70,10 +70,10 @@
             </button>
           </div>
         
-        <!-- Modal creazione società -->
+        <!-- Modal creazione/modifica società -->
         <div v-if="showCreateSocieta" class="create-modal">
           <div class="create-modal-content">
-            <h3>Crea nuova società</h3>
+            <h3>{{ isEditingSocieta ? 'Modifica società' : 'Crea nuova società' }}</h3>
             
             <div class="form-section">
               <h4>Dati Società</h4>
@@ -99,7 +99,7 @@
               </div>
             </div>
             
-            <div class="form-section">
+            <div class="form-section" v-if="!isEditingSocieta">
               <h4>Amministratore Locale</h4>
               <div class="form-row">
                 <div class="form-group">
@@ -123,7 +123,7 @@
               </div>
             </div>
             
-            <div class="form-section">
+            <div class="form-section" v-if="!isEditingSocieta">
               <h4>Stagione</h4>
               <div class="form-group">
                 <label>Stagione *</label>
@@ -136,8 +136,8 @@
             </div>
             
             <div class="modal-actions">
-              <button type="button" class="btn-secondary" @click="showCreateSocieta = false">Annulla</button>
-              <button type="button" class="btn-primary" @click="creaSocieta">Crea</button>
+              <button type="button" class="btn-secondary" @click="closeSocietaModal">Annulla</button>
+              <button type="button" class="btn-primary" @click="creaSocieta">{{ isEditingSocieta ? 'Salva' : 'Crea' }}</button>
             </div>
           </div>
         </div>
@@ -227,7 +227,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { login, getMe, getSocieta, getSocietaById, createSocieta, uploadSocietaFile, createUtente, createCategoria, getCategorie } from '../api/index.js'
+import { login, getMe, getSocieta, getSocietaById, createSocieta, updateSocieta, uploadSocietaFile, createUtente, createCategoria, getCategorie } from '../api/index.js'
 import { useStore } from '../store.js'
 
 const username = ref('')
@@ -253,6 +253,8 @@ const logoFile = ref(null)
 const logosponsorFile = ref(null)
 const currentYear = new Date().getFullYear()
 const newStagione = ref(new Date().getFullYear())
+const societaInModifica = ref(null)
+const isEditingSocieta = computed(() => societaInModifica.value !== null)
 const newAdmin = ref({
   username: '',
   password: '',
@@ -416,17 +418,21 @@ function modificaSocieta(s) {
     logo: s.logo || '', 
     logosponsor: s.logosponsor || '' 
   }
-  societaSelezionata.value = s.id
+  newAdmin.value = { username: '', password: '', nome: '', cognome: '' }
+  logoFile.value = null
+  logosponsorFile.value = null
+  societaInModifica.value = s.id
   showCreateSocieta.value = true
+}
+
+function closeSocietaModal() {
+  showCreateSocieta.value = false
+  societaInModifica.value = null
 }
 
 async function creaSocieta() {
   if (!newSocieta.value.nome) {
     alert('Inserisci il nome della società')
-    return
-  }
-  if (!newAdmin.value.username || !newAdmin.value.password || !newAdmin.value.nome || !newAdmin.value.cognome) {
-    alert('Compila tutti i dati dell\'amministratore')
     return
   }
   try {
@@ -439,6 +445,25 @@ async function creaSocieta() {
     if (logosponsorFile.value) {
       const uploadRes = await uploadSocietaFile('logosponsor', logosponsorFile.value)
       newSocieta.value.logosponsor = uploadRes.data.filename
+    }
+    
+    if (isEditingSocieta.value) {
+      // MODIFICA della società esistente
+      const res = await updateSocieta(societaInModifica.value, newSocieta.value)
+      const aggiornata = res.data
+      const idx = societaOptions.value.findIndex(s => s.id === aggiornata.id)
+      if (idx !== -1) societaOptions.value[idx] = aggiornata
+      setListaSocieta(societaOptions.value)
+      showCreateSocieta.value = false
+      societaInModifica.value = null
+      logoFile.value = null
+      logosponsorFile.value = null
+      return
+    }
+    
+    if (!newAdmin.value.username || !newAdmin.value.password || !newAdmin.value.nome || !newAdmin.value.cognome) {
+      alert('Compila tutti i dati dell\'amministratore')
+      return
     }
     
     // Crea società
