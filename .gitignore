@@ -49,3 +49,8 @@ releases/
 
 # Secret scan list per il pre-commit hook (mai committare)
 scripts/git-hooks/secrets.lst
+
+# File di sessione e appunti locali (mai committare)
+SESSION_SUMMARY.md
+session-ses_*.md
+SECURITY_TODO.json
