@@ -63,9 +63,19 @@ registro_presenze/
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v5.4.0**.
+La versione attuale è **v6.0.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
+
+### 🎉 Novità v6.0.0 (Major Release)
+
+- **Sicurezza Repository Ripulita**: Rimossi tutti i segreti (password, chiavi AES, token) dalla storia di GitHub, incluso `.env`, `.env.dev`, `.env.prod`, `__pycache__` e documenti di sessione
+- **Tag Storici Riscritti**: I vecchi tag (v1.0.0 → v5.3.0) contenenti credenziali sono stati eliminati; v5.4.0 e v5.5.0 riscritti su commit puliti
+- **Pre-commit Hook di Sicurezza**: Blocca automaticamente commit con file `.env` o stringhe di credenziali reali (`scripts/git-hooks/pre-commit`), attivo su locale, dev e prod
+- **Secret Scan**: `scripts/git-hooks/secrets.lst` (gitignored) contiene i segreti da bloccare nei commit
+- **Multi-tenant Hardening**: Isolamento dati tra società completato, check `societa_id` in tutti i router
+- **Crittografia PII**: Codice fiscale e telefoni genitori cifrati con pgcrypto AES
+- **JWT 60 min**: Token di accesso con scadenza, password policy forte (8+ char, maiuscole, minuscole, numeri, simboli)
 
 ### Novità v5.4.0
 
@@ -156,6 +166,17 @@ Le release vengono salvate nella cartella `releases/vX.X.X/` per i rollback.
 ## Credenziali
 
 Le credenziali sono configurate nel database. Contattare l'amministratore per l'accesso.
+
+## Sicurezza
+
+- **Nessun segreto nel repository**: file `.env` sono gitignored, mai committati
+- **Pre-commit hook**: `scripts/git-hooks/pre-commit` blocca commit con `.env` o segreti
+- **Crittografia PII**: codice fiscale e telefoni genitori cifrati con pgcrypto AES
+- **JWT**: token HS256 con scadenza 60 minuti
+- **Password policy**: 8+ caratteri, maiuscola, minuscola, numero, simbolo
+- **bcrypt**: hash password con salting automatico
+- **Rate limiting**: slowapi per-worker, endpoint pubblici PII a 5/min
+- **Multi-tenant**: ogni risorsa filtrata per `societa_id`
 
 ## Funzionalità
 
