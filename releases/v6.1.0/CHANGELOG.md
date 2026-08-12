@@ -170,8 +170,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Fix bug medi: sicurezza multi-tenant societa/auth, esclusioni convocazioni, upsert registro/presenze_allenatori, migrazioni idempotenti, validazioni frontend
-
-## [6.1.0] - 2026-08-12
-
-### Added
-- Accesso con Google OAuth, inviti email e relay SMTP Gmail
