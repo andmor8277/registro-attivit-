@@ -36,6 +36,11 @@
             <tr v-for="a in adminList" :key="a.id">
               <td class="td-nome">
                 <span class="persona-name">{{ a.cognome }} {{ a.nome }}</span>
+                <button class="btn-delete" @click="eliminaUtente(a)" title="Elimina utente">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                  </svg>
+                </button>
               </td>
               <td v-for="cat in categorie" :key="cat.id" class="td-check">
                 <label class="check-cell">
@@ -75,6 +80,11 @@
             <tr v-for="m in misterList" :key="m.id">
               <td class="td-nome">
                 <span class="persona-name">{{ m.cognome }} {{ m.nome }}</span>
+                <button class="btn-delete" @click="eliminaUtente(m)" title="Elimina utente">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                  </svg>
+                </button>
               </td>
               <td v-for="cat in categorie" :key="cat.id" class="td-check">
                 <label class="check-cell">
@@ -114,6 +124,11 @@
             <tr v-for="d in dirigentiList" :key="d.id">
               <td class="td-nome">
                 <span class="persona-name">{{ d.cognome }} {{ d.nome }}</span>
+                <button class="btn-delete" @click="eliminaUtente(d)" title="Elimina utente">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                  </svg>
+                </button>
               </td>
               <td v-for="cat in categorie" :key="cat.id" class="td-check">
                 <label class="check-cell">
@@ -137,7 +152,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { getCategorie, getCategoriaResponsabili, getCategoriaUtenti, assegnaCategoriaUtenti, getUtenti } from "../api/index.js"
+import { getCategorie, getCategoriaResponsabili, getCategoriaUtenti, assegnaCategoriaUtenti, getUtenti, deleteUtente } from "../api/index.js"
 import { useStore } from "../store.js"
 const router = useRouter()
 const { societaAttiva } = useStore()
@@ -166,6 +181,16 @@ async function toggleAssegna(catId, uid, event) {
   assegnazioneMap.value[catId] = current
   await assegnaCategoriaUtenti(catId, current)
   await refreshResponsabili(catId)
+}
+
+async function eliminaUtente(utente) {
+  if (!confirm(`Eliminare l'utente ${utente.cognome} ${utente.nome}?`)) return
+  try {
+    await deleteUtente(utente.id)
+    await load()
+  } catch (e) {
+    alert('Errore: ' + (e.response?.data?.detail || 'Errore sconosciuto'))
+  }
 }
 
 async function refreshResponsabili(catId) {
@@ -414,6 +439,26 @@ tbody td {
   padding: 2rem !important;
   color: var(--color-text-muted);
   font-style: italic;
+}
+
+.btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: #ef4444;
+  transition: all var(--transition-fast);
+}
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 @media (max-width: 640px) {
