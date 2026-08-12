@@ -91,18 +91,16 @@
         <div class="card-arrow">→</div>
       </div>
 
-      <div v-if="utenteAttivo?.is_admin" class="hub-card nuovo-utente" @click="apriNuovoUtente">
+      <div v-if="utenteAttivo?.is_admin" class="hub-card nuovo-utente" @click="apriInvito">
         <div class="card-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-            <circle cx="8.5" cy="7" r="4"/>
-            <line x1="20" y1="8" x2="20" y2="14"/>
-            <line x1="23" y1="11" x2="17" y2="11"/>
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
           </svg>
         </div>
         <div class="card-content">
-          <span class="card-title">Nuovo Utente</span>
-          <span class="card-desc">Crea un utente della tua società</span>
+          <span class="card-title">Invita Utente</span>
+          <span class="card-desc">Invia un link di invito con Google OAuth</span>
         </div>
         <div class="card-arrow">→</div>
       </div>
@@ -225,11 +223,11 @@
     </Teleport>
 
     <Teleport to="body">
-      <div v-if="nuovoUtenteModal.show" class="modal-overlay" @click.self="nuovoUtenteModal.show = false">
+      <div v-if="invitoModal.show" class="modal-overlay" @click.self="invitoModal.show = false">
         <div class="modal">
           <div class="modal-header">
-            <h3>Crea nuovo utente</h3>
-            <button class="modal-close" @click="nuovoUtenteModal.show = false">
+            <h3>Invita Utente con Google</h3>
+            <button class="modal-close" @click="invitoModal.show = false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"/>
                 <line x1="6" y1="6" x2="18" y2="18"/>
@@ -237,58 +235,31 @@
             </button>
           </div>
           <div class="modal-body">
+            <p class="modal-info">Inserisci l'email e il ruolo. Verrà inviato un link per l'accesso con Google OAuth.</p>
             <div class="form-group">
-              <label>Username *</label>
-              <input v-model="nuovoUtenteModal.username" type="text" placeholder="Username" />
-            </div>
-            <div class="form-group">
-              <label>Password *</label>
-              <input v-model="nuovoUtenteModal.password" type="password" placeholder="Password" />
+              <label>Email *</label>
+              <input v-model="invitoModal.email" type="email" placeholder="email@esempio.com" />
             </div>
             <div class="form-group">
               <label>Ruolo *</label>
-              <select v-model="nuovoUtenteModal.ruolo">
+              <select v-model="invitoModal.ruolo">
                 <option value="">Seleziona ruolo...</option>
-                <option value="admin">Responsabile</option>
                 <option value="mister">Mister</option>
                 <option value="dirigente">Dirigente</option>
                 <option value="segreteria">Segreteria</option>
                 <option value="infermeria">Infermeria</option>
               </select>
             </div>
-            <div class="form-group">
-              <label>Nome *</label>
-              <input v-model="nuovoUtenteModal.nome" type="text" placeholder="Nome" />
-            </div>
-            <div class="form-group">
-              <label>Cognome *</label>
-              <input v-model="nuovoUtenteModal.cognome" type="text" placeholder="Cognome" />
-            </div>
-            <div class="form-group">
-              <label>Data di Nascita</label>
-              <input v-model="nuovoUtenteModal.data_nascita" type="date" />
-            </div>
-            <div class="form-group">
-              <label>Codice Fiscale</label>
-              <input v-model="nuovoUtenteModal.codice_fiscale" type="text" maxlength="16" placeholder="Codice Fiscale" />
-            </div>
-            <div class="form-group">
-              <label>Cellulare</label>
-              <input v-model="nuovoUtenteModal.cellulare" type="text" placeholder="Numero Cellulare" />
-            </div>
-            <div class="form-group">
-              <label>Tesserino</label>
-              <input v-model="nuovoUtenteModal.tesserino" type="text" placeholder="Numero Tesserino" />
-            </div>
           </div>
           <div class="modal-footer">
-            <button class="btn-secondary" @click="nuovoUtenteModal.show = false">Annulla</button>
-            <button class="btn-primary" @click="creaNuovoUtente" :disabled="nuovoUtenteModal.loading">
-              <span v-if="nuovoUtenteModal.loading" class="spinner-small"></span>
-              <template v-else>Crea</template>
+            <button class="btn-secondary" @click="invitoModal.show = false">Annulla</button>
+            <button class="btn-primary" @click="creaInvito" :disabled="invitoModal.loading">
+              <span v-if="invitoModal.loading" class="spinner-small"></span>
+              <template v-else>Invia Invito</template>
             </button>
           </div>
-          <p v-if="nuovoUtenteModal.errore" class="errore-msg">{{ nuovoUtenteModal.errore }}</p>
+          <p v-if="invitoModal.msg" class="invito-msg success">{{ invitoModal.msg }}</p>
+          <p v-if="invitoModal.errore" class="errore-msg">{{ invitoModal.errore }}</p>
         </div>
       </div>
     </Teleport>
@@ -299,7 +270,7 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useStore } from "../store.js"
-import { getAllCategorie, updateCategoria, archiviaStagione, createUtente } from "../api/index.js"
+import { getAllCategorie, updateCategoria, archiviaStagione, creaInvito as apiCreaInvito } from "../api/index.js"
 
 const router = useRouter()
 const { utenteAttivo, societaAttiva } = useStore()
@@ -328,15 +299,15 @@ const gestioneStagioneModal = ref({ show: false })
 const stagioneModal = ref({ show: false, stagione: new Date().getFullYear(), data_inizio_stagione: '', data_fine_stagione: '', loading: false, errore: '' })
 const archiviaModal = ref({ show: false, loading: false, stagione: null })
 
-const nuovoUtenteModal = ref({ show: false, username: '', password: '', ruolo: '', nome: '', cognome: '', data_nascita: null, codice_fiscale: null, cellulare: '', tesserino: '', loading: false, errore: '' })
+const invitoModal = ref({ show: false, email: '', ruolo: '', loading: false, errore: '', msg: '' })
 
-function apriNuovoUtente() {
-  nuovoUtenteModal.value = { show: true, username: '', password: '', ruolo: '', nome: '', cognome: '', data_nascita: null, codice_fiscale: null, cellulare: '', tesserino: '', loading: false, errore: '' }
+function apriInvito() {
+  invitoModal.value = { show: true, email: '', ruolo: '', loading: false, errore: '', msg: '' }
 }
 
-async function creaNuovoUtente() {
-  const m = nuovoUtenteModal.value
-  if (!m.username || !m.password || !m.nome || !m.cognome || !m.ruolo) {
+async function creaInvito() {
+  const m = invitoModal.value
+  if (!m.email || !m.ruolo) {
     m.errore = 'Compila i campi obbligatori (*)'
     return
   }
@@ -347,24 +318,19 @@ async function creaNuovoUtente() {
   }
   m.loading = true
   m.errore = ''
+  m.msg = ''
   try {
-    await createUtente({
-      username: m.username,
-      password: m.password,
-      nome: m.nome,
-      cognome: m.cognome,
-      data_nascita: m.data_nascita || null,
-      codice_fiscale: m.codice_fiscale ? m.codice_fiscale.toUpperCase() : null,
-      cellulare: m.cellulare || null,
-      tesserino: m.tesserino || null,
+    await apiCreaInvito({
+      email: m.email,
       ruolo: m.ruolo,
-      societa_id: targetSocieta,
-      is_admin: m.ruolo === 'admin' ? 1 : 0,
-      is_super_admin: 0
+      societa_id: targetSocieta
     })
-    nuovoUtenteModal.value.show = false
+    m.msg = 'Invito inviato con successo!'
+    m.email = ''
+    m.ruolo = ''
+    setTimeout(() => { m.show = false }, 2000)
   } catch (e) {
-    m.errore = e.response?.data?.detail || 'Errore nella creazione'
+    m.errore = e.response?.data?.detail || 'Errore nell\'invio dell\'invito'
   } finally {
     m.loading = false
   }
@@ -824,6 +790,12 @@ onMounted(() => {
   margin-top: 0.75rem;
   font-size: 0.8125rem;
   color: #ef4444;
+}
+
+.invito-msg.success {
+  margin-top: 0.75rem;
+  font-size: 0.8125rem;
+  color: #22c55e;
 }
 
 @keyframes slideUp {

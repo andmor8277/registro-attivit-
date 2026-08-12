@@ -61,88 +61,62 @@
       </div>
     </div>
 
-    <div class="card card-create">
+    <!-- Sezione Inviti Google -->
+    <div class="card card-inviti">
       <div class="card-header">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-          <circle cx="8.5" cy="7" r="4"/>
-          <line x1="20" y1="8" x2="20" y2="14"/>
-          <line x1="23" y1="11" x2="17" y2="11"/>
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
         </svg>
-        <h3>{{ editingUtente ? 'Modifica utente' : 'Crea nuovo utente' }}</h3>
+        <h3>Invita utente con Google</h3>
       </div>
-      <div class="form-grid">
-        <div class="input-group">
-          <label>Username *</label>
-          <input v-model="nuovo.username" placeholder="Username" :disabled="editingUtente" />
-        </div>
-        <div class="input-group" v-if="!editingUtente">
-          <label>Password *</label>
-          <input v-model="nuovo.password" type="password" placeholder="Password" />
-        </div>
-        <div class="input-group">
-          <label>Ruolo *</label>
-          <select v-model="nuovo.ruolo" class="ruolo-select">
+      <div class="invito-form">
+        <div class="invito-inputs">
+          <input v-model="nuovoInvito.email" placeholder="Email dell'utente" />
+          <select v-model="nuovoInvito.ruolo" class="ruolo-select">
             <option value="">Seleziona ruolo...</option>
-            <option v-if="isSuperAdmin" value="super_admin">SuperAdmin (tutte le società)</option>
-            <option value="admin">Responsabile</option>
+            <option v-if="isSuperAdmin" value="admin">Admin</option>
             <option value="mister">Mister</option>
             <option value="dirigente">Dirigente</option>
             <option value="segreteria">Segreteria</option>
             <option value="infermeria">Infermeria</option>
           </select>
-        </div>
-        <div class="input-group">
-          <label>Nome *</label>
-          <input v-model="nuovo.nome" placeholder="Nome" />
-        </div>
-        <div class="input-group">
-          <label>Cognome *</label>
-          <input v-model="nuovo.cognome" placeholder="Cognome" />
-        </div>
-        <div class="input-group">
-          <label>Data di Nascita *</label>
-          <input v-model="nuovo.data_nascita" type="date" />
-        </div>
-        <div class="input-group">
-          <label>Codice Fiscale *</label>
-          <input v-model="nuovo.codice_fiscale" placeholder="Codice Fiscale" maxlength="16" />
-        </div>
-        <div class="input-group">
-          <label>Cellulare *</label>
-          <input v-model="nuovo.cellulare" placeholder="Numero Cellulare" />
-        </div>
-        <div class="input-group">
-          <label>Tesserino</label>
-          <input v-model="nuovo.tesserino" placeholder="Numero Tesserino" />
-        </div>
-        <div class="input-group" v-if="isSuperAdmin">
-          <label>Società *</label>
-          <select v-model="nuovo.societa_id" required>
+          <select v-if="isSuperAdmin" v-model="nuovoInvito.societa_id" class="ruolo-select">
             <option value="">Seleziona società...</option>
             <option v-for="s in listaSocieta" :key="s.id" :value="s.id">{{ s.nome }}</option>
           </select>
+          <button @click="creaInvitoUtente" class="btn-primary" :disabled="!nuovoInvito.email || !nuovoInvito.ruolo">
+            Invia Invito
+          </button>
+        </div>
+        <p v-if="invitoMsg" class="invito-msg" :class="{ 'success': !invitoError, 'error': invitoError }">{{ invitoMsg }}</p>
+      </div>
+
+      <div v-if="inviti.length" class="inviti-list">
+        <h4>Inviti attivi</h4>
+        <div v-for="inv in inviti" :key="inv.id" class="invito-row">
+          <div class="invito-info">
+            <span class="invito-email">{{ inv.email }}</span>
+            <span class="invito-ruolo">{{ inv.ruolo }}</span>
+            <span v-if="inv.societa_nome" class="invito-societa">{{ inv.societa_nome }}</span>
+            <span class="invito-date">{{ new Date(inv.scade).toLocaleDateString('it-IT') }}</span>
+          </div>
+          <div class="invito-actions">
+            <button @click="copiaLink(inv.link)" class="btn-copia" title="Copia link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+            </button>
+            <button @click="eliminaInvitoUtente(inv.id)" class="btn-elimina" title="Elimina">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
-      <div class="form-actions">
-        <button class="btn-primary" @click="editingUtente ? salvaUtente() : creaUtente()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          {{ editingUtente ? 'Salva' : 'Crea' }}
-        </button>
-        <button v-if="editingUtente" class="btn-secondary" @click="annullaModifica">
-          Annulla
-        </button>
-      </div>
-      <p v-if="errore" class="errore">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        {{ errore }}
-      </p>
     </div>
 
     <div class="users-list">
@@ -171,13 +145,6 @@
             <span><strong>Nato:</strong> {{ formatData(u.data_nascita) }}</span>
           </div>
           <div class="user-actions">
-            <button class="btn-edit" @click="modificaUtente(u)" title="Modifica">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-              Modifica
-            </button>
             <button class="btn-reset" @click="resetsPassword(u.id)" title="Reset Password">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
@@ -223,7 +190,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '../store.js'
-import { getUtenti, createUtente, deleteUtente, updateUtente, resetPassword, assegnaCategorie, getCategorie, getCategoriaUtenti, getSocieta, api } from '../api/index.js'
+import { getUtenti, deleteUtente, resetPassword, assegnaCategorie, getCategorie, getCategoriaUtenti, getSocieta, api, creaInvito, listaInviti, eliminaInvito } from '../api/index.js'
 
 const router = useRouter()
 const { societaAttiva, utenteAttivo } = useStore()
@@ -235,7 +202,6 @@ const categorieAssegnabili = computed(() => tutteCategorie.value.filter(cat => c
 const listaSocieta = ref([])
 const societaIdSelezionata = ref(null)
 
-const errore = ref('')
 const loading = ref(false)
 const encryptionKey = ref('')
 const oldKey = ref('')
@@ -259,8 +225,60 @@ async function salvaChiave() {
     chiaveMsg.value = 'Errore: ' + (e.detail || 'impossibile aggiornare')
   }
 }
-const editingUtente = ref(null)
-const nuovo = ref({ username: '', password: '', nome: '', cognome: '', data_nascita: null, codice_fiscale: null, cellulare: null, tesserino: '', ruolo: '', societa_id: '' })
+const inviti = ref([])
+const nuovoInvito = ref({ email: '', ruolo: '', societa_id: '' })
+const invitoMsg = ref('')
+const invitoError = ref(false)
+
+async function caricaInviti() {
+  try {
+    const socId = isSuperAdmin.value ? societaIdSelezionata.value : societaAttiva.value?.id
+    const res = await listaInviti(socId)
+    inviti.value = res.data.filter(i => !i.usato)
+  } catch (e) {
+    console.error('Errore caricamento inviti:', e)
+  }
+}
+
+async function creaInvitoUtente() {
+  invitoMsg.value = ''
+  invitoError.value = false
+  if (!nuovoInvito.value.email || !nuovoInvito.value.ruolo) return
+  try {
+    const data = { email: nuovoInvito.value.email, ruolo: nuovoInvito.value.ruolo }
+    if (isSuperAdmin.value) {
+      data.societa_id = nuovoInvito.value.societa_id || societaIdSelezionata.value
+    }
+    await creaInvito(data)
+    invitoMsg.value = 'Invito inviato a ' + nuovoInvito.value.email
+    nuovoInvito.value = { email: '', ruolo: '', societa_id: '' }
+    caricaInviti()
+  } catch (e) {
+    invitoError.value = true
+    invitoMsg.value = e.response?.data?.detail || 'Errore nell\'invio'
+  }
+}
+
+async function eliminaInvitoUtente(id) {
+  try {
+    await eliminaInvito(id)
+    invitoMsg.value = 'Invito eliminato'
+    caricaInviti()
+  } catch (e) {
+    invitoError.value = true
+    invitoMsg.value = 'Errore nell\'eliminazione'
+  }
+}
+
+function copiaLink(link) {
+  navigator.clipboard.writeText(link).then(() => {
+    invitoMsg.value = 'Link copiato negli appunti!'
+    invitoError.value = false
+  }).catch(() => {
+    invitoError.value = true
+    invitoMsg.value = 'Impossibile copiare il link'
+  })
+}
 
 // Track mister assignments: { utenteId: { categoriaId: true/false } }
 const misterMap = ref({})
@@ -282,22 +300,6 @@ function getSocietaNome(societaId) {
   if (!societaId) return ''
   const s = listaSocieta.value.find(s => s.id === societaId)
   return s ? s.nome_breve || s.nome : ''
-}
-
-function resetForm() {
-  nuovo.value = { 
-    username: '', 
-    password: '', 
-    nome: '', 
-    cognome: '', 
-    data_nascita: null, 
-    codice_fiscale: null, 
-    cellulare: null, 
-    tesserino: '', 
-    ruolo: '', 
-    societa_id: societaIdSelezionata.value || '' 
-  }
-  editingUtente.value = null
 }
 
 function isMister(u, catId) {
@@ -369,11 +371,6 @@ async function load() {
       tutteCategorie.value = []
     }
     
-    // Preimposta la società per nuovi utenti
-    if (societaAttiva.value?.id) {
-      nuovo.value.societa_id = societaAttiva.value.id
-    }
-    
     // Load mister assignments for each category
     for (const cat of categorieData) {
       try {
@@ -397,89 +394,6 @@ async function load() {
   }
 }
 
-async function creaUtente() {
-  errore.value = ''
-  const n = nuovo.value
-  if (!n.username || !n.password || !n.nome || !n.cognome || !n.ruolo || !n.societa_id) {
-    errore.value = 'Compila tutti i campi obbligatori (*)'
-    return
-  }
-  try {
-    await createUtente({
-      username: n.username,
-      password: n.password,
-      is_admin: (n.ruolo === 'admin' || n.ruolo === 'super_admin') ? 1 : 0,
-      is_super_admin: n.ruolo === 'super_admin' ? 1 : 0,
-      societa_id: n.societa_id,
-      nome: n.nome,
-      cognome: n.cognome,
-      data_nascita: n.data_nascita && n.data_nascita !== '' ? n.data_nascita : null,
-      codice_fiscale: n.codice_fiscale && n.codice_fiscale !== '' ? n.codice_fiscale.toUpperCase() : null,
-      cellulare: n.cellulare && n.cellulare !== '' ? n.cellulare : null,
-      tesserino: n.tesserino && n.tesserino !== '' ? n.tesserino : null,
-      ruolo: n.ruolo
-    })
-    resetForm()
-    await load()
-  } catch (e) {
-    errore.value = e.response?.data?.detail || 'Errore'
-  }
-}
-
-function modificaUtente(u) {
-  editingUtente.value = u.id
-  const societaIdDefault = societaAttiva.value?.id || null
-  nuovo.value = {
-    username: u.username,
-    password: '',
-    nome: u.nome,
-    cognome: u.cognome,
-    data_nascita: u.data_nascita,
-    codice_fiscale: u.codice_fiscale,
-    cellulare: u.cellulare,
-    tesserino: u.tesserino || '',
-    ruolo: u.ruolo || '',
-    societa_id: u.societa_id || societaIdDefault || ''
-  }
-}
-
-function annullaModifica() {
-  resetForm()
-}
-
-async function salvaUtente() {
-  errore.value = ''
-  const n = nuovo.value
-  if (!n.nome || !n.cognome || !n.ruolo) {
-    errore.value = 'Compila tutti i campi obbligatori (*)'
-    return
-  }
-  try {
-    // Determina societa_id: super admin usa il campo del form, admin locale la propria
-    let societaIdValue = isSuperAdmin.value
-      ? (n.societa_id || null)
-      : (societaAttiva.value?.id || null)
-    
-    const data = {
-      nome: n.nome,
-      cognome: n.cognome,
-      data_nascita: n.data_nascita && n.data_nascita !== '' ? n.data_nascita : null,
-      codice_fiscale: n.codice_fiscale && n.codice_fiscale !== '' ? n.codice_fiscale.toUpperCase() : null,
-      cellulare: n.cellulare && n.cellulare !== '' ? n.cellulare : null,
-      tesserino: n.tesserino && n.tesserino !== '' ? n.tesserino : null,
-      ruolo: n.ruolo,
-      societa_id: societaIdValue,
-      is_super_admin: n.ruolo === 'super_admin' ? 1 : 0
-    }
-    await updateUtente(editingUtente.value, data)
-    resetForm()
-    await load()
-  } catch (e) {
-    console.error('Errore salvataggio utente:', e)
-    errore.value = e.response?.data?.detail || e.message || 'Errore'
-  }
-}
-
 async function eliminaUtente(id) {
   if (!confirm('Eliminare utente?')) return
   await deleteUtente(id)
@@ -493,7 +407,10 @@ async function resetsPassword(id) {
   await load()
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  caricaInviti()
+})
 </script>
 
 <style scoped>
@@ -1141,5 +1058,154 @@ onMounted(load)
   .user-header { flex-direction: column; align-items: flex-start; }
   .user-data { flex-direction: column; gap: 0.5rem; }
   .btn-delete { align-self: flex-end; }
+}
+
+/* Inviti */
+.card-inviti {
+  margin-top: 1.5rem;
+}
+
+.invito-form {
+  margin-top: 1rem;
+}
+
+.invito-inputs {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.invito-inputs input {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  color: #fff;
+  font-size: 0.9rem;
+  flex: 1;
+  min-width: 200px;
+}
+
+.invito-inputs input:focus {
+  outline: none;
+  border-color: #dc2626;
+}
+
+.inviti-list {
+  margin-top: 1.5rem;
+  border-top: 1px solid #222;
+  padding-top: 1rem;
+}
+
+.inviti-list h4 {
+  color: #888;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.invito-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.invito-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.invito-email {
+  color: #fff;
+  font-weight: 500;
+}
+
+.invito-ruolo {
+  color: #dc2626;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.invito-societa {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.invito-date {
+  color: #555;
+  font-size: 0.8rem;
+}
+
+.invito-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-copia,
+.btn-elimina {
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 0.4rem;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.btn-copia:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.btn-elimina:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.btn-copia svg,
+.btn-elimina svg {
+  width: 16px;
+  height: 16px;
+}
+
+.invito-msg {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.invito-msg.success {
+  color: #22c55e;
+}
+
+.invito-msg.error {
+  color: #ef4444;
+}
+
+@media (max-width: 640px) {
+  .invito-inputs {
+    flex-direction: column;
+  }
+  .invito-inputs input,
+  .invito-inputs select {
+    width: 100%;
+  }
+  .invito-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .invito-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
 }
 </style>

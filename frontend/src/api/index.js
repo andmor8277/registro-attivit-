@@ -233,3 +233,23 @@ export const getSchedeTrend = (params) => api.get('/schede-allenamento/stats/tre
 export const getSchedeSummary = (params) => api.get('/schede-allenamento/stats/summary', { params })
 export const getSchedeTeam = (params) => api.get('/schede-allenamento/stats/team', { params })
 export const getSchedePlayerTrend = (params) => api.get('/schede-allenamento/stats/player-trend', { params })
+
+// Google OAuth
+export const googleAuthorize = (invitoToken) => {
+  const params = invitoToken ? `?invito=${invitoToken}` : ''
+  window.location.href = (import.meta.env.VITE_API_URL || '/api') + '/auth/google/authorize' + params
+}
+export const googleCallback = (code, state) => {
+  const base = import.meta.env.VITE_API_URL || '/api'
+  return axios.get(`${base}/auth/google/callback`, { params: { code, state } })
+}
+export const registraUtenteGoogle = (data) => api.post('/auth/google/registra', data)
+
+// Inviti
+export const creaInvito = (data) => api.post('/inviti/', data)
+export const listaInviti = (societaId) => {
+  const params = societaId ? `?societa_id=${societaId}` : ''
+  return api.get('/inviti/' + params)
+}
+export const eliminaInvito = (id) => api.delete(`/inviti/${id}`)
+export const verificaInvito = (token) => axios.get((import.meta.env.VITE_API_URL || '/api') + '/inviti/verifica/' + token)

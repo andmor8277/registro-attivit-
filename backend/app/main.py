@@ -11,6 +11,7 @@ from .database import Base, engine
 from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni, infortuni, openday, planning_eventi, schede_allenamento
 from .routers.gruppi import router as gruppi_router
 from .routers.liste_tornei import router as liste_tornei_router
+from .routers.inviti import router as inviti_router
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
 
@@ -38,7 +39,7 @@ async def security_headers(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://thof.crickethouse.mywire.org", "http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["https://thof.crickethouse.mywire.org", "https://dev-thof.crickethouse.mywire.org", "http://localhost:5173", "http://localhost:3000", "http://192.168.178.133:3000"],
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
     expose_headers=["Content-Disposition"]
@@ -961,6 +962,44 @@ def run_migrations():
                 print(f"Migration warning (allenatori societa_id): {e}")
                 conn.rollback()
 
+            # Tabella inviti per Google OAuth
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS inviti (
+                        id SERIAL PRIMARY KEY,
+                        email VARCHAR(200) NOT NULL,
+                        societa_id INTEGER NOT NULL REFERENCES societa(id),
+                        ruolo VARCHAR(20) NOT NULL,
+                        token VARCHAR(100) UNIQUE NOT NULL,
+                        creato_il TIMESTAMP DEFAULT NOW(),
+                        scade TIMESTAMP NOT NULL,
+                        usato BOOLEAN DEFAULT FALSE
+                    )
+                """))
+                conn.commit()
+                print("Migration: Created inviti table")
+            except Exception as e:
+                print(f"Migration warning (inviti): {e}")
+                conn.rollback()
+
+            # Rendi password_hash nullable per utenti Google OAuth
+            try:
+                conn.execute(text("ALTER TABLE utenti ALTER COLUMN password_hash DROP NOT NULL"))
+                conn.commit()
+                print("Migration: password_hash nullable for Google OAuth users")
+            except Exception as e:
+                print(f"Migration warning (password_hash nullable): {e}")
+                conn.rollback()
+
+            # Aggiungi google_sub per bind con l'identità Google
+            try:
+                conn.execute(text("ALTER TABLE utenti ADD COLUMN IF NOT EXISTS google_sub VARCHAR(255)"))
+                conn.commit()
+                print("Migration: Added google_sub column to utenti")
+            except Exception as e:
+                print(f"Migration warning (google_sub): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 
@@ -968,6 +1007,7 @@ Base.metadata.create_all(bind=engine)
 run_migrations()
 
 app.include_router(auth_router)
+app.include_router(inviti_router)
 app.include_router(societa.router, dependencies=[Depends(get_current_user)])
 app.include_router(persone.router)
 app.include_router(registro.router, dependencies=[Depends(get_current_user)])
