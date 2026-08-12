@@ -10,7 +10,7 @@
         </button>
         <div>
           <h1>Responsabili per Categoria</h1>
-          <p class="page-subtitle">Assegna mister e dirigenti alle categorie</p>
+          <p class="page-subtitle">Gestisci ruoli e assegnazioni per categoria</p>
         </div>
       </div>
     </header>
@@ -44,6 +44,15 @@
                     @change="toggleAssegna(cat.id, a.id, $event)" />
                   <span class="checkmark"></span>
                 </label>
+              </td>
+              <td class="td-ruolo">
+                <select class="role-select" :value="a.ruolo" @change="cambiaRuolo(a, $event)" :disabled="a.ruolo === 'super_admin'">
+                  <option value="admin">Admin</option>
+                  <option value="mister">Mister</option>
+                  <option value="dirigente">Dirigente</option>
+                  <option value="segreteria">Segreteria</option>
+                  <option value="infermeria">Infermeria</option>
+                </select>
               </td>
               <td class="td-actions">
                 <button class="btn-delete" @click="eliminaUtente(a)" title="Elimina utente">
@@ -91,6 +100,15 @@
                   <span class="checkmark"></span>
                 </label>
               </td>
+              <td class="td-ruolo">
+                <select class="role-select" :value="m.ruolo" @change="cambiaRuolo(m, $event)">
+                  <option value="admin">Admin</option>
+                  <option value="mister">Mister</option>
+                  <option value="dirigente">Dirigente</option>
+                  <option value="segreteria">Segreteria</option>
+                  <option value="infermeria">Infermeria</option>
+                </select>
+              </td>
               <td class="td-actions">
                 <button class="btn-delete" @click="eliminaUtente(m)" title="Elimina utente">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -137,6 +155,15 @@
                   <span class="checkmark"></span>
                 </label>
               </td>
+              <td class="td-ruolo">
+                <select class="role-select" :value="d.ruolo" @change="cambiaRuolo(d, $event)">
+                  <option value="admin">Admin</option>
+                  <option value="mister">Mister</option>
+                  <option value="dirigente">Dirigente</option>
+                  <option value="segreteria">Segreteria</option>
+                  <option value="infermeria">Infermeria</option>
+                </select>
+              </td>
               <td class="td-actions">
                 <button class="btn-delete" @click="eliminaUtente(d)" title="Elimina utente">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -152,13 +179,123 @@
         </table>
       </div>
     </div>
+
+    <div class="table-section">
+      <h2 class="section-title">
+        <span class="section-icon badge-segreteria">S</span>
+        Segreteria
+      </h2>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th class="th-nome">Segreteria</th>
+              <th v-for="cat in categorie" :key="cat.id" class="th-cat">
+                <span v-if="cat.is_portieri">⭐</span>
+                <span v-else>{{ cat.anno }}</span>
+                <span class="cat-label">{{ cat.nome }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in segreteriaList" :key="s.id">
+              <td class="td-nome">
+                <span class="persona-name">{{ s.cognome }} {{ s.nome }}</span>
+              </td>
+              <td v-for="cat in categorie" :key="cat.id" class="td-check">
+                <label class="check-cell">
+                  <input type="checkbox"
+                    :checked="isAssegnato(cat.id, s.id)"
+                    @change="toggleAssegna(cat.id, s.id, $event)" />
+                  <span class="checkmark"></span>
+                </label>
+              </td>
+              <td class="td-ruolo">
+                <select class="role-select" :value="s.ruolo" @change="cambiaRuolo(s, $event)">
+                  <option value="admin">Admin</option>
+                  <option value="mister">Mister</option>
+                  <option value="dirigente">Dirigente</option>
+                  <option value="segreteria">Segreteria</option>
+                  <option value="infermeria">Infermeria</option>
+                </select>
+              </td>
+              <td class="td-actions">
+                <button class="btn-delete" @click="eliminaUtente(s)" title="Elimina utente">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr v-if="segreteriaList.length === 0">
+              <td colspan="999" class="td-empty">Nessun membro di segreteria</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <h2 class="section-title">
+        <span class="section-icon badge-infermeria">I</span>
+        Infermeria
+      </h2>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th class="th-nome">Infermeria</th>
+              <th v-for="cat in categorie" :key="cat.id" class="th-cat">
+                <span v-if="cat.is_portieri">⭐</span>
+                <span v-else>{{ cat.anno }}</span>
+                <span class="cat-label">{{ cat.nome }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="inf in infermeriaList" :key="inf.id">
+              <td class="td-nome">
+                <span class="persona-name">{{ inf.cognome }} {{ inf.nome }}</span>
+              </td>
+              <td v-for="cat in categorie" :key="cat.id" class="td-check">
+                <label class="check-cell">
+                  <input type="checkbox"
+                    :checked="isAssegnato(cat.id, inf.id)"
+                    @change="toggleAssegna(cat.id, inf.id, $event)" />
+                  <span class="checkmark"></span>
+                </label>
+              </td>
+              <td class="td-ruolo">
+                <select class="role-select" :value="inf.ruolo" @change="cambiaRuolo(inf, $event)">
+                  <option value="admin">Admin</option>
+                  <option value="mister">Mister</option>
+                  <option value="dirigente">Dirigente</option>
+                  <option value="segreteria">Segreteria</option>
+                  <option value="infermeria">Infermeria</option>
+                </select>
+              </td>
+              <td class="td-actions">
+                <button class="btn-delete" @click="eliminaUtente(inf)" title="Elimina utente">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            <tr v-if="infermeriaList.length === 0">
+              <td colspan="999" class="td-empty">Nessun membro di infermeria</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { getCategorie, getCategoriaResponsabili, getCategoriaUtenti, assegnaCategoriaUtenti, getUtenti, deleteUtente } from "../api/index.js"
+import { getCategorie, getCategoriaResponsabili, getCategoriaUtenti, assegnaCategoriaUtenti, getUtenti, deleteUtente, updateUtente } from "../api/index.js"
 import { useStore } from "../store.js"
 const router = useRouter()
 const { societaAttiva } = useStore()
@@ -171,6 +308,8 @@ const responsabileMap = ref({})
 const adminList = computed(() => tuttiUtenti.value.filter(u => u.ruolo === 'admin').sort((a, b) => a.cognome.localeCompare(b.cognome)))
 const misterList = computed(() => tuttiUtenti.value.filter(u => u.ruolo === 'mister').sort((a, b) => a.cognome.localeCompare(b.cognome)))
 const dirigentiList = computed(() => tuttiUtenti.value.filter(u => u.ruolo === 'dirigente').sort((a, b) => a.cognome.localeCompare(b.cognome)))
+const segreteriaList = computed(() => tuttiUtenti.value.filter(u => u.ruolo === 'segreteria').sort((a, b) => a.cognome.localeCompare(b.cognome)))
+const infermeriaList = computed(() => tuttiUtenti.value.filter(u => u.ruolo === 'infermeria').sort((a, b) => a.cognome.localeCompare(b.cognome)))
 
 function isAssegnato(catId, uid) {
   return (assegnazioneMap.value[catId] || []).includes(uid)
@@ -199,6 +338,17 @@ async function eliminaUtente(utente) {
   }
 }
 
+async function cambiaRuolo(utente, event) {
+  const nuovoRuolo = event.target.value
+  try {
+    await updateUtente(utente.id, { ruolo: nuovoRuolo })
+    await load()
+  } catch (e) {
+    event.target.value = utente.ruolo
+    alert('Errore: ' + (e.response?.data?.detail || 'Errore sconosciuto'))
+  }
+}
+
 async function refreshResponsabili(catId) {
   try {
     const respRes = await getCategoriaResponsabili(catId)
@@ -214,7 +364,7 @@ async function load() {
   categorie.value = (catRes.data || []).filter(c => c.parent_id !== null)
 
   const utentiRes = await getUtenti(societaId)
-  tuttiUtenti.value = (utentiRes.data || []).filter(u => ['admin', 'mister', 'dirigente'].includes(u.ruolo))
+  tuttiUtenti.value = (utentiRes.data || []).filter(u => ['admin', 'mister', 'dirigente', 'segreteria', 'infermeria'].includes(u.ruolo))
 
   for (const cat of categorie.value) {
     await refreshResponsabili(cat.id)
@@ -325,6 +475,14 @@ onMounted(load)
   background: #2563eb;
 }
 
+.section-icon.badge-segreteria {
+  background: #0891b2;
+}
+
+.section-icon.badge-infermeria {
+  background: #16a34a;
+}
+
 .table-wrapper {
   overflow-x: auto;
   border-radius: var(--radius-lg);
@@ -393,6 +551,40 @@ tbody td {
 
 .td-check {
   padding: 0.75rem 0;
+}
+
+.td-ruolo {
+  text-align: center;
+  padding: 0.5rem 0.25rem;
+  width: 120px;
+}
+
+.role-select {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-elevated);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+.role-select:hover {
+  border-color: var(--color-primary);
+}
+
+.role-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.role-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .td-actions {
