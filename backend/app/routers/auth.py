@@ -138,8 +138,9 @@ def me(current_user: Utente = Depends(get_current_user), db: Session = Depends(g
     if current_user.is_super_admin:
         categorie_ids = None  # super_admin vede tutto
     elif current_user.is_admin:
-        # admin locale vede solo le categorie della propria società
-        categorie_ids = None
+        # admin vede tutto, ma può essere assegnato a categorie specifiche
+        rows = db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == current_user.id).all()
+        categorie_ids = [r.categoria_id for r in rows]
     else:
         rows = db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == current_user.id).all()
         categorie_ids = [r.categoria_id for r in rows]

@@ -17,6 +17,45 @@
 
     <div class="table-section">
       <h2 class="section-title">
+        <span class="section-icon badge-admin">A</span>
+        Admin
+      </h2>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th class="th-nome">Admin</th>
+              <th v-for="cat in categorie" :key="cat.id" class="th-cat">
+                <span v-if="cat.is_portieri">⭐</span>
+                <span v-else>{{ cat.anno }}</span>
+                <span class="cat-label">{{ cat.nome }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in adminList" :key="a.id">
+              <td class="td-nome">
+                <span class="persona-name">{{ a.cognome }} {{ a.nome }}</span>
+              </td>
+              <td v-for="cat in categorie" :key="cat.id" class="td-check">
+                <label class="check-cell">
+                  <input type="checkbox"
+                    :checked="isAssegnato(cat.id, a.id)"
+                    @change="toggleAssegna(cat.id, a.id, $event)" />
+                  <span class="checkmark"></span>
+                </label>
+              </td>
+            </tr>
+            <tr v-if="adminList.length === 0">
+              <td colspan="999" class="td-empty">Nessun admin disponibile</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <h2 class="section-title">
         <span class="section-icon badge-mister">M</span>
         Mister
       </h2>
@@ -108,6 +147,7 @@ const tuttiUtenti = ref([])
 const assegnazioneMap = ref({})
 const responsabileMap = ref({})
 
+const adminList = computed(() => tuttiUtenti.value.filter(u => u.ruolo === 'admin').sort((a, b) => a.cognome.localeCompare(b.cognome)))
 const misterList = computed(() => tuttiUtenti.value.filter(u => u.ruolo === 'mister').sort((a, b) => a.cognome.localeCompare(b.cognome)))
 const dirigentiList = computed(() => tuttiUtenti.value.filter(u => u.ruolo === 'dirigente').sort((a, b) => a.cognome.localeCompare(b.cognome)))
 
@@ -143,7 +183,7 @@ async function load() {
   categorie.value = (catRes.data || []).filter(c => c.parent_id !== null)
 
   const utentiRes = await getUtenti(societaId)
-  tuttiUtenti.value = (utentiRes.data || []).filter(u => ['mister', 'dirigente'].includes(u.ruolo))
+  tuttiUtenti.value = (utentiRes.data || []).filter(u => ['admin', 'mister', 'dirigente'].includes(u.ruolo))
 
   for (const cat of categorie.value) {
     await refreshResponsabili(cat.id)
@@ -240,6 +280,10 @@ onMounted(load)
   font-size: 0.8125rem;
   font-weight: 800;
   color: white;
+}
+
+.section-icon.badge-admin {
+  background: #7c3aed;
 }
 
 .section-icon.badge-mister {
