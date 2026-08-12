@@ -26,6 +26,9 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       SMTP_HOST: ${SMTP_HOST:-host.docker.internal}
       SMTP_FROM: ${SMTP_FROM:-noreply@thof.crickethouse.mywire.org}
+      GOOGLE_CREDENTIALS_PATH: ${GOOGLE_CREDENTIALS_PATH:-/app/google-credentials.json}
+    volumes:
+      - ./backend/google-credentials.json:/app/google-credentials.json:ro
     ports:
       - "8000:8000"
     depends_on:
