@@ -92,7 +92,8 @@ class Utente(Base):
     id = Column(Integer, primary_key=True)
     societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
     username = Column(String(100), unique=True, nullable=False)
-    password_hash = Column(String(200), nullable=False)
+    password_hash = Column(String(200), nullable=True)
+    google_sub = Column(String(255), nullable=True)
     is_admin = Column(Integer, default=0)
     is_super_admin = Column(Integer, default=0)
     nome = Column(String(100), nullable=False)
@@ -321,3 +322,14 @@ class ListaTorneoGiocatore(Base):
     lista_id = Column(Integer, ForeignKey("liste_torneo.id"), nullable=False)
     persona_id = Column(Integer, ForeignKey("persone.id"), nullable=False)
     ordine = Column(Integer, default=0)
+
+class Invito(Base):
+    __tablename__ = "inviti"
+    id = Column(Integer, primary_key=True)
+    email = Column(String(200), nullable=False)
+    societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
+    ruolo = Column(String(20), nullable=False)
+    token = Column(String(100), unique=True, nullable=False)
+    creato_il = Column(DateTime, server_default=text("NOW()"))
+    scade = Column(DateTime, nullable=False)
+    usato = Column(Boolean, default=False)

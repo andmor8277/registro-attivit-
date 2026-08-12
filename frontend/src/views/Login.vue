@@ -100,27 +100,14 @@
             </div>
             
             <div class="form-section" v-if="!isEditingSocieta">
-              <h4>Amministratore Locale</h4>
-              <div class="form-row">
-                <div class="form-group">
-                  <label>Username *</label>
-                  <input v-model="newAdmin.username" placeholder="admin" />
-                </div>
-                <div class="form-group">
-                  <label>Password *</label>
-                  <input v-model="newAdmin.password" type="password" placeholder="Password" />
-                </div>
+              <h4>Invita Amministratore</h4>
+              <div class="form-group">
+                <label>Email Amministratore *</label>
+                <input v-model="newAdmin.email" type="email" placeholder="email@esempio.com" />
               </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label>Nome *</label>
-                  <input v-model="newAdmin.nome" placeholder="Nome" />
-                </div>
-                <div class="form-group">
-                  <label>Cognome *</label>
-                  <input v-model="newAdmin.cognome" placeholder="Cognome" />
-                </div>
-              </div>
+              <p style="color: #888; font-size: 0.8rem; margin-top: 0.5rem;">
+                Verrà inviato un link di invito via email per accedere con Google.
+              </p>
             </div>
             
             <div class="form-section" v-if="!isEditingSocieta">
@@ -219,6 +206,24 @@
           </template>
         </button>
       </form>
+
+        <!-- Invito info + Google Login -->
+        <div class="invito-section">
+          <div v-if="invitoInfo" class="invito-info">
+            <p>Invito per <strong>{{ invitoInfo.email }}</strong></p>
+            <p>Società: <strong>{{ invitoInfo.societa_nome }}</strong> · Ruolo: <strong>{{ invitoInfo.ruolo }}</strong></p>
+          </div>
+          <button @click="loginGoogle" class="btn-google">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            {{ invitoInfo ? 'Accedi con Google per completare l\'invito' : 'Accedi con Google' }}
+          </button>
+          <p v-if="invitoErrore" class="errore">{{ invitoErrore }}</p>
+        </div>
       </div>
     </div>
   </div>
@@ -227,7 +232,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { login, getMe, getSocieta, getSocietaById, createSocieta, updateSocieta, uploadSocietaFile, createUtente, createCategoria, getCategorie } from '../api/index.js'
+import { login, getMe, getSocieta, getSocietaById, createSocieta, updateSocieta, uploadSocietaFile, createUtente, createCategoria, getCategorie, verificaInvito, googleAuthorize, creaInvito, api } from '../api/index.js'
 import { useStore } from '../store.js'
 
 const username = ref('')
@@ -256,10 +261,45 @@ const newStagione = ref(new Date().getFullYear())
 const societaInModifica = ref(null)
 const isEditingSocieta = computed(() => societaInModifica.value !== null)
 const newAdmin = ref({
-  username: '',
-  password: '',
-  nome: '',
-  cognome: ''
+  email: ''
+})
+const invitoToken = ref(null)
+const invitoInfo = ref(null)
+const invitoErrore = ref('')
+
+onMounted(async () => {
+  // Check for invitation token in URL
+  const params = new URLSearchParams(window.location.search)
+  const invToken = params.get('invito')
+  if (invToken) {
+    invitoToken.value = invToken
+    try {
+      const res = await verificaInvito(invToken)
+      invitoInfo.value = res.data
+    } catch (e) {
+      invitoErrore.value = e.response?.data?.detail || 'Invito non valido'
+    }
+  }
+
+  // Se utente già loggato e super_admin, mostra selezione società
+  const storedToken = localStorage.getItem('token')
+  if (!storedToken) return
+  try {
+    const me = await getMe()
+    utenteAttivo.value = me.data
+    const isSuper = me.data.is_super_admin || me.data.ruolo === 'super_admin'
+    if (isSuper) {
+      const res = await getSocieta()
+      societaOptions.value = res.data
+      setListaSocieta(res.data)
+      showSocietaSelection.value = true
+      setSocietaAttiva(null)
+    }
+  } catch (e) {
+    if (e.response?.status !== 401) {
+      console.error('Errore caricamento sessione:', e)
+    }
+  }
 })
 
 function handleLogoUpload(event) {
@@ -280,27 +320,9 @@ function handleLogosponsorUpload(event) {
 const router = useRouter()
 const { setToken, utenteAttivo, setSocietaAttiva, setListaSocieta, societaAttiva } = useStore()
 
-onMounted(async () => {
-  // Se utente già loggato e super_admin, mostra selezione società
-  const token = localStorage.getItem('token')
-  if (!token) return
-  try {
-    const me = await getMe()
-    utenteAttivo.value = me.data
-    const isSuper = me.data.is_super_admin || me.data.ruolo === 'super_admin'
-    if (isSuper) {
-      const res = await getSocieta()
-      societaOptions.value = res.data
-      setListaSocieta(res.data)
-      showSocietaSelection.value = true
-      setSocietaAttiva(null)
-    }
-  } catch (e) {
-    if (e.response?.status !== 401) {
-      console.error('Errore caricamento sessione:', e)
-    }
-  }
-})
+function loginGoogle() {
+  googleAuthorize(invitoToken.value)
+}
 
 async function doLogin() {
   if (loading.value) return
@@ -418,7 +440,7 @@ function modificaSocieta(s) {
     logo: s.logo || '', 
     logosponsor: s.logosponsor || '' 
   }
-  newAdmin.value = { username: '', password: '', nome: '', cognome: '' }
+  newAdmin.value = { email: '' }
   logoFile.value = null
   logosponsorFile.value = null
   societaInModifica.value = s.id
@@ -461,30 +483,22 @@ async function creaSocieta() {
       return
     }
     
-    if (!newAdmin.value.username || !newAdmin.value.password || !newAdmin.value.nome || !newAdmin.value.cognome) {
-      alert('Compila tutti i dati dell\'amministratore')
+    if (!newAdmin.value.email) {
+      alert('Inserisci l\'email dell\'amministratore')
       return
     }
-    
+
     // Crea società
     const res = await createSocieta(newSocieta.value)
     const nuova = res.data
-    
-    // Crea utente admin per la società
-    await createUtente({
-      username: newAdmin.value.username,
-      password: newAdmin.value.password,
-      nome: newAdmin.value.nome,
-      cognome: newAdmin.value.cognome,
-      data_nascita: null,
-      codice_fiscale: null,
-      cellulare: null,
-      tesserino: null,
+
+    // Invita admin per la società
+    await creaInvito({
+      email: newAdmin.value.email,
       ruolo: 'admin',
-      is_admin: 1,
       societa_id: nuova.id
     })
-    
+
     // Crea la stagione come categoria attiva
     await createCategoria({
       nome: 'Stagione ' + newStagione.value + '/' + (newStagione.value + 1),
@@ -494,14 +508,14 @@ async function creaSocieta() {
       is_portieri: false,
       societa_id: nuova.id
     })
-    
+
     societaOptions.value.push(nuova)
     societaSelezionata.value = nuova.id
     setListaSocieta(societaOptions.value)
     setSocietaAttiva(nuova)
     showCreateSocieta.value = false
     newSocieta.value = { nome: '', nome_breve: null, colore_primario: '#dc2626', colore_secondario: '#1f2937', logo: '', logosponsor: '' }
-    newAdmin.value = { username: '', password: '', nome: '', cognome: '' }
+    newAdmin.value = { email: '' }
     newStagione.value = currentYear
     logoFile.value = null
     logosponsorFile.value = null
@@ -1280,5 +1294,50 @@ h1 {
     flex-direction: row;
     justify-content: flex-start;
   }
+}
+
+.invito-section {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.invito-info {
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  color: #ccc;
+  font-size: 0.85rem;
+}
+
+.invito-info strong {
+  color: #fff;
+}
+
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background: #fff;
+  color: #333;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn-google:hover {
+  background: #f0f0f0;
+  transform: translateY(-1px);
+}
+
+.btn-google:active {
+  transform: translateY(0);
 }
 </style>

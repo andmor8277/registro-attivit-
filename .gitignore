@@ -47,6 +47,10 @@ releases/
 .env.production
 *.local.env
 
+# Google OAuth credentials (mai committare)
+backend/google-credentials.json
+client_secret_*.json
+
 # Secret scan list per il pre-commit hook (mai committare)
 scripts/git-hooks/secrets.lst
 

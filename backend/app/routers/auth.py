@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from jose import JWTError, jwt
@@ -7,11 +8,15 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta, date, timezone
 from pydantic import BaseModel
 from typing import Optional, List
+from urllib.parse import urlencode
 from ..database import get_db
-from ..models import Utente, UtenteCategoria, Categoria
+from ..models import Utente, UtenteCategoria, Categoria, Invito, Societa
 from ..rate_limit import limiter
 import os
 import re
+import json
+import httpx
+import secrets
 
 def format_cognome(val):
     return val.upper() if val else val
@@ -121,7 +126,7 @@ class PasswordChange(BaseModel):
 @router.post("/token")
 def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(Utente).filter(Utente.username == form.username).first()
-    if not user or not verify_password(form.password, user.password_hash):
+    if not user or not user.password_hash or not verify_password(form.password, user.password_hash):
         if not user:
             verify_password(form.password, "$2b$12$260mdxWoPqJ9blHKaB4fKuiJbLr7WbMYw6K78Q3vGHxRRz8xZzqEi")
         raise HTTPException(status_code=401, detail="Credenziali errate")
@@ -331,3 +336,316 @@ def cambia_password(uid: int, data: PasswordChange, current_user: Utente = Depen
     utente.password_hash = hash_password(data.nuova)
     db.commit()
     return {"ok": True}
+
+
+# ── Google OAuth ──
+
+GOOGLE_CREDENTIALS_PATH = os.environ.get("GOOGLE_CREDENTIALS_PATH", "/app/google-credentials.json")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+
+_google_config = None
+
+def get_google_config():
+    global _google_config
+    if _google_config:
+        return _google_config
+    try:
+        with open(GOOGLE_CREDENTIALS_PATH) as f:
+            _google_config = json.load(f)
+        if isinstance(_google_config, dict) and "web" in _google_config:
+            _google_config = _google_config["web"]
+    except Exception as e:
+        print(f"Google credentials error: {e}")
+        _google_config = None
+    return _google_config
+
+
+def get_google_authorize_url(state: str):
+    config = get_google_config()
+    if not config:
+        raise HTTPException(status_code=500, detail="Google OAuth non configurato")
+
+    client_id = config.get("client_id")
+    redirect_uri = f"{FRONTEND_URL}/registrazione"
+
+    params = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "prompt": "select_account",
+        "state": state,
+    }
+    return f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+
+
+@router.get("/google/authorize")
+def google_authorize(request: Request, invito: Optional[str] = Query(None)):
+    """Redirect to Google OAuth. Pass ?invito=token to link invitation."""
+    # CSRF state: random, salvato in cookie httpOnly, verificato in callback
+    state = secrets.token_urlsafe(32)
+    url = get_google_authorize_url(state)
+    secure = request.url.scheme == "https"
+
+    resp = RedirectResponse(url=url)
+    resp.set_cookie(
+        key="oauth_state",
+        value=state,
+        httponly=True,
+        samesite="lax",
+        secure=secure,
+        path="/",
+        max_age=600,
+    )
+    if invito:
+        resp.set_cookie(
+            key="oauth_invito",
+            value=invito,
+            httponly=True,
+            samesite="lax",
+            secure=secure,
+            path="/",
+            max_age=600,
+        )
+    else:
+        resp.delete_cookie("oauth_invito", path="/")
+    return resp
+
+
+def _clear_oauth_cookies(resp):
+    resp.delete_cookie("oauth_state", path="/")
+    resp.delete_cookie("oauth_invito", path="/")
+    return resp
+
+
+@router.get("/google/callback")
+async def google_callback(
+    code: str,
+    request: Request,
+    state: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Google OAuth callback. Exchanges code for user info."""
+    # Verifica CSRF: il parametro state deve corrispondere al cookie
+    cookie_state = request.cookies.get("oauth_state")
+    if not cookie_state or not state or cookie_state != state:
+        raise HTTPException(status_code=400, detail="Richiesta non valida (state mismatch)")
+
+    config = get_google_config()
+    if not config:
+        raise HTTPException(status_code=500, detail="Google OAuth non configurato")
+
+    client_id = config.get("client_id")
+    client_secret = config.get("client_secret")
+    redirect_uri = f"{FRONTEND_URL}/registrazione"
+
+    # Exchange code for tokens
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post("https://oauth2.googleapis.com/token", data={
+                "code": code,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code"
+            })
+            resp.raise_for_status()
+            token_data = resp.json()
+            access_token = token_data["access_token"]
+
+            # Get user info
+            resp = await client.get("https://www.googleapis.com/oauth2/v2/userinfo", headers={
+                "Authorization": f"Bearer {access_token}"
+            })
+            resp.raise_for_status()
+            google_user = resp.json()
+    except Exception as e:
+        print(f"Google OAuth error: {e}")
+        raise HTTPException(status_code=400, detail="Errore nella comunicazione con Google")
+
+    google_email = google_user.get("email", "").lower()
+    google_name = google_user.get("name", "")
+    google_sub = google_user.get("sub", "")
+    email_verified = google_user.get("verified_email", False)
+
+    if not google_email:
+        raise HTTPException(status_code=400, detail="Email non trovata")
+
+    # Verifica email confirmata da Google
+    if not email_verified:
+        raise HTTPException(status_code=400, detail="Email Google non verificata")
+
+    # Match utente per google_sub prima, poi per email (backward compat)
+    existing_user = db.query(Utente).filter(Utente.google_sub == google_sub).first()
+    if not existing_user:
+        existing_user = db.query(Utente).filter(Utente.username == google_email).first()
+        if existing_user:
+            existing_user.google_sub = google_sub
+            db.commit()
+
+    if existing_user:
+        # Return existing JWT
+        token = create_token({
+            "sub": existing_user.username,
+            "is_admin": existing_user.is_admin,
+            "societa_id": existing_user.societa_id,
+            "is_super_admin": existing_user.is_super_admin
+        })
+        resp = JSONResponse({
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {
+                "id": existing_user.id,
+                "username": existing_user.username,
+                "is_admin": existing_user.is_admin,
+                "is_super_admin": existing_user.is_super_admin,
+                "societa_id": existing_user.societa_id,
+                "nome": existing_user.nome,
+                "cognome": existing_user.cognome,
+                "ruolo": existing_user.ruolo
+            },
+            "requires_registration": False
+        })
+        return _clear_oauth_cookies(resp)
+
+    # New user: read invitation token from cookie (non trustable da client)
+    invito_token = request.cookies.get("oauth_invito")
+    if not invito_token:
+        raise HTTPException(status_code=400, detail="Nessun invito trovato. Contatta un amministratore.")
+
+    invito = db.query(Invito).filter(Invito.token == invito_token).first()
+    if not invito:
+        raise HTTPException(status_code=404, detail="Invito non trovato")
+    if invito.usato:
+        raise HTTPException(status_code=400, detail="Invito già utilizzato")
+    if invito.scade < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Invito scaduto")
+    if invito.email.lower() != google_email:
+        raise HTTPException(status_code=400, detail="L'email Google non corrisponde a quella dell'invito")
+
+    # Verify society exists
+    societa = db.query(Societa).filter(Societa.id == invito.societa_id).first()
+    if not societa:
+        raise HTTPException(status_code=404, detail="Società non trovata")
+
+    # Emi un reg_token temporaneo firmato: prova che questo utente ha
+    # completato la callback OAuth. Serve a POST /google/registra.
+    reg_token = jwt.encode({
+        "invito_token": invito.token,
+        "google_sub": google_sub,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=10)
+    }, SECRET_KEY, algorithm=ALGORITHM)
+
+    # Return info for registration form
+    name_parts = google_name.split(" ", 1)
+    resp = JSONResponse({
+        "requires_registration": True,
+        "reg_token": reg_token,
+        "google_email": google_email,
+        "google_name": google_name,
+        "google_nome": name_parts[0] if len(name_parts) > 0 else "",
+        "google_cognome": name_parts[1] if len(name_parts) > 1 else "",
+        "ruolo": invito.ruolo,
+        "societa_id": invito.societa_id,
+        "societa_nome": societa.nome
+    })
+    return _clear_oauth_cookies(resp)
+
+
+class RegistrazioneData(BaseModel):
+    nome: str
+    cognome: str
+    cellulare: str
+    data_nascita: str
+    codice_fiscale: str
+    tesserino: Optional[str] = None
+    reg_token: str
+
+
+@router.post("/google/registra")
+def registra_utente_google(
+    data: RegistrazioneData,
+    db: Session = Depends(get_db)
+):
+    """Crea utente dopo Google OAuth + form registrazione.
+    Richiede il reg_token emesso dal callback (prova di possesso Google)."""
+    from datetime import datetime as dt
+
+    # Verifica il reg_token firmato: chi chiama deve aver completato il callback
+    try:
+        payload = jwt.decode(data.reg_token, SECRET_KEY, algorithms=[ALGORITHM])
+        invito_token = payload.get("invito_token")
+        google_sub = payload.get("google_sub")
+    except JWTError:
+        raise HTTPException(status_code=400, detail="Sessione di registrazione non valida o scaduta. Riprova.")
+    if not invito_token:
+        raise HTTPException(status_code=400, detail="Sessione di registrazione non valida")
+
+    # Verify invitation
+    invito = db.query(Invito).filter(Invito.token == invito_token).first()
+    if not invito:
+        raise HTTPException(status_code=404, detail="Invito non trovato")
+    if invito.usato:
+        raise HTTPException(status_code=400, detail="Invito già utilizzato")
+    if invito.scade < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Invito scaduto")
+
+    # Check user doesn't already exist
+    if db.query(Utente).filter(Utente.username == invito.email).first():
+        raise HTTPException(status_code=400, detail="Utente già esistente")
+
+    # Parse date
+    try:
+        data_nascita = dt.strptime(data.data_nascita, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Data di nascita non valida")
+
+    # Create user (no password hash needed for Google-only)
+    is_admin = 1 if invito.ruolo == "admin" else 0
+    is_super = 1 if invito.ruolo == "super_admin" else 0
+
+    utente = Utente(
+        username=invito.email,
+        password_hash=None,
+        google_sub=google_sub or None,
+        is_admin=is_admin,
+        is_super_admin=is_super,
+        societa_id=invito.societa_id,
+        nome=format_nome(data.nome),
+        cognome=format_cognome(data.cognome),
+        data_nascita=data_nascita,
+        codice_fiscale=data.codice_fiscale.upper() if data.codice_fiscale else None,
+        cellulare=data.cellulare,
+        tesserino=data.tesserino,
+        ruolo=invito.ruolo
+    )
+    db.add(utente)
+    db.commit()
+    db.refresh(utente)
+
+    # Mark invitation as used
+    invito.usato = True
+    db.commit()
+
+    # Create JWT
+    token = create_token({
+        "sub": utente.username,
+        "is_admin": utente.is_admin,
+        "societa_id": utente.societa_id,
+        "is_super_admin": utente.is_super_admin
+    })
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": utente.id,
+            "username": utente.username,
+            "is_admin": utente.is_admin,
+            "is_super_admin": utente.is_super_admin,
+            "societa_id": utente.societa_id,
+            "nome": utente.nome,
+            "cognome": utente.cognome,
+            "ruolo": utente.ruolo
+        }
+    }
