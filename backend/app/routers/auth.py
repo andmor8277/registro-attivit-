@@ -105,15 +105,15 @@ class UtenteCreate(BaseModel):
     ruolo: Optional[str] = None
 
 class UtenteUpdate(BaseModel):
-    nome: str
-    cognome: str
+    nome: Optional[str] = None
+    cognome: Optional[str] = None
     data_nascita: Optional[date] = None
     codice_fiscale: Optional[str] = None
     cellulare: Optional[str] = None
     societa_id: Optional[int] = None
     tesserino: Optional[str] = None
     ruolo: Optional[str] = None
-    is_super_admin: Optional[int] = 0
+    is_super_admin: Optional[int] = None
 
 class AssegnaCategorie(BaseModel):
     categoria_ids: List[int]
@@ -206,28 +206,34 @@ def modifica_utente(uid: int, data: UtenteUpdate, current_user: Utente = Depends
     # Non super_admin non può modificare super_admin
     if utente.is_super_admin and not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="Non autorizzato a modificare super admin")
-    utente.nome = format_nome(data.nome)
-    utente.cognome = format_cognome(data.cognome)
-    utente.data_nascita = data.data_nascita
-    utente.codice_fiscale = data.codice_fiscale
-    utente.cellulare = data.cellulare
-    utente.tesserino = data.tesserino
+    if data.nome is not None:
+        utente.nome = format_nome(data.nome)
+    if data.cognome is not None:
+        utente.cognome = format_cognome(data.cognome)
+    if data.data_nascita is not None:
+        utente.data_nascita = data.data_nascita
+    if data.codice_fiscale is not None:
+        utente.codice_fiscale = data.codice_fiscale
+    if data.cellulare is not None:
+        utente.cellulare = data.cellulare
+    if data.tesserino is not None:
+        utente.tesserino = data.tesserino
     # Solo super_admin può modificare società dell'utente
-    if current_user.is_super_admin:
-        # Converti in int se è una stringa
-        if data.societa_id is not None:
-            if isinstance(data.societa_id, str):
-                utente.societa_id = int(data.societa_id)
-            else:
-                utente.societa_id = data.societa_id
+    if current_user.is_super_admin and data.societa_id is not None:
+        if isinstance(data.societa_id, str):
+            utente.societa_id = int(data.societa_id)
+        else:
+            utente.societa_id = data.societa_id
     # Non super_admin non può assegnare ruolo super_admin
     if data.ruolo == 'super_admin' and not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="Non autorizzato ad assegnare ruolo super_admin")
-    utente.ruolo = data.ruolo
-    utente.is_admin = 1 if data.ruolo in ('admin', 'super_admin') else 0
-    # Solo super_admin può modificare is_super_admin
-    if current_user.is_super_admin:
-        utente.is_super_admin = 1 if data.ruolo == 'super_admin' else 0
+    if data.ruolo is not None:
+        utente.ruolo = data.ruolo
+        utente.is_admin = 1 if data.ruolo in ('admin', 'super_admin') else 0
+        if current_user.is_super_admin:
+            utente.is_super_admin = 1 if data.ruolo == 'super_admin' else 0
+    if data.is_super_admin is not None and current_user.is_super_admin:
+        utente.is_super_admin = data.is_super_admin
     db.commit()
     return {"ok": True}
 
