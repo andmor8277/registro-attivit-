@@ -36,11 +36,6 @@
             <tr v-for="a in adminList" :key="a.id">
               <td class="td-nome">
                 <span class="persona-name">{{ a.cognome }} {{ a.nome }}</span>
-                <button class="btn-delete" @click="eliminaUtente(a)" title="Elimina utente">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-                  </svg>
-                </button>
               </td>
               <td v-for="cat in categorie" :key="cat.id" class="td-check">
                 <label class="check-cell">
@@ -49,6 +44,13 @@
                     @change="toggleAssegna(cat.id, a.id, $event)" />
                   <span class="checkmark"></span>
                 </label>
+              </td>
+              <td class="td-actions">
+                <button class="btn-delete" @click="eliminaUtente(a)" title="Elimina utente">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                  </svg>
+                </button>
               </td>
             </tr>
             <tr v-if="adminList.length === 0">
@@ -80,11 +82,6 @@
             <tr v-for="m in misterList" :key="m.id">
               <td class="td-nome">
                 <span class="persona-name">{{ m.cognome }} {{ m.nome }}</span>
-                <button class="btn-delete" @click="eliminaUtente(m)" title="Elimina utente">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-                  </svg>
-                </button>
               </td>
               <td v-for="cat in categorie" :key="cat.id" class="td-check">
                 <label class="check-cell">
@@ -93,6 +90,13 @@
                     @change="toggleAssegna(cat.id, m.id, $event)" />
                   <span class="checkmark"></span>
                 </label>
+              </td>
+              <td class="td-actions">
+                <button class="btn-delete" @click="eliminaUtente(m)" title="Elimina utente">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                  </svg>
+                </button>
               </td>
             </tr>
             <tr v-if="misterList.length === 0">
@@ -124,11 +128,6 @@
             <tr v-for="d in dirigentiList" :key="d.id">
               <td class="td-nome">
                 <span class="persona-name">{{ d.cognome }} {{ d.nome }}</span>
-                <button class="btn-delete" @click="eliminaUtente(d)" title="Elimina utente">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-                  </svg>
-                </button>
               </td>
               <td v-for="cat in categorie" :key="cat.id" class="td-check">
                 <label class="check-cell">
@@ -137,6 +136,13 @@
                     @change="toggleAssegna(cat.id, d.id, $event)" />
                   <span class="checkmark"></span>
                 </label>
+              </td>
+              <td class="td-actions">
+                <button class="btn-delete" @click="eliminaUtente(d)" title="Elimina utente">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                  </svg>
+                </button>
               </td>
             </tr>
             <tr v-if="dirigentiList.length === 0">
@@ -387,6 +393,12 @@ tbody td {
 
 .td-check {
   padding: 0.75rem 0;
+}
+
+.td-actions {
+  text-align: right;
+  padding: 0.5rem 0.75rem;
+  width: 44px;
 }
 
 .check-cell {
