@@ -244,6 +244,7 @@
               <label>Ruolo *</label>
               <select v-model="invitoModal.ruolo">
                 <option value="">Seleziona ruolo...</option>
+                <option value="admin">Admin</option>
                 <option value="mister">Mister</option>
                 <option value="dirigente">Dirigente</option>
                 <option value="segreteria">Segreteria</option>
