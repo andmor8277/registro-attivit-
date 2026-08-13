@@ -43,7 +43,7 @@
               <input v-model="searchPlayer" placeholder="Cerca giocatore..." class="search-input" />
             </div>
             <div class="toolbar-actions">
-              <button v-if="utenteAttivo?.is_admin || utenteAttivo?.ruolo === 'mister'" class="btn-icon-pill" @click="gdprModal.show = true" :title="gdprSbloccato ? 'Dati sbloccati' : 'Sblocca Dati Sensibili'" :class="{ 'gdpr-unlocked': gdprSbloccato }">
+              <button v-if="utenteAttivo?.is_admin || ['mister','segreteria','infermeria'].includes(utenteAttivo?.ruolo)" class="btn-icon-pill" @click="gdprModal.show = true" :title="gdprSbloccato ? 'Dati sbloccati' : 'Sblocca Dati Sensibili'" :class="{ 'gdpr-unlocked': gdprSbloccato }">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
                 </svg>
