@@ -343,6 +343,9 @@ def cambia_password(uid: int, data: PasswordChange, current_user: Utente = Depen
     utente.password_hash = hash_password(data.nuova)
     db.commit()
     return {"ok": True}
+@router.post("/verify-gdpr")
+def verify_gdpr(current_user: Utente = Depends(get_admin)):
+    return {"ok": True}
 
 
 # ── Google OAuth ──
