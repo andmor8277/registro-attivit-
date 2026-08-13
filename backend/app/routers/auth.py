@@ -345,8 +345,8 @@ def cambia_password(uid: int, data: PasswordChange, current_user: Utente = Depen
     return {"ok": True}
 @router.post("/verify-gdpr")
 def verify_gdpr(categoria_id: Optional[int] = None, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Admin può sempre sbloccare
-    if current_user.is_admin:
+    # Admin, segreteria e infermeria possono sempre sbloccare
+    if current_user.is_admin or current_user.ruolo in ('segreteria', 'infermeria'):
         return {"ok": True}
     # Mister può sbloccare solo se assegnato alla categoria richiesta
     if categoria_id and current_user.ruolo == 'mister':
