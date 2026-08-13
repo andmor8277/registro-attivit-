@@ -211,7 +211,7 @@ function toggleColonna(key) {
 
 async function sbloccaGdpr() {
   try {
-    const res = await fetch('/api/auth/verify-gdpr', {
+    const res = await fetch(`/api/auth/verify-gdpr?categoria_id=${categoriaId}`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
     })

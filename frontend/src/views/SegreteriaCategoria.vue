@@ -290,7 +290,7 @@ function isScaduta(data) {
 async function sbloccaGdpr() {
   gdprModal.value.error = ''
   try {
-    const res = await fetch('/api/auth/verify-gdpr', {
+    const res = await fetch(`/api/auth/verify-gdpr?categoria_id=${catId.value}`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
     })
