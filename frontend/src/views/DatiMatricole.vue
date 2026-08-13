@@ -119,11 +119,7 @@
     <div v-if="gdprModal.show" class="modal-overlay" @click.self="gdprModal.show = false">
       <div class="modal modal-small">
         <h3>🔒 Sblocco Dati Sensibili</h3>
-        <p class="gdpr-info">Inserisci la password per visualizzare i dati personali dei giocatori (CF, tel. Papà/Mamma, data nascita)</p>
-        <div class="form-field">
-          <label>Password</label>
-          <input v-model="gdprModal.password" type="password" @keyup.enter="verificaPasswordGdpr" />
-        </div>
+        <p class="gdpr-info">Confermi di voler visualizzare i dati sensibili (CF, telefoni)?</p>
         <p v-if="gdprModal.errore" class="error-msg">{{ gdprModal.errore }}</p>
         <div class="modal-actions">
           <button class="btn-annulla" @click="gdprModal.show = false">Annulla</button>
@@ -289,17 +285,15 @@ function apriSbloccoGdpr() {
 
 async function verificaPasswordGdpr() {
   try {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-    const res = await fetch(`${apiUrl}/auth/token`, {
+    const res = await fetch('/api/auth/verify-gdpr', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `username=${utenteAttivo.value?.username || ''}&password=${gdprModal.value.password}`
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
     })
     if (res.ok) {
       gdprSbloccato.value = true
       gdprModal.value.show = false
     } else {
-      gdprModal.value.errore = 'Password non valida'
+      gdprModal.value.errore = 'Non autorizzato'
     }
   } catch (e) {
     gdprModal.value.errore = 'Errore di verifica'

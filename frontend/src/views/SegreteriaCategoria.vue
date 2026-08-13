@@ -33,11 +33,7 @@
             </button>
           </div>
           <div class="modal-body">
-            <p class="gdpr-info">Inserisci la password admin per visualizzare i dati sensibili.</p>
-            <div class="form-group">
-              <label>Password</label>
-              <input type="password" v-model="gdprModal.password" @keyup.enter="sbloccaGdpr" placeholder="Password admin" />
-            </div>
+            <p class="gdpr-info">Confermi di voler visualizzare i dati sensibili (CF, telefoni)?</p>
             <button class="btn-sblocca" @click="sbloccaGdpr">Sblocca</button>
             <p v-if="gdprModal.error" class="gdpr-error">{{ gdprModal.error }}</p>
           </div>
@@ -294,21 +290,16 @@ function isScaduta(data) {
 async function sbloccaGdpr() {
   gdprModal.value.error = ''
   try {
-    const response = await fetch('/api/auth/me', {
+    const res = await fetch('/api/auth/verify-gdpr', {
+      method: 'POST',
       headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
     })
-    const user = await response.json()
-    const loginRes = await fetch('/api/auth/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `username=${user.username}&password=${gdprModal.value.password}`
-    })
-    if (loginRes.ok) {
+    if (res.ok) {
       gdprSbloccato.value = true
       gdprModal.value.show = false
       sessionStorage.setItem('gdpr_sbloccato', 'true')
     } else {
-      gdprModal.value.error = 'Password errata'
+      gdprModal.value.error = 'Non autorizzato'
     }
   } catch(e) {
     gdprModal.value.error = 'Errore di verifica'
