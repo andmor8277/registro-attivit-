@@ -285,7 +285,7 @@ function apriSbloccoGdpr() {
 
 async function verificaPasswordGdpr() {
   try {
-    const res = await fetch('/api/auth/verify-gdpr', {
+    const res = await fetch(`/api/auth/verify-gdpr?categoria_id=${categoriaId}`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
     })

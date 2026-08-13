@@ -344,8 +344,19 @@ def cambia_password(uid: int, data: PasswordChange, current_user: Utente = Depen
     db.commit()
     return {"ok": True}
 @router.post("/verify-gdpr")
-def verify_gdpr(current_user: Utente = Depends(get_admin)):
-    return {"ok": True}
+def verify_gdpr(categoria_id: Optional[int] = None, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Admin può sempre sbloccare
+    if current_user.is_admin:
+        return {"ok": True}
+    # Mister può sbloccare solo se assegnato alla categoria richiesta
+    if categoria_id and current_user.ruolo == 'mister':
+        assegnato = db.query(UtenteCategoria).filter(
+            UtenteCategoria.utente_id == current_user.id,
+            UtenteCategoria.categoria_id == categoria_id
+        ).first()
+        if assegnato:
+            return {"ok": True}
+    raise HTTPException(status_code=403, detail="Non autorizzato")
 
 
 # ── Google OAuth ──
