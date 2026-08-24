@@ -1,196 +1,181 @@
 <template>
   <div class="home">
-    <header class="page-header">
-      <div class="header-top">
-        <div class="header-badge">
-          <span class="badge-dot"></span>
-          <span>{{ currentSeason }}</span>
-        </div>
-        <div v-if="isSuperAdmin" class="societa-switch">
-          <button class="btn-societa" @click="vaiSelezioneSocieta">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-              <path d="M7 16V4m0 0L3 8m4-4l4 4"/>
-              <path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
-            </svg>
-            {{ societaAttiva?.nome || 'Cambia Società' }}
-          </button>
-        </div>
+    <!-- Page head -->
+    <div class="home-head">
+      <div class="home-head-txt">
+        <h1 class="society-name">{{ societaAttiva?.nome || 'Benvenuto' }}</h1>
+        <p class="header-subtitle">Pannello di controllo · {{ oggiLabel }}</p>
       </div>
-      <h1 class="society-name">{{ societaAttiva?.nome || 'Benvenuto' }}</h1>
-      <p class="header-subtitle">Pannello di controllo</p>
-    </header>
-
-    <div v-if="canInfermeria && infortuniCount > 0" class="alert-strip" @click="router.push('/infermeria')">
-      <span class="alert-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-      </span>
-      <span class="alert-text"><strong>{{ infortuniCount }}</strong>&nbsp;{{ infortuniCount === 1 ? 'giocatore infortunato' : 'giocatori infortunati' }} — apri Infermeria</span>
-      <span class="alert-arrow">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </span>
+      <div class="home-head-actions">
+        <span class="season-pill">{{ currentSeason }}</span>
+        <button v-if="isSuperAdmin" class="btn-societa" @click="vaiSelezioneSocieta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M7 16V4m0 0L3 8m4-4l4 4"/>
+            <path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
+          </svg>
+          {{ societaAttiva?.nome_breve || 'Cambia Società' }}
+        </button>
+      </div>
     </div>
 
-    <section class="op-section">
-      <div class="section-header">
-        <div class="section-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-          </svg>
+    <div class="grid">
+      <!-- Oggi al campo -->
+      <section class="card span2">
+        <div class="card-h">
+          <h2>Oggi al campo</h2>
+          <span class="card-date">{{ oggiLabel }}</span>
         </div>
-        <div>
-          <h2 class="section-title">Allenamenti di oggi</h2>
-          <p class="section-subtitle">{{ oggiLabel }}</p>
+        <div class="card-body">
+          <div v-if="oggiCategorie.length" class="today-list">
+            <div v-for="cat in oggiCategorie" :key="cat.id" class="today-row">
+              <span class="chip-dot" :class="{ portieri: cat.is_portieri }"></span>
+              <span class="today-cat">{{ cat.nome }}</span>
+              <span class="chip-badge">{{ cat.is_portieri ? 'POR' : cat.anno }}</span>
+              <button class="btn-open" @click="apriRegistro(cat)">
+                Apri registro
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+          </div>
+          <p v-else class="empty-note">Nessun allenamento in programma oggi</p>
         </div>
-      </div>
+      </section>
 
-      <div class="panel today-panel">
-        <div v-if="oggiCategorie.length" class="today-list">
-          <div v-for="cat in oggiCategorie" :key="cat.id" class="today-row">
-            <span class="chip-dot" :class="{ portieri: cat.is_portieri }"></span>
-            <span class="today-cat">{{ cat.nome }}</span>
-            <span class="chip-badge">{{ cat.is_portieri ? 'POR' : cat.anno }}</span>
-            <button class="btn-open" @click="apriRegistro(cat)">
-              Apri registro
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      <!-- Prossima gara -->
+      <section class="card">
+        <div class="card-h">
+          <h2>Prossima gara</h2>
+          <span v-if="prossimaGara" class="pill pill-blue">{{ countdown }}</span>
+        </div>
+        <div class="card-body">
+          <div v-if="prossimaGara" class="match-box">
+            <div class="match-teams">
+              <span class="team">{{ prossimaGara.casa_fuori === 'fuori' ? (prossimaGara.avversario || 'TBD') : (societaAttiva?.nome_breve || 'Noi') }}</span>
+              <span class="match-vs">vs</span>
+              <span class="team">{{ prossimaGara.casa_fuori === 'fuori' ? (societaAttiva?.nome_breve || 'Noi') : (prossimaGara.avversario || 'TBD') }}</span>
+            </div>
+            <div class="match-meta">
+              <span class="meta-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                {{ dataGaraLabel }}
+              </span>
+              <span v-if="prossimaGara.ora" class="meta-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                {{ prossimaGara.ora.slice(0, 5) }}
+              </span>
+              <span v-if="prossimaGara.campo" class="meta-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                {{ prossimaGara.campo }}
+              </span>
+              <span class="pill pill-violet" v-if="categoriaGaraNome">{{ prossimaGara.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa' }} · {{ categoriaGaraNome }}</span>
+            </div>
+          </div>
+          <p v-else class="empty-note">Nessuna gara in programma</p>
+        </div>
+      </section>
+
+      <!-- Da controllare -->
+      <section class="card">
+        <div class="card-h">
+          <h2>Da controllare</h2>
+        </div>
+        <div class="card-body">
+          <div v-if="canInfermeria || canSegreteria" class="check-list">
+            <button v-if="canInfermeria && infortuniCount > 0" class="check-row" @click="router.push('/infermeria')">
+              <span class="check-ic red">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 21C7 17 3 13.5 3 9.5A5.5 5.5 0 0113.6 6H12a5.5 5.5 0 018 3.5c0 4-4 7.5-8 11.5z"/></svg>
+              </span>
+              <span class="check-label"><strong>{{ infortuniCount }}</strong>&nbsp;{{ infortuniCount === 1 ? 'giocatore infortunato' : 'giocatori infortunati' }}</span>
+              <svg class="check-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+            <button v-if="canSegreteria && certScaduti > 0" class="check-row" @click="router.push('/infermeria/certificati')">
+              <span class="check-ic amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M9 15l2 2 4-4"/></svg>
+              </span>
+              <span class="check-label"><strong>{{ certScaduti }}</strong>&nbsp;{{ certScaduti === 1 ? 'certificato scaduto' : 'certificati scaduti' }}</span>
+              <svg class="check-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+            <p v-if="!((canInfermeria && infortuniCount > 0) || (canSegreteria && certScaduti > 0))" class="empty-note">Tutto in ordine</p>
+          </div>
+          <p v-else class="empty-note">Nessuna voce da controllare</p>
+        </div>
+      </section>
+
+      <!-- Azioni rapide -->
+      <section class="card span2">
+        <div class="card-h">
+          <h2>Azioni rapide</h2>
+        </div>
+        <div class="card-body">
+          <div class="quick-grid">
+            <button class="quick" @click="apriRegistroPrimo">
+              <span class="quick-ic red">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5M14 16l2 2 3-3"/></svg>
+              </span>
+              <span>Apri registro</span>
+            </button>
+            <button class="quick" @click="vaiConvocazioni">
+              <span class="quick-ic blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+              </span>
+              <span>Convocazioni</span>
+            </button>
+            <button class="quick" @click="router.push('/allenatori')">
+              <span class="quick-ic violet">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 15.3c2.7.4 4.5 2.2 4.5 4.7"/></svg>
+              </span>
+              <span>Gestione squadre</span>
+            </button>
+            <button v-if="canSegreteria" class="quick" @click="router.push('/segreteria')">
+              <span class="quick-ic green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M17 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V4a2 2 0 00-2-2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+              </span>
+              <span>Segreteria</span>
+            </button>
+            <button v-if="canInfermeria" class="quick" @click="router.push('/infermeria')">
+              <span class="quick-ic amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M12 9v8M8 13h8"/></svg>
+              </span>
+              <span>Infermeria</span>
             </button>
           </div>
         </div>
-        <p v-else class="empty-note">Nessun allenamento in programma oggi</p>
-      </div>
-    </section>
+      </section>
 
-    <section class="op-section">
-      <div class="section-header">
-        <div class="section-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
+      <!-- Programmazione settimana -->
+      <section class="card span2">
+        <div class="card-h">
+          <h2>Programmazione settimana</h2>
+          <span class="card-date">Tutte le categorie</span>
         </div>
-        <div>
-          <h2 class="section-title">Programmazione settimana</h2>
-          <p class="section-subtitle">Tutte le categorie, giorno per giorno</p>
-        </div>
-      </div>
-
-      <div class="panel week-panel">
-        <div
-          v-for="giorno in planningSettimana"
-          :key="giorno.val"
-          class="week-row"
-          :class="{ today: isToday(giorno.val), empty: giorno.categorie.length === 0 }"
-        >
-          <span class="day-name">{{ giorno.nome }}<span v-if="isToday(giorno.val)" class="today-tag">oggi</span></span>
-          <div class="chips">
-            <span
-              v-for="cat in giorno.categorie"
-              :key="cat.id"
-              class="cat-chip"
-              :class="{ portieri: cat.is_portieri }"
-              @click="apriRegistro(cat)"
+        <div class="card-body">
+          <div class="week-list">
+            <div
+              v-for="giorno in planningSettimana"
+              :key="giorno.val"
+              class="week-row"
+              :class="{ today: isToday(giorno.val), empty: giorno.categorie.length === 0 }"
             >
-              <span class="chip-dot" :class="{ portieri: cat.is_portieri }"></span>
-              {{ cat.nome }}
-              <span class="chip-badge">{{ cat.is_portieri ? 'POR' : cat.anno }}</span>
-            </span>
-            <span v-if="giorno.categorie.length === 0" class="no-cats">—</span>
+              <span class="day-name">{{ giorno.nome }}<span v-if="isToday(giorno.val)" class="today-tag">oggi</span></span>
+              <div class="chips">
+                <span
+                  v-for="cat in giorno.categorie"
+                  :key="cat.id"
+                  class="cat-chip"
+                  :class="{ portieri: cat.is_portieri }"
+                  @click="apriRegistro(cat)"
+                >
+                  <span class="chip-dot" :class="{ portieri: cat.is_portieri }"></span>
+                  {{ cat.nome }}
+                  <span class="chip-badge">{{ cat.is_portieri ? 'POR' : cat.anno }}</span>
+                </span>
+                <span v-if="giorno.categorie.length === 0" class="no-cats">—</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
-
-    <section class="op-section">
-      <div class="section-header">
-        <div class="section-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
-            <rect x="3" y="3" width="7" height="7" rx="1"/>
-            <rect x="14" y="3" width="7" height="7" rx="1"/>
-            <rect x="3" y="14" width="7" height="7" rx="1"/>
-            <rect x="14" y="14" width="7" height="7" rx="1"/>
-          </svg>
-        </div>
-        <div>
-          <h2 class="section-title">Sezioni</h2>
-          <p class="section-subtitle">Naviga per area</p>
-        </div>
-      </div>
-
-      <div class="sections-grid">
-        <div class="section-card" @click="router.push('/allenatori')">
-          <div class="card-icon-wrap icon-red">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 6v6l4 2"/>
-            </svg>
-          </div>
-          <div class="card-text">
-            <h3 class="card-title">Gestione Squadre</h3>
-            <p class="card-desc">Allenamenti · Categorie · Presenze</p>
-          </div>
-          <div class="card-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </div>
-        </div>
-
-        <div v-if="utenteAttivo?.ruolo === 'segreteria' || utenteAttivo?.is_admin" class="section-card" @click="router.push('/segreteria')">
-          <div class="card-icon-wrap icon-purple">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24">
-              <path d="M17 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V4a2 2 0 00-2-2z"/>
-              <path d="M12 6v4"/><path d="M12 14h.01"/>
-            </svg>
-          </div>
-          <div class="card-text">
-            <h3 class="card-title">Gestione Segreteria</h3>
-            <p class="card-desc">Tesseramenti · Documenti · Rate</p>
-          </div>
-          <div class="card-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </div>
-        </div>
-
-        <div v-if="utenteAttivo?.is_admin" class="section-card" @click="router.push('/responsabili')">
-          <div class="card-icon-wrap icon-amber">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24">
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-              <path d="M16 3.13a4 4 0 010 7.75"/>
-            </svg>
-          </div>
-          <div class="card-text">
-            <h3 class="card-title">Gestione Responsabili</h3>
-            <p class="card-desc">Mister · Dirigenti · Partite</p>
-          </div>
-          <div class="card-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </div>
-        </div>
-
-        <div v-if="['infermeria', 'admin', 'super_admin'].includes(utenteAttivo?.ruolo)" class="section-card" @click="router.push('/infermeria')">
-          <div class="card-icon-wrap icon-green">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24">
-              <path d="M9 12l2 2 4-4"/>
-              <path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/>
-              <path d="M12 6v6"/>
-            </svg>
-          </div>
-          <div class="card-text">
-            <h3 class="card-title">Gestione Infermeria</h3>
-            <p class="card-desc">Certificati medici · Infortuni</p>
-          </div>
-          <div class="card-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </div>
-        </div>
-      </div>
-    </section>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -198,15 +183,18 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useStore } from "../store.js"
-import { getSocieta, getAllCategorie, getInfortuni } from "../api/index.js"
+import { getSocieta, getAllCategorie, getInfortuni, getPartite, getPersone } from "../api/index.js"
 
 const router = useRouter()
 const { utenteAttivo, societaAttiva, setSocietaAttiva } = useStore()
 const isSuperAdmin = computed(() => utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'super_admin')
 const canInfermeria = computed(() => ['infermeria', 'admin', 'super_admin'].includes(utenteAttivo.value?.ruolo))
+const canSegreteria = computed(() => ['segreteria', 'admin', 'super_admin'].includes(utenteAttivo.value?.ruolo))
 
 const allCategories = ref([])
+const partite = ref([])
 const infortuniCount = ref(0)
+const certScaduti = ref(0)
 
 const m = new Date().getMonth() + 1
 const currentSeason = ref(`${m >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1}/${m >= 8 ? new Date().getFullYear() + 1 : new Date().getFullYear()}`)
@@ -254,8 +242,65 @@ function apriRegistro(cat) {
   router.push("/scelta/" + cat.id)
 }
 
+function apriRegistroPrimo() {
+  const cat = allCategories.value.find(c => c.parent_id !== null) || allCategories.value[0]
+  if (cat) router.push("/scelta/" + cat.id)
+  else router.push("/allenatori")
+}
+
+function vaiConvocazioni() {
+  const cat = allCategories.value.find(c => c.parent_id !== null) || allCategories.value[0]
+  if (cat) router.push("/convocazioni/" + cat.id)
+  else router.push("/allenatori")
+}
+
 function vaiSelezioneSocieta() {
   router.push('/login')
+}
+
+// ── Prossima gara ──
+const prossimaGara = computed(() => {
+  const now = new Date()
+  const future = partite.value
+    .filter(p => p.data_partite && !p.risultato)
+    .map(p => {
+      const d = new Date(p.data_partite + 'T' + (p.ora ? p.ora.slice(0, 5) : '00:00'))
+      return { ...p, _dt: isNaN(d) ? null : d }
+    })
+    .filter(p => p._dt && p._dt > now)
+  if (!future.length) return null
+  future.sort((a, b) => a._dt - b._dt)
+  return future[0]
+})
+
+const categoriaGaraNome = computed(() => {
+  if (!prossimaGara.value) return ''
+  const cat = allCategories.value.find(c => c.id === prossimaGara.value.categoria_id)
+  return cat?.nome || ''
+})
+
+const dataGaraLabel = computed(() => {
+  if (!prossimaGara.value) return ''
+  const d = new Date(prossimaGara.value.data_partite)
+  return d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
+})
+
+const countdown = computed(() => {
+  if (!prossimaGara.value?._dt) return ''
+  const diff = prossimaGara.value._dt - new Date()
+  const days = Math.floor(diff / 86400000)
+  const hours = Math.floor((diff % 86400000) / 3600000)
+  if (days > 0) return `Tra ${days}g ${hours}h`
+  if (hours > 0) return `Tra ${hours}h`
+  return 'Oggi'
+})
+
+// ── Certificati scaduti ──
+function isCertScaduto(dateStr) {
+  if (!dateStr) return false
+  const d = new Date(dateStr)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  return !isNaN(d) && d < today
 }
 
 async function loadPlanning() {
@@ -270,6 +315,15 @@ async function loadPlanning() {
   }
 }
 
+async function loadPartite() {
+  try {
+    const res = await getPartite()
+    partite.value = res.data || []
+  } catch (e) {
+    console.error('Errore caricamento partite:', e)
+  }
+}
+
 async function loadInfortuni() {
   if (!canInfermeria.value) return
   try {
@@ -277,6 +331,17 @@ async function loadInfortuni() {
     infortuniCount.value = (res.data || []).length
   } catch (e) {
     console.error('Errore caricamento infortuni:', e)
+  }
+}
+
+async function loadCertificati() {
+  if (!canSegreteria.value) return
+  try {
+    const res = await getPersone()
+    const list = res.data || []
+    certScaduti.value = list.filter(p => isCertScaduto(p.scadenza_certificato)).length
+  } catch (e) {
+    console.error('Errore caricamento certificati:', e)
   }
 }
 
@@ -296,60 +361,73 @@ onMounted(async () => {
   }
 
   loadPlanning()
+  loadPartite()
   loadInfortuni()
+  loadCertificati()
 })
 </script>
 
 <style scoped>
 .home {
   position: relative;
-  padding: 2rem 2rem 4rem;
-  max-width: 1080px;
+  padding: 1.25rem 1.5rem 3rem;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
-/* ── Header ── */
-.page-header {
-  margin-bottom: 1.5rem;
-}
-
-.header-top {
+/* ── Head ── */
+.home-head {
   display: flex;
+  align-items: flex-end;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 1.1rem;
 }
 
-.header-badge {
+.society-name {
+  font-size: clamp(1.35rem, 2.6vw, 1.7rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+.header-subtitle {
+  font-size: 0.86rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin-top: 3px;
+}
+
+.home-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.season-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.3rem 0.8rem;
-  background: rgba(220, 38, 38, 0.07);
-  border: 1px solid rgba(220, 38, 38, 0.22);
-  border-radius: 100px;
+  gap: 7px;
   font-family: var(--font-mono);
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--color-primary);
-}
-
-.badge-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-primary);
+  color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
+  border-radius: 999px;
+  padding: 5px 12px;
 }
 
 .btn-societa {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.45rem 0.9rem;
+  padding: 0.5rem 0.9rem;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-strong);
   border-radius: 10px;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
@@ -358,194 +436,317 @@ onMounted(async () => {
 
 .btn-societa:hover {
   border-color: var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-primary-dark);
 }
 
-.society-name {
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--color-text);
-  line-height: 1.15;
-  margin-bottom: 0.15rem;
+/* ── Grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 
-.header-subtitle {
-  font-size: 0.95rem;
-  color: var(--color-text-muted);
-  font-weight: 500;
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: 2fr 1fr;
+  }
+  .span2 {
+    grid-column: span 2;
+  }
 }
 
-/* ── Alert operativi ── */
-.alert-strip {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.8rem 1rem;
-  margin-bottom: 1.25rem;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-radius: 12px;
-  color: #92400e;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
-}
-
-.alert-strip:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.alert-strip strong {
-  font-weight: 800;
-}
-
-.alert-icon {
-  display: flex;
-  align-items: center;
-  color: #d97706;
-  flex-shrink: 0;
-}
-
-.alert-arrow {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-/* ── Sezioni operative ── */
-.op-section {
-  margin-bottom: 2rem;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.85rem;
-}
-
-.section-icon {
-  width: 38px;
-  height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 10px;
-  color: var(--color-primary);
-  flex-shrink: 0;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  min-width: 0;
 }
 
-.section-title {
-  font-size: 1.05rem;
+.card-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.card-h h2 {
+  font-size: 0.95rem;
   font-weight: 700;
-  color: var(--color-text);
   letter-spacing: -0.01em;
 }
 
-.section-subtitle {
-  font-size: 0.78rem;
+.card-date {
+  font-size: 0.76rem;
   color: var(--color-text-muted);
-  margin-top: 0.05rem;
+  font-weight: 600;
 }
 
-.panel {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  overflow: hidden;
+.card-body {
+  padding: 16px 18px;
 }
 
-/* Oggi */
+.empty-note {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  padding: 6px 0;
+}
+
+/* ── Oggi al campo ── */
 .today-list {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 .today-row {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.8rem 1rem;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.today-row:last-child {
-  border-bottom: none;
-}
-
-.today-cat {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.chip-badge {
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  font-weight: 700;
-  padding: 0.12rem 0.4rem;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-light);
-  color: var(--color-text-secondary);
-  border-radius: 5px;
-  letter-spacing: 0.04em;
-}
-
-.btn-open {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 0.85rem;
-  background: var(--color-primary);
-  border: none;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
-.btn-open:hover {
-  background: var(--color-primary-dark);
-}
-
-.empty-note {
-  padding: 1.25rem 1rem;
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
+  gap: 10px;
+  padding: 11px 13px;
+  background: var(--color-slate-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
 }
 
 .chip-dot {
-  width: 7px;
-  height: 7px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: var(--color-primary);
   flex-shrink: 0;
 }
 
 .chip-dot.portieri {
-  background: var(--color-accent);
+  background: var(--color-violet);
 }
 
-/* Settimana */
+.today-cat {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.chip-badge {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+
+.btn-open {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 8px 13px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--transition-fast), transform 0.1s ease;
+}
+
+.btn-open:hover {
+  background: var(--color-primary-dark);
+}
+
+.btn-open:active {
+  transform: scale(0.97);
+}
+
+/* ── Prossima gara ── */
+.match-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.match-teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.team {
+  flex: 1;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.match-vs {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: var(--color-slate-soft);
+  border-radius: 999px;
+  padding: 3px 9px;
+  flex-shrink: 0;
+}
+
+.match-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+/* ── Da controllare ── */
+.check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+  padding: 11px 13px;
+  background: var(--color-slate-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.check-row:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-border-light);
+}
+
+.check-ic {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.check-ic.red {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+.check-ic.amber {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.check-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.check-label strong {
+  font-weight: 800;
+}
+
+.check-arrow {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Azioni rapide ── */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (min-width: 600px) {
+  .quick-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .quick-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.quick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  padding: 15px 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 11px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast), transform 0.1s ease;
+}
+
+.quick:hover {
+  border-color: var(--color-text);
+  background: var(--color-slate-soft);
+}
+
+.quick:active {
+  transform: scale(0.98);
+}
+
+.quick-ic {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quick-ic.red { background: var(--color-primary-soft); color: var(--color-primary-dark); }
+.quick-ic.blue { background: var(--color-info-soft); color: var(--color-info); }
+.quick-ic.green { background: var(--color-success-soft); color: var(--color-success); }
+.quick-ic.amber { background: var(--color-warning-soft); color: var(--color-warning); }
+.quick-ic.violet { background: var(--color-violet-soft); color: var(--color-violet); }
+
+/* ── Programmazione settimana ── */
 .week-list {
   display: flex;
   flex-direction: column;
 }
 
 .week-row {
-  display: flex;
-  align-items: baseline;
-  gap: 1rem;
-  padding: 0.65rem 1rem;
-  border-bottom: 1px solid var(--color-border-light);
+  display: grid;
+  grid-template-columns: 108px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .week-row:last-child {
@@ -553,177 +754,81 @@ onMounted(async () => {
 }
 
 .week-row.today {
-  background: rgba(220, 38, 38, 0.03);
-  box-shadow: inset 3px 0 0 var(--color-primary);
+  background: var(--color-primary-soft);
+  border-radius: 9px;
+  padding: 10px 8px;
+  border-bottom-color: transparent;
 }
 
 .week-row.empty {
-  opacity: 0.5;
+  opacity: 0.55;
 }
 
 .day-name {
-  width: 96px;
-  flex-shrink: 0;
-  font-size: 0.8rem;
   font-weight: 700;
+  font-size: 0.84rem;
   color: var(--color-text-secondary);
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 6px;
 }
 
 .week-row.today .day-name {
-  color: var(--color-primary);
+  color: var(--color-primary-dark);
 }
 
 .today-tag {
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  font-weight: 700;
+  font-size: 0.6rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 0.1rem 0.35rem;
-  background: var(--color-primary);
+  letter-spacing: 0.04em;
   color: #fff;
-  border-radius: 4px;
+  background: var(--color-primary);
+  border-radius: 999px;
+  padding: 2px 7px;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 6px;
 }
 
 .cat-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.32rem 0.6rem;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-light);
-  border-radius: 8px;
+  gap: 6px;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--color-text);
+  background: var(--color-slate-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 5px 11px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
 .cat-chip:hover {
   border-color: var(--color-primary);
-  background: rgba(220, 38, 38, 0.05);
-  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.cat-chip .chip-badge {
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
 .no-cats {
+  color: var(--color-text-muted);
   font-size: 0.8rem;
-  color: var(--color-text-muted);
 }
 
-/* Sezioni */
-.sections-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 0.75rem;
-}
-
-.section-card {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  padding: 1.05rem 1.1rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all var(--transition-base);
-}
-
-.section-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--color-text-muted);
-  box-shadow: var(--shadow-md);
-}
-
-.card-icon-wrap {
-  width: 46px;
-  height: 46px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 11px;
-  flex-shrink: 0;
-}
-
-.icon-red { background: rgba(220, 38, 38, 0.08); color: var(--color-primary); }
-.icon-purple { background: rgba(124, 58, 237, 0.08); color: #7c3aed; }
-.icon-amber { background: rgba(217, 119, 6, 0.1); color: #b45309; }
-.icon-green { background: rgba(22, 163, 74, 0.09); color: #15803d; }
-
-.card-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.card-title {
-  font-size: 0.98rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.card-desc {
-  font-size: 0.74rem;
-  color: var(--color-text-muted);
-  margin-top: 0.1rem;
-}
-
-.card-arrow {
-  color: var(--color-text-muted);
-  flex-shrink: 0;
-  opacity: 0;
-  transform: translateX(-4px);
-  transition: all var(--transition-base);
-}
-
-.section-card:hover .card-arrow {
-  opacity: 1;
-  transform: translateX(0);
-  color: var(--color-primary);
-}
-
-/* ── Responsive ── */
-@media (max-width: 768px) {
-  .home {
-    padding: 1.25rem 0.75rem 2rem;
-  }
-
-  .society-name {
-    font-size: 1.35rem;
-  }
-
-  .header-top {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .today-row {
-    flex-wrap: wrap;
-  }
-
-  .btn-open {
-    width: 100%;
-    justify-content: center;
-    margin-left: 0;
-  }
-
+@media (max-width: 600px) {
   .week-row {
-    flex-direction: column;
-    gap: 0.4rem;
-  }
-
-  .day-name {
-    width: auto;
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 }
 </style>
