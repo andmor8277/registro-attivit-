@@ -238,25 +238,28 @@
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
           <polyline points="9 22 9 12 15 12 15 22"/>
         </svg>
-        <span>Home</span>
+        <span>Panoramica</span>
       </router-link>
       <button v-else class="bottom-nav-item" @click="vaiSelezioneSocieta">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
           <polyline points="9 22 9 12 15 12 15 22"/>
         </svg>
-        <span>Home</span>
+        <span>Panoramica</span>
       </button>
-      <a href="/guida.html" target="_blank" rel="noopener,noreferrer" class="bottom-nav-item">
+      <button class="bottom-nav-item" :class="{ active: isActive(['/scelta', '/registro', '/dati']) }" @click="vaiPaginaCategoria('scelta')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
+          <rect x="3" y="4" width="18" height="17" rx="2"/>
+          <path d="M3 9h18M8 2v4M16 2v4"/>
         </svg>
-        <span>Guida</span>
-      </a>
+        <span>Presenze</span>
+      </button>
+      <button class="bottom-nav-item" :class="{ active: isActive(['/convocazioni']) }" @click="vaiPaginaCategoria('convocazioni')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 6h16M4 12h16M4 18h10"/>
+        </svg>
+        <span>Convocazioni</span>
+      </button>
       <button @click="mobileMenuOpen = true" class="bottom-nav-item">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="3" y1="6" x2="21" y2="6"/>
@@ -1122,7 +1125,7 @@ watch(societaAttiva, async (newVal) => {
   display: none;
   background: transparent;
   border: none;
-  color: white;
+  color: var(--color-text);
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 8px;
@@ -1130,7 +1133,7 @@ watch(societaAttiva, async (newVal) => {
 }
 
 .hamburger:hover {
-  background: rgba(255,255,255,0.1);
+  background: var(--color-slate-soft);
 }
 
 .hamburger svg {
