@@ -1014,10 +1014,10 @@ onMounted(() => {
 
 .societa-select {
   padding: 0.5rem 1rem;
-  background: #1a1a1a;
+  background: var(--color-surface);
   border: 2px solid var(--color-primary);
   border-radius: var(--radius-md);
-  color: #fff;
+  color: var(--color-text);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
@@ -1077,11 +1077,11 @@ onMounted(() => {
 }
 
 .invito-inputs input {
-  background: #111;
-  border: 1px solid #333;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.6rem 1rem;
-  color: #fff;
+  color: var(--color-text);
   font-size: 0.9rem;
   flex: 1;
   min-width: 200px;
@@ -1094,12 +1094,12 @@ onMounted(() => {
 
 .inviti-list {
   margin-top: 1.5rem;
-  border-top: 1px solid #222;
+  border-top: 1px solid var(--color-border);
   padding-top: 1rem;
 }
 
 .inviti-list h4 {
-  color: #888;
+  color: var(--color-text-muted);
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1111,7 +1111,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 0.6rem 0;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .invito-info {
@@ -1122,7 +1122,7 @@ onMounted(() => {
 }
 
 .invito-email {
-  color: #fff;
+  color: var(--color-text);
   font-weight: 500;
 }
 
@@ -1133,12 +1133,12 @@ onMounted(() => {
 }
 
 .invito-societa {
-  color: #666;
+  color: var(--color-text-muted);
   font-size: 0.85rem;
 }
 
 .invito-date {
-  color: #555;
+  color: var(--color-text-muted);
   font-size: 0.8rem;
 }
 
@@ -1150,10 +1150,10 @@ onMounted(() => {
 .btn-copia,
 .btn-elimina {
   background: transparent;
-  border: 1px solid #333;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 0.4rem;
-  color: #888;
+  color: var(--color-text-muted);
   cursor: pointer;
   transition: all 0.2s;
   display: flex;

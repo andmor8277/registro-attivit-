@@ -777,7 +777,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 12px;
@@ -788,7 +788,7 @@ onMounted(() => {
 }
 
 .btn-back:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-slate-soft);
   border-color: var(--color-primary);
   color: var(--color-text);
 }
@@ -825,7 +825,7 @@ onMounted(() => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 12px;
@@ -838,7 +838,7 @@ onMounted(() => {
 }
 
 .btn-societa:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-slate-soft);
   border-color: var(--color-primary);
   color: var(--color-text);
 }
@@ -917,7 +917,7 @@ onMounted(() => {
 
 .planning-day {
   position: relative;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 16px;
@@ -930,7 +930,7 @@ onMounted(() => {
 }
 
 .planning-day:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--color-border-strong);
   transform: translateY(-2px);
 }
 
@@ -1003,7 +1003,7 @@ onMounted(() => {
   align-items: center;
   gap: 0.375rem;
   padding: 0.4rem 0.5rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   cursor: pointer;
@@ -1046,7 +1046,7 @@ onMounted(() => {
   font-size: 0.5625rem;
   font-weight: 700;
   padding: 0.1rem 0.375rem;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-surface);
   color: var(--color-text-secondary);
   border-radius: 4px;
   letter-spacing: 0.05em;
@@ -1162,7 +1162,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 20px;
@@ -1269,7 +1269,7 @@ onMounted(() => {
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding: 1rem 1.5rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 12px;
   flex-wrap: wrap;
@@ -1378,7 +1378,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   color: var(--color-text-muted);
@@ -1387,8 +1387,8 @@ onMounted(() => {
 }
 
 .btn-action:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--color-slate-soft);
+  border-color: var(--color-border-strong);
   color: var(--color-text);
 }
 
@@ -1444,7 +1444,7 @@ onMounted(() => {
   font-size: 0.625rem;
   font-weight: 600;
   padding: 0.15rem 0.4rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   border-radius: 4px;
   color: var(--color-text-secondary);
   letter-spacing: 0.04em;
@@ -1516,7 +1516,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 16px;
   transition: all var(--transition-base);
@@ -1618,7 +1618,7 @@ onMounted(() => {
   border-radius: var(--radius-md);
   font-size: 0.875rem;
   color: var(--color-text);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   transition: all var(--transition-fast);
   font-family: inherit;
 }
@@ -1627,12 +1627,12 @@ onMounted(() => {
 .form-group select:focus {
   outline: none;
   border-color: var(--color-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
 }
 
 .form-group select option {
-  background: #1a1a1a;
-  color: #ffffff;
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .giorni-grid {
@@ -1645,7 +1645,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   padding: 0.4rem 0.75rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   cursor: pointer;
@@ -1680,7 +1680,7 @@ onMounted(() => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.75rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   cursor: pointer;
@@ -1829,7 +1829,7 @@ onMounted(() => {
 
 .btn-secondary {
   padding: 0.625rem 1.25rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
@@ -1841,7 +1841,7 @@ onMounted(() => {
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-slate-soft);
   color: var(--color-text);
 }
 

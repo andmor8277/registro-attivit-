@@ -268,7 +268,7 @@ async function setNote(row, value) {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.4rem 0.4rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 100px;
@@ -281,7 +281,7 @@ async function setNote(row, value) {
 }
 
 .btn-back-pill svg {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
   border-radius: 50%;
   width: 24px;
   height: 24px;
@@ -289,8 +289,8 @@ async function setNote(row, value) {
 }
 
 .btn-back-pill:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--color-slate-soft);
+  border-color: var(--color-border-strong);
   color: var(--color-text);
 }
 
@@ -382,7 +382,7 @@ async function setNote(row, value) {
   position: relative;
   z-index: 1;
   overflow-x: auto;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 20px;
@@ -403,7 +403,7 @@ async function setNote(row, value) {
   letter-spacing: 0.04em;
   color: var(--color-text-muted);
   border-bottom: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-surface);
   text-align: center;
   white-space: nowrap;
   position: sticky;
@@ -426,7 +426,7 @@ async function setNote(row, value) {
 
 .val-table td {
   padding: 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--color-border);
   text-align: center;
   vertical-align: middle;
 }
@@ -471,7 +471,7 @@ async function setNote(row, value) {
 }
 
 .rating-btn:hover {
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--color-border-strong);
   color: var(--color-text);
 }
 
@@ -512,7 +512,7 @@ async function setNote(row, value) {
 .note-input:focus {
   outline: none;
   border-color: var(--color-border);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
 }
 
 .note-input::placeholder {
@@ -521,11 +521,11 @@ async function setNote(row, value) {
 }
 
 .row-empty:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-slate-soft);
 }
 
 .val-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-slate-soft);
 }
 
 .empty-state {

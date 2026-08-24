@@ -1843,7 +1843,7 @@ onUnmounted(() => {
 .catalogo-item:hover { border-color: var(--color-primary); background: var(--color-bg); }
 .catalogo-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
 .catalogo-item-title { color: var(--color-text); font-weight: 600; font-size: 1rem; }
-.catalogo-item-focus { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; background: #374151; color: var(--color-text); }
+.catalogo-item-focus { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; background: #374151; color: #fff; }
 .catalogo-item-focus.focus-tecnica { background: #3b82f6; }
 .catalogo-item-focus.focus-tattica { background: #8b5cf6; }
 .catalogo-item-focus.focus-fisico { background: #ef4444; }

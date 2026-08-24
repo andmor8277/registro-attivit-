@@ -732,7 +732,7 @@ watch([anno, mese], async () => {
   align-items: center;
   gap: 1rem;
   padding: 0.5rem 0.5rem 0.5rem 1.25rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 100px;
@@ -778,7 +778,7 @@ watch([anno, mese], async () => {
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   padding: 1rem 1.25rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 16px;

@@ -733,7 +733,7 @@ function selezionaCategoria(cat) {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.4rem 0.4rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 100px;
@@ -746,7 +746,7 @@ function selezionaCategoria(cat) {
 }
 
 .btn-back-pill svg {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
   border-radius: 50%;
   width: 24px;
   height: 24px;
@@ -754,8 +754,8 @@ function selezionaCategoria(cat) {
 }
 
 .btn-back-pill:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--color-slate-soft);
+  border-color: var(--color-border-strong);
   color: var(--color-text);
 }
 
@@ -830,7 +830,7 @@ function selezionaCategoria(cat) {
   flex-direction: column;
   gap: 0.5rem;
   padding: 1.75rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 20px;
@@ -957,7 +957,7 @@ function selezionaCategoria(cat) {
 
 /* ── Archived cards ── */
 .scelta-card.archived-cat {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-surface);
 }
 
 .scelta-card.archived-cat::before {
@@ -1121,7 +1121,7 @@ function selezionaCategoria(cat) {
 
 .planning-day {
   position: relative;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 16px;
@@ -1134,7 +1134,7 @@ function selezionaCategoria(cat) {
 }
 
 .planning-day:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--color-border-strong);
   transform: translateY(-2px);
 }
 
@@ -1207,7 +1207,7 @@ function selezionaCategoria(cat) {
   align-items: center;
   gap: 0.375rem;
   padding: 0.4rem 0.5rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   cursor: pointer;
@@ -1250,7 +1250,7 @@ function selezionaCategoria(cat) {
   font-size: 0.5625rem;
   font-weight: 700;
   padding: 0.1rem 0.375rem;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-surface);
   color: var(--color-text-secondary);
   border-radius: 4px;
   letter-spacing: 0.05em;
@@ -1403,8 +1403,8 @@ function selezionaCategoria(cat) {
   z-index: 1000;
 }
 .modal {
-  background: #1e1e2e;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 24px;
   width: 90%;
@@ -1419,19 +1419,19 @@ function selezionaCategoria(cat) {
   margin-bottom: 16px;
 }
 .modal-header h3 {
-  color: #e5e7eb;
+  color: var(--color-text);
   font-size: 1rem;
   margin: 0;
 }
 .modal-close {
   background: none;
   border: none;
-  color: #9ca3af;
+  color: var(--color-text-muted);
   cursor: pointer;
   padding: 4px;
 }
 .modal-close:hover {
-  color: #e5e7eb;
+  color: var(--color-text);
 }
 .modal-body {
   display: flex;
@@ -1446,16 +1446,16 @@ function selezionaCategoria(cat) {
 .form-group label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--color-text-secondary);
 }
 .form-group input,
 .form-group select,
 .form-group textarea {
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
-  color: #e5e7eb;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
   font-size: 0.85rem;
   font-family: inherit;
 }
@@ -1489,15 +1489,15 @@ function selezionaCategoria(cat) {
 .btn-secondary {
   padding: 8px 16px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #d1d5db;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--color-slate-soft);
 }
 .evento-delete-row {
   text-align: right;

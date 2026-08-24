@@ -556,7 +556,7 @@ onMounted(async () => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.4rem 0.4rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 100px;
@@ -569,7 +569,7 @@ onMounted(async () => {
 }
 
 .btn-back-pill svg {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
   border-radius: 50%;
   width: 24px;
   height: 24px;
@@ -577,8 +577,8 @@ onMounted(async () => {
 }
 
 .btn-back-pill:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--color-slate-soft);
+  border-color: var(--color-border-strong);
   color: var(--color-text);
 }
 
@@ -594,7 +594,7 @@ onMounted(async () => {
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 50%;
   color: var(--color-text-secondary);
@@ -704,7 +704,7 @@ onMounted(async () => {
   border-radius: 12px;
   font-size: 0.875rem;
   color: var(--color-text);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   transition: all var(--transition-fast);
 }
@@ -723,7 +723,7 @@ onMounted(async () => {
   border-radius: 12px;
   font-size: 0.875rem;
   color: var(--color-text);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -740,7 +740,7 @@ onMounted(async () => {
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--color-border);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
 }
 
@@ -753,13 +753,13 @@ onMounted(async () => {
 }
 
 .tabella-giocatori th {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   color: var(--color-text-secondary);
   padding: 0.75rem 0.5rem;
   text-align: left;
   font-weight: 600;
   white-space: nowrap;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--color-border);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -767,14 +767,14 @@ onMounted(async () => {
 
 .tabella-giocatori td {
   padding: 0.6rem 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--color-border);
   color: var(--color-text);
 }
 
 tr:last-child td { border-bottom: none; }
 
 .tabella-giocatori tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-slate-soft);
 }
 
 .tabella-giocatori tr.row-scad {
@@ -870,7 +870,7 @@ tr:last-child td { border-bottom: none; }
 .cell-action { width: 50px; text-align: center; }
 
 .btn-modifica {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   cursor: pointer;
   font-size: 0.875rem;
@@ -985,7 +985,7 @@ tr:last-child td { border-bottom: none; }
   border-radius: 10px;
   font-size: 0.875rem;
   box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   color: var(--color-text);
   transition: all var(--transition-fast);
 }
@@ -1032,7 +1032,7 @@ tr:last-child td { border-bottom: none; }
   padding: 0.5rem 1rem;
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   color: var(--color-text-secondary);
   cursor: pointer;
   font-size: 0.8125rem;
@@ -1041,7 +1041,7 @@ tr:last-child td { border-bottom: none; }
 }
 
 .btn-annulla:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-slate-soft);
 }
 
 .btn-salva {
@@ -1076,12 +1076,12 @@ tr:last-child td { border-bottom: none; }
   border: 1px solid var(--color-border);
   border-radius: 10px;
   margin-bottom: 0.5rem;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-surface);
   transition: all var(--transition-fast);
 }
 
 .gruppo-row:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-slate-soft);
 }
 
 .gruppo-nome {
@@ -1104,7 +1104,7 @@ tr:last-child td { border-bottom: none; }
   height: 28px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   color: var(--color-text-muted);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -1135,7 +1135,7 @@ tr:last-child td { border-bottom: none; }
   border: 1px solid var(--color-border);
   border-radius: 10px;
   font-size: 0.875rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   color: var(--color-text);
   transition: all var(--transition-fast);
 }
