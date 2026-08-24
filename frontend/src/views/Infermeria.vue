@@ -219,7 +219,7 @@ onMounted(async () => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.4rem 0.4rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 100px;
@@ -232,7 +232,7 @@ onMounted(async () => {
 }
 
 .btn-back-pill svg {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
   border-radius: 50%;
   width: 24px;
   height: 24px;
@@ -240,8 +240,8 @@ onMounted(async () => {
 }
 
 .btn-back-pill:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--color-slate-soft);
+  border-color: var(--color-border-strong);
   color: var(--color-text);
 }
 
@@ -312,7 +312,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: 0.75rem;
   padding: 1.75rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 20px;

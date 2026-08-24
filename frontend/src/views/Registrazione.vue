@@ -197,13 +197,13 @@ async function goHomeByRole(user) {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: #0a0a0a;
+  background: var(--color-bg);
   padding: 2rem;
 }
 
 .registrazione-card {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 2.5rem;
   max-width: 520px;
@@ -222,19 +222,19 @@ async function goHomeByRole(user) {
 }
 
 .card-header h1 {
-  color: #fff;
+  color: var(--color-text);
   font-size: 1.5rem;
   margin-bottom: 0.5rem;
 }
 
 .subtitle {
-  color: #888;
+  color: var(--color-text-muted);
   font-size: 0.9rem;
   margin: 0.25rem 0;
 }
 
 .subtitle strong {
-  color: #ccc;
+  color: var(--color-text);
 }
 
 .form {
@@ -260,17 +260,17 @@ async function goHomeByRole(user) {
 }
 
 .form-group label {
-  color: #aaa;
+  color: var(--color-text-secondary);
   font-size: 0.85rem;
   font-weight: 500;
 }
 
 .form-group input {
-  background: #111;
-  border: 1px solid #333;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.75rem 1rem;
-  color: #fff;
+  color: var(--color-text);
   font-size: 0.95rem;
   transition: border-color 0.2s;
 }
@@ -281,8 +281,8 @@ async function goHomeByRole(user) {
 }
 
 .disabled-input {
-  background: #0d0d0d !important;
-  color: #666 !important;
+  background: var(--color-slate-soft) !important;
+  color: var(--color-text-faint) !important;
   cursor: not-allowed;
 }
 
@@ -320,12 +320,12 @@ async function goHomeByRole(user) {
 }
 
 .success-card h1 {
-  color: #fff;
+  color: var(--color-text);
   margin-bottom: 0.5rem;
 }
 
 .success-card p {
-  color: #888;
+  color: var(--color-text-muted);
 }
 
 .spinner-small {
@@ -356,7 +356,7 @@ async function goHomeByRole(user) {
 }
 
 .checking-text {
-  color: #888;
+  color: var(--color-text-muted);
   font-size: 0.95rem;
 }
 

@@ -414,7 +414,7 @@ async function sbloccaGdpr() {
   content: '';
   flex: 1;
   height: 1px;
-  background: rgba(255,255,255,0.08);
+  background: var(--color-surface);
 }
 
 .cat-grid {
@@ -447,7 +447,7 @@ async function sbloccaGdpr() {
 }
 
 .cat-anno {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--color-surface);
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   font-size: 0.7rem;

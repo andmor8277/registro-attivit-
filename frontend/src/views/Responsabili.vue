@@ -836,7 +836,7 @@ onMounted(() => {
 
 .modal-menu-item:hover {
   border-color: var(--color-primary);
-  background: var(--color-surface);
+  background: var(--color-slate-soft);
   transform: translateX(4px);
 }
 

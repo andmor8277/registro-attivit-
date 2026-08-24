@@ -405,7 +405,7 @@ onMounted(async () => {
   padding: 0.5rem 0.875rem;
   border: 1px solid var(--color-border, rgba(255,255,255,0.1));
   border-radius: 10px;
-  background: rgba(255,255,255,0.04);
+  background: var(--color-surface);
   color: var(--color-text, #f3f4f6);
   cursor: pointer;
   font-size: 0.875rem;
@@ -413,7 +413,7 @@ onMounted(async () => {
 }
 
 .btn-back:hover {
-  background: rgba(255,255,255,0.08);
+  background: var(--color-slate-soft);
 }
 
 .liste-container {
@@ -425,7 +425,7 @@ onMounted(async () => {
 .liste-sidebar {
   width: 260px;
   flex-shrink: 0;
-  background: rgba(255,255,255,0.03);
+  background: var(--color-surface);
   border: 1px solid var(--color-border, rgba(255,255,255,0.1));
   border-radius: 14px;
   padding: 1rem;
@@ -482,11 +482,11 @@ onMounted(async () => {
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
-  background: rgba(255,255,255,0.02);
+  background: var(--color-surface);
 }
 
 .lista-item:hover {
-  background: rgba(255,255,255,0.06);
+  background: var(--color-slate-soft);
 }
 
 .lista-item.active {
@@ -570,7 +570,7 @@ onMounted(async () => {
   padding: 0.5rem 0.875rem;
   border: 1px solid var(--color-border, rgba(255,255,255,0.1));
   border-radius: 10px;
-  background: rgba(255,255,255,0.04);
+  background: var(--color-surface);
   color: var(--color-text, #f3f4f6);
   cursor: pointer;
   font-size: 0.8125rem;
@@ -579,7 +579,7 @@ onMounted(async () => {
 }
 
 .btn-colonne-trigger:hover {
-  background: rgba(255,255,255,0.08);
+  background: var(--color-slate-soft);
 }
 
 .colonne-menu {
@@ -612,7 +612,7 @@ onMounted(async () => {
 }
 
 .colonne-item:hover {
-  background: rgba(255,255,255,0.06);
+  background: var(--color-slate-soft);
 }
 
 .colonne-item input[type="checkbox"] {
@@ -637,14 +637,14 @@ onMounted(async () => {
   height: 36px;
   border: 1px solid var(--color-border, rgba(255,255,255,0.1));
   border-radius: 10px;
-  background: rgba(255,255,255,0.04);
+  background: var(--color-surface);
   color: var(--color-text, #f3f4f6);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .btn-icon-pill:hover {
-  background: rgba(255,255,255,0.08);
+  background: var(--color-slate-soft);
 }
 
 .btn-icon-pill.gdpr-unlocked {
@@ -664,7 +664,7 @@ onMounted(async () => {
   padding: 0.625rem 0.875rem;
   border: 1px solid var(--color-border, rgba(255,255,255,0.1));
   border-radius: 10px;
-  background: rgba(255,255,255,0.04);
+  background: var(--color-surface);
   color: var(--color-text, #f3f4f6);
   font-size: 0.875rem;
   width: 280px;
@@ -711,7 +711,7 @@ onMounted(async () => {
 }
 
 .giocatori-table-wrapper {
-  background: rgba(255,255,255,0.03);
+  background: var(--color-surface);
   border: 1px solid var(--color-border, rgba(255,255,255,0.1));
   border-radius: 14px;
   overflow: hidden;
@@ -738,7 +738,7 @@ onMounted(async () => {
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
   color: var(--color-text, #f3f4f6);
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .giocatori-table tr:last-child td {
@@ -784,7 +784,7 @@ onMounted(async () => {
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
-  background: rgba(255,255,255,0.02);
+  background: var(--color-surface);
 }
 
 .giocatore-card:hover {
@@ -815,8 +815,8 @@ onMounted(async () => {
 }
 
 .modal {
-  background: #1f2937;
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 1.5rem;
   width: 90%;
@@ -847,7 +847,7 @@ onMounted(async () => {
   padding: 0.625rem 0.875rem;
   border: 1px solid var(--color-border, rgba(255,255,255,0.1));
   border-radius: 10px;
-  background: rgba(255,255,255,0.04);
+  background: var(--color-surface);
   color: var(--color-text, #f3f4f6);
   font-size: 0.875rem;
   box-sizing: border-box;
@@ -868,7 +868,7 @@ onMounted(async () => {
   padding: 0.5rem 1rem;
   border: 1px solid var(--color-border, rgba(255,255,255,0.1));
   border-radius: 10px;
-  background: rgba(255,255,255,0.04);
+  background: var(--color-surface);
   color: var(--color-text, #f3f4f6);
   cursor: pointer;
   font-size: 0.8125rem;
@@ -877,7 +877,7 @@ onMounted(async () => {
 }
 
 .btn-annulla:hover {
-  background: rgba(255,255,255,0.08);
+  background: var(--color-slate-soft);
 }
 
 .btn-salva {

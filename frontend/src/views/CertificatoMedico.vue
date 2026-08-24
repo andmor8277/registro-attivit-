@@ -352,7 +352,7 @@ function getRowClass(p) {
 }
 
 .filter-count {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-slate-soft);
   padding: 0.1rem 0.4rem;
   border-radius: 100px;
   font-size: 0.65rem;

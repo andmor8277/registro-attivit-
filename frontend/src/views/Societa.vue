@@ -272,18 +272,18 @@ onMounted(async () => {
 .page-header h1 {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text);
   margin-bottom: 0.5rem;
 }
 
 .page-subtitle {
-  color: #888;
+  color: var(--color-text-muted);
   font-size: 0.9375rem;
 }
 
 .card {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
   margin-bottom: 1.5rem;
@@ -295,7 +295,7 @@ onMounted(async () => {
   gap: 0.75rem;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .card-header svg {
@@ -307,7 +307,7 @@ onMounted(async () => {
 .card-header h3 {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-text);
 }
 
 .form-grid {
@@ -326,15 +326,15 @@ onMounted(async () => {
 .input-group label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #aaa;
+  color: var(--color-text-secondary);
 }
 
 .input-group input, .input-group select {
   padding: 0.75rem 1rem;
-  background: #0d0d0d;
-  border: 2px solid #333;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: #fff;
+  color: var(--color-text);
   font-size: 0.9375rem;
 }
 
@@ -359,7 +359,7 @@ onMounted(async () => {
   gap: 2rem;
   margin-bottom: 1.5rem;
   padding: 1rem;
-  background: #0d0d0d;
+  background: var(--color-slate-soft);
   border-radius: var(--radius-md);
 }
 
@@ -373,15 +373,15 @@ onMounted(async () => {
 .logo-upload-group label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #aaa;
+  color: var(--color-text-secondary);
 }
 
 .logo-upload-group input[type="file"] {
   padding: 0.5rem;
-  background: #1a1a1a;
-  border: 2px solid #333;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: #ccc;
+  color: var(--color-text-secondary);
   font-size: 0.875rem;
 }
 
@@ -391,7 +391,7 @@ onMounted(async () => {
   border-radius: 50%;
   overflow: hidden;
   background: #fff;
-  border: 2px solid #333;
+  border: 2px solid var(--color-border);
 }
 
 .logo-preview img {
@@ -434,10 +434,10 @@ onMounted(async () => {
 
 .btn-secondary {
   padding: 0.75rem 1.5rem;
-  background: #333;
+  background: var(--color-slate-soft);
   border: none;
   border-radius: var(--radius-md);
-  color: #fff;
+  color: var(--color-text);
   font-weight: 600;
   cursor: pointer;
 }
@@ -456,18 +456,18 @@ onMounted(async () => {
 .data-table th, .data-table td {
   padding: 1rem;
   text-align: left;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .data-table th {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #888;
+  color: var(--color-text-muted);
   text-transform: uppercase;
 }
 
 .data-table td {
-  color: #fff;
+  color: var(--color-text);
   font-size: 0.9375rem;
 }
 
@@ -475,14 +475,14 @@ onMounted(async () => {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 2px solid #444;
+  border: 2px solid var(--color-border);
 }
 
 .logo-badge {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 2px solid #444;
+  border: 2px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -512,16 +512,16 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #333;
+  background: var(--color-slate-soft);
   border: none;
   border-radius: var(--radius-md);
-  color: #fff;
+  color: var(--color-text);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .btn-icon:hover {
-  background: #444;
+  background: var(--color-border);
 }
 
 .btn-icon.btn-danger:hover {

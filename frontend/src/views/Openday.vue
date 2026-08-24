@@ -487,8 +487,8 @@ onMounted(carica)
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   color: var(--color-text-secondary, #9ca3af);
   cursor: pointer;
@@ -496,7 +496,7 @@ onMounted(carica)
 }
 
 .btn-icon:hover {
-  background: rgba(255,255,255,0.1);
+  background: var(--color-slate-soft);
   color: var(--color-text, #fff);
 }
 
@@ -515,8 +515,8 @@ onMounted(carica)
   align-items: center;
   gap: 0.4rem;
   padding: 0.3rem 0.75rem;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 100px;
   font-size: 0.75rem;
   font-weight: 500;
@@ -587,8 +587,8 @@ onMounted(carica)
 .search-input {
   width: 100%;
   padding: 0.5rem 0.75rem 0.5rem 2.25rem;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   color: var(--color-text, #fff);
   font-size: 0.8125rem;
@@ -602,8 +602,8 @@ onMounted(carica)
 
 .filter-btn {
   padding: 0.4rem 0.75rem;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   color: var(--color-text-secondary, #9ca3af);
   font-size: 0.75rem;
@@ -620,9 +620,9 @@ onMounted(carica)
 
 .table-wrap {
   overflow-x: auto;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: rgba(255,255,255,0.02);
+  background: var(--color-surface);
 }
 
 .data-table {
@@ -639,14 +639,14 @@ onMounted(carica)
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-muted, #6b7280);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
 }
 
 .data-table td {
   padding: 0.65rem 1rem;
   color: var(--color-text, #fff);
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .data-table tbody tr {
@@ -654,7 +654,7 @@ onMounted(carica)
 }
 
 .data-table tbody tr:hover {
-  background: rgba(255,255,255,0.03);
+  background: var(--color-slate-soft);
 }
 
 .data-table tbody tr.row-enrolled {
@@ -767,7 +767,7 @@ onMounted(carica)
 .expand-row td {
   padding: 0 1.5rem 1rem !important;
   background: rgba(99,102,241,0.03);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .expand-content {
@@ -862,8 +862,8 @@ onMounted(carica)
 }
 
 .modal {
-  background: #1e1e2e;
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   width: 100%;
   max-width: 420px;
@@ -879,7 +879,7 @@ onMounted(carica)
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .modal-header h3 {
@@ -894,7 +894,7 @@ onMounted(carica)
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,0.05);
+  background: var(--color-surface);
   border: none;
   border-radius: 8px;
   color: var(--color-text-secondary, #9ca3af);
@@ -997,7 +997,7 @@ onMounted(carica)
 .check-box {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(255,255,255,0.2);
+  border: 2px solid var(--color-border-strong);
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -1031,8 +1031,8 @@ onMounted(carica)
 
 .form-input {
   padding: 0.5rem 0.75rem;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   color: var(--color-text, #fff);
   font-size: 0.875rem;
@@ -1057,8 +1057,8 @@ onMounted(carica)
 
 .btn-cancel {
   padding: 0.5rem 1rem;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   color: var(--color-text-secondary, #9ca3af);
   font-size: 0.8125rem;
@@ -1089,7 +1089,7 @@ onMounted(carica)
 .toggle-slider {
   position: absolute;
   inset: 0;
-  background: rgba(255,255,255,0.1);
+  background: var(--color-surface);
   border-radius: 11px;
   cursor: pointer;
   transition: 0.2s;

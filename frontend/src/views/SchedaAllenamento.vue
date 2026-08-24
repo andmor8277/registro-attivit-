@@ -499,7 +499,7 @@ const chartColors = {
   greenAlpha: 'rgba(74, 222, 128, 0.15)',
   yellow: '#fbbf24',
   yellowAlpha: 'rgba(251, 191, 36, 0.15)',
-  grid: 'rgba(255, 255, 255, 0.06)',
+  grid: 'rgba(20, 26, 36, 0.08)',
   text: '#aaaaaa',
   textMuted: '#666666'
 }
@@ -989,7 +989,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.4rem 0.4rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 100px;
@@ -1001,15 +1001,15 @@ onUnmounted(() => {
   transition: all var(--transition-fast);
 }
 .btn-back-pill svg {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-surface);
   border-radius: 50%;
   width: 24px;
   height: 24px;
   padding: 3px;
 }
 .btn-back-pill:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--color-slate-soft);
+  border-color: var(--color-border-strong);
   color: var(--color-text);
 }
 .header-badge {
@@ -1063,7 +1063,7 @@ onUnmounted(() => {
   display: flex;
   gap: 0.25rem;
   margin-bottom: 1.5rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 4px;
@@ -1102,7 +1102,7 @@ onUnmounted(() => {
 .period-selector {
   display: flex;
   gap: 0.25rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 3px;
@@ -1129,7 +1129,7 @@ onUnmounted(() => {
 .view-toggle {
   display: flex;
   gap: 0.25rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 3px;
@@ -1155,7 +1155,7 @@ onUnmounted(() => {
 }
 .player-select, .metric-select {
   padding: 0.45rem 0.875rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   color: var(--color-text);
@@ -1169,7 +1169,7 @@ onUnmounted(() => {
   border-color: rgba(220, 38, 38, 0.5);
 }
 .player-select option, .metric-select option {
-  background: #1a1a1a;
+  background: var(--color-surface);
   color: var(--color-text);
 }
 
@@ -1181,7 +1181,7 @@ onUnmounted(() => {
   margin-bottom: 1.5rem;
 }
 .summary-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 14px;
@@ -1189,8 +1189,8 @@ onUnmounted(() => {
   transition: all var(--transition-fast);
 }
 .summary-card:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: var(--color-slate-soft);
+  border-color: var(--color-border-strong);
 }
 .card-label {
   font-size: 0.6875rem;
@@ -1220,7 +1220,7 @@ onUnmounted(() => {
   gap: 1rem;
 }
 .chart-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 16px;
@@ -1269,7 +1269,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 1.25rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 100px;
@@ -1317,7 +1317,7 @@ table {
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.8125rem;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-surface);
   backdrop-filter: blur(10px);
   border: 1px solid var(--color-border);
   border-radius: 16px;
@@ -1326,7 +1326,7 @@ table {
 }
 th, td {
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--color-border);
   text-align: center;
   padding: 0.6rem 0.3rem;
   white-space: nowrap;
@@ -1334,7 +1334,7 @@ th, td {
 }
 tr:last-child td { border-bottom: none; }
 th {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   font-weight: 600;
   color: var(--color-text-secondary);
   position: sticky;
@@ -1376,7 +1376,7 @@ th {
   justify-content: center;
 }
 .btn-edit, .btn-delete {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 4px;
@@ -1465,7 +1465,7 @@ th {
   color: var(--color-text);
 }
 .modal-close {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   width: 32px;
@@ -1478,7 +1478,7 @@ th {
   transition: all var(--transition-fast);
 }
 .modal-close:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-slate-soft);
 }
 .modal-body {
   padding: 0 1.5rem 1.5rem;
@@ -1498,7 +1498,7 @@ th {
 .form-select, .form-input, .form-textarea {
   width: 100%;
   padding: 0.625rem 0.875rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   color: var(--color-text);
@@ -1514,7 +1514,7 @@ th {
   resize: vertical;
 }
 .form-select option {
-  background: #1a1a1a;
+  background: var(--color-surface);
   color: var(--color-text);
 }
 
@@ -1525,7 +1525,7 @@ th {
   margin-bottom: 1.25rem;
 }
 .metric-input {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 0.75rem;
@@ -1589,7 +1589,7 @@ th {
 }
 .btn-cancel {
   padding: 0.625rem 1.5rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   color: var(--color-text-secondary);
@@ -1599,7 +1599,7 @@ th {
   transition: all var(--transition-fast);
 }
 .btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-slate-soft);
 }
 
 @media (max-width: 1024px) {
