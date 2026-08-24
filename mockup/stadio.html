@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THOF — Stadio Notturno · Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#070b14;
+    --bg-2:#0b1220;
+    --panel:#0e1626;
+    --panel-2:#111c30;
+    --line:rgba(120,150,210,.16);
+    --line-2:rgba(120,150,210,.32);
+    --text:#eaf0ff;
+    --text-2:#9fb0d0;
+    --text-3:#5f7095;
+    --gold:#e6b64c;
+    --gold-2:#f4d488;
+    --red:#ff3b4e;
+    --red-2:#ff6b78;
+    --pitch:#1f7a4d;
+    --font-display:'Unbounded',sans-serif;
+    --font-body:'Manrope',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:16px;line-height:1.55;overflow-x:hidden;position:relative}
+  ::selection{background:var(--gold);color:#0b1220}
+
+  /* stadium atmosphere */
+  .stage{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .flood{position:absolute;top:-30%;width:60vw;height:80vh;filter:blur(60px);opacity:.5}
+  .flood.l{left:-10%;background:radial-gradient(closest-side,rgba(230,182,76,.5),transparent 70%)}
+  .flood.r{right:-10%;background:radial-gradient(closest-side,rgba(255,59,78,.35),transparent 70%)}
+  .pitch-line{position:absolute;bottom:0;left:0;right:0;height:40vh;background:
+    radial-gradient(120% 100% at 50% 120%,rgba(31,122,77,.35),transparent 60%)}
+  .sweep{position:absolute;top:0;left:-40%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(230,182,76,.06),transparent);animation:sweep 9s linear infinite}
+  @keyframes sweep{to{left:120%}}
+  .noise{position:fixed;inset:0;z-index:55;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 1.4rem;position:relative;z-index:10}
+
+  /* nav */
+  .nav{position:sticky;top:0;z-index:40;background:rgba(7,11,20,.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .nav .wrap{display:flex;align-items:center;justify-content:space-between;height:66px}
+  .brand{display:flex;align-items:center;gap:.7rem}
+  .brand .mark{width:38px;height:38px;border-radius:10px;background:linear-gradient(150deg,var(--gold),#9c7420);display:grid;place-items:center;font-family:var(--font-display);font-weight:900;color:#0b1220;font-size:.9rem;box-shadow:0 0 24px rgba(230,182,76,.4)}
+  .brand .name{font-family:var(--font-display);font-weight:800;font-size:1rem;letter-spacing:.02em}
+  .brand .name small{display:block;font-family:var(--font-mono);font-size:.56rem;color:var(--text-3);letter-spacing:.2em;font-weight:500}
+  .tabs{display:flex;gap:.5rem}
+  .tab{font-family:var(--font-body);font-weight:700;font-size:.82rem;color:var(--text-2);background:rgba(255,255,255,.03);border:1px solid var(--line);padding:.55rem 1rem;border-radius:100px;cursor:pointer;transition:.25s}
+  .tab:hover{color:var(--text);border-color:var(--line-2)}
+  .tab.active{color:#0b1220;background:linear-gradient(150deg,var(--gold-2),var(--gold));border-color:var(--gold);box-shadow:0 0 24px rgba(230,182,76,.35)}
+
+  main{position:relative;z-index:10}
+  .page{display:none;animation:pg .6s ease both}
+  .page.active{display:block}
+  @keyframes pg{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+  /* hero */
+  .hero{padding:3.4rem 0 2rem;text-align:center;position:relative}
+  .hero .eyebrow{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);display:inline-flex;align-items:center;gap:.6rem}
+  .hero .eyebrow::before,.hero .eyebrow::after{content:"";width:34px;height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
+  .hero .eyebrow::after{background:linear-gradient(90deg,var(--gold),transparent)}
+  .hero h1{font-family:var(--font-display);font-weight:900;font-size:clamp(2.6rem,9vw,6rem);line-height:.95;margin:1.1rem 0 .4rem;letter-spacing:-.01em}
+  .hero h1 .g{background:linear-gradient(120deg,var(--gold-2),var(--gold) 40%,var(--red-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{color:var(--text-2);max-width:52ch;margin:0 auto;font-weight:500}
+  .hero .meta{display:flex;gap:1.6rem;justify-content:center;margin-top:1.8rem;flex-wrap:wrap;font-family:var(--font-mono);font-size:.72rem;color:var(--text-3);letter-spacing:.08em}
+  .hero .meta b{color:var(--text);font-weight:700}
+
+  /* stat cards */
+  .statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:2.4rem}
+  .stat{position:relative;background:linear-gradient(160deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:1.4rem;overflow:hidden}
+  .stat::before{content:"";position:absolute;inset:0;border-radius:18px;padding:1px;background:linear-gradient(160deg,var(--line-2),transparent 60%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.7}
+  .stat .v{font-family:var(--font-display);font-weight:800;font-size:2.6rem;line-height:1;background:linear-gradient(180deg,#fff,var(--text-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .v.gold{background:linear-gradient(180deg,var(--gold-2),var(--gold));-webkit-background-clip:text;background-clip:text}
+  .stat .l{font-size:.76rem;font-weight:700;color:var(--text-2);margin-top:.5rem;letter-spacing:.02em}
+
+  /* section head */
+  .shead{display:flex;align-items:center;gap:1rem;margin:3rem 0 1.4rem}
+  .shead .ic{width:40px;height:40px;border-radius:12px;background:linear-gradient(150deg,rgba(230,182,76,.25),rgba(230,182,76,.05));border:1px solid var(--line-2);display:grid;place-items:center}
+  .shead .ic svg{width:20px;height:20px;stroke:var(--gold);fill:none;stroke-width:1.6}
+  .shead h2{font-family:var(--font-display);font-weight:700;font-size:clamp(1.3rem,3.5vw,1.9rem);letter-spacing:-.01em}
+  .shead .rule{flex:1;height:1px;background:linear-gradient(90deg,var(--line-2),transparent)}
+  .shead .tag{font-family:var(--font-mono);font-size:.68rem;color:var(--text-3);letter-spacing:.1em}
+
+  /* schedule */
+  .sched{display:grid;grid-template-columns:repeat(7,1fr);gap:.7rem}
+  .day{position:relative;background:linear-gradient(165deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:16px;padding:1rem .8rem;min-height:190px;display:flex;flex-direction:column;gap:.5rem;transition:transform .3s,border-color .3s,box-shadow .3s}
+  .day:hover{transform:translateY(-5px);border-color:var(--line-2);box-shadow:0 20px 40px -24px rgba(0,0,0,.9)}
+  .day .dow{font-family:var(--font-display);font-weight:700;font-size:.9rem}
+  .day .date{font-family:var(--font-mono);font-size:.62rem;color:var(--text-3);letter-spacing:.08em}
+  .day .hr{height:1px;background:var(--line);margin:.2rem 0}
+  .day.now{border-color:var(--gold);background:linear-gradient(165deg,rgba(230,182,76,.14),var(--panel));box-shadow:0 0 40px -12px rgba(230,182,76,.5)}
+  .day.now .dow{color:var(--gold-2)}
+  .live{position:absolute;top:-10px;right:10px;font-family:var(--font-mono);font-size:.56rem;font-weight:700;letter-spacing:.14em;color:#0b1220;background:linear-gradient(150deg,var(--gold-2),var(--gold));padding:.28rem .5rem;border-radius:100px;box-shadow:0 0 18px rgba(230,182,76,.6);animation:pulse 2s infinite}
+  @keyframes pulse{50%{box-shadow:0 0 26px rgba(230,182,76,.9)}}
+  .ev{display:flex;align-items:center;gap:.45rem;font-size:.74rem;font-weight:600;padding:.4rem .5rem;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid var(--line);transition:.2s}
+  .ev:hover{border-color:var(--line-2);background:rgba(255,255,255,.06)}
+  .ev .dot{width:7px;height:7px;border-radius:50%;background:var(--red-2);box-shadow:0 0 8px var(--red-2)}
+  .ev.gk .dot{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+  .ev .t{margin-left:auto;font-family:var(--font-mono);font-size:.6rem;color:var(--text-3)}
+  .day .rest{margin-top:auto;font-family:var(--font-mono);font-size:.62rem;color:var(--text-3);font-style:italic}
+
+  /* areas */
+  .areas{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem}
+  .area{position:relative;display:flex;gap:1.1rem;padding:1.5rem;background:linear-gradient(165deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:18px;cursor:pointer;overflow:hidden;transition:transform .3s,border-color .3s,box-shadow .3s}
+  .area::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 100% 0%,rgba(230,182,76,.14),transparent 55%);opacity:0;transition:opacity .4s}
+  .area:hover{transform:translateY(-5px);border-color:var(--line-2);box-shadow:0 24px 44px -26px rgba(0,0,0,.9)}
+  .area:hover::after{opacity:1}
+  .area .ic{flex:none;width:56px;height:56px;border-radius:14px;background:linear-gradient(150deg,rgba(255,59,78,.22),rgba(255,59,78,.05));border:1px solid var(--line-2);display:grid;place-items:center}
+  .area .ic svg{width:28px;height:28px;stroke:var(--red-2);fill:none;stroke-width:1.5}
+  .area .k{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+  .area h3{font-family:var(--font-display);font-weight:700;font-size:1.3rem;margin:.25rem 0 .35rem}
+  .area p{font-size:.86rem;color:var(--text-2)}
+  .area .go{position:absolute;right:1.3rem;bottom:1.3rem;font-family:var(--font-mono);font-size:.66rem;color:var(--gold-2);opacity:0;transform:translateX(-6px);transition:.3s}
+  .area:hover .go{opacity:1;transform:none}
+
+  .colophon{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:.6rem;font-family:var(--font-mono);font-size:.66rem;color:var(--text-3);letter-spacing:.08em}
+
+  /* login */
+  .login-stage{min-height:calc(100vh - 66px);display:grid;place-items:center;padding:2.5rem 1.4rem}
+  .login-card{width:100%;max-width:420px;background:linear-gradient(165deg,var(--panel-2),var(--panel));border:1px solid var(--line-2);border-radius:24px;padding:2.4rem 2rem;text-align:center;position:relative;overflow:hidden;box-shadow:0 40px 80px -40px rgba(0,0,0,.9)}
+  .login-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--red))}
+  .login-card .mark{width:64px;height:64px;border-radius:16px;margin:0 auto 1.1rem;background:linear-gradient(150deg,var(--gold),#9c7420);display:grid;place-items:center;font-family:var(--font-display);font-weight:900;color:#0b1220;font-size:1.3rem;box-shadow:0 0 34px rgba(230,182,76,.5)}
+  .login-card .k{font-family:var(--font-mono);font-size:.64rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold)}
+  .login-card h2{font-family:var(--font-display);font-weight:800;font-size:1.7rem;margin:.5rem 0 .2rem}
+  .login-card .sub{color:var(--text-2);font-size:.9rem;margin-bottom:1.6rem}
+  .field{text-align:left;margin-bottom:1.1rem}
+  .field label{display:block;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);margin-bottom:.4rem}
+  .field input{width:100%;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:.8rem .9rem;color:var(--text);font-family:var(--font-body);font-size:.95rem;transition:.2s}
+  .field input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(230,182,76,.15)}
+  .field input::placeholder{color:var(--text-3)}
+  .opts{display:flex;justify-content:space-between;font-size:.78rem;font-weight:600;color:var(--text-2);margin:.2rem 0 1.4rem}
+  .opts a{color:var(--gold-2);text-decoration:none}
+  .btn{width:100%;background:linear-gradient(150deg,var(--gold-2),var(--gold));color:#0b1220;border:none;font-family:var(--font-display);font-weight:700;font-size:.95rem;padding:1rem;border-radius:12px;cursor:pointer;transition:.2s;box-shadow:0 12px 26px -12px rgba(230,182,76,.7)}
+  .btn:hover{filter:brightness(1.05);transform:translateY(-1px)}
+  .btn:active{transform:translateY(1px)}
+  .gline{margin-top:1.1rem;font-family:var(--font-mono);font-size:.62rem;color:var(--text-3);letter-spacing:.14em;text-transform:uppercase}
+  .gbtn{margin-top:.6rem;width:100%;display:flex;align-items:center;justify-content:center;gap:.6rem;background:rgba(255,255,255,.03);border:1px solid var(--line);color:var(--text);font-family:var(--font-body);font-weight:700;font-size:.88rem;padding:.8rem;border-radius:12px;cursor:pointer;transition:.2s}
+  .gbtn:hover{border-color:var(--line-2);background:rgba(255,255,255,.06)}
+  .gbtn svg{width:18px;height:18px}
+
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+
+  @media(max-width:900px){.sched{grid-template-columns:repeat(4,1fr)}.areas{grid-template-columns:1fr}.statgrid{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.sched{grid-template-columns:repeat(2,1fr)}.day{min-height:150px}.statgrid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="flood l"></div><div class="flood r"></div>
+    <div class="pitch-line"></div><div class="sweep"></div>
+  </div>
+  <div class="noise"></div>
+
+  <nav class="nav">
+    <div class="wrap">
+      <div class="brand">
+        <div class="mark">TH</div>
+        <div class="name">THOF<small>REGISTRO ATTIVITÀ</small></div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" data-page="home">Programma</button>
+        <button class="tab" data-page="login">Accesso Soci</button>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <!-- HOME -->
+    <section id="page-home" class="page active">
+      <div class="wrap">
+        <div class="hero">
+          <span class="eyebrow">Stagione 2025 / 26</span>
+          <h1>Sotto le <span class="g">floodlight</span><br>del club</h1>
+          <p>Il registro notturno della società: presenze, allenamenti e appuntamenti, illuminati in tempo reale.</p>
+          <div class="meta"><span>GIORNATA <b>34</b></span><span>SOCCIA <b>128</b></span><span>ULTIMO AGGIORNAMENTO <b>20:00</b></span></div>
+        </div>
+
+        <div class="shead reveal">
+          <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
+          <h2>Calendario Settimanale</h2><span class="rule"></span><span class="tag">allenamenti &amp; partite</span>
+        </div>
+        <div class="sched reveal">
+          <div class="day"><div class="dow">Lun</div><div class="date">18 AGO</div><div class="hr"></div>
+            <div class="ev"><span class="dot"></span>Allievi<span class="t">18:30</span></div>
+            <div class="ev"><span class="dot"></span>Pulcini<span class="t">19:00</span></div></div>
+          <div class="day"><div class="dow">Mar</div><div class="date">19 AGO</div><div class="hr"></div>
+            <div class="ev"><span class="dot"></span>Esordienti<span class="t">18:30</span></div>
+            <div class="ev gk"><span class="dot"></span>Portieri<span class="t">19:00</span></div></div>
+          <div class="day now"><span class="live">OGGI</span><div class="dow">Mer</div><div class="date">20 AGO</div><div class="hr"></div>
+            <div class="ev"><span class="dot"></span>Primi Calci<span class="t">17:30</span></div>
+            <div class="ev"><span class="dot"></span>Allievi<span class="t">18:30</span></div>
+            <div class="ev gk"><span class="dot"></span>Portieri<span class="t">19:00</span></div></div>
+          <div class="day"><div class="dow">Gio</div><div class="date">21 AGO</div><div class="hr"></div>
+            <div class="ev"><span class="dot"></span>Pulcini<span class="t">18:30</span></div>
+            <div class="ev"><span class="dot"></span>Esordienti<span class="t">19:00</span></div></div>
+          <div class="day"><div class="dow">Ven</div><div class="date">22 AGO</div><div class="hr"></div>
+            <div class="ev"><span class="dot"></span>Prima Squadra<span class="t">20:30</span></div></div>
+          <div class="day"><div class="dow">Sab</div><div class="date">23 AGO</div><div class="hr"></div>
+            <div class="ev"><span class="dot"></span>Torneo<span class="t">09:00</span></div>
+            <div class="ev"><span class="dot"></span>Allievi<span class="t">10:30</span></div></div>
+          <div class="day"><div class="dow">Dom</div><div class="date">24 AGO</div><div class="hr"></div><div class="rest">riposo</div></div>
+        </div>
+
+        <div class="shead reveal">
+          <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 10h16M10 4v16"/></svg></div>
+          <h2>Aree del Club</h2><span class="rule"></span><span class="tag">sezione registro</span>
+        </div>
+        <div class="areas">
+          <article class="area reveal"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></div><div><div class="k">Allenatori &amp; Mister</div><h3>Registro Allenamenti</h3><p>Schede, presenze, convocazioni e reportistica per ogni categoria.</p></div><span class="go">APRI →</span></article>
+          <article class="area reveal"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></div><div><div class="k">Segreteria</div><h3>Atti &amp; Iscrizioni</h3><p>Moduli, iscrizioni, Open Day e gestione amministrativa dei soci.</p></div><span class="go">APRI →</span></article>
+          <article class="area reveal"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><path d="M16 6a3 3 0 010 6"/></svg></div><div><div class="k">Responsabili</div><h3>Responsabili Categoria</h3><p>Assegnazione categorie, ruoli e personale di ogni squadra.</p></div><span class="go">APRI →</span></article>
+          <article class="area reveal"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg></div><div><div class="k">Infermeria</div><h3>Infortuni &amp; Certificati</h3><p>Registro infortuni, certificati medici e stato di forma.</p></div><span class="go">APRI →</span></article>
+        </div>
+
+        <footer class="colophon"><span>The Home Of Football Club</span><span>Mockup grafico · non collegato al sito reale</span></footer>
+      </div>
+    </section>
+
+    <!-- LOGIN -->
+    <section id="page-login" class="page">
+      <div class="login-stage">
+        <div class="login-card">
+          <div class="mark">TH</div>
+          <div class="k">Soci &amp; Staff</div>
+          <h2>Member Sign-In</h2>
+          <p class="sub">Accedi al registro notturno della società</p>
+          <div class="field"><label>Nome utente</label><input type="text" placeholder="es. m.rossi" /></div>
+          <div class="field"><label>Password</label><input type="password" placeholder="••••••••" /></div>
+          <div class="opts"><label><input type="checkbox" checked style="accent-color:var(--gold)" /> Ricordami</label><a href="#">Dimenticata?</a></div>
+          <button class="btn">Accedi al Registro</button>
+          <div class="gline">— oppure —</div>
+          <button class="gbtn"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.4 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.3-7.7 2.3-6.3 0-11.7-3.9-13.6-9.3l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>Continua con Google</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const tabs=document.querySelectorAll('.tab'),pages={home:document.getElementById('page-home'),login:document.getElementById('page-login')};
+    tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));t.classList.add('active');const id=t.dataset.page;Object.values(pages).forEach(p=>p.classList.remove('active'));pages[id].classList.add('active');window.scrollTo({top:0,behavior:'smooth'});if(id==='home'){reveal();countUp();}}));
+    const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+    function reveal(){document.querySelectorAll('.reveal:not(.in)').forEach(el=>io.observe(el))}
+    function countUp(){document.querySelectorAll('[data-count]').forEach(el=>{if(el.dataset.done)return;el.dataset.done=1;const target=+el.dataset.count;let n=0;const step=Math.max(1,Math.ceil(target/40));const t=setInterval(()=>{n+=step;if(n>=target){n=target;clearInterval(t)}el.textContent=n},28);});}
+    reveal();countUp();
+  </script>
+</body>
+</html>

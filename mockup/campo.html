@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THOF — Gesso &amp; Prato · Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --grass-1:#0e4d2f;
+    --grass-2:#0b3f27;
+    --grass-deep:#093420;
+    --chalk:#f2f6ea;
+    --chalk-dim:rgba(242,246,234,.62);
+    --chalk-faint:rgba(242,246,234,.28);
+    --line-chalk:rgba(242,246,234,.85);
+    --chalk-yellow:#ffe9a3;
+    --alert:#ffb3a1;
+    --font-sans:'Bricolage Grotesque',sans-serif;
+    --font-chalk:'Caveat',cursive;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:var(--font-sans);
+    color:var(--chalk);
+    font-size:16px;line-height:1.55;
+    min-height:100vh;overflow-x:hidden;
+    /* mowing stripes */
+    background:
+      repeating-linear-gradient(90deg,
+        var(--grass-1) 0px, var(--grass-1) 110px,
+        var(--grass-2) 110px, var(--grass-2) 220px);
+  }
+  /* vignette + noise */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(120% 90% at 50% -10%, rgba(255,255,255,.07), transparent 55%),
+      radial-gradient(140% 100% at 50% 115%, rgba(0,0,0,.5), transparent 60%);
+  }
+  body::after{
+    content:"";position:fixed;inset:0;z-index:91;pointer-events:none;opacity:.35;
+    background-image:radial-gradient(rgba(255,255,255,.06) .5px,transparent .6px);
+    background-size:3px 3px;
+  }
+  ::selection{background:var(--chalk);color:var(--grass-deep)}
+  a{color:inherit;text-decoration:none}
+  button,input,select{font-family:inherit}
+
+  /* ---------- Nav ---------- */
+  nav{
+    position:sticky;top:0;z-index:50;
+    background:rgba(9,52,32,.88);backdrop-filter:blur(8px);
+    border-bottom:3px solid var(--line-chalk);
+  }
+  .nav-in{max-width:1120px;margin:0 auto;padding:0 20px;display:flex;align-items:center;gap:22px;height:64px}
+  .brand{display:flex;align-items:center;gap:12px;margin-right:auto}
+  .ball{
+    width:40px;height:40px;border-radius:50%;flex:none;position:relative;
+    background:var(--chalk);
+    display:grid;place-items:center;
+    font-weight:800;font-size:.8rem;color:var(--grass-deep);
+    box-shadow:inset -3px -4px 0 rgba(9,52,32,.25);
+  }
+  .brand-name{font-weight:800;font-size:1.3rem;line-height:1;letter-spacing:-.01em}
+  .brand-name small{display:block;font-family:var(--font-chalk);font-weight:600;font-size:1rem;color:var(--chalk-dim);letter-spacing:.04em}
+  .tabs{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    appearance:none;background:none;color:var(--chalk-dim);
+    border:2px solid transparent;font-size:.92rem;font-weight:600;
+    padding:7px 14px;white-space:nowrap;cursor:pointer;
+    transition:all .18s ease;
+  }
+  .tab:hover{color:var(--chalk)}
+  .tab.active{color:var(--grass-deep);background:var(--chalk)}
+
+  main{max-width:1120px;margin:0 auto;padding:0 20px;position:relative;z-index:1}
+  .page{display:none}
+  .page.active{display:block;animation:pageIn .5s cubic-bezier(.2,.75,.25,1) both}
+  @keyframes pageIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  .reveal{opacity:0;transform:translateY(18px)}
+  .reveal.in{opacity:1;transform:none;transition:opacity .6s ease,transform .6s cubic-bezier(.2,.75,.25,1)}
+
+  /* ---------- Section head ---------- */
+  .shead{display:flex;align-items:center;gap:16px;margin:50px 0 22px}
+  .shead h2{
+    font-size:clamp(1.7rem,4vw,2.5rem);font-weight:800;line-height:1;letter-spacing:-.02em;white-space:nowrap;
+  }
+  .shead h2 em{font-family:var(--font-chalk);font-style:normal;font-weight:600;color:var(--chalk-yellow)}
+  .shead .mid{flex:1;height:0;border-top:3px dashed var(--chalk-faint)}
+  .shead .note{font-family:var(--font-chalk);font-size:1.25rem;color:var(--chalk-dim);white-space:nowrap;transform:rotate(-2deg)}
+  @media(max-width:640px){.shead .note{display:none}}
+
+  /* chalk panel */
+  .panel{
+    position:relative;background:rgba(9,52,32,.42);
+    border:3px solid var(--line-chalk);
+    box-shadow:inset 0 0 0 200vmax rgba(0,0,0,.08);
+  }
+  .panel.dashed{border-style:dashed}
+
+  /* ---------- HOME ---------- */
+  .hero{padding:56px 0 10px;position:relative}
+  .hero .center-ring{
+    position:absolute;top:-30px;right:-70px;width:340px;height:340px;border-radius:50%;
+    border:3px solid var(--chalk-faint);pointer-events:none;
+  }
+  .hero .center-ring::after{
+    content:"";position:absolute;left:50%;top:50%;width:0;height:190px;
+    border-left:3px solid var(--chalk-faint);
+  }
+  @media(max-width:720px){.hero .center-ring{display:none}}
+  .season-chip{
+    display:inline-block;font-family:var(--font-chalk);font-size:1.3rem;font-weight:600;
+    color:var(--grass-deep);background:var(--chalk-yellow);
+    padding:2px 16px;transform:rotate(-2deg);margin-bottom:18px;
+    box-shadow:2px 3px 0 rgba(0,0,0,.25);
+  }
+  h1.hero-title{
+    font-size:clamp(2.7rem,7.5vw,5rem);font-weight:800;line-height:.95;letter-spacing:-.03em;
+    max-width:12ch;
+  }
+  h1.hero-title em{
+    font-family:var(--font-chalk);font-style:normal;font-weight:600;color:var(--chalk-yellow);letter-spacing:0;
+  }
+  .hero-sub{color:var(--chalk-dim);max-width:48ch;margin-top:16px;font-size:1.05rem}
+  .hero-note{
+    position:absolute;right:0;bottom:6px;max-width:230px;text-align:right;
+    font-family:var(--font-chalk);font-size:1.3rem;line-height:1.15;color:var(--chalk-dim);transform:rotate(-2.5deg);
+  }
+  .hero-note b{color:var(--chalk-yellow)}
+  @media(max-width:880px){.hero-note{display:none}}
+
+  /* planning — mini pitches */
+  .sched{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  @media(max-width:960px){.sched{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:520px){.sched{grid-template-columns:1fr}}
+  .day-card{position:relative;border:3px solid var(--chalk-faint);padding:13px 13px 15px;transition:border-color .2s ease,transform .2s ease;background:rgba(9,52,32,.3)}
+  .day-card:hover{border-color:var(--chalk);transform:translateY(-3px)}
+  .day-card.now{border-color:var(--chalk);background:rgba(9,52,32,.55)}
+  .dow{font-weight:800;font-size:1.05rem;text-transform:uppercase;letter-spacing:-.01em;display:flex;justify-content:space-between;align-items:center}
+  .today-tag{font-family:var(--font-chalk);font-size:1rem;font-weight:700;color:var(--grass-deep);background:var(--chalk-yellow);padding:0 8px;transform:rotate(-2deg)}
+  .date-n{font-family:var(--font-chalk);font-size:1.05rem;color:var(--chalk-dim);margin-bottom:9px}
+  .ev{display:flex;align-items:baseline;gap:8px;font-size:.86rem;font-weight:600;margin-top:6px}
+  .ev .t{margin-left:auto;font-family:var(--font-chalk);font-size:1.1rem;color:var(--chalk-dim)}
+  .ev.gk{color:var(--chalk-yellow)}
+  .rest{font-family:var(--font-chalk);font-size:1.25rem;color:var(--chalk-faint);margin-top:14px;transform:rotate(-3deg)}
+
+  /* aree — corner arcs */
+  .areas{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  @media(max-width:720px){.areas{grid-template-columns:1fr}}
+  a.area{
+    position:relative;display:block;padding:24px 24px 22px;
+    border:3px solid var(--line-chalk);overflow:hidden;
+    transition:transform .2s ease,box-shadow .2s ease;
+  }
+  a.area:hover{transform:translateY(-4px);box-shadow:0 14px 30px -18px rgba(0,0,0,.65)}
+  a.area .corner{
+    position:absolute;width:34px;height:34px;border-radius:0 0 0 100%;
+    top:0;right:0;border-right:3px solid var(--line-chalk);border-bottom:3px solid var(--line-chalk);
+    opacity:.5;
+  }
+  a.area .num{font-family:var(--font-chalk);font-size:1.3rem;color:var(--chalk-yellow)}
+  a.area h3{font-size:1.55rem;font-weight:800;letter-spacing:-.02em;margin:2px 0 6px}
+  a.area p{color:var(--chalk-dim);font-size:.93rem;max-width:38ch}
+  a.area .apri{
+    display:inline-block;margin-top:14px;font-family:var(--font-chalk);font-size:1.35rem;font-weight:600;
+    color:var(--chalk-yellow);border-bottom:3px dashed rgba(255,233,163,.5);
+  }
+
+  footer.colophon{
+    margin:66px 0 44px;padding-top:20px;border-top:3px dashed var(--chalk-faint);
+    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    font-family:var(--font-chalk);font-size:1.15rem;color:var(--chalk-dim);
+  }
+
+  /* ---------- LOGIN ---------- */
+  .gate-wrap{min-height:calc(100vh - 150px);display:grid;place-items:center;padding:56px 0}
+  .gate{width:min(460px,100%);padding:38px 36px;position:relative}
+  .gate .tape{
+    position:absolute;top:-16px;left:50%;transform:translateX(-50%) rotate(-2deg);
+    background:var(--chalk-yellow);color:var(--grass-deep);
+    font-family:var(--font-chalk);font-size:1.25rem;font-weight:700;
+    padding:1px 22px;box-shadow:2px 3px 0 rgba(0,0,0,.25);white-space:nowrap;
+  }
+  .gate h2{font-size:2.1rem;font-weight:800;letter-spacing:-.02em;line-height:1;margin-bottom:4px}
+  .gate .sub{font-family:var(--font-chalk);font-size:1.35rem;color:var(--chalk-dim);margin-bottom:26px}
+  .field{margin-bottom:18px}
+  .field label{display:block;font-family:var(--font-chalk);font-size:1.25rem;color:var(--chalk-dim);margin-bottom:2px;transform:rotate(-1deg)}
+  .field input{
+    width:100%;background:transparent;border:none;border-bottom:3px dashed var(--chalk-faint);
+    color:var(--chalk);font-size:1.05rem;font-weight:600;padding:10px 2px;outline:none;
+    transition:border-color .2s ease;
+  }
+  .field input:focus{border-bottom-color:var(--chalk)}
+  .field input::placeholder{color:rgba(242,246,234,.3)}
+  .opts{display:flex;justify-content:space-between;align-items:center;margin:4px 0 24px;font-family:var(--font-chalk);font-size:1.15rem;color:var(--chalk-dim)}
+  .opts label{display:flex;gap:9px;align-items:center;cursor:pointer}
+  .opts input{accent-color:var(--chalk-yellow);width:16px;height:16px}
+  .btn-chalk{
+    width:100%;appearance:none;cursor:pointer;
+    background:var(--chalk);color:var(--grass-deep);border:none;
+    font-size:1.15rem;font-weight:800;letter-spacing:.01em;padding:14px;
+    box-shadow:inset -4px -5px 0 rgba(9,52,32,.18),0 8px 20px -10px rgba(0,0,0,.5);
+    transition:transform .15s ease;
+  }
+  .btn-chalk:hover{transform:translateY(-2px)}
+  .btn-chalk:active{transform:none}
+  .or-line{display:flex;align-items:center;gap:14px;margin:20px 0 16px;font-family:var(--font-chalk);font-size:1.2rem;color:var(--chalk-dim)}
+  .or-line::before,.or-line::after{content:"";flex:1;border-top:3px dashed var(--chalk-faint)}
+  .btn-google{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:12px;
+    background:transparent;border:3px solid var(--line-chalk);color:var(--chalk);
+    padding:12px;font-weight:700;font-size:1rem;cursor:pointer;
+    transition:background .2s ease;
+  }
+  .btn-google:hover{background:rgba(242,246,234,.08)}
+  .btn-google svg{width:19px;height:19px}
+
+  /* ---------- REGISTRO ---------- */
+  .reg-head{display:flex;flex-wrap:wrap;align-items:end;gap:14px;margin:44px 0 16px}
+  .reg-head h2{font-size:clamp(2rem,5vw,2.9rem);font-weight:800;letter-spacing:-.02em;line-height:.95}
+  .reg-head h2 em{font-family:var(--font-chalk);font-style:normal;font-weight:600;color:var(--chalk-yellow)}
+  .reg-meta{margin-left:auto;font-family:var(--font-chalk);font-size:1.3rem;color:var(--chalk-dim);text-align:right;transform:rotate(-1.5deg)}
+  .reg-meta b{color:var(--chalk-yellow);font-weight:700}
+  @media(max-width:640px){.reg-meta{margin-left:0;text-align:left}}
+  .legend{display:flex;flex-wrap:wrap;gap:9px;margin:16px 0}
+  .lg{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-chalk);font-size:1.15rem;color:var(--chalk-dim)}
+  .lg b{
+    width:26px;height:26px;display:grid;place-items:center;
+    font-family:var(--font-sans);font-size:.72rem;font-weight:800;
+    border:2.5px solid var(--chalk);color:var(--chalk);
+  }
+  .cd-x{background:var(--chalk);color:var(--grass-deep)}
+  .cd-p{border-color:var(--chalk-yellow)!important;color:var(--chalk-yellow)!important}
+  .cd-r{border-style:dashed!important;border-color:var(--chalk-yellow)!important;color:var(--chalk-yellow)!important}
+  .cd-a{background:var(--alert);border-color:var(--alert);color:var(--grass-deep)}
+  .cd-ag{background:repeating-linear-gradient(45deg,var(--chalk-yellow) 0 3px,transparent 3px 6px);border-color:var(--chalk-yellow);color:var(--chalk-yellow)}
+  .cd-ai{background:var(--alert);border-color:var(--alert);border-style:dotted;color:var(--grass-deep)}
+
+  .reg-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table.reg{border-collapse:collapse;width:100%;min-width:820px}
+  table.reg th,table.reg td{border-bottom:2px dashed var(--chalk-faint);border-right:2px solid rgba(242,246,234,.12);text-align:center}
+  table.reg th:last-child,table.reg td:last-child{border-right:none}
+  thead th{
+    font-size:.78rem;font-weight:700;letter-spacing:.02em;padding:12px 6px;color:var(--chalk-dim);
+    border-bottom:3px solid var(--chalk)!important;
+  }
+  tbody tr:hover td{background:rgba(242,246,234,.05)}
+  td.player{text-align:left;padding:11px 14px;min-width:190px;white-space:nowrap;font-weight:700;font-size:.95rem}
+  td.player .nr{
+    display:inline-grid;place-items:center;width:26px;height:26px;margin-right:10px;
+    border:2.5px solid var(--chalk);border-radius:50%;
+    font-size:.68rem;font-weight:800;
+  }
+  td.code{width:54px;height:46px}
+  td.code span{
+    display:inline-grid;place-items:center;width:27px;height:27px;
+    font-size:.74rem;font-weight:800;border:2.5px solid transparent;
+  }
+  td.tot{font-weight:800;font-size:1rem;color:var(--chalk-yellow);width:58px;font-variant-numeric:tabular-nums}
+  td.pct{font-family:var(--font-chalk);font-size:1.2rem;color:var(--chalk-dim);width:66px}
+  tr.inj td.player{opacity:.75}
+  tr.inj td.player::after{content:"infor.";font-family:var(--font-chalk);font-size:1.1rem;color:var(--alert);margin-left:9px}
+  .reg-note{font-family:var(--font-chalk);font-size:1.2rem;color:var(--chalk-dim);margin-top:14px;transform:rotate(-1deg)}
+
+  /* ---------- CONVOCAZIONI — schieramento sul campo ---------- */
+  .conv-head{margin:44px 0 20px}
+  .conv-head h2{font-size:clamp(2.2rem,5.5vw,3.4rem);font-weight:800;letter-spacing:-.025em;line-height:.95;max-width:16ch}
+  .conv-head h2 em{font-family:var(--font-chalk);font-style:normal;font-weight:600;color:var(--chalk-yellow)}
+  .conv-cols{display:grid;grid-template-columns:.9fr 1.1fr;gap:18px;align-items:start}
+  @media(max-width:860px){.conv-cols{grid-template-columns:1fr}}
+
+  .pitch{
+    position:relative;aspect-ratio:3/4;max-width:420px;margin:0 auto;width:100%;
+    border:3px solid var(--line-chalk);
+    background:
+      repeating-linear-gradient(0deg,transparent 0 60px,rgba(0,0,0,.1) 60px 120px),
+      radial-gradient(circle at 50% 50%,rgba(255,255,255,.05),transparent 70%);
+    overflow:hidden;
+  }
+  .pitch .halfway{position:absolute;left:0;right:0;top:50%;border-top:3px solid var(--line-chalk);opacity:.85}
+  .pitch .circle{position:absolute;left:50%;top:50%;width:90px;height:90px;border-radius:50%;border:3px solid var(--line-chalk);transform:translate(-50%,-50%);opacity:.85}
+  .pitch .goal-area{position:absolute;left:22%;right:22%;bottom:0;height:17%;border:3px solid var(--line-chalk);border-bottom:none;opacity:.85}
+  .pitch .pen-area{position:absolute;left:12%;right:12%;bottom:0;height:30%;border:3px solid var(--line-chalk);border-bottom:none;opacity:.85}
+  .player-dot{
+    position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;
+    background:var(--chalk);color:var(--grass-deep);
+    display:grid;place-items:center;font-weight:800;font-size:.82rem;
+    box-shadow:0 6px 14px -6px rgba(0,0,0,.6);
+    animation:pop .45s cubic-bezier(.3,1.4,.5,1) both;
+  }
+  .player-dot small{position:absolute;top:105%;left:50%;transform:translateX(-50%);font-family:var(--font-chalk);font-size:.98rem;font-weight:600;color:var(--chalk);white-space:nowrap}
+  @keyframes pop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+  .formation-note{
+    text-align:center;font-family:var(--font-chalk);font-size:1.4rem;color:var(--chalk-yellow);margin-top:12px;transform:rotate(-1.5deg);
+  }
+
+  .panel.conv-panel{padding:0}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:15px 20px;border-bottom:3px dashed var(--chalk-faint);font-family:var(--font-chalk);font-size:1.35rem;color:var(--chalk-dim)}
+  .panel-head b{color:var(--chalk-yellow);font-weight:700}
+  .info-list{list-style:none}
+  .info-list li{display:flex;justify-content:space-between;gap:14px;padding:12px 20px;border-bottom:2px dashed var(--chalk-faint);font-size:.95rem}
+  .info-list li:last-child{border-bottom:none}
+  .info-list .k{font-family:var(--font-chalk);font-size:1.2rem;color:var(--chalk-dim)}
+  .info-list .v{font-weight:700;text-align:right}
+  .notes-box{padding:18px 20px;background:rgba(255,233,163,.09)}
+  .notes-box .k{font-family:var(--font-chalk);font-size:1.35rem;font-weight:700;color:var(--chalk-yellow);margin-bottom:6px;transform:rotate(-1deg)}
+  .notes-box p{font-size:.95rem;color:var(--chalk)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-in">
+    <a class="brand" href="#">
+      <span class="ball">TH</span>
+      <span class="brand-name">THOF<small>gesso &amp; prato</small></span>
+    </a>
+    <div class="tabs">
+      <button class="tab active" data-page="home">Spogliatoio</button>
+      <button class="tab" data-page="login">Accesso</button>
+      <button class="tab" data-page="registro">Presenze</button>
+      <button class="tab" data-page="conv">Convocati</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <!-- ============ HOME ============ -->
+  <section id="page-home" class="page active">
+    <div class="hero">
+      <div class="center-ring"></div>
+      <span class="season-chip">Stagione 2025/2026</span>
+      <h1 class="hero-title">Il registro<br>disegnato <em>sul campo</em></h1>
+      <p class="hero-sub">Presenze, allenamenti e convocazioni della società: tutto scritto col gesso, tutto visibile a tutti.</p>
+      <p class="hero-note">gli allenamenti<br>della settimana,<br><b>tutti qui</b> →</p>
+    </div>
+
+    <div class="shead reveal">
+      <h2>Allenamenti <em>della settimana</em></h2><span class="mid"></span><span class="note">← tocca un giorno per aprire il registro</span>
+    </div>
+    <div class="sched reveal">
+      <div class="day-card"><div class="dow">Lun</div><div class="date-n">18 agosto</div>
+        <div class="ev">Allievi<span class="t">18:30</span></div><div class="ev">Pulcini<span class="t">19:00</span></div></div>
+      <div class="day-card"><div class="dow">Mar</div><div class="date-n">19 agosto</div>
+        <div class="ev gk">Portieri<span class="t">19:00</span></div></div>
+      <div class="day-card now"><div class="dow">Mer <span class="today-tag">oggi!</span></div><div class="date-n">20 agosto</div>
+        <div class="ev">Primi Calci<span class="t">17:30</span></div><div class="ev">Allievi<span class="t">18:30</span></div><div class="ev gk">Portieri<span class="t">19:00</span></div></div>
+      <div class="day-card"><div class="dow">Gio</div><div class="date-n">21 agosto</div>
+        <div class="ev">Pulcini<span class="t">18:30</span></div><div class="ev">Esordienti<span class="t">19:00</span></div></div>
+      <div class="day-card"><div class="dow">Ven</div><div class="date-n">22 agosto</div>
+        <div class="ev">Prima Squadra<span class="t">20:30</span></div></div>
+      <div class="day-card"><div class="dow">Sab</div><div class="date-n">23 agosto</div>
+        <div class="ev">Torneo Pulcini<span class="t">09:00</span></div><div class="ev">Allievi<span class="t">10:30</span></div></div>
+      <div class="day-card"><div class="dow">Dom</div><div class="date-n">24 agosto</div>
+        <div class="rest">riposo...</div></div>
+    </div>
+
+    <div class="shead reveal">
+      <h2>Le aree <em>del club</em></h2><span class="mid"></span><span class="note">ogni sezione ha il suo spogliatoio</span>
+    </div>
+    <div class="areas reveal">
+      <a class="area" href="#" onclick="go('registro');return false;">
+        <span class="corner"></span>
+        <span class="num">n.1</span>
+        <h3>Gestione Squadre</h3>
+        <p>Il registro delle presenze, la lavagna tattica e la reportistica di ogni categoria, per mister e preparatori.</p>
+        <span class="apri">entra sul campo →</span>
+      </a>
+      <a class="area" href="#">
+        <span class="corner"></span>
+        <span class="num">n.2</span>
+        <h3>Gestione Segreteria</h3>
+        <p>Iscrizioni, rate e pagamenti, moduli online e Open Day: la carta del club, tutta qui.</p>
+        <span class="apri">entra nello studio →</span>
+      </a>
+      <a class="area" href="#">
+        <span class="corner"></span>
+        <span class="num">n.3</span>
+        <h3>Gestione Responsabili</h3>
+        <p>Ruoli e categorie assegnate, partite del weekend, spogliatoi e campi da preparare per la domenica.</p>
+        <span class="apri">prendi la piantina →</span>
+      </a>
+      <a class="area" href="#">
+        <span class="corner"></span>
+        <span class="num">n.4</span>
+        <h3>Gestione Infermeria</h3>
+        <p>Infortuni con scadenza automatica e certificati medici sotto controllo: prima i ragazzi, poi il risultato.</p>
+        <span class="apri">apri la valigetta →</span>
+      </a>
+    </div>
+
+    <footer class="colophon">
+      <span>The Home Of Football Club</span>
+      <span>mockup grafico — non collegato al sito reale</span>
+    </footer>
+  </section>
+
+  <!-- ============ LOGIN ============ -->
+  <section id="page-login" class="page">
+    <div class="gate-wrap">
+      <form class="gate panel dashed reveal in" onsubmit="return false">
+        <span class="tape">spogliatoio staff</span>
+        <h2>Chi si presenta?</h2>
+        <p class="sub">scrivi nome e parola d'ordine per entrare</p>
+        <div class="field"><label>nome utente</label><input type="text" placeholder="es. m.rossi" autocomplete="off" /></div>
+        <div class="field"><label>parola d'ordine</label><input type="password" placeholder="••••••••" /></div>
+        <div class="opts">
+          <label><input type="checkbox" checked /> ricordami</label>
+          <span>l'hai persa? chiedi in segreteria</span>
+        </div>
+        <button class="btn-chalk">Entra nel registro</button>
+        <div class="or-line">oppure</div>
+        <button class="btn-google">
+          <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.4 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.3-7.7 2.3-6.3 0-11.7-3.9-13.6-9.3l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+          Continua con Google
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ REGISTRO ============ -->
+  <section id="page-registro" class="page">
+    <div class="reg-head reveal in">
+      <h2>Il registro <em>delle presenze</em></h2>
+      <div class="reg-meta">Allievi 2012 · <b>marzo 2026</b><br/>segna col gesso, non si cancella!</div>
+    </div>
+
+    <div class="legend reveal in">
+      <span class="lg"><b class="cd-x">X</b>presente</span>
+      <span class="lg"><b class="cd-p">P</b>permesso</span>
+      <span class="lg"><b class="cd-r">R</b>recupero</span>
+      <span class="lg"><b class="cd-a">A</b>assente</span>
+      <span class="lg"><b class="cd-ag">AG</b>assente giustificato</span>
+      <span class="lg"><b class="cd-ai">AI</b>infortunio</span>
+    </div>
+
+    <div class="reg-wrap reveal in">
+      <table class="reg">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding-left:14px">Giocatore</th>
+            <th>LUN 02</th><th>MER 04</th><th>VEN 06</th><th>LUN 09</th><th>MER 11</th><th>VEN 13</th><th>LUN 16</th><th>TOT</th><th>%</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="player"><span class="nr">7</span>Rossi Marco</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">6</td><td class="pct">86%</td></tr>
+          <tr><td class="player"><span class="nr">9</span>Bianchi Luca</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-r">R</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">6</td><td class="pct">86%</td></tr>
+          <tr class="inj"><td class="player"><span class="nr">4</span>Ferri Davide</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-ai">AI</span></td><td class="code"><span class="cd-ai">AI</span></td><td class="code"><span class="cd-ai">AI</span></td><td class="code"><span class="cd-ag">AG</span></td><td class="code"><span class="cd-ag">AG</span></td><td class="code"><span class="cd-ag">AG</span></td>
+            <td class="tot">1</td><td class="pct">14%</td></tr>
+          <tr><td class="player"><span class="nr">11</span>Esposito Andrea</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-a">A</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">5</td><td class="pct">71%</td></tr>
+          <tr><td class="player"><span class="nr">23</span>Colombo Simone</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">7</td><td class="pct">100%</td></tr>
+          <tr><td class="player"><span class="nr">5</span>Ricci Giulio</td>
+            <td class="code"><span class="cd-a">A</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-r">R</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">5</td><td class="pct">83%</td></tr>
+          <tr><td class="player"><span class="nr">17</span>Gallo Matteo</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-a">A</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">4</td><td class="pct">67%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="reg-note">(i dati sensibili restano dietro password, promesso — il regolamento privacy lo esige)</p>
+
+    <footer class="colophon">
+      <span>The Home Of Football Club</span>
+      <span>mockup grafico — non collegato al sito reale</span>
+    </footer>
+  </section>
+
+  <!-- ============ CONVOCAZIONI ============ -->
+  <section id="page-conv" class="page">
+    <div class="conv-head reveal in">
+      <h2>Domenica in trasferta: <em>ecco lo schieramento</em></h2>
+    </div>
+
+    <div class="conv-cols">
+      <div class="reveal in">
+        <div class="pitch" aria-label="modulo 4-3-3">
+          <span class="halfway"></span><span class="circle"></span>
+          <span class="pen-area"></span><span class="goal-area"></span>
+          <!-- portiere -->
+          <span class="player-dot" style="left:50%;top:88%">1<small>Marini</small></span>
+          <!-- difesa -->
+          <span class="player-dot" style="left:16%;top:68%">2<small>Ferretti</small></span>
+          <span class="player-dot" style="left:39%;top:73%">4<small>Lombardi</small></span>
+          <span class="player-dot" style="left:61%;top:73%">5<small>Testa</small></span>
+          <span class="player-dot" style="left:84%;top:68%">3<small>Neri</small></span>
+          <!-- centrocampo -->
+          <span class="player-dot" style="left:50%;top:54%">6<small>Villa</small></span>
+          <span class="player-dot" style="left:27%;top:47%">8<small>Sanna</small></span>
+          <span class="player-dot" style="left:73%;top:47%">10<small>Greco</small></span>
+          <!-- attacco -->
+          <span class="player-dot" style="left:18%;top:26%">7<small>Mancini</small></span>
+          <span class="player-dot" style="left:82%;top:26%">11<small>Barone</small></span>
+          <span class="player-dot" style="left:50%;top:20%">9<small>D'Amico</small></span>
+        </div>
+        <p class="formation-note">modulo 4-3-3 — pressione alta dal primo minuto!</p>
+      </div>
+
+      <div class="reveal in">
+        <div class="panel conv-panel">
+          <div class="panel-head"><span>dettagli gara</span><b>JUNIORES · GIORNATA 2</b></div>
+          <ul class="info-list">
+            <li><span class="k">avversario</span><span class="v">AC Caronnese</span></li>
+            <li><span class="k">quando</span><span class="v">Domenica 30 agosto, ore 15:00</span></li>
+            <li><span class="k">dove</span><span class="v">Campo Centrale di Caronno — terra rossa</span></li>
+            <li><span class="k">ritrovo</span><span class="v">13:45 agli spogliatoi</span></li>
+            <li><span class="k">mister</span><span class="v">Marco Bellini · +39 333 000 0000</span></li>
+            <li><span class="k">dirigente</span><span class="v">Sig. Paolo Marconi</span></li>
+          </ul>
+        </div>
+        <div class="panel conv-panel" style="margin-top:16px">
+          <div class="notes-box">
+            <div class="k">← scritto sulla lavagna:</div>
+            <p>Tenuta completa con maglia rossa. Pullman societario in partenza puntuale — chi arriva tardi guarda dalla panchina. Borraccia e snack nello zaino.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="colophon">
+      <span>The Home Of Football Club</span>
+      <span>mockup grafico — non collegato al sito reale</span>
+    </footer>
+  </section>
+</main>
+
+<script>
+  const tabs=document.querySelectorAll('.tab');
+  const pages={
+    home:document.getElementById('page-home'),
+    login:document.getElementById('page-login'),
+    registro:document.getElementById('page-registro'),
+    conv:document.getElementById('page-conv')
+  };
+  function go(id){
+    tabs.forEach(t=>t.classList.toggle('active',t.dataset.page===id));
+    Object.entries(pages).forEach(([k,p])=>p.classList.toggle('active',k===id));
+    window.scrollTo({top:0,behavior:'smooth'});
+    if(id==='home'){reveal();countUp();}else{reveal(true);}
+  }
+  tabs.forEach(t=>t.addEventListener('click',()=>go(t.dataset.page)));
+
+  const io=new IntersectionObserver(es=>es.forEach(e=>{
+    if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}
+  }),{threshold:.1});
+  function reveal(immediate){
+    document.querySelectorAll('.page.active .reveal').forEach((el,i)=>{
+      if(el.classList.contains('in'))return;
+      el.style.transitionDelay=(i*70)+'ms';
+      if(immediate){requestAnimationFrame(()=>el.classList.add('in'));}
+      else io.observe(el);
+    });
+    document.querySelectorAll('#page-conv.active .player-dot').forEach((el,i)=>{
+      el.style.animationDelay=(300+i*90)+'ms';
+    });
+  }
+  let counted=false;
+  function countUp(){
+    document.querySelectorAll('.page.active [data-count]').forEach(el=>{
+      if(counted&&el.textContent!=='0')return;
+      const target=+el.dataset.count;let n=0;
+      const step=Math.max(1,Math.ceil(target/38));
+      const t=setInterval(()=>{n+=step;if(n>=target){n=target;clearInterval(t);}el.textContent=n;},26);
+    });
+    counted=true;
+  }
+  reveal();countUp();
+</script>
+</body>
+</html>

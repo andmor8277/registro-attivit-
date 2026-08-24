@@ -54,7 +54,7 @@
         <span class="badge-desc">{{ c.descrizione }}</span>
       </span>
     </div>
-    
+
     <div class="table-wrapper">
       <template v-if="isDirigente">
         <table>
@@ -76,8 +76,9 @@
                 <span class="persona-name">{{ persona.cognome }} {{ persona.nome }}</span>
               </td>
               <td v-for="g in giorniMese" :key="g.num"
-                class="cella" 
-                :class="getCodiceClasse(persona.id, g.num)"
+                class="cella"
+                :class="[getCodiceClasse(persona.id, g.num), { 'cella-readthrough': isReadthrough(persona.id, g.num), 'cella-locked': isAutoInfortunio(persona.id, g.num) }]"
+                :title="titoloCella(persona, g.num)"
                 @click="openEdit(persona, g.num)">
                 {{ getCodice(persona.id, g.num) }}
               </td>
@@ -118,8 +119,9 @@
                     <span class="persona-name">{{ persona.cognome }} {{ persona.nome }}</span>
                   </td>
                   <td v-for="g in giorniMese" :key="g.num"
-                    class="cella" 
-                    :class="getCodiceClasse(persona.id, g.num)"
+                    class="cella"
+                    :class="[getCodiceClasse(persona.id, g.num), { 'cella-readthrough': isReadthrough(persona.id, g.num), 'cella-locked': isAutoInfortunio(persona.id, g.num) }]"
+                    :title="titoloCella(persona, g.num)"
                     @click="openEdit(persona, g.num)">
                     {{ getCodice(persona.id, g.num) }}
                   </td>
@@ -172,6 +174,7 @@
                 <td v-for="g in getGiorniMese(gruppo)" :key="g.num"
                   class="cella"
                   :class="[getCodiceClasse(persona.id, g.num), { 'cella-readthrough': isReadthrough(persona.id, g.num), 'cella-locked': isAutoInfortunio(persona.id, g.num) }]"
+                  :title="titoloCella(persona, g.num)"
                   @click="openEdit(persona, g.num)">
                   {{ getCodice(persona.id, g.num) }}
                 </td>
@@ -441,6 +444,13 @@ function openEdit(persona, giorno) {
   editModal.value = { show: true, persona, giorno }
 }
 
+function titoloCella(persona, giorno) {
+  const codice = getCodice(persona.id, giorno)
+  if (!codice) return 'Vuoto — clicca per segnare'
+  const c = codici.value.find(x => x.codice === codice)
+  return c ? `${c.codice} — ${c.descrizione}` : codice
+}
+
 async function salvaPresenza(codice) {
   const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(editModal.value.giorno).padStart(2,"0")
   await upsertRegistro({ persona_id: editModal.value.persona.id, data: d, codice, categoria_id: categoriaId.value })
@@ -637,8 +647,7 @@ watch([anno, mese], async () => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.4rem 0.4rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 100px;
   color: var(--color-text-secondary);
@@ -650,7 +659,7 @@ watch([anno, mese], async () => {
 }
 
 .btn-back-pill svg {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-bg);
   border-radius: 50%;
   width: 24px;
   height: 24px;
@@ -658,8 +667,8 @@ watch([anno, mese], async () => {
 }
 
 .btn-back-pill:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--color-bg);
+  border-color: var(--color-text-muted);
   color: var(--color-text);
 }
 
@@ -703,7 +712,7 @@ watch([anno, mese], async () => {
 }
 
 .name-gradient {
-  background: linear-gradient(135deg, #ffffff 0%, #ffffff 40%, var(--color-primary) 100%);
+  background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text) 40%, var(--color-primary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -745,7 +754,7 @@ watch([anno, mese], async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 50%;
   color: var(--color-text-secondary);
@@ -795,21 +804,21 @@ watch([anno, mese], async () => {
 }
 
 .badge.presenza {
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.2);
-  color: #4ade80;
+  background: rgba(22, 163, 74, 0.1);
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  color: #15803d;
 }
 
 .badge.assenza {
-  background: rgba(220, 38, 38, 0.12);
-  border: 1px solid rgba(220, 38, 38, 0.2);
-  color: #f87171;
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  color: #b91c1c;
 }
 
 .badge.extra {
-  background: rgba(234, 179, 8, 0.12);
-  border: 1px solid rgba(234, 179, 8, 0.2);
-  color: #fbbf24;
+  background: rgba(217, 119, 6, 0.1);
+  border: 1px solid rgba(217, 119, 6, 0.25);
+  color: #92400e;
 }
 
 /* ── Table Wrapper ── */
@@ -826,8 +835,7 @@ table {
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.8125rem;
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(10px);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 16px;
   overflow: hidden;
@@ -836,7 +844,7 @@ table {
 
 th, td {
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--color-border-light);
   text-align: center;
   padding: 0.5rem 0.25rem;
   white-space: nowrap;
@@ -852,12 +860,12 @@ tr:last-child td {
 .th-tot, .td-tot { min-width: 60px; }
 
 .th-weekend {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-bg);
   color: var(--color-text-muted);
 }
 
 th {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-bg);
   font-weight: 600;
   color: var(--color-text-secondary);
   position: sticky;
@@ -875,8 +883,7 @@ th {
 /* ── Group Blocks ── */
 .gruppo-block {
   margin-bottom: 2rem;
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(10px);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 20px;
   overflow: hidden;
@@ -925,38 +932,42 @@ th {
 }
 
 .cella:hover {
-  background: rgba(220, 38, 38, 0.15);
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.cella:active {
+  transform: scale(0.82);
 }
 
 .cella.presenza {
-  background: rgba(34, 197, 94, 0.12);
-  color: #4ade80;
+  background: rgba(22, 163, 74, 0.14);
+  color: #15803d;
 }
 
 .cella.assenza {
-  background: rgba(220, 38, 38, 0.12);
-  color: #f87171;
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
 }
 
 .cella.cod-ag {
-  background: rgba(234, 179, 8, 0.12) !important;
-  color: #fbbf24 !important;
+  background: rgba(217, 119, 6, 0.14) !important;
+  color: #92400e !important;
 }
 
 .cella.cod-p {
-  background: rgba(234, 179, 8, 0.12) !important;
-  color: #fbbf24 !important;
+  background: rgba(217, 119, 6, 0.14) !important;
+  color: #92400e !important;
 }
 
 .cella.cod-r {
-  background: rgba(34, 197, 94, 0.15) !important;
-  color: #4ade80 !important;
+  background: rgba(22, 163, 74, 0.18) !important;
+  color: #166534 !important;
   font-weight: 700;
 }
 
 .cella.cod-i {
-  background: rgba(220, 38, 38, 0.15) !important;
-  color: #f87171 !important;
+  background: rgba(220, 38, 38, 0.16) !important;
+  color: #991b1b !important;
   font-weight: 700;
 }
 
@@ -995,18 +1006,18 @@ th {
   border-color: rgba(248, 113, 113, 0.6);
 }
 
-.td-pres { color: #4ade80; font-weight: 700; }
+.td-pres { color: #15803d; font-weight: 700; }
 
 .riga-totale td {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-bg);
   font-weight: 600;
   font-size: 0.75rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--color-border-light);
   color: var(--color-text-secondary);
 }
 
-.riga-totale.pres td { color: #4ade80; }
-.riga-totale.ass td { color: #f87171; }
+.riga-totale.pres td { color: #15803d; }
+.riga-totale.ass td { color: #b91c1c; }
 
 .tot-cell {
   font-weight: 600;
@@ -1017,8 +1028,7 @@ th {
 /* ── Totale Generale ── */
 .totale-generale {
   margin-top: 1.5rem;
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(10px);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 20px;
   overflow: hidden;
@@ -1029,9 +1039,9 @@ th {
   align-items: center;
   gap: 0.5rem;
   padding: 0.875rem 1.25rem;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.05) 100%);
-  border-bottom: 1px solid rgba(168, 85, 247, 0.15);
-  color: #a78bfa;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(124, 58, 237, 0.03) 100%);
+  border-bottom: 1px solid rgba(124, 58, 237, 0.18);
+  color: #6d28d9;
   font-weight: 700;
   font-size: 0.8125rem;
   letter-spacing: 0.03em;
@@ -1039,7 +1049,7 @@ th {
 }
 
 .totale-generale table th {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-bg);
   font-weight: 600;
   font-size: 0.75rem;
   padding: 0.375rem;
@@ -1054,13 +1064,13 @@ th {
 }
 
 .tot-pres {
-  background: rgba(34, 197, 94, 0.08) !important;
-  color: #4ade80 !important;
+  background: rgba(22, 163, 74, 0.08) !important;
+  color: #15803d !important;
 }
 
 .tot-ass {
-  background: rgba(220, 38, 38, 0.08) !important;
-  color: #f87171 !important;
+  background: rgba(220, 38, 38, 0.07) !important;
+  color: #b91c1c !important;
 }
 
 /* ── Modals ── */
@@ -1094,13 +1104,12 @@ th {
 
 /* ── Edit Modal ── */
 .modal {
-  background: rgba(30, 30, 30, 0.95);
-  backdrop-filter: blur(20px);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 24px;
   width: 100%;
   max-width: 480px;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 60px rgba(22, 24, 29, 0.25);
   animation: scaleIn 0.3s ease-out;
   overflow: hidden;
 }
@@ -1143,7 +1152,7 @@ th {
   border-radius: 14px;
   cursor: pointer;
   transition: all var(--transition-fast);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-bg);
 }
 
 .btn-codice:hover {
@@ -1166,39 +1175,39 @@ th {
 }
 
 .btn-codice.presenza {
-  border-color: rgba(34, 197, 94, 0.3);
-  background: rgba(34, 197, 94, 0.1);
-  color: #4ade80;
+  border-color: rgba(22, 163, 74, 0.35);
+  background: rgba(22, 163, 74, 0.08);
+  color: #15803d;
 }
-.btn-codice.presenza:hover { background: rgba(34, 197, 94, 0.18); }
+.btn-codice.presenza:hover { background: rgba(22, 163, 74, 0.16); }
 
 .btn-codice.assenza {
-  border-color: rgba(220, 38, 38, 0.3);
-  background: rgba(220, 38, 38, 0.1);
-  color: #f87171;
+  border-color: rgba(220, 38, 38, 0.35);
+  background: rgba(220, 38, 38, 0.07);
+  color: #b91c1c;
 }
-.btn-codice.assenza:hover { background: rgba(220, 38, 38, 0.18); }
+.btn-codice.assenza:hover { background: rgba(220, 38, 38, 0.14); }
 
 .btn-codice.extra {
-  border-color: rgba(234, 179, 8, 0.3);
-  background: rgba(234, 179, 8, 0.1);
-  color: #fbbf24;
+  border-color: rgba(217, 119, 6, 0.35);
+  background: rgba(217, 119, 6, 0.08);
+  color: #92400e;
 }
-.btn-codice.extra:hover { background: rgba(234, 179, 8, 0.18); }
+.btn-codice.extra:hover { background: rgba(217, 119, 6, 0.16); }
 
 .btn-codice.cancella {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
+  border-color: var(--color-border);
+  background: transparent;
   color: var(--color-text-muted);
 }
-.btn-codice.cancella:hover { background: rgba(255, 255, 255, 0.06); }
+.btn-codice.cancella:hover { background: var(--color-bg); }
 
 .btn-close-modal {
   display: block;
   width: calc(100% - 3rem);
   margin: 0 1.5rem 1.5rem;
   padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 12px;
   color: var(--color-text-secondary);
@@ -1209,7 +1218,7 @@ th {
 }
 
 .btn-close-modal:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-border-light);
 }
 
 /* ── Rotate Overlay ── */
