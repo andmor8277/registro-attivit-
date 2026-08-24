@@ -17,8 +17,7 @@
         <span class="header-category">{{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
       </div>
       <div class="header-right">
-        <button v-if="convocazione" class="btn btn-accent" @click="nuovaConvocazione()">+ Nuova</button>
-        <button v-else class="btn btn-accent" @click="nuovaConvocazione()">+ Nuova</button>
+        <button class="btn btn-primary" @click="nuovaConvocazione()">+ Nuova</button>
       </div>
     </header>
 
@@ -60,202 +59,189 @@
     </div>
 
     <div class="conv-body">
-      <!-- SIDEBAR -->
-      <aside class="sidebar">
-        <div class="sidebar-section">
-          <div class="sidebar-title">Storico</div>
-          <div v-for="c in storico" :key="c.id" :class="['sidebar-link', { active: convocazioneId === c.id }]" @click="caricaConvocazione(c.id)">
-            {{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' — ' + formatDataShort(c.data_fine) : '' }}
-          </div>
-          <div v-if="storico.length === 0" class="sidebar-empty">Nessun storico</div>
-        </div>
-        <div class="sidebar-section">
-          <div class="sidebar-title">Mister</div>
-          <div v-for="r in responsabili" :key="r.id" class="mister-card">
-            <div class="mister-avatar">{{ r.cognome.charAt(0) }}</div>
-            <div class="mister-info">
-              <span class="mister-name">{{ r.cognome }}</span>
-              <span class="mister-tel">{{ r.cellulare }}</span>
-            </div>
-          </div>
-          <div v-if="responsabili.length === 0" class="sidebar-empty">Nessun mister</div>
-        </div>
-        <div class="sidebar-section">
-          <div class="sidebar-title">Weekend Gare</div>
-          <div v-for="w in weekendDisponibili" :key="w.id" class="weekend-card" @click="creaConvocazioneDaWeekend(w)">
-            <div class="weekend-card-top">
-              <span class="weekend-name">{{ w.nome || 'Weekend' }}</span>
-              <span class="weekend-badge">{{ w.partite.length }}</span>
-            </div>
-            <div class="weekend-dates">{{ formatDataShort(w.data_inizio) }}{{ w.data_fine ? ' — ' + formatDataShort(w.data_fine) : '' }}</div>
-          </div>
-          <div v-if="weekendDisponibili.length === 0" class="sidebar-empty">Nessun weekend</div>
-        </div>
-      </aside>
-
-      <!-- EDITOR -->
-      <main class="editor" v-if="convocazione">
-        <!-- Editor Top Bar -->
-        <div class="editor-topbar">
-          <div class="date-pickers">
-            <div class="date-field">
-              <label>Inizio</label>
-              <input type="date" v-model="convocazione.data_inizio" />
-            </div>
-            <div class="date-field">
-              <label>Fine</label>
-              <input type="date" v-model="convocazione.data_fine" />
-            </div>
-            <div class="date-field">
-              <label>Gare</label>
-              <input type="number" min="1" max="7" v-model.number="numPartite" @change="aggiustaGare" class="num-input" />
-            </div>
-          </div>
-          <div class="editor-actions">
-            <button class="btn btn-ghost" @click="caricaPartiteEsistenti">⚽ Carica Partite</button>
-            <button class="btn btn-primary" @click="salva">💾 Salva</button>
-            <button class="btn btn-danger" @click="elimina">🗑</button>
-            <button class="btn btn-ghost" @click="esportaPDF">📄 PDF</button>
-          </div>
-        </div>
-
-        <!-- NON CONVOCABILI -->
-        <div class="alert-box" v-if="convocazione">
-          <span class="alert-icon">⚠️</span>
-          <span class="alert-label">NON CONVOCABILI</span>
-          <span class="alert-period" v-if="convocazione.data_inizio">(Lun-Ven {{ getSettimanaLabel(convocazione.data_inizio) }})</span>
-          <span v-for="p in getAllEsclusi()" :key="p.id" class="alert-tag">{{ p.cognome }} {{ p.nome }}</span>
-          <span v-if="getAllEsclusi().length === 0" class="alert-none">Nessuno</span>
-        </div>
-
-        <!-- ESCLUSIONI MANUALI -->
-        <div class="esclusioni-grid" v-if="convocazione">
-          <div class="esclusione-panel" v-for="tipo in ['no_sabato_mattina', 'no_sabato_pomeriggio', 'no_domenica']" :key="tipo">
-            <div class="esclusione-panel-header">
-              <span class="esclusione-panel-title">{{ tipo.replace(/_/g, ' ').toUpperCase() }}</span>
-              <select @change="toggleEsclusione(tipo, $event)" class="esclusione-select">
-                <option value="">+ Aggiungi</option>
-                <option v-for="p in getGiocatoriDisponibili(tipo)" :key="p.id" :value="p.id">{{ p.cognome }} {{ p.nome }}</option>
-              </select>
-            </div>
-            <div class="esclusione-tags">
-              <span v-for="p in getEsclusiPerTipo(tipo)" :key="p.id" class="esclusione-tag" @click="toggleEsclusione(tipo, p.id)">{{ p.cognome }} {{ p.nome }} ×</span>
-              <span v-if="getEsclusiPerTipo(tipo).length === 0" class="esclusione-none">—</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- GARE -->
-        <div class="gare-scroll">
-          <div class="gare-grid" :style="{ gridTemplateColumns: 'repeat(' + convocazione.gare.length + ', minmax(280px, 1fr))' }">
-            <!-- Header Banner -->
-            <div class="gare-banner" :style="{ gridColumn: '1 / -1' }">
-              <img v-if="societaAttiva?.logosponsor" :src="'/uploads/' + societaAttiva.logosponsor" alt="logo" class="banner-logo banner-logo-left" />
-              <img v-else src="/logosponsor.png" alt="logo" class="banner-logo banner-logo-left" />
-              <div class="banner-text">
-                <div class="banner-title">{{ societaAttiva?.nome || 'SQUADRA' }}</div>
-                <div class="banner-sub">CONVOCAZIONE GARE</div>
-                <div class="banner-cat">{{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</div>
+      <main class="editor">
+        <template v-if="convocazione">
+          <!-- TOPBAR: date + azioni -->
+          <div class="editor-topbar">
+            <div class="date-pickers">
+              <div class="date-field">
+                <label>Inizio</label>
+                <input type="date" v-model="convocazione.data_inizio" />
               </div>
-              <img v-if="societaAttiva?.logo" :src="'/uploads/' + societaAttiva.logo" alt="logo" class="banner-logo banner-logo-right" />
-              <img v-else src="/logo.jpg" alt="logo" class="banner-logo banner-logo-right" />
+              <div class="date-field">
+                <label>Fine</label>
+                <input type="date" v-model="convocazione.data_fine" />
+              </div>
+              <div class="date-field">
+                <label>Gare</label>
+                <input type="number" min="1" max="7" v-model.number="numPartite" @change="aggiustaGare" class="num-input" />
+              </div>
+            </div>
+            <div class="editor-actions">
+              <button class="btn btn-ghost" @click="caricaPartiteEsistenti">Carica Partite</button>
+              <button class="btn btn-danger" @click="elimina">Elimina</button>
+              <button class="btn btn-primary" @click="salva">Salva</button>
+            </div>
+          </div>
+
+          <!-- NON CONVOCABILI -->
+          <div class="alert-box">
+            <span class="alert-icon">&#9888;&#65039;</span>
+            <span class="alert-label">NON CONVOCABILI</span>
+            <span class="alert-period" v-if="convocazione.data_inizio">(Lun-Ven {{ getSettimanaLabel(convocazione.data_inizio) }})</span>
+            <span v-for="p in getAllEsclusi()" :key="p.id" class="alert-tag">{{ p.cognome }} {{ p.nome }}</span>
+            <span v-if="getAllEsclusi().length === 0" class="alert-none">Nessuno</span>
+          </div>
+
+          <!-- ESCLUSIONI MANUALI -->
+          <div class="esclusioni-grid">
+            <div class="esclusione-panel" v-for="tipo in ['no_sabato_mattina', 'no_sabato_pomeriggio', 'no_domenica']" :key="tipo">
+              <div class="esclusione-panel-header">
+                <span class="esclusione-panel-title">{{ tipo.replace(/_/g, ' ').toUpperCase() }}</span>
+                <select @change="toggleEsclusione(tipo, $event)" class="esclusione-select">
+                  <option value="">+ Aggiungi</option>
+                  <option v-for="p in getGiocatoriDisponibili(tipo)" :key="p.id" :value="p.id">{{ p.cognome }} {{ p.nome }}</option>
+                </select>
+              </div>
+              <div class="esclusioni-tags-wrap esclusione-tags">
+                <span v-for="p in getEsclusiPerTipo(tipo)" :key="p.id" class="esclusione-tag" @click="toggleEsclusione(tipo, p.id)">{{ p.cognome }} {{ p.nome }} &times;</span>
+                <span v-if="getEsclusiPerTipo(tipo).length === 0" class="esclusione-none">&mdash;</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- PAGE HEAD -->
+          <div class="page-head">
+            <div>
+              <h1>Convocazioni</h1>
+              <p class="sub">Attiva o disattiva i giocatori con un tocco &middot; l'elenco va in PDF pronto da stampare</p>
+            </div>
+            <button class="btn btn-primary" @click="esportaPDF">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V6a6 6 0 0112 0v3"/><rect x="4" y="9" width="16" height="12" rx="2"/><path d="M12 14v3"/></svg>
+              Esporta PDF
+            </button>
+          </div>
+
+          <!-- WEEKEND CHIPS -->
+          <div class="weekend-chips">
+            <button v-for="c in storico" :key="'s-' + c.id" :class="['wk', { active: convocazioneId === c.id }]" @click="caricaConvocazione(c.id)">
+              {{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' \u2013 ' + formatDataShort(c.data_fine) : '' }}
+            </button>
+            <button v-for="w in weekendDisponibili" :key="'w-' + w.id" class="wk wk-new" @click="creaConvocazioneDaWeekend(w)">
+              + {{ w.nome || formatDataShort(w.data_inizio) }}
+            </button>
+            <button class="wk wk-new" @click="nuovaConvocazione()">+ nuovo</button>
+          </div>
+
+          <!-- GARE TABS -->
+          <div class="gara-tabs" v-if="convocazione.gare.length > 0">
+            <button v-for="(g, gi) in convocazione.gare" :key="'t-' + gi" :class="['gtab', { active: gi === activeGaraIdx }]" @click="activeGaraIdx = gi">
+              Gara {{ gi + 1 }}<span v-if="g.gara" class="gtab-label"> &middot; {{ g.gara }}</span>
+            </button>
+          </div>
+
+          <!-- CONV GRID -->
+          <div class="conv-grid" v-if="garaAttiva">
+            <div class="card">
+              <div class="card-h">
+                <h2><input v-model="garaAttiva.gara" class="gara-title-inline" placeholder="THOF vs Avversario" /></h2>
+                <span class="conv-count">{{ countAssigned(garaAttiva) }} convocati</span>
+              </div>
+              <ul class="roster">
+                <li v-for="(pid, pos) in garaAttiva.giocatori" :key="'r-' + pos" :class="[pid ? (garaAttiva.nonPresenti && garaAttiva.nonPresenti.has(pid) ? 'off' : 'on') : 'empty']">
+                  <template v-if="pid">
+                    <span class="pnum">{{ pos + 1 }}</span>
+                    <span class="pname" @click="openPicker(activeGaraIdx, pos)" title="Cambia giocatore">{{ getPlayerLabel(pid) }}</span>
+                    <span class="prole">{{ getPlayerRuolo(pid) }}</span>
+                    <button class="toggle" aria-label="attiva/disattiva" @click="switchNonPresente(activeGaraIdx, pid)"></button>
+                    <button class="slot-x" title="Rimuovi" @click.stop="rimuoviGiocatore(activeGaraIdx, pos)">&times;</button>
+                  </template>
+                  <template v-else>
+                    <span class="pnum">{{ pos + 1 }}</span>
+                    <button class="slot-add" @click="openPicker(activeGaraIdx, pos)">+ Seleziona giocatore</button>
+                  </template>
+                </li>
+              </ul>
+              <div class="roster-foot">
+                <button class="link-btn" @click="aggiungiSlot(activeGaraIdx)">+ Aggiungi riga</button>
+              </div>
             </div>
 
-            <div v-for="(gara, gi) in convocazione.gare" :key="gi" class="gara-card">
-              <div class="gara-card-header">
-                <span class="gara-num">{{ gi + 1 }}</span>
-                <input v-model="gara.gara" placeholder="Squadra A vs Squadra B" class="gara-title-input" />
+            <div class="conv-side">
+              <div class="card">
+                <div class="card-h"><h2>Dettagli gara</h2></div>
+                <ul class="info-dl">
+                  <li><span class="k">Data</span><span class="v"><input type="date" v-model="garaAttiva.data" /></span></li>
+                  <li><span class="k">Campo</span><span class="v"><input v-model="garaAttiva.campo" placeholder="Comunale n.1" /></span></li>
+                  <li><span class="k">Indirizzo</span><span class="v"><input v-model="garaAttiva.indirizzo" placeholder="&mdash;" /></span></li>
+                  <li><span class="k">Ritrovo</span><span class="v"><input v-model="garaAttiva.appuntamento" placeholder="13:45 &middot; spogliatoi" /></span></li>
+                  <li><span class="k">Inizio gara</span><span class="v"><input v-model="garaAttiva.inizio_gara" placeholder="15:00" /></span></li>
+                  <li><span class="k">Mister</span>
+                    <span class="v">
+                      <select v-model="garaAttiva.allenatore">
+                        <option value="">&mdash;</option>
+                        <option v-for="r in responsabili" :key="r.id" :value="r.cognome">{{ r.cognome }} &middot; {{ r.cellulare }}</option>
+                      </select>
+                    </span>
+                  </li>
+                </ul>
               </div>
-              <div class="gara-fields">
-                <div class="gf-row"><span class="gf-label">Data</span><input type="date" v-model="gara.data" class="gf-input" /></div>
-                <div class="gf-row"><span class="gf-label">Campo</span><input v-model="gara.campo" class="gf-input" /></div>
-                <div class="gf-row"><span class="gf-label">Indirizzo</span><input v-model="gara.indirizzo" class="gf-input" /></div>
-                <div class="gf-row"><span class="gf-label">Appuntamento</span><input v-model="gara.appuntamento" class="gf-input" /></div>
-                <div class="gf-row"><span class="gf-label">Inizio Gara</span><input v-model="gara.inizio_gara" class="gf-input" /></div>
-                <div class="gf-row"><span class="gf-label">Mister</span>
-                  <select v-model="gara.allenatore" class="gf-input">
-                    <option value="">— Seleziona —</option>
-                    <option v-for="r in responsabili" :key="r.id" :value="r.cognome">{{ r.cognome }} - {{ r.cellulare }}</option>
-                  </select>
-                </div>
-              </div>
-              <div class="giocatori-section">
-                <div class="giocatori-title">
-                  <span class="giocatori-title-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M5.5 21c0-4.5 3-6.5 6.5-6.5s6.5 2 6.5 6.5"/></svg>
-                  </span>
-                  SQUADRA
-                  <span class="giocatori-count">{{ countAssigned(gara) }}</span>
-                </div>
-                <div class="giocatori-grid">
-                  <div v-for="(pid, pos) in gara.giocatori" :key="'slot-' + pos" class="giocatore-slot" :class="{ filled: !!pid, non_presente: !!pid && gara.nonPresenti?.has(pid) }" @click="openPicker(gi, pos)">
-                    <span class="pos-badge">{{ pos + 1 }}</span>
-                    <span v-if="pid" class="slot-name">{{ getPlayerCognome(pid) }}</span>
-                    <span v-else class="slot-empty">+ tap</span>
-                    <label v-if="pid" class="slot-np-toggle" @click.stop>
-                      <input type="checkbox" :checked="gara.nonPresenti?.has(pid)" @change="toggleNonPresente(gi, pid, $event)" />
-                      <span class="slot-np-label">NP</span>
-                    </label>
-                    <span v-if="pid" class="slot-remove" @click.stop="rimuoviGiocatore(gi, pos)">×</span>
-                  </div>
-                  <div class="giocatore-slot add-slot" @click="aggiungiSlot(gi)">
-                    <span class="add-icon">+</span>
-                    <span class="slot-empty">Aggiungi</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- PLAYER PICKER MODAL -->
-              <div v-if="pickerOpen && pickerGara === gi && pickerPos !== null" class="picker-overlay" @click.self="closePicker">
-                <div class="picker-modal">
-                  <div class="picker-header">
-                    <div class="picker-title">
-                      <span class="picker-pos">#{{ pickerPos + 1 }}</span>
-                      <span>Seleziona Giocatore</span>
-                    </div>
-                    <button class="picker-close" @click="closePicker">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
-                  </div>
-                  <div class="picker-search">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    <input v-model="pickerSearch" placeholder="Cerca giocatore..." autofocus />
-                  </div>
-                  <div class="picker-list">
-                    <div class="picker-empty" v-if="filteredPickerPlayers.length === 0">Nessun giocatore trovato</div>
-                    <div v-for="p in filteredPickerPlayers" :key="p.id" class="picker-item" :class="{ selected: p.id === gara.giocatori[pickerPos] }" @click="selectPlayer(gi, pickerPos, p.id)">
-                      <div class="picker-avatar">{{ p.cognome.charAt(0) }}{{ p.nome.charAt(0) }}</div>
-                      <div class="picker-info">
-                        <span class="picker-name">{{ p.cognome }}</span>
-                        <span class="picker-surname">{{ p.nome }}</span>
-                      </div>
-                      <div class="picker-check" v-if="p.id === gara.giocatori[pickerPos]">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                      </div>
-                    </div>
+              <div class="card note-card">
+                <div class="note-box">
+                  <label>Note per la convocazione</label>
+                  <textarea v-model="convocazione.note" rows="5"></textarea>
+                  <div class="note-actions">
+                    <button class="btn btn-primary" @click="salva">Salva</button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- NOTE -->
-        <div class="note-section">
-          <label class="note-label">Note</label>
-          <textarea v-model="convocazione.note" rows="6" class="note-textarea"></textarea>
+          <!-- PLAYER PICKER MODAL -->
+          <div v-if="pickerOpen && pickerPos !== null && garaAttiva" class="picker-overlay" @click.self="closePicker">
+            <div class="picker-modal">
+              <div class="picker-header">
+                <div class="picker-title">
+                  <span class="picker-pos">#{{ pickerPos + 1 }}</span>
+                  <span>Seleziona Giocatore</span>
+                </div>
+                <button class="picker-close" @click="closePicker">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="picker-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input v-model="pickerSearch" placeholder="Cerca giocatore..." autofocus />
+              </div>
+              <div class="picker-list">
+                <div class="picker-empty" v-if="filteredPickerPlayers.length === 0">Nessun giocatore trovato</div>
+                <div v-for="p in filteredPickerPlayers" :key="p.id" class="picker-item" :class="{ selected: p.id === garaAttiva.giocatori[pickerPos] }" @click="selectPlayer(activeGaraIdx, pickerPos, p.id)">
+                  <div class="picker-avatar">{{ p.cognome.charAt(0) }}{{ p.nome.charAt(0) }}</div>
+                  <div class="picker-info">
+                    <span class="picker-name">{{ p.cognome }}</span>
+                    <span class="picker-surname">{{ p.nome }}</span>
+                  </div>
+                  <div class="picker-check" v-if="p.id === garaAttiva.giocatori[pickerPos]">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <div v-else class="empty-state">
+          <div class="empty-icon">&#9917;</div>
+          <div class="empty-title">Nessuna convocazione attiva</div>
+          <div class="empty-sub">Seleziona un weekend dai chip sopra o crea una nuova convocazione</div>
+          <button class="btn btn-primary" @click="nuovaConvocazione()">+ Nuova Convocazione</button>
         </div>
       </main>
-
-      <div v-else class="empty-state">
-        <div class="empty-icon">⚽</div>
-        <div class="empty-title">Nessuna convocazione attiva</div>
-        <div class="empty-sub">Seleziona un weekend dalla sidebar o crea una nuova convocazione</div>
-        <button class="btn btn-accent" @click="nuovaConvocazione()">+ Nuova Convocazione</button>
-      </div>
     </div>
   </div>
 </template>
+
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
@@ -288,6 +274,9 @@ const pickerOpen = ref(false)
 const pickerGara = ref(null)
 const pickerPos = ref(null)
 const pickerSearch = ref('')
+const activeGaraIdx = ref(0)
+
+const garaAttiva = computed(() => convocazione.value?.gare?.[activeGaraIdx.value] || null)
 
 const filteredPickerPlayers = computed(() => {
   const players = getGiocatoriSettimanaPrecedente()
@@ -395,6 +384,23 @@ function countAssigned(gara) {
   return gara.giocatori.filter(Boolean).length
 }
 
+function getPlayerLabel(id) {
+  const p = persone.value.find(x => x.id === id)
+  return p ? getCognomeDisplay(p) : ''
+}
+
+function getPlayerRuolo(id) {
+  const p = persone.value.find(x => x.id === id)
+  return (p && p.ruolo) ? p.ruolo.toUpperCase() : ''
+}
+
+function switchNonPresente(garaIdx, personaId) {
+  const gara = convocazione.value.gare[garaIdx]
+  if (!gara.nonPresenti) gara.nonPresenti = new Set()
+  if (gara.nonPresenti.has(personaId)) gara.nonPresenti.delete(personaId)
+  else gara.nonPresenti.add(personaId)
+}
+
 function openPicker(garaIdx, pos) {
   pickerGara.value = garaIdx
   pickerPos.value = pos
@@ -441,6 +447,7 @@ function aggiustaGare() {
   const gare = convocazione.value.gare
   while (gare.length < n) gare.push(garaVuota(gare.length + 1))
    if (gare.length > n) gare.splice(n)
+  if (activeGaraIdx.value >= gare.length) activeGaraIdx.value = Math.max(0, gare.length - 1)
 }
 
 function padGiocatori(arr) {
@@ -496,6 +503,7 @@ async function popolaConvocazione(dataInizio, dataFine) {
     allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null), nonPresenti: new Set()
   })) : [garaVuota(1)]
   numPartite.value = gare.length
+  activeGaraIdx.value = 0
   convocazione.value = {
     data_inizio: dataInizio, data_fine: dataFine, esclusioni: [],
     note: `PRESENTARSI ALL'APPUNTAMENTO IN ORARIO STABILITO ED IN TENUTA DA RAPPRESENTANZA GEMS (NO GIA CAMBIATI).
@@ -518,6 +526,7 @@ async function caricaPartiteEsistenti() {
   }))
   convocazione.value.gare = gare
   numPartite.value = gare.length
+  if (activeGaraIdx.value >= gare.length) activeGaraIdx.value = 0
 }
 
 async function caricaConvocazione(id) {
@@ -545,6 +554,7 @@ async function caricaConvocazione(id) {
     })
   }
   numPartite.value = convocazione.value.gare.length
+  activeGaraIdx.value = 0
 }
 
 async function loadStorico() {
@@ -589,6 +599,7 @@ function creaConvocazioneDaWeekend(weekend) {
     inizio_gara: p.ora ? p.ora.slice(0, 5) : '', allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null), nonPresenti: new Set()
   }))
   numPartite.value = gare.length
+  activeGaraIdx.value = 0
   convocazione.value = {
     data_inizio: dataInizio, data_fine: dataFine, esclusioni: [],
     note: `PRESENTARSI ALL'APPUNTAMENTO IN ORARIO STABILITO ED IN TENUTA DA RAPPRESENTANZA GEMS (NO GIA CAMBIATI).
@@ -673,7 +684,7 @@ async function esportaPDF() {
 
   exportContainer.innerHTML = `<div style="background:#fff;font-family:'Helvetica Neue',Arial,sans-serif;width:100%;box-sizing:border-box;">
     <div style="background:#1a1a1a;color:#fff;padding:24px 20px;text-align:center;position:relative;overflow:hidden;">
-      <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(255,255,255,0.02) 40px,rgba(255,255,255,0.02) 41px);pointer-events:none;"></div>
+      <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(90deg,transparent,transparent 40px,var(--color-surface) 40px,var(--color-surface) 41px);pointer-events:none;"></div>
       <div style="display:flex;align-items:center;justify-content:center;gap:20px;position:relative;z-index:1;">
         <img src="${societaAttiva.value?.logosponsor ? '/uploads/' + societaAttiva.value.logosponsor : '/logosponsor.png'}" style="height:60px;width:60px;object-fit:contain;border-radius:50%;background:#fff;padding:4px;" />
         <div>
@@ -741,7 +752,7 @@ onMounted(async () => {
 
 <style scoped>
 /* ============================================
-   DESIGN SYSTEM — Dark editorial sports theme
+   DESIGN SYSTEM — Light operational theme (demo)
    ============================================ */
 
 .conv-page {
@@ -750,9 +761,8 @@ onMounted(async () => {
   height: 100vh;
   width: 100%;
   max-width: none;
-  background: #0a0a0a;
-  color: #e4e4e4;
-  font-family: var(--font-sans, 'Segoe UI', system-ui, -apple-system, sans-serif);
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 /* ---- PAGE HEADER ---- */
@@ -761,16 +771,12 @@ onMounted(async () => {
   align-items: center;
   gap: 1rem;
   padding: 0.75rem 1.25rem;
-  background: #000;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
+.header-left { display: flex; align-items: center; gap: 0.25rem; }
 
 .icon-btn {
   width: 36px;
@@ -779,29 +785,16 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.04);
-  color: #a3a3a3;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.2s;
 }
+.icon-btn:hover { background: var(--color-bg); color: var(--color-text); }
+.icon-btn svg { width: 18px; height: 18px; }
 
-.icon-btn:hover {
-  background: rgba(255,255,255,0.1);
-  color: #fff;
-}
-
-.icon-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
-.header-center {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
+.header-center { flex: 1; display: flex; flex-direction: column; gap: 0; }
 
 .header-label {
   font-size: 0.6rem;
@@ -810,19 +803,15 @@ onMounted(async () => {
   text-transform: uppercase;
   color: #dc2626;
 }
-
 .header-category {
   font-size: 1.05rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--color-text);
   letter-spacing: 0.02em;
   line-height: 1.2;
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-}
+.header-right { display: flex; align-items: center; }
 
 /* ---- BUTTONS ---- */
 .btn {
@@ -838,279 +827,79 @@ onMounted(async () => {
   border: 1px solid transparent;
   white-space: nowrap;
 }
+.btn svg { width: 15px; height: 15px; }
 
-.btn-accent {
-  background: #dc2626;
-  color: #fff;
-  border-color: #dc2626;
-}
-
-.btn-accent:hover {
-  background: #ef4444;
-  border-color: #ef4444;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
-}
-
-.btn-primary {
-  background: #dc2626;
-  color: #fff;
-}
-
-.btn-primary:hover {
-  background: #ef4444;
-  transform: translateY(-1px);
-}
+.btn-primary { background: #dc2626; color: #fff; }
+.btn-primary:hover { background: #b91c1c; transform: translateY(-1px); }
 
 .btn-ghost {
-  background: rgba(255,255,255,0.05);
-  color: #a3a3a3;
-  border-color: rgba(255,255,255,0.08);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
 }
-
-.btn-ghost:hover {
-  background: rgba(255,255,255,0.1);
-  color: #fff;
-}
+.btn-ghost:hover { background: var(--color-bg); color: var(--color-text); }
 
 .btn-danger {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.3);
-  padding: 0.5rem 0.6rem;
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.35);
 }
-
-.btn-danger:hover {
-  background: #dc2626;
-  color: #fff;
-}
+.btn-danger:hover { background: #dc2626; color: #fff; }
 
 /* ---- BODY LAYOUT ---- */
-.conv-body {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
+.conv-body { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 
-/* ---- SIDEBAR ---- */
-.sidebar {
-  width: 220px;
-  flex-shrink: 0;
-  background: #111;
-  border-right: 1px solid rgba(255,255,255,0.06);
-  overflow-y: auto;
-  display: none;
-  flex-direction: column;
-}
-
-@media (min-width: 1024px) {
-  .sidebar { display: flex; }
-}
-
-.sidebar-section {
-  padding: 1rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-
-.sidebar-section:last-child {
-  border-bottom: none;
-}
-
-.sidebar-title {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: #525252;
-  margin-bottom: 0.75rem;
-}
-
-.sidebar-link {
-  padding: 0.5rem 0.65rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  margin-bottom: 2px;
-  color: #737373;
-  transition: all 0.15s;
-}
-
-.sidebar-link:hover {
-  background: rgba(255,255,255,0.05);
-  color: #e4e4e4;
-}
-
-.sidebar-link.active {
-  background: #dc2626;
-  color: #fff;
-  font-weight: 600;
-}
-
-.sidebar-empty {
-  font-size: 0.7rem;
-  color: #404040;
-  text-align: center;
-  padding: 0.5rem;
-}
-
-/* Mister cards */
-.mister-card {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  border-radius: 8px;
-  margin-bottom: 4px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.04);
-}
-
-.mister-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #dc2626;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.mister-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.mister-name {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #e4e4e4;
-}
-
-.mister-tel {
-  font-size: 0.65rem;
-  color: #525252;
-}
-
-/* Weekend cards */
-.weekend-card {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 8px;
-  padding: 0.65rem 0.75rem;
-  margin-bottom: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.weekend-card:hover {
-  border-color: #dc2626;
-  background: rgba(220, 38, 38, 0.08);
-  transform: translateY(-1px);
-}
-
-.weekend-card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.weekend-name {
-  font-weight: 700;
-  font-size: 0.78rem;
-  color: #e4e4e4;
-}
-
-.weekend-badge {
-  background: #dc2626;
-  color: #fff;
-  font-size: 0.6rem;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  min-width: 18px;
-  text-align: center;
-}
-
-.weekend-dates {
-  font-size: 0.65rem;
-  color: #525252;
-  margin-top: 3px;
-}
-
-/* ---- EDITOR ---- */
 .editor {
   flex: 1;
   overflow-y: auto;
   padding: 1.25rem;
-  background: #0a0a0a;
+  background: var(--color-bg);
+  min-width: 0;
 }
 
+/* ---- TOPBAR date + azioni ---- */
 .editor-topbar {
   display: flex;
   align-items: center;
   gap: 1.5rem;
   flex-wrap: wrap;
-  margin-bottom: 1.25rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
 }
 
-.date-pickers {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.75rem;
-}
+.date-pickers { display: flex; align-items: flex-end; gap: 0.75rem; }
 
-.date-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
+.date-field { display: flex; flex-direction: column; gap: 0.25rem; }
 .date-field label {
   font-size: 0.55rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #525252;
+  color: var(--color-text-muted);
 }
-
 .date-field input {
   padding: 0.4rem 0.6rem;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: #171717;
-  color: #e4e4e4;
+  background: var(--color-bg);
+  color: var(--color-text);
   font-size: 0.8rem;
   outline: none;
   transition: border-color 0.2s;
 }
+.date-field input:focus { border-color: #dc2626; }
 
-.date-field input:focus {
-  border-color: #dc2626;
-}
+.num-input { width: 56px !important; text-align: center; }
 
-.num-input {
-  width: 56px !important;
-  text-align: center;
-}
-
-.editor-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-left: auto;
-}
+.editor-actions { display: flex; gap: 0.5rem; margin-left: auto; }
 
 /* ---- ALERT BOX (non convocabili) ---- */
 .alert-box {
   background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: 8px;
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
@@ -1119,86 +908,48 @@ onMounted(async () => {
   align-items: center;
   gap: 0.5rem;
 }
-
-.alert-icon {
-  font-size: 0.9rem;
-}
-
-.alert-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #f59e0b;
-  letter-spacing: 0.05em;
-}
-
-.alert-period {
-  font-size: 0.7rem;
-  color: #a16207;
-}
-
+.alert-icon { font-size: 0.9rem; }
+.alert-label { font-size: 0.75rem; font-weight: 700; color: #92400e; letter-spacing: 0.05em; }
+.alert-period { font-size: 0.7rem; color: #a16207; }
 .alert-tag {
-  background: rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
   padding: 3px 10px;
   border-radius: 12px;
   font-size: 0.7rem;
   font-weight: 600;
 }
-
-.alert-none {
-  font-size: 0.75rem;
-  color: #525252;
-}
+.alert-none { font-size: 0.75rem; color: var(--color-text-muted); }
 
 /* ---- ESCLUSIONI ---- */
 .esclusioni-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.75rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
-
 .esclusione-panel {
-  background: #171717;
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.75rem;
 }
-
-.esclusione-panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.esclusione-panel-title {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #737373;
-}
-
+.esclusione-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.esclusione-panel-title { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; color: var(--color-text-muted); }
 .esclusione-select {
   font-size: 0.7rem;
   padding: 3px 6px;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  background: #0a0a0a;
-  color: #a3a3a3;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
   max-width: 130px;
   outline: none;
 }
-
-.esclusione-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
+.esclusione-tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .esclusione-tag {
-  background: rgba(255,255,255,0.06);
-  color: #a3a3a3;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 0.65rem;
@@ -1206,409 +957,334 @@ onMounted(async () => {
   cursor: pointer;
   transition: all 0.15s;
 }
+.esclusione-tag:hover { background: #dc2626; color: #fff; }
+.esclusione-none { font-size: 0.65rem; color: var(--color-text-muted); }
 
-.esclusione-tag:hover {
-  background: #dc2626;
-  color: #fff;
+/* ---- PAGE HEAD (demo) ---- */
+.page-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
 }
+.page-head h1 { font-size: clamp(1.25rem, 2.6vw, 1.55rem); font-weight: 800; letter-spacing: -0.02em; }
+.page-head .sub { color: var(--color-text-muted); font-size: 0.86rem; margin-top: 2px; }
 
-.esclusione-none {
-  font-size: 0.65rem;
-  color: #404040;
-}
-
-/* ---- GARE GRID ---- */
-.gare-scroll {
+/* ---- WEEKEND CHIPS (demo) ---- */
+.weekend-chips {
+  display: flex;
+  gap: 8px;
   overflow-x: auto;
-  width: 100%;
+  padding-bottom: 4px;
+  margin-bottom: 14px;
   -webkit-overflow-scrolling: touch;
-  margin-bottom: 1.25rem;
+  scrollbar-width: none;
 }
-
-.gare-grid {
-  display: grid;
-  gap: 1rem;
-  min-width: max-content;
-  width: 100%;
-}
-
-/* Banner */
-.gare-banner {
-  background: linear-gradient(135deg, #1a0000 0%, #0a0a0a 100%);
-  border: 1px solid rgba(220, 38, 38, 0.2);
-  border-radius: 12px;
-  padding: 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-}
-
-.banner-logo {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.05);
-  padding: 4px;
-}
-
-.banner-text {
-  text-align: center;
-}
-
-.banner-title {
-  font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  color: #fff;
-}
-
-.banner-sub {
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 0.15em;
-  color: #737373;
-  margin-top: 2px;
-}
-
-.banner-cat {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #dc2626;
-  margin-top: 4px;
-}
-
-/* Gara card */
-.gara-card {
-  background: #111;
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 12px;
-  min-width: 300px;
-  overflow: hidden;
-  transition: border-color 0.2s;
-}
-
-.gara-card:hover {
-  border-color: rgba(255,255,255,0.12);
-}
-
-.gara-card-header {
-  background: #dc2626;
-  padding: 0.75rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.gara-num {
-  font-size: 0.7rem;
-  font-weight: 800;
-  background: rgba(0,0,0,0.3);
-  color: #fff;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.weekend-chips::-webkit-scrollbar { display: none; }
+.wk {
   flex-shrink: 0;
-}
-
-.gara-title-input {
-  flex: 1;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-  color: #fff;
-  font-size: 0.9rem;
-  font-weight: 700;
-  text-align: center;
-  outline: none;
-  transition: all 0.2s;
-}
-
-.gara-title-input::placeholder {
-  color: rgba(255,255,255,0.4);
-}
-
-.gara-title-input:focus {
-  background: rgba(255,255,255,0.18);
-  border-color: rgba(255,255,255,0.4);
-}
-
-/* Gara fields */
-.gara-fields {
-  padding: 0.75rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-
-.gf-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 6px;
-  gap: 0.5rem;
-}
-
-.gf-row:last-child {
-  margin-bottom: 0;
-}
-
-.gf-label {
-  font-size: 0.6rem;
-  color: #525252;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  min-width: 72px;
-  flex-shrink: 0;
-}
-
-.gf-input {
-  flex: 1;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 0.78rem;
-  height: 28px;
-  box-sizing: border-box;
-  background: #0a0a0a;
-  color: #e4e4e4;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.gf-input:focus {
-  border-color: #dc2626;
-}
-
-/* Giocatori — Grid Layout */
-.giocatori-section {
-  padding: 0.75rem;
-}
-
-.giocatori-title {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #525252;
-  margin-bottom: 0.6rem;
-}
-
-.giocatori-title-icon {
-  width: 14px;
-  height: 14px;
-  color: #dc2626;
-}
-
-.giocatori-title-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.giocatori-count {
-  margin-left: auto;
-  font-size: 0.6rem;
-  color: #404040;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.giocatori-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-}
-
-.giocatore-slot {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 6px 2px;
-  border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.02);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.15s;
-  min-height: 48px;
-  justify-content: center;
+  white-space: nowrap;
 }
+.wk:hover { border-color: var(--color-text); color: var(--color-text); }
+.wk.active { background: var(--color-text); border-color: var(--color-text); color: #fff; }
+.wk-new { border-style: dashed; color: #dc2626; border-color: rgba(220, 38, 38, 0.4); background: transparent; }
+.wk-new:hover { border-color: #dc2626; background: rgba(220, 38, 38, 0.05); color: #dc2626; }
 
-.giocatore-slot:hover {
-  border-color: #dc2626;
-  background: rgba(220, 38, 38, 0.08);
-  transform: translateY(-1px);
-}
-
-.giocatore-slot.filled {
-  border-color: rgba(220, 38, 38, 0.3);
-  background: rgba(220, 38, 38, 0.06);
-}
-
-.pos-badge {
-  font-size: 0.55rem;
-  font-weight: 800;
-  color: #404040;
-  line-height: 1;
-}
-
-.giocatore-slot.filled .pos-badge {
-  color: #dc2626;
-}
-
-.slot-name {
-  font-size: 0.65rem;
+/* ---- GARA TABS ---- */
+.gara-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.gtab {
+  padding: 7px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 0.78rem;
   font-weight: 700;
-  color: #e4e4e4;
-  text-align: center;
-  line-height: 1.2;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
+}
+.gtab:hover { border-color: var(--color-text); color: var(--color-text); }
+.gtab.active { background: #dc2626; border-color: #dc2626; color: #fff; }
+.gtab-label { font-weight: 500; opacity: 0.85; }
+
+/* ---- CONV GRID + CARD (demo) ---- */
+.conv-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.card-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.card-h h2 { font-size: 0.95rem; font-weight: 800; letter-spacing: -0.01em; min-width: 0; flex: 1; }
+
+.gara-title-inline {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-text);
+  outline: none;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.gara-title-inline:focus { background: var(--color-bg); box-shadow: inset 0 -2px 0 #dc2626; }
+
+.conv-count {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.slot-empty {
-  font-size: 0.55rem;
-  color: #404040;
-  font-weight: 500;
-  text-transform: uppercase;
-}
-
-.giocatore-slot.add-slot {
-  border-style: dashed;
-  border-color: rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.01);
-}
-
-.giocatore-slot.add-slot:hover {
-  border-color: #22c55e;
-  background: rgba(34, 197, 94, 0.08);
-}
-
-.add-icon {
-  font-size: 1.1rem;
-  font-weight: 300;
-  color: #666;
-  line-height: 1;
-}
-
-.giocatore-slot.add-slot:hover .add-icon {
-  color: #22c55e;
-}
-
-.slot-remove {
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  font-size: 0.7rem;
-  color: #ef4444;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s;
-  line-height: 1;
-}
-
-.giocatore-slot:hover .slot-remove {
-  opacity: 1;
-}
-
-.giocatore-slot.non_presente {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.1);
-}
-
-.giocatore-slot.non_presente .slot-name {
-  color: #ef4444;
-  text-decoration: line-through;
-  opacity: 0.7;
-}
-
-.slot-np-toggle {
-  position: absolute;
-  top: 2px;
-  left: 4px;
+/* ---- ROSTER (demo) ---- */
+.roster { list-style: none; margin: 0; padding: 0; }
+.roster li {
   display: flex;
   align-items: center;
-  gap: 2px;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 2;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+  transition: opacity 0.15s ease;
 }
+.roster li:last-child { border-bottom: none; }
 
-.giocatore-slot:hover .slot-np-toggle {
-  opacity: 1;
-}
-
-.slot-np-toggle input[type="checkbox"] {
-  width: 10px;
-  height: 10px;
-  accent-color: #ef4444;
-  cursor: pointer;
-}
-
-.slot-np-label {
-  font-size: 0.5rem;
+.pnum {
+  font-family: var(--font-mono, monospace);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.66rem;
   font-weight: 700;
-  color: #ef4444;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+li.on .pnum { background: #dc2626; color: #fff; }
+
+.pname { font-weight: 600; font-size: 0.89rem; cursor: pointer; }
+.pname:hover { text-decoration: underline; text-decoration-color: var(--color-text-muted); }
+.prole {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
 }
 
-.giocatore-slot {
+.toggle {
+  margin-left: auto;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: #d3d9e3;
+  border: none;
   position: relative;
-  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
 }
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(22, 24, 29, 0.25);
+  transition: left 0.2s;
+}
+li.on .toggle { background: #15803d; }
+li.on .toggle::after { left: 18px; }
+li.off .pname { color: var(--color-text-muted); text-decoration: line-through; }
+li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+
+.slot-x {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.15s, all 0.15s;
+}
+.roster li:hover .slot-x { opacity: 1; }
+.slot-x:hover { color: #dc2626; background: rgba(220, 38, 38, 0.08); }
+
+.slot-add {
+  border: 1px dashed var(--color-border);
+  background: transparent;
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.slot-add:hover { border-color: #dc2626; color: #dc2626; background: rgba(220, 38, 38, 0.04); }
+
+.roster-foot { padding: 10px 16px; border-top: 1px solid var(--color-border-light); }
+.link-btn {
+  border: none;
+  background: transparent;
+  color: #dc2626;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.link-btn:hover { text-decoration: underline; }
+
+/* ---- DETTAGLI GARA (demo info-dl editabile) ---- */
+.conv-side { display: flex; flex-direction: column; gap: 14px; }
+
+.info-dl { list-style: none; margin: 0; padding: 0; }
+.info-dl li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 0.87rem;
+}
+.info-dl li:last-child { border-bottom: none; }
+.info-dl .k { color: var(--color-text-muted); font-weight: 600; font-size: 0.8rem; flex: none; }
+.info-dl .v { flex: 1; display: flex; justify-content: flex-end; min-width: 0; }
+.info-dl .v input,
+.info-dl .v select {
+  width: 100%;
+  max-width: 210px;
+  border: none;
+  border-bottom: 1px dashed transparent;
+  background: transparent;
+  text-align: right;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--color-text);
+  padding: 3px 4px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.info-dl .v input::placeholder { color: var(--color-text-muted); font-weight: 400; }
+.info-dl .v input:focus,
+.info-dl .v select:focus { border-bottom: 1px dashed #dc2626; background: var(--color-bg); }
+
+.note-card { margin-top: 0; }
+.note-box { padding: 14px 18px; }
+.note-box label {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  margin-bottom: 7px;
+}
+.note-box textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.note-box textarea:focus { border-color: #dc2626; }
+.note-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+
+/* ---- EMPTY STATE ---- */
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--color-text-muted);
+}
+.empty-icon { font-size: 3rem; opacity: 0.3; }
+.empty-title { font-size: 1.25rem; font-weight: 700; color: var(--color-text-secondary); }
+.empty-sub { font-size: 0.85rem; margin-bottom: 0.5rem; }
 
 /* ---- PLAYER PICKER MODAL ---- */
 .picker-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.75);
+  background: rgba(22, 24, 29, 0.45);
   z-index: 300;
   display: flex;
   align-items: center;
   justify-content: center;
   animation: fadeIn 0.15s ease-out;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(6px);
 }
-
 .picker-modal {
   width: 340px;
   max-height: 80vh;
-  background: #111;
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   display: flex;
   flex-direction: column;
   animation: scaleIn 0.2s ease-out;
   overflow: hidden;
-  box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+  box-shadow: 0 24px 48px rgba(22, 24, 29, 0.25);
 }
-
 .picker-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  background: #000;
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-surface);
 }
-
-.picker-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
+.picker-title { display: flex; align-items: center; gap: 0.5rem; }
 .picker-pos {
   background: #dc2626;
   color: #fff;
@@ -1621,13 +1297,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
 }
-
-.picker-title span:last-child {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #fff;
-}
-
+.picker-title span:last-child { font-size: 0.85rem; font-weight: 700; color: var(--color-text); }
 .picker-close {
   width: 28px;
   height: 28px;
@@ -1635,65 +1305,34 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   border: none;
-  background: rgba(255,255,255,0.06);
+  background: var(--color-bg);
   border-radius: 6px;
-  color: #737373;
+  color: var(--color-text-muted);
   cursor: pointer;
   transition: all 0.15s;
 }
-
-.picker-close:hover {
-  background: rgba(255,255,255,0.12);
-  color: #fff;
-}
-
-.picker-close svg {
-  width: 14px;
-  height: 14px;
-}
-
+.picker-close:hover { background: var(--color-border-light); color: var(--color-text); }
+.picker-close svg { width: 14px; height: 14px; }
 .picker-search {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--color-border-light);
 }
-
-.picker-search svg {
-  width: 16px;
-  height: 16px;
-  color: #404040;
-  flex-shrink: 0;
-}
-
+.picker-search svg { width: 16px; height: 16px; color: var(--color-text-muted); flex-shrink: 0; }
 .picker-search input {
   flex: 1;
   border: none;
   background: none;
-  color: #e4e4e4;
+  color: var(--color-text);
   font-size: 0.85rem;
   outline: none;
   font-family: inherit;
 }
-
-.picker-search input::placeholder {
-  color: #404040;
-}
-
-.picker-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.5rem;
-}
-
-.picker-empty {
-  text-align: center;
-  padding: 2rem 1rem;
-  color: #404040;
-  font-size: 0.8rem;
-}
-
+.picker-search input::placeholder { color: var(--color-text-muted); }
+.picker-list { flex: 1; overflow-y: auto; padding: 0.5rem; }
+.picker-empty { text-align: center; padding: 2rem 1rem; color: var(--color-text-muted); font-size: 0.8rem; }
 .picker-item {
   display: flex;
   align-items: center;
@@ -1703,21 +1342,14 @@ onMounted(async () => {
   cursor: pointer;
   transition: all 0.12s;
 }
-
-.picker-item:hover {
-  background: rgba(255,255,255,0.06);
-}
-
-.picker-item.selected {
-  background: rgba(220, 38, 38, 0.15);
-}
-
+.picker-item:hover { background: var(--color-bg); }
+.picker-item.selected { background: rgba(220, 38, 38, 0.08); }
 .picker-avatar {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: rgba(255,255,255,0.06);
-  color: #a3a3a3;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
   font-size: 0.65rem;
   font-weight: 700;
   display: flex;
@@ -1726,116 +1358,22 @@ onMounted(async () => {
   flex-shrink: 0;
   letter-spacing: 0.02em;
 }
-
-.picker-item.selected .picker-avatar {
-  background: #dc2626;
-  color: #fff;
-}
-
-.picker-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.picker-name {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #e4e4e4;
-}
-
-.picker-surname {
-  font-size: 0.7rem;
-  color: #525252;
-}
-
-.picker-check {
-  color: #dc2626;
-  flex-shrink: 0;
-}
-
-.picker-check svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* ---- NOTE ---- */
-.note-section {
-  margin-top: 0.5rem;
-}
-
-.note-label {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #525252;
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.note-textarea {
-  width: 100%;
-  border: 1px solid rgba(220, 38, 38, 0.3);
-  border-radius: 8px;
-  padding: 1rem;
-  font-size: 0.72rem;
-  resize: vertical;
-  background: rgba(220, 38, 38, 0.06);
-  color: #fca5a5;
-  font-weight: 600;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  min-height: 100px;
-  line-height: 1.4;
-  outline: none;
-  font-family: inherit;
-  transition: border-color 0.2s;
-}
-
-.note-textarea:focus {
-  border-color: #dc2626;
-}
-
-/* ---- EMPTY STATE ---- */
-.empty-state {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  color: #404040;
-}
-
-.empty-icon {
-  font-size: 3rem;
-  opacity: 0.3;
-}
-
-.empty-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #525252;
-}
-
-.empty-sub {
-  font-size: 0.85rem;
-  color: #404040;
-  margin-bottom: 0.5rem;
-}
+.picker-item.selected .picker-avatar { background: #dc2626; color: #fff; }
+.picker-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.picker-name { font-size: 0.82rem; font-weight: 700; color: var(--color-text); }
+.picker-surname { font-size: 0.7rem; color: var(--color-text-muted); }
+.picker-check { color: #dc2626; flex-shrink: 0; }
+.picker-check svg { width: 16px; height: 16px; }
 
 /* ---- MOBILE MENU ---- */
 .mobile-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.8);
+  background: rgba(22, 24, 29, 0.45);
   z-index: 200;
   animation: fadeIn 0.2s ease-out;
   backdrop-filter: blur(6px);
 }
-
 .mobile-drawer {
   position: absolute;
   left: 0;
@@ -1843,172 +1381,88 @@ onMounted(async () => {
   bottom: 0;
   width: 280px;
   max-width: 85vw;
-  background: #111;
+  background: var(--color-surface);
   animation: slideInLeft 0.3s ease-out;
   overflow-y: auto;
-  border-right: 1px solid rgba(255,255,255,0.06);
+  border-right: 1px solid var(--color-border);
 }
-
 .mobile-drawer-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  background: #000;
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-surface);
 }
-
-.mobile-drawer-title {
-  font-weight: 700;
-  font-size: 0.9rem;
-  color: #fff;
-}
-
-.mobile-drawer-body {
-  padding: 1rem;
-}
-
-.drawer-section {
-  margin-bottom: 1.25rem;
-}
-
+.mobile-drawer-title { font-weight: 700; font-size: 0.9rem; color: var(--color-text); }
+.mobile-drawer-body { padding: 1rem; }
+.drawer-section { margin-bottom: 1.25rem; }
 .drawer-section-title {
   font-weight: 700;
   font-size: 0.6rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: #404040;
+  color: var(--color-text-muted);
   margin-bottom: 0.5rem;
 }
-
 .drawer-link {
   padding: 0.6rem 0.75rem;
   border-radius: 6px;
   font-size: 0.8rem;
   cursor: pointer;
-  color: #737373;
+  color: var(--color-text-secondary);
   margin-bottom: 2px;
   transition: all 0.15s;
 }
-
-.drawer-link:hover {
-  background: rgba(255,255,255,0.05);
-  color: #e4e4e4;
-}
-
-.drawer-link.active {
-  background: #dc2626;
-  color: #fff;
-  font-weight: 600;
-}
-
-.drawer-weekend-link {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.drawer-weekend-meta {
-  font-size: 0.65rem;
-  color: #404040;
-}
-
+.drawer-link:hover { background: var(--color-bg); color: var(--color-text); }
+.drawer-link.active { background: #dc2626; color: #fff; font-weight: 600; }
+.drawer-weekend-link { display: flex; flex-direction: column; gap: 2px; }
+.drawer-weekend-meta { font-size: 0.65rem; color: var(--color-text-muted); }
 .drawer-mister {
   display: flex;
   justify-content: space-between;
   padding: 0.4rem 0.75rem;
   font-size: 0.8rem;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--color-border-light);
 }
-
-.drawer-mister:last-child {
-  border-bottom: none;
-}
-
-.mister-name {
-  color: #e4e4e4;
-  font-weight: 600;
-}
-
-.mister-tel {
-  color: #525252;
-}
-
-.drawer-empty {
-  font-size: 0.7rem;
-  color: #404040;
-  padding: 0.5rem;
-  text-align: center;
-}
+.drawer-mister:last-child { border-bottom: none; }
+.mister-name { color: var(--color-text); font-weight: 600; }
+.mister-tel { color: var(--color-text-muted); }
+.drawer-empty { font-size: 0.7rem; color: var(--color-text-muted); padding: 0.5rem; text-align: center; }
 
 /* ---- ANIMATIONS ---- */
 @keyframes slideInLeft {
   from { transform: translateX(-100%); }
   to { transform: translateX(0); }
 }
-
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
 
 /* ---- RESPONSIVE ---- */
+@media (max-width: 1024px) {
+  .conv-grid { grid-template-columns: 1fr; }
+}
 @media (max-width: 768px) {
-  .conv-body {
-    flex-direction: column;
-  }
-  .gare-scroll {
-    overflow-x: visible !important;
-  }
-  .gare-grid {
-    grid-template-columns: 1fr !important;
-    min-width: auto !important;
-  }
-  .editor-topbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
-  }
-  .date-pickers {
-    flex-wrap: wrap;
-  }
-  .editor-actions {
-    margin-left: 0;
-    justify-content: flex-end;
-  }
-  .esclusioni-grid {
-    grid-template-columns: 1fr;
-  }
-  .header-center {
-    flex-direction: column;
-    gap: 0;
-  }
-  .header-label {
-    font-size: 0.5rem;
-  }
-  .header-category {
-    font-size: 0.85rem;
-  }
-  .banner-title {
-    font-size: 1.1rem;
-  }
-  .banner-logo {
-    width: 48px;
-    height: 48px;
-  }
-  .giocatori-grid {
-    grid-template-columns: repeat(4, 1fr) !important;
-  }
-  .giocatore-slot {
-    min-height: 42px;
-    padding: 4px 1px;
-  }
-  .slot-name {
-    font-size: 0.58rem;
-  }
-  .picker-modal {
-    width: 95vw;
-    max-width: 340px;
-  }
+  .conv-body { flex-direction: column; }
+  .editor { padding: 0.85rem; }
+  .editor-topbar { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+  .date-pickers { flex-wrap: wrap; }
+  .editor-actions { margin-left: 0; justify-content: flex-end; }
+  .esclusioni-grid { grid-template-columns: 1fr; }
+  .header-center { flex-direction: column; gap: 0; }
+  .header-label { font-size: 0.5rem; }
+  .header-category { font-size: 0.85rem; }
+  .roster li { padding: 8px 10px; gap: 8px; }
+  .pname { font-size: 0.8rem; }
+  .slot-x { opacity: 1; }
+  .picker-modal { width: 95vw; max-width: 340px; }
+  .info-dl li { padding: 8px 12px; }
 }
 </style>
+

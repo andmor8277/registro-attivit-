@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THOF — La Pagina del Club · Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800;900&family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --rosa:#f6cdd3;
+    --rosa-light:#fbe0e4;
+    --rosa-deep:#efb9c1;
+    --ink:#26181d;
+    --ink-soft:#57393f;
+    --ink-faint:#8a6b71;
+    --rosso:#b30f2e;
+    --rosso-deep:#8f0c24;
+    --verde:#0e7a45;
+    --rule:rgba(38,24,29,.75);
+    --rule-soft:rgba(38,24,29,.28);
+    --font-head:'Big Shoulders Display',sans-serif;
+    --font-body:'PT Serif',serif;
+    --font-mono:'Courier Prime',monospace;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--rosa);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;line-height:1.55;
+    min-height:100vh;overflow-x:hidden;
+    position:relative;
+  }
+  /* paper grain */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:90;pointer-events:none;opacity:.5;
+    background-image:radial-gradient(rgba(38,24,29,.05) .6px,transparent .7px);
+    background-size:3px 3px;
+  }
+  ::selection{background:var(--rosso);color:var(--rosa-light)}
+  a{color:inherit;text-decoration:none}
+  button{font-family:inherit;cursor:pointer}
+
+  /* ---------- Nameplate nav ---------- */
+  nav{
+    position:sticky;top:0;z-index:50;
+    background:var(--rosa);
+    border-bottom:3px double var(--rule);
+    box-shadow:0 1px 0 rgba(38,24,29,.12),0 8px 18px -14px rgba(38,24,29,.5);
+  }
+  .nav-in{
+    max-width:1120px;margin:0 auto;padding:10px 20px;
+    display:flex;align-items:center;gap:22px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;margin-right:auto}
+  .crest{
+    width:42px;height:42px;border:2.5px solid var(--ink);border-radius:50%;
+    display:grid;place-items:center;
+    font-family:var(--font-head);font-weight:900;font-size:.95rem;line-height:1;
+    background:var(--rosa-light);box-shadow:inset 0 0 0 2px var(--rosa),inset 0 0 0 4px var(--ink);
+  }
+  .brand-name{font-family:var(--font-head);font-weight:900;font-size:1.5rem;text-transform:uppercase;letter-spacing:.02em;line-height:.95}
+  .brand-name small{display:block;font-family:var(--font-mono);font-weight:400;font-size:.58rem;letter-spacing:.32em;color:var(--ink-soft)}
+  .tabs{display:flex;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    appearance:none;background:none;border:none;color:var(--ink-soft);
+    font-family:var(--font-head);font-weight:800;font-size:.98rem;
+    letter-spacing:.08em;text-transform:uppercase;padding:10px 13px;
+    white-space:nowrap;border-bottom:3px solid transparent;
+    transition:all .15s ease;
+  }
+  .tab:hover{color:var(--rosso)}
+  .tab.active{color:var(--rosso);border-bottom-color:var(--rosso)}
+
+  main{max-width:1120px;margin:0 auto;padding:0 20px}
+  .page{display:none}
+  .page.active{display:block;animation:pageIn .45s ease both}
+  @keyframes pageIn{from{opacity:0}to{opacity:1}}
+
+  .reveal{opacity:0;transform:translateY(14px)}
+  .reveal.in{opacity:1;transform:none;transition:opacity .55s ease,transform .55s cubic-bezier(.2,.7,.3,1)}
+
+  /* ---------- Masthead ---------- */
+  .masthead{text-align:center;padding:34px 0 18px}
+  .dateline{
+    display:flex;align-items:center;gap:16px;
+    font-family:var(--font-mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);
+    border-top:1.5px solid var(--rule);border-bottom:1.5px solid var(--rule);
+    padding:6px 2px;margin-bottom:26px;
+  }
+  .dateline .tricolore{margin-left:auto;display:inline-flex;height:9px;width:60px;border:1px solid var(--rule-soft)}
+  .dateline .tricolore span{flex:1}
+  .dateline .tricolore span:nth-child(1){background:var(--verde)}
+  .dateline .tricolore span:nth-child(2){background:var(--rosa-light)}
+  .dateline .tricolore span:nth-child(3){background:var(--rosso)}
+  h1.mast-title{
+    font-family:var(--font-head);font-weight:900;
+    font-size:clamp(3.4rem,10vw,6.8rem);
+    text-transform:uppercase;letter-spacing:.005em;line-height:.86;
+  }
+  h1.mast-title .row2{display:block;font-size:.36em;letter-spacing:.34em;font-weight:700;color:var(--rosso)}
+  .mast-sub{font-style:italic;color:var(--ink-soft);margin-top:14px;font-size:1.05rem}
+
+  /* ---------- Section head (rubrica) ---------- */
+  .shead{display:flex;align-items:center;gap:16px;margin:46px 0 20px}
+  .shead h2{
+    font-family:var(--font-head);font-weight:900;
+    font-size:clamp(1.7rem,4vw,2.5rem);text-transform:uppercase;line-height:1;white-space:nowrap;
+  }
+  .shead h2 em{color:var(--rosso);font-style:normal}
+  .shead .rules{flex:1;height:7px;border-top:1.5px solid var(--rule);border-bottom:1.5px solid var(--rule)}
+  .shead .kicker{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap}
+  @media(max-width:640px){.shead .kicker{display:none}}
+
+  /* ---------- HOME ---------- */
+  .lead-grid{display:grid;grid-template-columns:1fr}
+  @media(max-width:880px){.lead-grid{gap:0}}
+  .lead h1.headline{
+    font-family:var(--font-head);font-weight:900;
+    font-size:clamp(2.6rem,6.5vw,4.6rem);
+    text-transform:uppercase;line-height:.9;letter-spacing:.005em;
+  }
+  .lead h1 .hl{color:var(--rosso)}
+  .lead .standfirst{font-size:1.15rem;font-style:italic;color:var(--ink-soft);margin:16px 0 20px;max-width:52ch}
+  .byline{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);border-top:1px solid var(--rule-soft);padding-top:10px;display:flex;gap:18px;flex-wrap:wrap}
+  .byline b{color:var(--rosso)}
+  .drop::first-letter{
+    float:left;font-family:var(--font-head);font-weight:900;
+    font-size:3.6em;line-height:.82;padding:4px 10px 0 0;color:var(--rosso);
+  }
+  .lead p.body{columns:2;column-gap:26px;text-align:justify;font-size:.95rem;margin-top:14px}
+  @media(max-width:640px){.lead p.body{columns:1}}
+
+  /* programma settimana — table style */
+  table.prog{width:100%;border-collapse:collapse;border-top:1.5px solid var(--rule)}
+  table.prog td{padding:11px 10px;border-bottom:1px solid var(--rule-soft);vertical-align:middle}
+  table.prog tr:last-child td{border-bottom:1.5px solid var(--rule)}
+  td.giorno{font-family:var(--font-head);font-weight:900;text-transform:uppercase;font-size:1.15rem;width:86px}
+  tr.oggi td{background:linear-gradient(90deg,rgba(179,15,46,.09),transparent)}
+  tr.oggi td.giorno{color:var(--rosso)}
+  .oggi-tag{font-family:var(--font-mono);font-size:.56rem;font-weight:700;letter-spacing:.18em;background:var(--rosso);color:var(--rosa-light);padding:2px 6px;margin-left:8px;vertical-align:middle}
+  td.evento{font-size:.95rem}
+  td.ora{font-family:var(--font-mono);font-size:.78rem;text-align:right;color:var(--ink-soft);white-space:nowrap}
+  .cat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--rosso);margin-right:8px;vertical-align:baseline}
+  .cat-dot.por{background:none;border:1.5px solid var(--rosso);width:7px;height:7px}
+
+  /* aree come articoli in vetrina */
+  .vetrina{display:grid;grid-template-columns:repeat(2,1fr);gap:24px}
+  @media(max-width:760px){.vetrina{grid-template-columns:1fr}}
+  article.rubrica{border-top:3px solid var(--ink);padding-top:14px;transition:transform .2s ease}
+  article.rubrica:hover{transform:translateY(-3px)}
+  article.rubrica .rub-k{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:var(--rosso)}
+  article.rubrica h3{font-family:var(--font-head);font-weight:900;font-size:1.9rem;text-transform:uppercase;line-height:.92;margin:6px 0 8px}
+  article.rubrica p{color:var(--ink-soft);font-size:.94rem}
+  article.rubrica .leggi-tutto{display:inline-block;margin-top:10px;font-family:var(--font-mono);font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--rosso);border-bottom:2px solid var(--rosso)}
+
+  footer.colophon{
+    margin:64px 0 40px;border-top:3px double var(--rule);padding-top:16px;
+    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    font-family:var(--font-mono);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);
+  }
+
+  /* ---------- LOGIN — coupon ---------- */
+  .gate-wrap{min-height:calc(100vh - 150px);display:grid;place-items:center;padding:56px 0}
+  .coupon{
+    width:min(480px,100%);
+    border:2px dashed var(--rule);
+    background:var(--rosa-light);
+    padding:34px 32px;position:relative;
+    clip-path:polygon(0 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%);
+  }
+  .coupon .tag-coupon{
+    position:absolute;top:-13px;left:24px;
+    background:var(--rosso);color:var(--rosa-light);
+    font-family:var(--font-mono);font-size:.62rem;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+    padding:4px 12px;
+  }
+  .coupon h2{font-family:var(--font-head);font-weight:900;font-size:2.3rem;text-transform:uppercase;line-height:.92;margin:10px 0 4px}
+  .coupon .sub{font-style:italic;color:var(--ink-soft);margin-bottom:24px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-family:var(--font-mono);font-size:.64rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px}
+  .field input{
+    width:100%;background:transparent;border:none;border-bottom:2px solid var(--rule);
+    color:var(--ink);font-family:var(--font-mono);font-size:1rem;padding:9px 2px;outline:none;
+    transition:border-color .2s ease;
+  }
+  .field input:focus{border-bottom-color:var(--rosso)}
+  .opts{display:flex;justify-content:space-between;align-items:center;margin:6px 0 22px;font-family:var(--font-mono);font-size:.74rem;color:var(--ink-soft)}
+  .opts label{display:flex;gap:8px;align-items:center;cursor:pointer}
+  .opts input{accent-color:var(--rosso)}
+  .btn-rosso{
+    width:100%;appearance:none;border:2px solid var(--ink);cursor:pointer;
+    background:var(--rosso);color:var(--rosa-light);
+    font-family:var(--font-head);font-weight:900;font-size:1.35rem;
+    letter-spacing:.06em;text-transform:uppercase;padding:12px;
+    box-shadow:4px 4px 0 var(--ink);
+    transition:transform .12s ease,box-shadow .12s ease;
+  }
+  .btn-rosso:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+  .btn-rosso:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+  .or-line{display:flex;align-items:center;gap:14px;margin:20px 0 16px;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint)}
+  .or-line::before,.or-line::after{content:"";flex:1;border-top:1px dashed var(--rule-soft)}
+  .btn-google{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:12px;
+    background:transparent;border:2px solid var(--rule);color:var(--ink);
+    padding:11px;font-family:var(--font-body);font-weight:700;font-size:.95rem;cursor:pointer;
+    transition:border-color .2s ease,background .2s ease;
+  }
+  .btn-google:hover{border-color:var(--rosso);background:rgba(179,15,46,.06)}
+  .btn-google svg{width:19px;height:19px}
+  .coupon-foot{margin-top:20px;border-top:1px dotted var(--rule);padding-top:10px;font-family:var(--font-mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);text-align:center}
+
+  /* ---------- REGISTRO — tabellino stampato ---------- */
+  .reg-head{display:flex;flex-wrap:wrap;align-items:end;gap:14px;margin:40px 0 16px}
+  .reg-head h2{font-family:var(--font-head);font-weight:900;font-size:clamp(2rem,5vw,3rem);text-transform:uppercase;line-height:.9}
+  .reg-head h2 em{color:var(--rosso);font-style:normal}
+  .reg-meta{margin-left:auto;font-family:var(--font-mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);text-align:right}
+  .reg-meta b{color:var(--rosso)}
+  @media(max-width:640px){.reg-meta{margin-left:0;text-align:left}}
+  .legend{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}
+  .lg{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);border:1px solid var(--rule-soft);padding:4px 8px;background:var(--rosa-light)}
+  .lg b{width:19px;height:19px;display:grid;place-items:center;font-size:.64rem;font-weight:700}
+  .cd-x{background:var(--verde);color:#fff}
+  .cd-p{border:1.5px solid #1d63b8;color:#1d63b8}
+  .cd-r{border:1.5px dashed #c07f10;color:#a86c0b}
+  .cd-a{background:var(--rosso);color:#fff}
+  .cd-ag{background:repeating-linear-gradient(45deg,var(--rosso) 0 3px,var(--rosso-deep) 3px 6px);color:#fff}
+  .cd-ai{background:var(--ink);color:var(--rosa)}
+
+  .reg-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1.5px solid var(--rule);background:var(--rosa-light);box-shadow:5px 5px 0 rgba(38,24,29,.16)}
+  table.reg{border-collapse:collapse;width:100%;min-width:800px}
+  table.reg th,table.reg td{border-bottom:1px solid var(--rule-soft);border-right:1px dotted var(--rule-soft);text-align:center}
+  thead th{
+    font-family:var(--font-mono);font-size:.62rem;font-weight:700;letter-spacing:.08em;
+    color:var(--ink-soft);text-transform:uppercase;padding:11px 6px;
+    border-bottom:2px solid var(--rule);background:var(--rosa);
+  }
+  tbody tr:hover td{background:rgba(179,15,46,.05)}
+  td.player{text-align:left;padding:10px 14px;min-width:190px;white-space:nowrap;font-weight:700;font-size:.92rem}
+  td.player .nr{font-family:var(--font-mono);font-size:.7rem;color:var(--rosso);margin-right:10px;font-weight:700}
+  td.code{width:54px;height:44px}
+  td.code span{
+    display:inline-grid;place-items:center;width:25px;height:25px;
+    font-family:var(--font-mono);font-size:.68rem;font-weight:700;
+    transform:rotate(-3deg);
+  }
+  td.tot{font-family:var(--font-mono);font-weight:700;font-size:.85rem;color:var(--verde);width:60px;font-variant-numeric:tabular-nums}
+  td.pct{font-family:var(--font-mono);font-size:.74rem;color:var(--ink-soft);width:70px;font-variant-numeric:tabular-nums}
+  tr.inj td.player{color:var(--rosso)}
+  tr.inj td.player::after{content:"INFOR.";font-family:var(--font-mono);font-size:.54rem;letter-spacing:.12em;background:var(--ink);color:var(--rosa);padding:2px 5px;margin-left:9px}
+  .reg-note{font-family:var(--font-mono);font-size:.66rem;color:var(--ink-faint);margin-top:12px;font-style:italic}
+
+  /* ---------- CONVOCAZIONI — articolo di cronaca ---------- */
+  .conv-article{max-width:860px;margin:40px auto 0}
+  .conv-cat{
+    display:inline-block;background:var(--ink);color:var(--rosa);
+    font-family:var(--font-mono);font-size:.64rem;font-weight:700;letter-spacing:.24em;text-transform:uppercase;
+    padding:5px 12px;margin-bottom:14px;
+  }
+  h2.conv-title{font-family:var(--font-head);font-weight:900;font-size:clamp(2.4rem,6vw,4rem);text-transform:uppercase;line-height:.88}
+  h2.conv-title em{color:var(--rosso);font-style:normal}
+  .conv-sub{font-size:1.12rem;font-style:italic;color:var(--ink-soft);margin:14px 0 20px}
+  .info-strip{
+    display:grid;grid-template-columns:repeat(4,auto);gap:0;
+    border-top:2px solid var(--ink);border-bottom:2px solid var(--ink);margin-bottom:24px;
+  }
+  @media(max-width:720px){.info-strip{grid-template-columns:repeat(2,1fr)}}
+  .is{padding:12px 18px 12px 0;margin-right:18px}
+  .is+.is{border-left:1px solid var(--rule-soft);padding-left:18px;margin-right:0}
+  .is .k{font-family:var(--font-mono);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint)}
+  .is .v{font-family:var(--font-head);font-weight:800;font-size:1.15rem;text-transform:uppercase;margin-top:3px}
+  .conv-cols{display:grid;grid-template-columns:1.25fr .75fr;gap:34px}
+  @media(max-width:760px){.conv-cols{grid-template-columns:1fr}}
+  .lista-h{font-family:var(--font-head);font-weight:900;font-size:1.4rem;text-transform:uppercase;border-bottom:3px double var(--rule);padding-bottom:8px;margin-bottom:6px}
+  ol.lista{list-style:none;counter-reset:g}
+  ol.lista li{
+    counter-increment:g;display:flex;align-items:baseline;gap:14px;
+    padding:8px 2px;border-bottom:1px dotted var(--rule-soft);font-size:.97rem;
+  }
+  ol.lista li::before{
+    content:counter(g,decimal-leading-zero);
+    font-family:var(--font-head);font-weight:900;font-size:1.25rem;color:var(--rosso);
+    min-width:34px;line-height:1;
+  }
+  ol.lista li .ruolo{margin-left:auto;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.14em;color:var(--ink-faint);text-transform:uppercase}
+  .aside-block{border-top:3px solid var(--ink);padding-top:12px;margin-bottom:24px}
+  .aside-block .k{font-family:var(--font-mono);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--rosso)}
+  .aside-block .v{font-family:var(--font-head);font-weight:800;font-size:1.3rem;text-transform:uppercase;margin-top:2px}
+  blockquote.nota{
+    border-left:4px solid var(--rosso);padding:4px 0 4px 18px;margin-top:6px;
+    font-style:italic;color:var(--ink-soft);font-size:1rem;
+  }
+  blockquote.nota cite{display:block;margin-top:8px;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;font-style:normal;color:var(--ink-faint)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-in">
+    <a class="brand" href="#">
+      <span class="crest">TH</span>
+      <span class="brand-name">THOF<small>Registro Attività</small></span>
+    </a>
+    <div class="tabs">
+      <button class="tab active" data-page="home">Cronaca</button>
+      <button class="tab" data-page="login">Accesso</button>
+      <button class="tab" data-page="registro">Tabellino</button>
+      <button class="tab" data-page="conv">Convocati</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <!-- ============ HOME ============ -->
+  <section id="page-home" class="page active">
+    <header class="masthead">
+      <div class="dateline">
+        <span>Anno I — N° 34</span><span>Lunedì 24 Agosto 2026</span><span>Stagione 2025/2026</span>
+        <span class="tricolore"><span></span><span></span><span></span></span>
+      </div>
+      <h1 class="mast-title">La Pagina<span class="row2">del Club · THOF</span></h1>
+      <p class="mast-sub">Cronaca, presenze e convocazioni della nostra società — dal campo alla segreteria.</p>
+    </header>
+
+    <div class="shead reveal">
+      <h2>Oggi <em>in edicola</em></h2><span class="rules"></span><span class="kicker">rassegna settimanale</span>
+    </div>
+
+    <div class="lead-grid">
+      <div class="lead reveal">
+        <h1 class="headline">La settimana del club<br>si accende: <span class="hl">tre gare</span> al via</h1>
+        <p class="standfirst">Torna il campionato per le formazioni giovanili. Al comunale si parte sabato con gli Allievi, mentre domenica la Prima Squadra è di scena in trasferta.</p>
+        <p class="body drop">Settimana intensa per tutti i reparti della società: dal lunedì al venerdì i campi del comunale ospitano gli allenamenti di sei categorie, con i portieri che si allenano in gruppo unico il martedì e il mercoledì. Il registro presenze riparte pieno, con sole tre assenze comunicate per la prima settimana. L'infermeria, intanto, segnala tre certificati medici in scadenza entro fine mese: la segreteria ha già inviato i promemoria alle famiglie.</p>
+        <div class="byline"><span>Redazione <b>THOF</b></span><span>Cronaca sportiva locale</span><span>Pag. 1 — edizione serale</span></div>
+      </div>
+    </div>
+
+    <div class="shead reveal">
+      <h2>Il <em>programma</em> della settimana</h2><span class="rules"></span><span class="kicker">campi &amp; orari</span>
+    </div>
+    <table class="prog reveal">
+      <tbody>
+        <tr><td class="giorno">Lunedì</td><td class="evento"><span class="cat-dot"></span>Allievi · Campo 1 &nbsp;&nbsp;<span class="cat-dot"></span>Pulcini · Campo 2</td><td class="ora">18:30 / 19:00</td></tr>
+        <tr><td class="giorno">Martedì</td><td class="evento"><span class="cat-dot por"></span>Portieri (gruppo unico) · Campo 2</td><td class="ora">19:00</td></tr>
+        <tr class="oggi"><td class="giorno">Oggi<span class="oggi-tag">OGGI</span></td><td class="evento"><span class="cat-dot"></span>Primi Calci · Campo 2 &nbsp;&nbsp;<span class="cat-dot"></span>Allievi · Campo 1</td><td class="ora">17:30 / 18:30</td></tr>
+        <tr><td class="giorno">Giovedì</td><td class="evento"><span class="cat-dot"></span>Pulcini · Campo 2 &nbsp;&nbsp;<span class="cat-dot"></span>Esordienti · Campo 1</td><td class="ora">18:30 / 19:00</td></tr>
+        <tr><td class="giorno">Venerdì</td><td class="evento"><span class="cat-dot"></span>Prima Squadra · Campo 1</td><td class="ora">20:30</td></tr>
+        <tr><td class="giorno">Sabato</td><td class="evento"><span class="cat-dot"></span>Gara Allievi vs AC Rosso Blu &nbsp;&nbsp;<span class="cat-dot"></span>Torneo Pulcini</td><td class="ora">10:30 / 09:00</td></tr>
+        <tr><td class="giorno">Domenica</td><td class="evento"><span class="cat-dot"></span>Gara Juniores in trasferta a Caronno</td><td class="ora">15:00</td></tr>
+      </tbody>
+    </table>
+
+    <div class="shead reveal">
+      <h2>Le rubriche <em>del club</em></h2><span class="rules"></span><span class="kicker">aree riservate allo staff</span>
+    </div>
+    <div class="vetrina reveal">
+      <article class="rubrica">
+        <div class="rub-k">Allenatori &amp; Mister</div>
+        <h3>Gestione Squadre</h3>
+        <p>Il tabellino delle presenze, la lavagna tattica e la reportistica di ogni categoria. La pagina di riferimento per mister e preparatori.</p>
+        <span class="leggi-tutto" onclick="go('registro')">Leggi il tabellino →</span>
+      </article>
+      <article class="rubrica">
+        <div class="rub-k">Segreteria</div>
+        <h3>Gestione Segreteria</h3>
+        <p>Iscrizioni, rate e pagamenti, moduli online e Open Day: tutta la burocrazia del club in un'unica redazione digitale.</p>
+        <span class="leggi-tutto">Vai alla sezione →</span>
+      </article>
+      <article class="rubrica">
+        <div class="rub-k">Dirigenti</div>
+        <h3>Gestione Responsabili</h3>
+        <p>Ruoli, categorie assegnate, programmazione partite del weekend e gestione spogliatoi e campi per le gare casalinghe.</p>
+        <span class="leggi-tutto">Vai alla sezione →</span>
+      </article>
+      <article class="rubrica">
+        <div class="rub-k">Infermeria</div>
+        <h3>Gestione Infermeria</h3>
+        <p>Il registro degli infortuni con scadenze automatiche e i certificati medici in scadenza: la salute dei nostri ragazzi prima di tutto.</p>
+        <span class="leggi-tutto">Vai alla sezione →</span>
+      </article>
+    </div>
+
+    <footer class="colophon">
+      <span>The Home Of Football Club</span>
+      <span>Mockup grafico — non collegato al sito reale</span>
+    </footer>
+  </section>
+
+  <!-- ============ LOGIN ============ -->
+  <section id="page-login" class="page">
+    <div class="gate-wrap">
+      <div class="coupon reveal in">
+        <span class="tag-coupon">Tagliando d'accesso</span>
+        <h2>Soci &amp; Staff</h2>
+        <p class="sub">Compila il modulo per entrare nella redazione del registro.</p>
+        <div class="field"><label>Nome utente</label><input type="text" placeholder="es. m.rossi" autocomplete="off" /></div>
+        <div class="field"><label>Password</label><input type="password" placeholder="••••••••" /></div>
+        <div class="opts">
+          <label><input type="checkbox" checked /> Ricordami</label>
+          <span>Password dimenticata? Scrivi in redazione</span>
+        </div>
+        <button class="btn-rosso">Entra nel Registro</button>
+        <div class="or-line">oppure</div>
+        <button class="btn-google">
+          <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.4 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.3-7.7 2.3-6.3 0-11.7-3.9-13.6-9.3l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+          Continua con Google
+        </button>
+        <div class="coupon-foot">Valido per tesserati, staff e dirigenti · stagione 2025/2026</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REGISTRO ============ -->
+  <section id="page-registro" class="page">
+    <div class="reg-head reveal in">
+      <h2>Il <em>Tabellino</em> delle presenze</h2>
+      <div class="reg-meta">Allievi 2012 — <b>Marzo 2026</b><br/>compilato dal mister · aggiornato ieri sera</div>
+    </div>
+
+    <div class="legend reveal in">
+      <span class="lg"><b class="cd-x">X</b>Presente</span>
+      <span class="lg"><b class="cd-p">P</b>Permesso</span>
+      <span class="lg"><b class="cd-r">R</b>Recupero</span>
+      <span class="lg"><b class="cd-a">A</b>Assente</span>
+      <span class="lg"><b class="cd-ag">AG</b>Ass. giustificato</span>
+      <span class="lg"><b class="cd-ai">AI</b>Infortunio</span>
+    </div>
+
+    <div class="reg-wrap reveal in">
+      <table class="reg">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding-left:14px">Giocatore</th>
+            <th>Lun 02</th><th>Mer 04</th><th>Ven 06</th><th>Lun 09</th><th>Mer 11</th><th>Ven 13</th><th>Lun 16</th><th>Tot.</th><th>%</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="player"><span class="nr">N.7</span>Rossi Marco</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">6</td><td class="pct">86%</td></tr>
+          <tr><td class="player"><span class="nr">N.9</span>Bianchi Luca</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-r">R</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">6</td><td class="pct">86%</td></tr>
+          <tr class="inj"><td class="player"><span class="nr">N.4</span>Ferri Davide</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-ai">AI</span></td><td class="code"><span class="cd-ai">AI</span></td><td class="code"><span class="cd-ai">AI</span></td><td class="code"><span class="cd-ag">AG</span></td><td class="code"><span class="cd-ag">AG</span></td><td class="code"><span class="cd-ag">AG</span></td>
+            <td class="tot">1</td><td class="pct">14%</td></tr>
+          <tr><td class="player"><span class="nr">N.11</span>Esposito Andrea</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-a">A</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">5</td><td class="pct">71%</td></tr>
+          <tr><td class="player"><span class="nr">N.23</span>Colombo Simone</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">7</td><td class="pct">100%</td></tr>
+          <tr><td class="player"><span class="nr">N.5</span>Ricci Giulio</td>
+            <td class="code"><span class="cd-a">A</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-r">R</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">5</td><td class="pct">83%</td></tr>
+          <tr><td class="player"><span class="nr">N.17</span>Gallo Matteo</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-a">A</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">4</td><td class="pct">67%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="reg-note">(*) Copia d'archivio — i dati sensibili sono protetti da password secondo il regolamento privacy del club.</p>
+
+    <footer class="colophon">
+      <span>The Home Of Football Club</span>
+      <span>Mockup grafico — non collegato al sito reale</span>
+    </footer>
+  </section>
+
+  <!-- ============ CONVOCAZIONI ============ -->
+  <section id="page-conv" class="page">
+    <div class="conv-article">
+      <span class="conv-cat">Comunicato ufficiale · Campionato Juniores Girone B</span>
+      <h2 class="conv-title">I convocati <em>della domenica:</em> si parte per Caronno</h2>
+      <p class="conv-sub">Quattordici ragazzi chiamati dalla trasferta di campionato. Appuntamento alle 13:45 negli spogliatoi del comunale.</p>
+
+      <div class="info-strip reveal in">
+        <div class="is"><div class="k">Giornata</div><div class="v">2ª Andata</div></div>
+        <div class="is"><div class="k">Data</div><div class="v">Dom 30 Agosto</div></div>
+        <div class="is"><div class="k">Kick-off</div><div class="v">Ore 15:00</div></div>
+        <div class="is"><div class="k">Campo</div><div class="v">Caronno — Centrale</div></div>
+      </div>
+
+      <div class="conv-cols">
+        <div class="reveal in">
+          <h3 class="lista-h">La lista dei quattordici</h3>
+          <ol class="lista">
+            <li>Marini Tommaso<span class="ruolo">Portiere</span></li>
+            <li>Ferretti Gabriele<span class="ruolo">Terzino dx</span></li>
+            <li>Lombardi Filippo<span class="ruolo">Difensore</span></li>
+            <li>Testa Alessio<span class="ruolo">Difensore</span></li>
+            <li>Neri Jacopo<span class="ruolo">Terzino sx</span></li>
+            <li>Villa Riccardo<span class="ruolo">Mediano</span></li>
+            <li>Sanna Lorenzo<span class="ruolo">Mezzala</span></li>
+            <li>Greco Samuele<span class="ruolo">Trequartista</span></li>
+            <li>Mancini Pietro<span class="ruolo">Ala dx</span></li>
+            <li>Barone Federico<span class="ruolo">Ala sx</span></li>
+            <li>D'Amico Nicolò<span class="ruolo">Attaccante</span></li>
+            <li>Pellegrini Enrico<span class="ruolo">Portiere</span></li>
+            <li>Fabbri Emanuele<span class="ruolo">Difensore</span></li>
+            <li>Moretti Davide<span class="ruolo">Attaccante</span></li>
+          </ol>
+        </div>
+        <aside class="reveal in">
+          <div class="aside-block">
+            <div class="k">Allenatore</div>
+            <div class="v">Mister Marco Bellini</div>
+          </div>
+          <div class="aside-block">
+            <div class="k">Cellulare dello staff</div>
+            <div class="v">+39 333 000 0000</div>
+          </div>
+          <div class="aside-block">
+            <div class="k">Dirigente accompagnatore</div>
+            <div class="v">Sig. Paolo Marconi</div>
+          </div>
+          <blockquote class="nota">
+            "Presentarsi in tenuta completa con maglia rossa. Partenza in pullman societario puntuali: chi arriva tardi resta a guardare. E ricordate la borraccia."
+            <cite>— Le note del mister, dall'ultima conferenza stampa</cite>
+          </blockquote>
+        </aside>
+      </div>
+    </div>
+
+    <footer class="colophon">
+      <span>The Home Of Football Club</span>
+      <span>Mockup grafico — non collegato al sito reale</span>
+    </footer>
+  </section>
+</main>
+
+<script>
+  const tabs=document.querySelectorAll('.tab');
+  const pages={
+    home:document.getElementById('page-home'),
+    login:document.getElementById('page-login'),
+    registro:document.getElementById('page-registro'),
+    conv:document.getElementById('page-conv')
+  };
+  function go(id){
+    tabs.forEach(t=>t.classList.toggle('active',t.dataset.page===id));
+    Object.entries(pages).forEach(([k,p])=>p.classList.toggle('active',k===id));
+    window.scrollTo({top:0,behavior:'smooth'});
+    if(id==='home'){reveal();countUp();}else{reveal(true);}
+  }
+  tabs.forEach(t=>t.addEventListener('click',()=>go(t.dataset.page)));
+
+  const io=new IntersectionObserver(es=>es.forEach(e=>{
+    if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}
+  }),{threshold:.1});
+  function reveal(immediate){
+    document.querySelectorAll('.page.active .reveal').forEach((el,i)=>{
+      if(el.classList.contains('in'))return;
+      el.style.transitionDelay=(i*70)+'ms';
+      if(immediate){requestAnimationFrame(()=>el.classList.add('in'));}
+      else io.observe(el);
+    });
+  }
+  let counted=false;
+  function countUp(){
+    document.querySelectorAll('.page.active [data-count]').forEach(el=>{
+      if(counted&&el.textContent!=='0')return;
+      const target=+el.dataset.count;let n=0;
+      const step=Math.max(1,Math.ceil(target/38));
+      const t=setInterval(()=>{n+=step;if(n>=target){n=target;clearInterval(t);}el.textContent=n;},26);
+    });
+    counted=true;
+  }
+  reveal();countUp();
+</script>
+</body>
+</html>

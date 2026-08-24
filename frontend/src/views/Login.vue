@@ -533,7 +533,7 @@ async function creaSocieta() {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: #000000;
+  background: linear-gradient(180deg, #f7f8fa 0%, #eef1f5 100%);
   padding: 2rem;
   position: relative;
   overflow: hidden;
@@ -548,13 +548,13 @@ async function creaSocieta() {
 }
 
 .login-card {
-  background: rgba(20, 20, 20, 0.95);
-  border: 1px solid rgba(220, 38, 38, 0.3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   padding: 2.5rem;
   width: 100%;
   max-width: 420px;
-  box-shadow: 0 0 60px rgba(220, 38, 38, 0.2);
+  box-shadow: 0 12px 40px rgba(22, 24, 29, 0.08);
   animation: scaleIn 0.4s ease-out, slideUp 0.4s ease-out;
   position: relative;
   z-index: 1;
@@ -563,11 +563,11 @@ async function creaSocieta() {
 .login-card--selection {
   max-width: 860px;
   padding: 3rem;
-  border: 1px solid rgba(220, 38, 38, 0.25);
+  border: 1px solid var(--color-border);
   background:
-    radial-gradient(1200px 500px at 15% -10%, rgba(220, 38, 38, 0.14) 0%, transparent 60%),
-    radial-gradient(900px 400px at 100% 110%, rgba(59, 130, 246, 0.1) 0%, transparent 55%),
-    rgba(16, 16, 18, 0.97);
+    radial-gradient(1200px 500px at 15% -10%, rgba(220, 38, 38, 0.05) 0%, transparent 60%),
+    radial-gradient(900px 400px at 100% 110%, rgba(59, 130, 246, 0.04) 0%, transparent 55%),
+    var(--color-surface);
 }
 
 .login-header {
@@ -578,7 +578,7 @@ async function creaSocieta() {
 h1 {
   font-size: 1.75rem;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--color-text);
   margin-bottom: 0.25rem;
   letter-spacing: 0.02em;
 }
@@ -588,7 +588,7 @@ h1 {
 }
 
 .subtitle {
-  color: #888888;
+  color: var(--color-text-muted);
   font-size: 0.9375rem;
 }
 
@@ -610,34 +610,34 @@ h1 {
   gap: 0.5rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #cccccc;
+  color: var(--color-text-secondary);
 }
 
 .form-group label svg {
   width: 16px;
   height: 16px;
-  color: #888888;
+  color: var(--color-text-muted);
 }
 
 .form-group input {
   padding: 0.875rem 1rem;
-  border: 2px solid #333333;
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: 1rem;
-  color: #ffffff;
-  background: #1a1a1a;
+  color: var(--color-text);
+  background: var(--color-surface);
   transition: all var(--transition-fast);
 }
 
 .form-group input:focus {
   outline: none;
   border-color: var(--color-primary);
-  background: #0d0d0d;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
 }
 
 .form-group input::placeholder {
-  color: #666666;
+  color: #9aa2af;
 }
 
 .input-wrapper {
@@ -656,14 +656,14 @@ h1 {
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: #888888;
+  color: var(--color-text-muted);
   padding: 0.25rem;
   cursor: pointer;
   transition: color var(--transition-fast);
 }
 
 .toggle-password:hover {
-  color: #cccccc;
+  color: var(--color-text-secondary);
 }
 
 .toggle-password svg {
@@ -676,10 +676,10 @@ h1 {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: rgba(220, 38, 38, 0.15);
-  border: 1px solid rgba(220, 38, 38, 0.3);
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.25);
   border-radius: var(--radius-md);
-  color: #f87171;
+  color: #b91c1c;
   font-size: 0.875rem;
   font-weight: 500;
   animation: slideDown 0.2s ease-out;
@@ -808,9 +808,9 @@ h1 {
 
 .btn-create {
   background: transparent;
-  border: 2px dashed #444;
+  border: 2px dashed var(--color-border);
   border-radius: var(--radius-md);
-  color: #888;
+  color: var(--color-text-muted);
   padding: 0.75rem 1.5rem;
   font-size: 0.875rem;
   cursor: pointer;
@@ -825,34 +825,37 @@ h1 {
 
 .btn-gestione {
   margin-top: 0.5rem;
-  background: #333;
-  border: none;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: #fff;
+  color: var(--color-text-secondary);
   padding: 0.75rem 1.5rem;
   font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
   width: 100%;
 }
 
 .btn-gestione:hover {
-  background: #444;
+  background: var(--color-border-light);
+  color: var(--color-text);
 }
 
 .create-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.8);
+  background: rgba(22, 24, 29, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
   padding: 1rem;
+  backdrop-filter: blur(4px);
 }
 
 .create-modal-content {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
   width: 100%;
@@ -862,7 +865,7 @@ h1 {
 }
 
 .create-modal-content h3 {
-  color: #fff;
+  color: var(--color-text);
   margin-bottom: 1rem;
   font-size: 1.25rem;
 }
@@ -874,7 +877,7 @@ h1 {
 .create-modal-content .form-group label {
   display: block;
   font-size: 0.875rem;
-  color: #aaa;
+  color: var(--color-text-secondary);
   margin-bottom: 0.5rem;
 }
 
@@ -887,10 +890,10 @@ h1 {
 
 .create-modal-content .form-group input[type="file"] {
   padding: 0.5rem;
-  background: #222;
-  border: 1px solid #444;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: #ccc;
+  color: var(--color-text-secondary);
   font-size: 0.875rem;
 }
 
@@ -907,17 +910,17 @@ h1 {
 .modal-actions .btn-secondary {
   flex: 1;
   padding: 0.75rem;
-  background: #333;
-  border: none;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: #fff;
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
 .form-section {
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .form-section:last-of-type {
@@ -925,7 +928,7 @@ h1 {
 }
 
 .form-section h4 {
-  color: #fff;
+  color: var(--color-text);
   font-size: 0.9rem;
   font-weight: 600;
   margin-bottom: 0.75rem;
@@ -945,20 +948,20 @@ h1 {
 
 .create-modal-content .form-group input[type="file"] {
   padding: 0.5rem;
-  background: #222;
-  border: 1px solid #444;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: #ccc;
+  color: var(--color-text-secondary);
   font-size: 0.875rem;
 }
 
 .create-modal-content .form-group select {
   padding: 0.75rem 1rem;
-  border: 2px solid #333;
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: 1rem;
-  color: #fff;
-  background: #1a1a1a;
+  color: var(--color-text);
+  background: var(--color-surface);
   cursor: pointer;
 }
 
@@ -1004,7 +1007,7 @@ h1 {
 .soc-title {
   font-size: 2rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--color-text);
   letter-spacing: -0.03em;
   margin-bottom: 0.4rem;
 }
@@ -1014,7 +1017,7 @@ h1 {
 }
 
 .soc-sub {
-  color: #999;
+  color: var(--color-text-muted);
   font-size: 0.95rem;
 }
 
@@ -1024,8 +1027,8 @@ h1 {
   align-items: center;
   gap: 1rem;
   padding: 0.9rem 1.1rem;
-  background: linear-gradient(90deg, rgba(220, 38, 38, 0.16), rgba(220, 38, 38, 0.04));
-  border: 1px solid rgba(220, 38, 38, 0.35);
+  background: linear-gradient(90deg, rgba(220, 38, 38, 0.07), rgba(220, 38, 38, 0.02));
+  border: 1px solid rgba(220, 38, 38, 0.25);
   border-radius: var(--radius-lg);
   margin-bottom: 1.25rem;
   animation: slideUp 0.3s ease-out;
@@ -1042,7 +1045,7 @@ h1 {
   justify-content: center;
   font-size: 1.35rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--color-primary);
   flex-shrink: 0;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.12);
 }
@@ -1055,7 +1058,7 @@ h1 {
 .soc-preview-info h3 {
   font-size: 1rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text);
   margin-bottom: 0.15rem;
   white-space: nowrap;
   overflow: hidden;
@@ -1064,7 +1067,7 @@ h1 {
 
 .soc-preview-info p {
   font-size: 0.8rem;
-  color: #aaa;
+  color: var(--color-text-secondary);
 }
 
 .soc-preview-check {
@@ -1095,8 +1098,8 @@ h1 {
   align-items: center;
   gap: 0.9rem;
   padding: 1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: transform var(--transition-base), border-color var(--transition-base), background var(--transition-base), box-shadow var(--transition-base);
@@ -1105,8 +1108,8 @@ h1 {
 .soc-card:hover {
   border-color: rgba(220, 38, 38, 0.5);
   transform: translateY(-3px);
-  background: rgba(220, 38, 38, 0.06);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  background: rgba(220, 38, 38, 0.04);
+  box-shadow: 0 12px 30px rgba(22, 24, 29, 0.1);
 }
 
 .soc-card.selected {
@@ -1145,14 +1148,14 @@ h1 {
 .soc-card-info h3 {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .soc-arrow {
-  color: #777;
+  color: var(--color-text-muted);
   font-size: 1.15rem;
   transition: transform var(--transition-base), color var(--transition-base);
   flex-shrink: 0;
@@ -1172,10 +1175,10 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,0.07);
-  border: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  color: #888;
+  color: var(--color-text-muted);
   cursor: pointer;
   transition: all var(--transition-fast);
   opacity: 0;
@@ -1245,10 +1248,10 @@ h1 {
   align-items: center;
   gap: 0.5rem;
   padding: 1rem 0.75rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed rgba(255, 255, 255, 0.12);
+  background: var(--color-bg);
+  border: 1px dashed var(--color-border);
   border-radius: var(--radius-lg);
-  color: #ccc;
+  color: var(--color-text-secondary);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -1259,8 +1262,8 @@ h1 {
 .soc-action:hover {
   border-color: var(--color-primary);
   border-style: solid;
-  color: #fff;
-  background: rgba(220, 38, 38, 0.08);
+  color: var(--color-primary);
+  background: rgba(220, 38, 38, 0.06);
   transform: translateY(-2px);
 }
 
@@ -1307,12 +1310,12 @@ h1 {
   border-radius: 8px;
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
-  color: #ccc;
+  color: var(--color-text-secondary);
   font-size: 0.85rem;
 }
 
 .invito-info strong {
-  color: #fff;
+  color: var(--color-text);
 }
 
 .btn-google {

@@ -1,9 +1,5 @@
 <template>
   <div class="home">
-    <div class="bg-glow bg-glow-1"></div>
-    <div class="bg-glow bg-glow-2"></div>
-    <div class="bg-glow bg-glow-3"></div>
-
     <header class="page-header">
       <div class="header-top">
         <div class="header-badge">
@@ -12,7 +8,7 @@
         </div>
         <div v-if="isSuperAdmin" class="societa-switch">
           <button class="btn-societa" @click="vaiSelezioneSocieta">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
               <path d="M7 16V4m0 0L3 8m4-4l4 4"/>
               <path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
             </svg>
@@ -20,18 +16,58 @@
           </button>
         </div>
       </div>
-      <div class="header-main">
-        <h1 class="society-name">
-          <span class="name-gradient">{{ societaAttiva?.nome || 'Benvenuto' }}</span>
-        </h1>
-        <p class="header-subtitle">Pannello di controllo</p>
-      </div>
+      <h1 class="society-name">{{ societaAttiva?.nome || 'Benvenuto' }}</h1>
+      <p class="header-subtitle">Pannello di controllo</p>
     </header>
 
-    <section class="planning-section">
+    <div v-if="canInfermeria && infortuniCount > 0" class="alert-strip" @click="router.push('/infermeria')">
+      <span class="alert-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </span>
+      <span class="alert-text"><strong>{{ infortuniCount }}</strong>&nbsp;{{ infortuniCount === 1 ? 'giocatore infortunato' : 'giocatori infortunati' }} — apri Infermeria</span>
+      <span class="alert-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </span>
+    </div>
+
+    <section class="op-section">
       <div class="section-header">
         <div class="section-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="section-title">Allenamenti di oggi</h2>
+          <p class="section-subtitle">{{ oggiLabel }}</p>
+        </div>
+      </div>
+
+      <div class="panel today-panel">
+        <div v-if="oggiCategorie.length" class="today-list">
+          <div v-for="cat in oggiCategorie" :key="cat.id" class="today-row">
+            <span class="chip-dot" :class="{ portieri: cat.is_portieri }"></span>
+            <span class="today-cat">{{ cat.nome }}</span>
+            <span class="chip-badge">{{ cat.is_portieri ? 'POR' : cat.anno }}</span>
+            <button class="btn-open" @click="apriRegistro(cat)">
+              Apri registro
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
+        <p v-else class="empty-note">Nessun allenamento in programma oggi</p>
+      </div>
+    </section>
+
+    <section class="op-section">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
             <line x1="16" y1="2" x2="16" y2="6"/>
             <line x1="8" y1="2" x2="8" y2="6"/>
@@ -39,54 +75,41 @@
           </svg>
         </div>
         <div>
-          <h2 class="section-title">Planning Allenamenti</h2>
-          <p class="section-subtitle">Programmazione settimanale</p>
+          <h2 class="section-title">Programmazione settimana</h2>
+          <p class="section-subtitle">Tutte le categorie, giorno per giorno</p>
         </div>
       </div>
 
-      <div class="planning-grid">
+      <div class="panel week-panel">
         <div
-          v-for="(giorno, idx) in planningSettimana"
+          v-for="giorno in planningSettimana"
           :key="giorno.val"
-          class="planning-day"
-          :class="{ active: isToday(giorno.val), empty: giorno.categorie.length === 0 }"
-          :style="{ animationDelay: idx * 60 + 'ms' }"
+          class="week-row"
+          :class="{ today: isToday(giorno.val), empty: giorno.categorie.length === 0 }"
         >
-          <div class="day-header">
-            <span class="day-name">{{ giorno.nome }}</span>
-            <div v-if="isToday(giorno.val)" class="today-badge">OGGI</div>
-          </div>
-          <div class="day-divider"></div>
-          <div class="day-content">
-            <div
-              v-if="giorno.categorie.length > 0"
-              class="day-cats"
+          <span class="day-name">{{ giorno.nome }}<span v-if="isToday(giorno.val)" class="today-tag">oggi</span></span>
+          <div class="chips">
+            <span
+              v-for="cat in giorno.categorie"
+              :key="cat.id"
+              class="cat-chip"
+              :class="{ portieri: cat.is_portieri }"
+              @click="apriRegistro(cat)"
             >
-              <div
-                v-for="cat in giorno.categorie"
-                :key="cat.id"
-                class="cat-chip"
-                :class="{ portieri: cat.is_portieri }"
-                @click="apriRegistro(cat)"
-              >
-                <span class="chip-dot" :class="{ portieri: cat.is_portieri }"></span>
-                <span class="chip-name">{{ cat.nome }}</span>
-                <span class="chip-badge">{{ cat.is_portieri ? 'POR' : cat.anno }}</span>
-              </div>
-            </div>
-            <div v-else class="day-empty">
-              <span class="empty-icon">—</span>
-              <span class="empty-text">Nessun allenamento</span>
-            </div>
+              <span class="chip-dot" :class="{ portieri: cat.is_portieri }"></span>
+              {{ cat.nome }}
+              <span class="chip-badge">{{ cat.is_portieri ? 'POR' : cat.anno }}</span>
+            </span>
+            <span v-if="giorno.categorie.length === 0" class="no-cats">—</span>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="sections-section">
+    <section class="op-section">
       <div class="section-header">
         <div class="section-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="22" height="22">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
             <rect x="3" y="3" width="7" height="7" rx="1"/>
             <rect x="14" y="3" width="7" height="7" rx="1"/>
             <rect x="3" y="14" width="7" height="7" rx="1"/>
@@ -100,11 +123,9 @@
       </div>
 
       <div class="sections-grid">
-        <div class="section-card allenatori" @click="router.push('/allenatori')">
-          <div class="card-glow"></div>
-          <div class="card-pattern"></div>
-          <div class="card-icon-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
+        <div class="section-card" @click="router.push('/allenatori')">
+          <div class="card-icon-wrap icon-red">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24">
               <circle cx="12" cy="12" r="10"/>
               <path d="M12 6v6l4 2"/>
             </svg>
@@ -114,20 +135,15 @@
             <p class="card-desc">Allenamenti · Categorie · Presenze</p>
           </div>
           <div class="card-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </div>
         </div>
 
-        <div v-if="utenteAttivo?.ruolo === 'segreteria' || utenteAttivo?.is_admin" class="section-card segreteria" @click="router.push('/segreteria')">
-          <div class="card-glow"></div>
-          <div class="card-pattern"></div>
-          <div class="card-icon-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
+        <div v-if="utenteAttivo?.ruolo === 'segreteria' || utenteAttivo?.is_admin" class="section-card" @click="router.push('/segreteria')">
+          <div class="card-icon-wrap icon-purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24">
               <path d="M17 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V4a2 2 0 00-2-2z"/>
-              <path d="M12 6v4"/>
-              <path d="M12 14h.01"/>
+              <path d="M12 6v4"/><path d="M12 14h.01"/>
             </svg>
           </div>
           <div class="card-text">
@@ -135,17 +151,13 @@
             <p class="card-desc">Tesseramenti · Documenti · Rate</p>
           </div>
           <div class="card-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </div>
         </div>
 
-        <div v-if="utenteAttivo?.is_admin" class="section-card responsabili" @click="router.push('/responsabili')">
-          <div class="card-glow"></div>
-          <div class="card-pattern"></div>
-          <div class="card-icon-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
+        <div v-if="utenteAttivo?.is_admin" class="section-card" @click="router.push('/responsabili')">
+          <div class="card-icon-wrap icon-amber">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24">
               <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
               <path d="M23 21v-2a4 4 0 00-3-3.87"/>
@@ -157,17 +169,13 @@
             <p class="card-desc">Mister · Dirigenti · Partite</p>
           </div>
           <div class="card-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </div>
         </div>
 
-        <div v-if="['infermeria', 'admin', 'super_admin'].includes(utenteAttivo?.ruolo)" class="section-card infermeria" @click="router.push('/infermeria')">
-          <div class="card-glow"></div>
-          <div class="card-pattern"></div>
-          <div class="card-icon-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
+        <div v-if="['infermeria', 'admin', 'super_admin'].includes(utenteAttivo?.ruolo)" class="section-card" @click="router.push('/infermeria')">
+          <div class="card-icon-wrap icon-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24">
               <path d="M9 12l2 2 4-4"/>
               <path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/>
               <path d="M12 6v6"/>
@@ -178,9 +186,7 @@
             <p class="card-desc">Certificati medici · Infortuni</p>
           </div>
           <div class="card-arrow">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </div>
         </div>
       </div>
@@ -192,14 +198,15 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useStore } from "../store.js"
-import { getSocieta, getAllCategorie, getCategoriaResponsabili } from "../api/index.js"
+import { getSocieta, getAllCategorie, getInfortuni } from "../api/index.js"
 
 const router = useRouter()
 const { utenteAttivo, societaAttiva, setSocietaAttiva } = useStore()
 const isSuperAdmin = computed(() => utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'super_admin')
+const canInfermeria = computed(() => ['infermeria', 'admin', 'super_admin'].includes(utenteAttivo.value?.ruolo))
 
 const allCategories = ref([])
-const responsabileMap = ref({})
+const infortuniCount = ref(0)
 
 const m = new Date().getMonth() + 1
 const currentSeason = ref(`${m >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1}/${m >= 8 ? new Date().getFullYear() + 1 : new Date().getFullYear()}`)
@@ -225,6 +232,20 @@ const planningSettimana = computed(() => {
   })
 })
 
+const oggiCategorie = computed(() => {
+  const dow = new Date().getDay()
+  return allCategories.value.filter(c => {
+    if (!c.giorni) return false
+    return c.giorni.split(',').map(Number).includes(dow)
+  })
+})
+
+const oggiLabel = computed(() => {
+  const d = new Date()
+  const nome = (tuttiGiorni.find(g => g.val === d.getDay()) || {}).nome || ''
+  return `${nome} ${d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}`
+})
+
 function isToday(giornoVal) {
   return new Date().getDay() === giornoVal
 }
@@ -244,16 +265,18 @@ async function loadPlanning() {
     allCategories.value = res.data || []
     const activeCat = allCategories.value.find(c => c.parent_id !== null && c.stagione)
     currentSeason.value = activeCat ? `${activeCat.stagione}/${activeCat.stagione + 1}` : currentSeason.value
-    for (const cat of allCategories.value) {
-      try {
-        const respRes = await getCategoriaResponsabili(cat.id)
-        if (respRes.data && respRes.data.length > 0) {
-          responsabileMap.value[cat.id] = respRes.data
-        }
-      } catch (e) {}
-    }
   } catch (e) {
     console.error('Errore loadPlanning:', e)
+  }
+}
+
+async function loadInfortuni() {
+  if (!canInfermeria.value) return
+  try {
+    const res = await getInfortuni({ attivi: true })
+    infortuniCount.value = (res.data || []).length
+  } catch (e) {
+    console.error('Errore caricamento infortuni:', e)
   }
 }
 
@@ -272,103 +295,42 @@ onMounted(async () => {
     }
   }
 
-  // Redirect diretto per ruoli specifici
-  const ruolo = utenteAttivo.value?.ruolo
-  if (ruolo === 'mister') {
-    router.replace('/allenatori')
-    return
-  }
-  if (ruolo === 'segreteria') {
-    router.replace('/segreteria')
-    return
-  }
-  if (ruolo === 'infermeria') {
-    router.replace('/infermeria')
-    return
-  }
-
   loadPlanning()
+  loadInfortuni()
 })
 </script>
 
 <style scoped>
 .home {
   position: relative;
-  padding: 2.5rem 2rem 4rem;
-  max-width: 1100px;
+  padding: 2rem 2rem 4rem;
+  max-width: 1080px;
   margin: 0 auto;
-  overflow: hidden;
-}
-
-/* ── Background Glows ── */
-.bg-glow {
-  position: fixed;
-  border-radius: 50%;
-  filter: blur(120px);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.bg-glow-1 {
-  width: 600px;
-  height: 600px;
-  top: -200px;
-  right: -100px;
-  background: radial-gradient(circle, rgba(220, 38, 38, 0.12) 0%, transparent 70%);
-  animation: glowFloat 8s ease-in-out infinite;
-}
-
-.bg-glow-2 {
-  width: 500px;
-  height: 500px;
-  bottom: -150px;
-  left: -100px;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.1) 0%, transparent 70%);
-  animation: glowFloat 10s ease-in-out infinite reverse;
-}
-
-.bg-glow-3 {
-  width: 400px;
-  height: 400px;
-  top: 40%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(245, 158, 11, 0.06) 0%, transparent 70%);
-  animation: glowFloat 12s ease-in-out infinite 2s;
-}
-
-@keyframes glowFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -20px) scale(1.05); }
-  66% { transform: translate(-20px, 15px) scale(0.95); }
 }
 
 /* ── Header ── */
 .page-header {
-  position: relative;
-  z-index: 1;
-  margin-bottom: 3rem;
-  animation: fadeSlideIn 0.7s ease-out both;
+  margin-bottom: 1.5rem;
 }
 
 .header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .header-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 1rem;
-  background: rgba(220, 38, 38, 0.1);
-  border: 1px solid rgba(220, 38, 38, 0.2);
+  gap: 0.45rem;
+  padding: 0.3rem 0.8rem;
+  background: rgba(220, 38, 38, 0.07);
+  border: 1px solid rgba(220, 38, 38, 0.22);
   border-radius: 100px;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
   color: var(--color-primary);
 }
 
@@ -377,25 +339,17 @@ onMounted(async () => {
   height: 6px;
   border-radius: 50%;
   background: var(--color-primary);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
 }
 
 .btn-societa {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.6rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
+  padding: 0.45rem 0.9rem;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: 10px;
   color: var(--color-text-secondary);
-  font-family: var(--font-sans);
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
@@ -403,197 +357,174 @@ onMounted(async () => {
 }
 
 .btn-societa:hover {
-  background: rgba(255, 255, 255, 0.1);
   border-color: var(--color-primary);
-  color: var(--color-text);
-}
-
-.header-main {
-  position: relative;
+  color: var(--color-primary);
 }
 
 .society-name {
-  font-size: clamp(2.5rem, 7vw, 4.5rem);
+  font-size: 1.75rem;
   font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1.05;
-  margin-bottom: 0.5rem;
-}
-
-.name-gradient {
-  background: linear-gradient(135deg, #ffffff 0%, #ffffff 40%, var(--color-primary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  line-height: 1.15;
+  margin-bottom: 0.15rem;
 }
 
 .header-subtitle {
-  font-size: 1.125rem;
+  font-size: 0.95rem;
   color: var(--color-text-muted);
-  font-weight: 400;
+  font-weight: 500;
 }
 
-/* ── Section Headers ── */
+/* ── Alert operativi ── */
+.alert-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1.25rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  color: #92400e;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.alert-strip:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.alert-strip strong {
+  font-weight: 800;
+}
+
+.alert-icon {
+  display: flex;
+  align-items: center;
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+.alert-arrow {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ── Sezioni operative ── */
+.op-section {
+  margin-bottom: 2rem;
+}
+
 .section-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
 }
 
 .section-icon {
-  width: 48px;
-  height: 48px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.15) 0%, rgba(220, 38, 38, 0.05) 100%);
-  border: 1px solid rgba(220, 38, 38, 0.2);
-  border-radius: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
   color: var(--color-primary);
+  flex-shrink: 0;
 }
 
 .section-title {
-  font-size: 1.375rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-text);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
 .section-subtitle {
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
-  margin-top: 0.125rem;
+  margin-top: 0.05rem;
 }
 
-/* ── Planning Section ── */
-.planning-section {
-  position: relative;
-  z-index: 1;
-  margin-bottom: 3rem;
-  animation: fadeSlideIn 0.7s ease-out 0.15s both;
-}
-
-.planning-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.75rem;
-}
-
-.planning-day {
-  position: relative;
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
+.panel {
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 16px;
-  padding: 1rem 0.875rem;
-  min-height: 140px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+/* Oggi */
+.today-list {
   display: flex;
   flex-direction: column;
-  transition: all var(--transition-base);
-  animation: fadeSlideIn 0.5s ease-out both;
 }
 
-.planning-day:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  transform: translateY(-2px);
-}
-
-.planning-day.active {
-  background: rgba(220, 38, 38, 0.06);
-  border-color: rgba(220, 38, 38, 0.3);
-  box-shadow: 0 0 30px rgba(220, 38, 38, 0.08);
-}
-
-.planning-day.empty {
-  opacity: 0.45;
-}
-
-.day-header {
+.today-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  position: relative;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
-.day-name {
-  font-size: 0.875rem;
+.today-row:last-child {
+  border-bottom: none;
+}
+
+.today-cat {
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--color-text);
 }
 
-.planning-day.active .day-name {
-  color: var(--color-primary);
+.chip-badge {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.12rem 0.4rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  color: var(--color-text-secondary);
+  border-radius: 5px;
+  letter-spacing: 0.04em;
 }
 
-.day-date {
-  font-size: 0.6875rem;
+.btn-open {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  background: var(--color-primary);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.btn-open:hover {
+  background: var(--color-primary-dark);
+}
+
+.empty-note {
+  padding: 1.25rem 1rem;
+  font-size: 0.875rem;
   color: var(--color-text-muted);
 }
 
-.today-badge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  font-family: var(--font-mono);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  padding: 0.15rem 0.5rem;
-  background: var(--color-primary);
-  color: white;
-  border-radius: 4px;
-}
-
-.day-divider {
-  height: 1px;
-  background: linear-gradient(90deg, var(--color-border) 0%, transparent 100%);
-  margin: 0.625rem 0;
-}
-
-.planning-day.active .day-divider {
-  background: linear-gradient(90deg, rgba(220, 38, 38, 0.4) 0%, transparent 100%);
-}
-
-.day-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.day-cats {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.cat-chip {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.4rem 0.5rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.cat-chip:hover {
-  background: rgba(220, 38, 38, 0.12);
-  border-color: rgba(220, 38, 38, 0.4);
-  transform: translateX(2px);
-}
-
-.cat-chip.portieri:hover {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.4);
-}
-
 .chip-dot {
-  width: 5px;
-  height: 5px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--color-primary);
   flex-shrink: 0;
@@ -603,368 +534,171 @@ onMounted(async () => {
   background: var(--color-accent);
 }
 
-.chip-name {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--color-text);
-  flex: 1;
-  line-height: 1.2;
-}
-
-.chip-badge {
-  font-family: var(--font-mono);
-  font-size: 0.5625rem;
-  font-weight: 700;
-  padding: 0.1rem 0.375rem;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--color-text-secondary);
-  border-radius: 4px;
-  letter-spacing: 0.05em;
-  flex-shrink: 0;
-}
-
-.cat-chip:hover .chip-badge {
-  background: var(--color-primary);
-  color: white;
-}
-
-.cat-chip.portieri:hover .chip-badge {
-  background: var(--color-accent);
-}
-
-.day-empty {
+/* Settimana */
+.week-list {
   display: flex;
   flex-direction: column;
+}
+
+.week-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.week-row:last-child {
+  border-bottom: none;
+}
+
+.week-row.today {
+  background: rgba(220, 38, 38, 0.03);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.week-row.empty {
+  opacity: 0.5;
+}
+
+.day-name {
+  width: 96px;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  display: flex;
   align-items: center;
-  gap: 0.375rem;
-  margin-top: auto;
-  padding-top: 0.5rem;
+  gap: 0.4rem;
 }
 
-.empty-icon {
-  font-size: 1rem;
-  color: var(--color-border);
-  font-weight: 300;
+.week-row.today .day-name {
+  color: var(--color-primary);
 }
 
-.empty-text {
-  font-size: 0.625rem;
+.today-tag {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.1rem 0.35rem;
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: 4px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.32rem 0.6rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cat-chip:hover {
+  border-color: var(--color-primary);
+  background: rgba(220, 38, 38, 0.05);
+  color: var(--color-primary);
+}
+
+.no-cats {
+  font-size: 0.8rem;
   color: var(--color-text-muted);
-  text-align: center;
 }
 
-/* ── Sections Grid ── */
-.sections-section {
-  position: relative;
-  z-index: 1;
-  animation: fadeSlideIn 0.7s ease-out 0.3s both;
-}
-
+/* Sezioni */
 .sections-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
 }
 
 .section-card {
-  position: relative;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
+  gap: 0.9rem;
+  padding: 1.05rem 1.1rem;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 20px;
+  border-radius: 14px;
   cursor: pointer;
   transition: all var(--transition-base);
-  overflow: hidden;
-}
-
-.section-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 20px;
-  opacity: 0;
-  transition: opacity var(--transition-base);
 }
 
 .section-card:hover {
-  transform: translateY(-4px);
-  border-color: transparent;
+  transform: translateY(-2px);
+  border-color: var(--color-text-muted);
+  box-shadow: var(--shadow-md);
 }
 
-.section-card:hover::before {
-  opacity: 1;
+.card-icon-wrap {
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  flex-shrink: 0;
 }
 
-.section-card:hover .card-glow {
-  opacity: 1;
+.icon-red { background: rgba(220, 38, 38, 0.08); color: var(--color-primary); }
+.icon-purple { background: rgba(124, 58, 237, 0.08); color: #7c3aed; }
+.icon-amber { background: rgba(217, 119, 6, 0.1); color: #b45309; }
+.icon-green { background: rgba(22, 163, 74, 0.09); color: #15803d; }
+
+.card-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.card-desc {
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+  margin-top: 0.1rem;
+}
+
+.card-arrow {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: all var(--transition-base);
 }
 
 .section-card:hover .card-arrow {
   opacity: 1;
-  transform: translate(0, 0);
-}
-
-.section-card:hover .card-icon-wrap {
-  transform: scale(1.1);
-}
-
-.card-glow {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity var(--transition-base);
-  border-radius: 20px;
-}
-
-.card-pattern {
-  position: absolute;
-  inset: 0;
-  opacity: 0.03;
-  background-image: radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0);
-  background-size: 20px 20px;
-  pointer-events: none;
-}
-
-/* Allenatori - Red */
-.section-card.allenatori::before {
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.12) 0%, rgba(185, 28, 28, 0.04) 100%);
-}
-.section-card.allenatori .card-glow {
-  background: radial-gradient(circle at 20% 50%, rgba(220, 38, 38, 0.15) 0%, transparent 60%);
-}
-.section-card.allenatori .card-icon-wrap {
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.2) 0%, rgba(220, 38, 38, 0.08) 100%);
-  border-color: rgba(220, 38, 38, 0.3);
-  color: #ef4444;
-}
-.section-card.allenatori:hover {
-  border-color: rgba(220, 38, 38, 0.3);
-  box-shadow: 0 8px 32px rgba(220, 38, 38, 0.15), 0 0 0 1px rgba(220, 38, 38, 0.1);
-}
-.section-card.allenatori .card-pattern { color: #dc2626; }
-
-/* Segreteria - Purple */
-.section-card.segreteria::before {
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(109, 40, 217, 0.04) 100%);
-}
-.section-card.segreteria .card-glow {
-  background: radial-gradient(circle at 20% 50%, rgba(124, 58, 237, 0.15) 0%, transparent 60%);
-}
-.section-card.segreteria .card-icon-wrap {
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(124, 58, 237, 0.08) 100%);
-  border-color: rgba(124, 58, 237, 0.3);
-  color: #a78bfa;
-}
-.section-card.segreteria:hover {
-  border-color: rgba(124, 58, 237, 0.3);
-  box-shadow: 0 8px 32px rgba(124, 58, 237, 0.15), 0 0 0 1px rgba(124, 58, 237, 0.1);
-}
-.section-card.segreteria .card-pattern { color: #7c3aed; }
-
-/* Responsabili - Amber */
-.section-card.responsabili::before {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.04) 100%);
-}
-.section-card.responsabili .card-glow {
-  background: radial-gradient(circle at 20% 50%, rgba(245, 158, 11, 0.15) 0%, transparent 60%);
-}
-.section-card.responsabili .card-icon-wrap {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.08) 100%);
-  border-color: rgba(245, 158, 11, 0.3);
-  color: #fbbf24;
-}
-.section-card.responsabili:hover {
-  border-color: rgba(245, 158, 11, 0.3);
-  box-shadow: 0 8px 32px rgba(245, 158, 11, 0.15), 0 0 0 1px rgba(245, 158, 11, 0.1);
-}
-.section-card.responsabili .card-pattern { color: #f59e0b; }
-
-/* Infermeria - Green */
-.section-card.infermeria::before {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.04) 100%);
-}
-.section-card.infermeria .card-glow {
-  background: radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.15) 0%, transparent 60%);
-}
-.section-card.infermeria .card-icon-wrap {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.08) 100%);
-  border-color: rgba(16, 185, 129, 0.3);
-  color: #10b981;
-}
-.section-card.infermeria:hover {
-  border-color: rgba(16, 185, 129, 0.3);
-  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.15), 0 0 0 1px rgba(16, 185, 129, 0.1);
-}
-.section-card.infermeria .card-pattern { color: #10b981; }
-
-.card-icon-wrap {
-  width: 56px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 16px;
-  border: 1px solid;
-  flex-shrink: 0;
-  transition: transform var(--transition-base);
-}
-
-.card-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.card-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--color-text);
-  letter-spacing: -0.01em;
-}
-
-.card-desc {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
-.card-arrow {
-  opacity: 0;
-  transform: translate(-8px, 0);
-  transition: all var(--transition-base);
-  color: var(--color-text-secondary);
-  flex-shrink: 0;
-}
-
-/* ── Animations ── */
-@keyframes fadeSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  transform: translateX(0);
+  color: var(--color-primary);
 }
 
 /* ── Responsive ── */
-@media (max-width: 1024px) {
-  .planning-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
 @media (max-width: 768px) {
   .home {
     padding: 1.25rem 0.75rem 2rem;
   }
 
-  .page-header {
-    margin-bottom: 1.5rem;
-  }
-
-  .planning-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
-  }
-
-  .planning-day {
-    padding: 0.75rem 0.625rem;
-    min-height: 100px;
-    border-radius: 12px;
-  }
-
-  .day-name {
-    font-size: 0.8rem;
-  }
-
-  .chip-name {
-    font-size: 0.65rem;
-  }
-
-  .sections-grid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-
-  .section-card {
-    padding: 1.125rem;
-    border-radius: 16px;
-    min-height: 48px;
-  }
-
-  .card-icon-wrap {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-  }
-
-  .card-title {
-    font-size: 1rem;
-  }
-
-  .card-desc {
-    font-size: 0.7rem;
-  }
-
-  .section-title {
-    font-size: 1.15rem;
-  }
-
-  .section-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-  }
-
-  .header-badge {
-    font-size: 0.7rem;
-    padding: 0.3rem 0.75rem;
-  }
-
-  .planning-section {
-    margin-bottom: 2rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .home {
-    padding: 1rem 0.625rem 1.5rem;
-  }
-
-  .planning-grid {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-  }
-
-  .planning-day {
-    min-height: auto;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-  }
-
-  .day-header {
-    flex: 0 0 auto;
-    min-width: 60px;
-  }
-
-  .day-divider {
-    display: none;
-  }
-
-  .day-content {
-    flex: 1;
-  }
-
   .society-name {
-    font-size: 1.75rem;
+    font-size: 1.35rem;
   }
 
   .header-top {
@@ -973,12 +707,23 @@ onMounted(async () => {
     gap: 0.5rem;
   }
 
-  .header-subtitle {
-    font-size: 0.95rem;
+  .today-row {
+    flex-wrap: wrap;
   }
 
-  .section-card {
-    padding: 1rem;
+  .btn-open {
+    width: 100%;
+    justify-content: center;
+    margin-left: 0;
+  }
+
+  .week-row {
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .day-name {
+    width: auto;
   }
 }
 </style>

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THOF — Brutalist · Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#f2efe6;
+    --ink:#0a0a0a;
+    --red:#ff2d2d;
+    --red-deep:#d61f1f;
+    --yellow:#ffd400;
+    --blue:#2d47ff;
+    --r:0px;
+    --font-display:'Archivo Black',sans-serif;
+    --font-body:'Archivo',sans-serif;
+    --font-mono:'Space Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.4;overflow-x:hidden;position:relative}
+  ::selection{background:var(--yellow);color:var(--ink)}
+  .wrap{max-width:1280px;margin:0 auto;padding:0 1.4rem}
+
+  /* marquee ticker */
+  .ticker{background:var(--ink);color:var(--paper);border-bottom:4px solid var(--red);overflow:hidden;white-space:nowrap}
+  .ticker .track{display:inline-block;padding:.5rem 0;font-family:var(--font-mono);font-weight:700;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;animation:tick 22s linear infinite}
+  .ticker .track span{margin:0 1.4rem}
+  .ticker .track b{color:var(--yellow)}
+  @keyframes tick{to{transform:translateX(-50%)}}
+
+  /* nav */
+  .nav{border-bottom:4px solid var(--ink);background:var(--paper);position:sticky;top:0;z-index:40}
+  .nav .wrap{display:flex;align-items:center;justify-content:space-between;height:76px}
+  .brand{font-family:var(--font-display);font-size:1.7rem;letter-spacing:-.02em;display:flex;align-items:center;gap:.6rem}
+  .brand .box{background:var(--red);color:#fff;padding:.1rem .5rem;transform:rotate(-3deg);box-shadow:4px 4px 0 var(--ink)}
+  .tabs{display:flex;gap:0}
+  .tab{font-family:var(--font-mono);font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;background:var(--paper);border:3px solid var(--ink);border-left:none;padding:.6rem 1rem;cursor:pointer;transition:.12s}
+  .tab:first-child{border-left:3px solid var(--ink)}
+  .tab:hover{background:var(--yellow)}
+  .tab.active{background:var(--ink);color:var(--paper)}
+
+  main{position:relative}
+  .page{display:none;animation:pg .35s steps(4) both}
+  .page.active{display:block}
+  @keyframes pg{from{opacity:0}to{opacity:1}}
+
+  /* hero */
+  .hero{border-bottom:4px solid var(--ink);padding:2.4rem 0 2rem}
+  .hero .grid{display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:end}
+  .hero .kick{font-family:var(--font-mono);font-weight:700;font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;background:var(--yellow);display:inline-block;padding:.2rem .6rem;border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);transform:rotate(-1deg)}
+  .hero h1{font-family:var(--font-display);font-size:clamp(3.4rem,15vw,11rem);line-height:.82;letter-spacing:-.03em;text-transform:uppercase;margin-top:1rem}
+  .hero h1 .o{-webkit-text-stroke:3px var(--ink);color:transparent}
+  .hero h1 .r{color:var(--red)}
+  .hero .sub{font-size:1.05rem;font-weight:600;max-width:40ch;margin-top:1rem}
+  .hero .stamp{font-family:var(--font-display);font-size:1.4rem;background:var(--ink);color:var(--paper);padding:1rem 1.2rem;transform:rotate(3deg);box-shadow:6px 6px 0 var(--red);text-align:center;line-height:1}
+  .hero .stamp small{display:block;font-family:var(--font-mono);font-size:.6rem;letter-spacing:.1em;color:var(--yellow);margin-top:.3rem}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:4px solid var(--ink)}
+  .stat{border-right:4px solid var(--ink);padding:1.4rem 1.2rem}
+  .stat:last-child{border-right:none}
+  .stat .v{font-family:var(--font-display);font-size:clamp(2.6rem,7vw,4.6rem);line-height:.9}
+  .stat:nth-child(1) .v{color:var(--red)}
+  .stat:nth-child(3) .v{color:var(--blue)}
+  .stat .l{font-family:var(--font-mono);font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;margin-top:.5rem}
+
+  /* section head */
+  .shead{display:flex;align-items:center;gap:1rem;padding:2.4rem 0 1.2rem}
+  .shead .no{font-family:var(--font-display);font-size:1.6rem;background:var(--ink);color:var(--paper);padding:.1rem .5rem}
+  .shead h2{font-family:var(--font-display);font-size:clamp(1.8rem,5vw,3rem);text-transform:uppercase;letter-spacing:-.02em}
+  .shead .rule{flex:1;height:4px;background:var(--ink)}
+
+  /* schedule */
+  .sched{display:grid;grid-template-columns:repeat(7,1fr);border:4px solid var(--ink);background:var(--ink)}
+  .day{background:var(--paper);border-right:4px solid var(--ink);padding:1rem .7rem;min-height:200px;display:flex;flex-direction:column;gap:.5rem}
+  .day:last-child{border-right:none}
+  .day .dow{font-family:var(--font-display);font-size:1.3rem;text-transform:uppercase}
+  .day .date{font-family:var(--font-mono);font-size:.66rem;font-weight:700}
+  .day.now{background:var(--red);color:#fff}
+  .day.now .date{color:#ffd0d0}
+  .day .badge{align-self:flex-end;font-family:var(--font-mono);font-weight:700;font-size:.6rem;background:var(--yellow);color:var(--ink);border:2px solid var(--ink);padding:.15rem .4rem;transform:rotate(-4deg)}
+  .ev{font-size:.76rem;font-weight:700;border:2px solid var(--ink);padding:.35rem .45rem;background:#fff;display:flex;justify-content:space-between;gap:.3rem;transition:.1s}
+  .ev:hover{background:var(--yellow);transform:translate(-2px,-2px);box-shadow:3px 3px 0 var(--ink)}
+  .ev .t{font-family:var(--font-mono);font-size:.62rem}
+  .day .rest{margin-top:auto;font-family:var(--font-mono);font-size:.66rem;font-weight:700;text-transform:uppercase}
+
+  /* areas */
+  .areas{display:grid;grid-template-columns:1fr 1fr}
+  .area{border:4px solid var(--ink);background:#fff;padding:1.6rem;position:relative;cursor:pointer;transition:.12s;margin:-2px 0 0 -2px}
+  .area:hover{transform:translate(-4px,-4px);box-shadow:8px 8px 0 var(--ink)}
+  .area .no{font-family:var(--font-display);font-size:3rem;color:var(--paper);-webkit-text-stroke:2px var(--ink);line-height:1}
+  .area h3{font-family:var(--font-display);font-size:1.7rem;text-transform:uppercase;margin:.5rem 0 .4rem}
+  .area p{font-size:.9rem;font-weight:500;max-width:40ch}
+  .area .go{position:absolute;right:1.2rem;bottom:1.2rem;font-family:var(--font-display);font-size:1.2rem;background:var(--ink);color:var(--paper);padding:.2rem .6rem}
+  .area:nth-child(1){background:var(--yellow)}
+  .area:nth-child(2){background:#fff}
+  .area:nth-child(3){background:#fff}
+  .area:nth-child(4){background:var(--blue);color:#fff}
+  .area:nth-child(4) p{color:#dfe3ff}
+  .area:nth-child(4) .go{background:var(--yellow);color:var(--ink)}
+
+  .colophon{margin-top:2.6rem;border-top:4px solid var(--ink);padding:1rem 0 3rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:.6rem;font-family:var(--font-mono);font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+
+  /* login */
+  .login-stage{min-height:calc(100vh - 150px);display:grid;place-items:center;padding:3rem 1.4rem}
+  .login-card{width:100%;max-width:460px;background:#fff;border:5px solid var(--ink);box-shadow:12px 12px 0 var(--red);padding:2.4rem 2rem}
+  .login-card .kick{font-family:var(--font-mono);font-weight:700;font-size:.72rem;text-transform:uppercase;background:var(--yellow);display:inline-block;padding:.2rem .6rem;border:3px solid var(--ink);transform:rotate(-2deg)}
+  .login-card h2{font-family:var(--font-display);font-size:2.6rem;text-transform:uppercase;line-height:.9;margin:.8rem 0 .3rem}
+  .login-card .sub{font-weight:600;margin-bottom:1.6rem}
+  .field{margin-bottom:1.2rem}
+  .field label{display:block;font-family:var(--font-mono);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
+  .field input{width:100%;border:3px solid var(--ink);background:var(--paper);padding:.8rem .9rem;font-family:var(--font-mono);font-size:1rem;font-weight:700;color:var(--ink);transition:.1s}
+  .field input:focus{outline:none;background:var(--yellow)}
+  .opts{display:flex;justify-content:space-between;font-size:.8rem;font-weight:700;margin:.2rem 0 1.4rem}
+  .opts a{color:var(--red);text-decoration:none}
+  .btn{width:100%;background:var(--ink);color:var(--paper);border:3px solid var(--ink);font-family:var(--font-display);font-size:1.1rem;text-transform:uppercase;padding:1rem;cursor:pointer;box-shadow:5px 5px 0 var(--red);transition:.1s}
+  .btn:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--red)}
+  .btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--red)}
+  .gline{margin-top:1.2rem;font-family:var(--font-mono);font-size:.66rem;font-weight:700;text-transform:uppercase;text-align:center}
+  .gbtn{margin-top:.6rem;width:100%;display:flex;align-items:center;justify-content:center;gap:.6rem;background:var(--paper);border:3px solid var(--ink);font-family:var(--font-body);font-weight:700;font-size:.9rem;padding:.8rem;cursor:pointer;transition:.1s}
+  .gbtn:hover{background:var(--yellow)}
+  .gbtn svg{width:18px;height:18px}
+
+  @media(max-width:900px){.sched{grid-template-columns:repeat(4,1fr)}.day{border-bottom:4px solid var(--ink)}.areas{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.stat{border-bottom:4px solid var(--ink)}}
+  @media(max-width:560px){.sched{grid-template-columns:repeat(2,1fr)}.hero .grid{grid-template-columns:1fr}.hero .stamp{justify-self:start}}
+</style>
+</head>
+<body>
+  <div class="ticker"><div class="track">
+    <span>REGISTRO ATTIVITÀ</span><span><b>OGGI</b> MER 20 AGO</span><span>3 ALLENAMENTI</span><span>SAB <b>TOURNEO AMICHEVOLE</b></span><span>128 SOCI TESSERATI</span><span>STAGIONE 2025/26</span>
+    <span>REGISTRO ATTIVITÀ</span><span><b>OGGI</b> MER 20 AGO</span><span>3 ALLENAMENTI</span><span>SAB <b>TOURNEO AMICHEVOLE</b></span><span>128 SOCI TESSERATI</span><span>STAGIONE 2025/26</span>
+  </div></div>
+
+  <nav class="nav">
+    <div class="wrap">
+      <div class="brand"><span class="box">THOF</span> CLUB</div>
+      <div class="tabs">
+        <button class="tab active" data-page="home">Programma</button>
+        <button class="tab" data-page="login">Accesso Soci</button>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <!-- HOME -->
+    <section id="page-home" class="page active">
+      <div class="wrap">
+        <div class="hero">
+          <div class="grid">
+            <div>
+              <span class="kick">Settimana 34</span>
+              <h1>Il<br><span class="o">Registro</span> <span class="r">Del Club</span></h1>
+              <p class="sub">Presenze, allenamenti e appuntamenti. Niente fronzoli, solo i numeri della società.</p>
+            </div>
+            <div class="stamp">EST.<br>1998<small>MILANO</small></div>
+          </div>
+        </div>
+
+        <div class="shead"><span class="no">01</span><h2>Calendario</h2><span class="rule"></span></div>
+        <div class="sched">
+          <div class="day"><div class="dow">Lun</div><div class="date">18 AGO</div>
+            <div class="ev"><span>Allievi</span><span class="t">18:30</span></div>
+            <div class="ev"><span>Pulcini</span><span class="t">19:00</span></div></div>
+          <div class="day"><div class="dow">Mar</div><div class="date">19 AGO</div>
+            <div class="ev"><span>Esordienti</span><span class="t">18:30</span></div>
+            <div class="ev"><span>Portieri</span><span class="t">19:00</span></div></div>
+          <div class="day now"><span class="badge">OGGI</span><div class="dow">Mer</div><div class="date">20 AGO</div>
+            <div class="ev"><span>Primi Calci</span><span class="t">17:30</span></div>
+            <div class="ev"><span>Allievi</span><span class="t">18:30</span></div>
+            <div class="ev"><span>Portieri</span><span class="t">19:00</span></div></div>
+          <div class="day"><div class="dow">Gio</div><div class="date">21 AGO</div>
+            <div class="ev"><span>Pulcini</span><span class="t">18:30</span></div>
+            <div class="ev"><span>Esordienti</span><span class="t">19:00</span></div></div>
+          <div class="day"><div class="dow">Ven</div><div class="date">22 AGO</div>
+            <div class="ev"><span>Prima Squadra</span><span class="t">20:30</span></div></div>
+          <div class="day"><div class="dow">Sab</div><div class="date">23 AGO</div>
+            <div class="ev"><span>Torneo</span><span class="t">09:00</span></div>
+            <div class="ev"><span>Allievi</span><span class="t">10:30</span></div></div>
+          <div class="day"><div class="dow">Dom</div><div class="date">24 AGO</div><div class="rest">Riposo</div></div>
+        </div>
+
+        <div class="shead"><span class="no">02</span><h2>Aree</h2><span class="rule"></span></div>
+        <div class="areas">
+          <article class="area"><div class="no">01</div><h3>Allenamenti</h3><p>Schede, presenze, convocazioni e reportistica per ogni categoria.</p><span class="go">APRI →</span></article>
+          <article class="area"><div class="no">02</div><h3>Segreteria</h3><p>Moduli, iscrizioni, Open Day e gestione amministrativa.</p><span class="go">APRI →</span></article>
+          <article class="area"><div class="no">03</div><h3>Responsabili</h3><p>Assegnazione categorie, ruoli e personale di squadra.</p><span class="go">APRI →</span></article>
+          <article class="area"><div class="no">04</div><h3>Infermeria</h3><p>Infortuni, certificati medici e stato di forma.</p><span class="go">APRI →</span></article>
+        </div>
+
+        <footer class="colophon"><span>The Home Of Football Club</span><span>Mockup grafico · non collegato al sito reale</span></footer>
+      </div>
+    </section>
+
+    <!-- LOGIN -->
+    <section id="page-login" class="page">
+      <div class="login-stage">
+        <div class="login-card">
+          <span class="kick">Soci &amp; Staff</span>
+          <h2>Member<br>Sign-In</h2>
+          <p class="sub">Accedi al registro della società.</p>
+          <div class="field"><label>Nome utente</label><input type="text" placeholder="m.rossi" /></div>
+          <div class="field"><label>Password</label><input type="password" placeholder="••••••••" /></div>
+          <div class="opts"><label><input type="checkbox" checked style="accent-color:var(--red)" /> Ricordami</label><a href="#">Dimenticata?</a></div>
+          <button class="btn">Accedi →</button>
+          <div class="gline">— oppure —</div>
+          <button class="gbtn"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.4 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.3-7.7 2.3-6.3 0-11.7-3.9-13.6-9.3l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>Continua con Google</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const tabs=document.querySelectorAll('.tab'),pages={home:document.getElementById('page-home'),login:document.getElementById('page-login')};
+    tabs.forEach(t=>t.addEventListener('click',()=>{tabs.forEach(x=>x.classList.remove('active'));t.classList.add('active');const id=t.dataset.page;Object.values(pages).forEach(p=>p.classList.remove('active'));pages[id].classList.add('active');window.scrollTo({top:0});if(id==='home')countUp();}));
+    function countUp(){document.querySelectorAll('[data-count]').forEach(el=>{if(el.dataset.done)return;el.dataset.done=1;const target=+el.dataset.count;let n=0;const step=Math.max(1,Math.ceil(target/30));const t=setInterval(()=>{n+=step;if(n>=target){n=target;clearInterval(t)}el.textContent=n},40);});}
+    countUp();
+  </script>
+</body>
+</html>

@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THOF — Aurora Glass · Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&family=Fragment+Mono:ital@0;1&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07080f;
+    --glass:rgba(255,255,255,.055);
+    --glass-strong:rgba(255,255,255,.09);
+    --stroke:rgba(255,255,255,.12);
+    --stroke-soft:rgba(255,255,255,.07);
+    --ink:#eef0fa;
+    --muted:#9aa0b8;
+    --faint:#5d6378;
+    --teal:#2dd4bf;
+    --violet:#a78bfa;
+    --magenta:#f472b6;
+    --amber:#fcd34d;
+    --font-ui:'Familjen Grotesk',sans-serif;
+    --font-serif:'Instrument Serif',serif;
+    --font-mono:'Fragment Mono',monospace;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-ui);
+    font-size:16px;line-height:1.55;
+    min-height:100vh;overflow-x:hidden;
+  }
+  ::selection{background:var(--teal);color:#04110e}
+
+  /* ---------- aurora backdrop ---------- */
+  .aurora{position:fixed;inset:0;z-index:-1;overflow:hidden}
+  .blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.55}
+  .b1{width:52vmax;height:52vmax;left:-14vmax;top:-20vmax;background:radial-gradient(circle,#134e4a,transparent 65%);animation:drift1 26s ease-in-out infinite alternate}
+  .b2{width:46vmax;height:46vmax;right:-16vmax;top:6vmax;background:radial-gradient(circle,#3b2a6d,transparent 65%);animation:drift2 32s ease-in-out infinite alternate}
+  .b3{width:40vmax;height:40vmax;left:24vw;bottom:-24vmax;background:radial-gradient(circle,#701a45,transparent 65%);animation:drift3 38s ease-in-out infinite alternate}
+  @keyframes drift1{to{transform:translate(9vw,7vh) scale(1.12)}}
+  @keyframes drift2{to{transform:translate(-7vw,10vh) scale(.92)}}
+  @keyframes drift3{to{transform:translate(-9vw,-8vh) scale(1.08)}}
+  .grain{
+    position:fixed;inset:0;z-index:92;pointer-events:none;opacity:.5;
+    background-image:radial-gradient(rgba(255,255,255,.045) .5px,transparent .6px);
+    background-size:3px 3px;
+  }
+  @media (prefers-reduced-motion:reduce){.blob{animation:none}}
+
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:5px}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.25)}
+
+  /* ---------- glass primitives ---------- */
+  .glass{
+    background:linear-gradient(160deg,var(--glass),rgba(255,255,255,.03));
+    border:1px solid var(--stroke);
+    border-radius:22px;
+    backdrop-filter:blur(18px) saturate(150%);
+    -webkit-backdrop-filter:blur(18px) saturate(150%);
+    box-shadow:0 24px 60px -30px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.09);
+  }
+  .glow-ring{position:relative}
+  .glow-ring::before{
+    content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;
+    background:linear-gradient(120deg,rgba(45,212,191,.55),rgba(167,139,250,.4) 50%,rgba(244,114,182,.45));
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    opacity:.75;pointer-events:none;
+  }
+
+  /* ---------- Nav ---------- */
+  nav{
+    position:sticky;top:0;z-index:50;
+    background:rgba(7,8,15,.66);backdrop-filter:blur(16px) saturate(160%);
+    -webkit-backdrop-filter:blur(16px) saturate(160%);
+    border-bottom:1px solid var(--stroke-soft);
+  }
+  .nav-in{max-width:1120px;margin:0 auto;padding:0 20px;display:flex;align-items:center;gap:22px;height:64px}
+  .brand{display:flex;align-items:center;gap:12px;margin-right:auto;text-decoration:none;color:inherit}
+  .mark{
+    width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+    font-weight:700;font-size:.85rem;letter-spacing:.02em;
+    background:linear-gradient(135deg,var(--teal),var(--violet));
+    color:#04121c;
+    box-shadow:0 8px 22px -8px rgba(45,212,191,.55);
+  }
+  .brand-name{font-weight:700;font-size:1.2rem;line-height:1.05;letter-spacing:-.01em}
+  .brand-name small{display:block;font-family:var(--font-mono);font-weight:400;font-size:.56rem;letter-spacing:.3em;color:var(--muted)}
+  .tabs{display:flex;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    appearance:none;background:none;color:var(--muted);
+    border:1px solid transparent;font-family:inherit;font-size:.88rem;font-weight:600;
+    padding:8px 15px;white-space:nowrap;cursor:pointer;border-radius:999px;
+    transition:all .2s ease;
+  }
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--ink);background:var(--glass-strong);border-color:var(--stroke)}
+
+  main{max-width:1120px;margin:0 auto;padding:0 20px}
+  .page{display:none}
+  .page.active{display:block;animation:pageIn .5s cubic-bezier(.22,.8,.28,1) both}
+  @keyframes pageIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  .reveal{opacity:0;transform:translateY(20px)}
+  .reveal.in{opacity:1;transform:none;transition:opacity .65s ease,transform .65s cubic-bezier(.22,.8,.28,1)}
+
+  /* ---------- Section head ---------- */
+  .shead{display:flex;align-items:baseline;gap:16px;margin:52px 0 22px}
+  .shead h2{font-size:clamp(1.6rem,3.8vw,2.35rem);font-weight:700;letter-spacing:-.02em;line-height:1;white-space:nowrap}
+  .shead h2 em{font-family:var(--font-serif);font-style:italic;font-weight:400;color:var(--teal);letter-spacing:0}
+  .shead .line{flex:1;height:1px;background:linear-gradient(90deg,var(--stroke),transparent)}
+  .shead .tag{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+  @media(max-width:640px){.shead .tag,.shead .line{display:none}}
+
+  /* ---------- HOME ---------- */
+  .hero{padding:62px 0 10px}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:9px;font-family:var(--font-mono);font-size:.64rem;
+    letter-spacing:.2em;text-transform:uppercase;color:var(--teal);
+    background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.25);
+    padding:6px 13px;border-radius:999px;margin-bottom:22px;
+  }
+  h1.hero-title{
+    font-size:clamp(2.7rem,7vw,4.8rem);font-weight:700;line-height:1;letter-spacing:-.035em;
+  }
+  h1.hero-title .serif{
+    font-family:var(--font-serif);font-style:italic;font-weight:400;letter-spacing:0;
+    background:linear-gradient(100deg,var(--teal) 10%,var(--violet) 55%,var(--magenta));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    padding-right:.06em;
+  }
+  .hero-sub{color:var(--muted);max-width:46ch;margin-top:18px;font-size:1.04rem}
+  .hero-sub strong{color:var(--ink);font-weight:600}
+  .hero-cta{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}
+  .btn-primary{
+    appearance:none;border:none;cursor:pointer;border-radius:14px;padding:13px 22px;
+    background:linear-gradient(120deg,var(--teal),#4cc2ec 60%,var(--violet));
+    color:#051019;font-weight:700;font-size:.98rem;font-family:inherit;
+    box-shadow:0 14px 34px -12px rgba(45,212,191,.5);
+    transition:transform .18s ease,box-shadow .25s ease;
+  }
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 20px 44px -14px rgba(76,194,236,.55)}
+  .btn-ghost{
+    appearance:none;cursor:pointer;border-radius:14px;padding:13px 22px;
+    background:var(--glass);border:1px solid var(--stroke);color:var(--ink);
+    font-weight:600;font-size:.98rem;font-family:inherit;
+    backdrop-filter:blur(10px);transition:border-color .2s ease,transform .18s ease;
+  }
+  .btn-ghost:hover{border-color:rgba(255,255,255,.3);transform:translateY(-2px)}
+
+  /* planning — pill days */
+  .sched{display:flex;gap:10px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  .day-pill{
+    flex:0 0 138px;padding:15px 15px 16px;border-radius:20px;
+    transition:transform .2s ease,border-color .2s ease;
+  }
+  .day-pill:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.25)}
+  .day-pill.now{border-color:rgba(45,212,191,.5);box-shadow:0 0 0 1px rgba(45,212,191,.25),0 18px 40px -20px rgba(45,212,191,.35)}
+  .dow{display:flex;justify-content:space-between;align-items:baseline;font-weight:700;font-size:1rem}
+  .today-tag{font-family:var(--font-mono);font-size:.54rem;font-weight:400;letter-spacing:.14em;color:var(--teal)}
+  .date-n{font-family:var(--font-mono);font-size:.62rem;color:var(--faint);margin-bottom:10px}
+  .ev{display:flex;align-items:baseline;gap:7px;font-size:.82rem;font-weight:600;margin-top:7px;white-space:nowrap}
+  .ev .t{margin-left:auto;font-family:var(--font-mono);font-size:.6rem;color:var(--muted)}
+  .ev.gk{color:var(--amber)}
+  .rest{font-family:var(--font-serif);font-style:italic;font-size:1rem;color:var(--faint);margin-top:12px}
+
+  /* aree */
+  .areas{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  @media(max-width:720px){.areas{grid-template-columns:1fr}}
+  a.area{
+    display:block;padding:24px;border-radius:22px;color:inherit;text-decoration:none;
+    transition:transform .2s ease,border-color .2s ease,background .25s ease;
+  }
+  a.area:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.28);background:linear-gradient(160deg,var(--glass-strong),rgba(255,255,255,.04))}
+  a.area .ic{
+    width:46px;height:46px;border-radius:14px;display:grid;place-items:center;margin-bottom:15px;
+    background:linear-gradient(140deg,rgba(45,212,191,.2),rgba(167,139,250,.16));
+    border:1px solid var(--stroke);color:var(--teal);
+  }
+  a.area:nth-child(2) .ic{background:linear-gradient(140deg,rgba(167,139,250,.22),rgba(244,114,182,.16));color:var(--violet)}
+  a.area:nth-child(3) .ic{background:linear-gradient(140deg,rgba(244,114,182,.2),rgba(252,211,77,.14));color:var(--magenta)}
+  a.area:nth-child(4) .ic{background:linear-gradient(140deg,rgba(252,211,77,.18),rgba(45,212,191,.16));color:var(--amber)}
+  a.area .ic svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7}
+  a.area .k{font-family:var(--font-mono);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  a.area h3{font-size:1.35rem;font-weight:700;letter-spacing:-.015em;margin:4px 0 6px}
+  a.area p{color:var(--muted);font-size:.9rem;max-width:40ch}
+  a.area .apri{
+    display:inline-block;margin-top:14px;font-size:.86rem;font-weight:600;color:var(--teal);
+  }
+  a.area:nth-child(2) .apri{color:var(--violet)}
+  a.area:nth-child(3) .apri{color:var(--magenta)}
+  a.area:nth-child(4) .apri{color:var(--amber)}
+
+  footer.colophon{
+    margin:68px 0 42px;padding-top:22px;border-top:1px solid var(--stroke-soft);
+    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    font-family:var(--font-mono);font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);
+  }
+
+  /* ---------- LOGIN ---------- */
+  .gate-wrap{min-height:calc(100vh - 150px);display:grid;place-items:center;padding:56px 0}
+  .gate-card{width:min(430px,100%);padding:38px 34px;text-align:center;position:relative;overflow:hidden}
+  .gate-card::before{
+    content:"";position:absolute;top:-70px;left:50%;transform:translateX(-50%);
+    width:260px;height:140px;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(45,212,191,.28),transparent);
+    filter:blur(24px);pointer-events:none;
+  }
+  .gate-mark{
+    width:52px;height:52px;border-radius:16px;display:grid;place-items:center;margin:0 auto 18px;
+    font-weight:700;font-size:1.05rem;
+    background:linear-gradient(135deg,var(--teal),var(--violet));color:#04121c;
+    box-shadow:0 12px 30px -10px rgba(45,212,191,.55);
+  }
+  .gate-k{font-family:var(--font-mono);font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;color:var(--faint)}
+  .gate-card h2{font-size:1.9rem;font-weight:700;letter-spacing:-.02em;margin:6px 0 2px}
+  .gate-card h2 .serif{font-family:var(--font-serif);font-style:italic;font-weight:400;color:var(--teal)}
+  .gate-sub{color:var(--muted);font-size:.92rem;margin-bottom:26px}
+  .field{margin-bottom:14px;text-align:left}
+  .field label{display:block;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;padding-left:4px}
+  .field input{
+    width:100%;background:rgba(255,255,255,.05);border:1px solid var(--stroke);
+    color:var(--ink);border-radius:14px;font-family:inherit;font-size:.95rem;padding:13px 15px;outline:none;
+    transition:border-color .2s ease,box-shadow .25s ease;
+  }
+  .field input:focus{border-color:rgba(45,212,191,.55);box-shadow:0 0 0 4px rgba(45,212,191,.12)}
+  .field input::placeholder{color:var(--faint)}
+  .opts{display:flex;justify-content:space-between;align-items:center;margin:6px 2px 22px;font-size:.84rem;color:var(--muted)}
+  .opts label{display:flex;gap:8px;align-items:center;cursor:pointer}
+  .opts input{accent-color:var(--teal)}
+  .opts a{color:var(--teal);text-decoration:none}
+  .gate-card .btn-primary{width:100%}
+  .or-line{display:flex;align-items:center;gap:14px;margin:20px 0 16px;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
+  .or-line::before,.or-line::after{content:"";flex:1;height:1px;background:var(--stroke-soft)}
+  .btn-google{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:12px;
+    background:rgba(255,255,255,.05);border:1px solid var(--stroke);color:var(--ink);
+    padding:13px;border-radius:14px;font-family:inherit;font-weight:600;font-size:.94rem;cursor:pointer;
+    transition:border-color .2s ease,background .2s ease;
+  }
+  .btn-google:hover{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.08)}
+  .btn-google svg{width:18px;height:18px}
+
+  /* ---------- REGISTRO ---------- */
+  .reg-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:44px 0 18px}
+  .chip-select{
+    appearance:none;background:var(--glass);border:1px solid var(--stroke);color:var(--ink);
+    font-family:inherit;font-size:.88rem;font-weight:600;padding:11px 38px 11px 16px;border-radius:999px;cursor:pointer;
+    backdrop-filter:blur(10px);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa0b8' fill='none' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 15px center;
+  }
+  .chip-month{
+    margin-left:auto;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--teal);background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.3);
+    padding:10px 16px;border-radius:999px;
+  }
+  @media(max-width:640px){.chip-month{margin-left:0}}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .lg{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:600;color:var(--muted);background:var(--glass);border:1px solid var(--stroke-soft);border-radius:999px;padding:5px 12px 5px 6px}
+  .lg b{width:22px;height:22px;display:grid;place-items:center;font-size:.62rem;font-weight:700;border-radius:8px}
+  .cd-x{background:linear-gradient(135deg,var(--teal),#4cc2ec);color:#04121c}
+  .cd-p{background:rgba(76,194,236,.14);color:#7dd3fc;border:1px solid rgba(125,211,252,.4)}
+  .cd-r{background:rgba(252,211,77,.12);color:var(--amber);border:1px dashed rgba(252,211,77,.5)}
+  .cd-a{background:rgba(244,114,182,.85);color:#210a14}
+  .cd-ag{background:rgba(252,211,77,.16);color:var(--amber);border:1px solid rgba(252,211,77,.4)}
+  .cd-ai{background:rgba(167,139,250,.85);color:#170b2e}
+
+  .reg-card{padding:10px 8px;overflow:hidden}
+  .reg-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table.reg{border-collapse:collapse;width:100%;min-width:800px}
+  table.reg th,table.reg td{text-align:center;border-bottom:1px solid var(--stroke-soft);padding:0}
+  table.reg tr:last-child td{border-bottom:none}
+  thead th{
+    font-family:var(--font-mono);font-size:.56rem;font-weight:400;letter-spacing:.12em;
+    color:var(--faint);text-transform:uppercase;padding:14px 6px 11px;
+  }
+  tbody tr{transition:background .15s ease}
+  tbody tr:hover{background:rgba(255,255,255,.04)}
+  td.player{text-align:left;padding:12px 16px;min-width:190px;white-space:nowrap;font-weight:600;font-size:.92rem}
+  td.player .nr{
+    display:inline-grid;place-items:center;width:25px;height:25px;margin-right:11px;border-radius:8px;
+    font-family:var(--font-mono);font-size:.62rem;
+    background:rgba(255,255,255,.07);border:1px solid var(--stroke-soft);color:var(--muted);
+  }
+  td.code{width:54px;height:48px}
+  td.code span{
+    display:inline-grid;place-items:center;width:27px;height:27px;border-radius:9px;
+    font-size:.68rem;font-weight:700;
+  }
+  td.tot{font-family:var(--font-serif);font-style:italic;font-size:1.15rem;color:var(--teal);width:58px;font-variant-numeric:tabular-nums}
+  td.pct{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);width:70px;font-variant-numeric:tabular-nums}
+  tr.inj td.player{color:var(--violet)}
+  tr.inj td.player::after{content:"infortunato";font-family:var(--font-serif);font-style:italic;font-size:.85rem;color:var(--violet);margin-left:10px;opacity:.8}
+  .reg-summary{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+  .rs{flex:1;min-width:150px;padding:16px 18px;border-radius:18px}
+  .rs .v{font-family:var(--font-serif);font-style:italic;font-size:1.9rem;line-height:1;font-variant-numeric:tabular-nums}
+  .rs .l{font-family:var(--font-mono);font-size:.56rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-top:7px}
+
+  /* ---------- CONVOCAZIONI ---------- */
+  .match-card{padding:0;overflow:hidden;margin-top:44px}
+  .mh-band{
+    height:5px;background:linear-gradient(90deg,var(--teal),var(--violet),var(--magenta));
+  }
+  .mh-comp{display:flex;justify-content:space-between;padding:16px 26px 0;font-family:var(--font-mono);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  .mh-comp b{color:var(--teal);font-weight:400}
+  .mh-main{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;padding:30px 26px}
+  @media(max-width:640px){.mh-main{grid-template-columns:1fr;gap:8px;text-align:center}}
+  .team{text-align:center}
+  .team .tn{font-size:clamp(1.5rem,4vw,2.3rem);font-weight:700;letter-spacing:-.025em;line-height:1.02}
+  .team.home .tn .serif{font-family:var(--font-serif);font-style:italic;font-weight:400;background:linear-gradient(100deg,var(--teal),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .team .ts{font-family:var(--font-mono);font-size:.56rem;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);margin-top:7px}
+  .vs-badge{
+    font-family:var(--font-serif);font-style:italic;font-size:1.15rem;color:var(--bg);
+    background:linear-gradient(120deg,var(--teal),var(--violet));
+    width:52px;height:52px;border-radius:50%;display:grid;place-items:center;
+    box-shadow:0 14px 32px -12px rgba(167,139,250,.6);
+  }
+  .mh-info{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--stroke-soft)}
+  @media(max-width:720px){.mh-info{grid-template-columns:repeat(2,1fr)}}
+  .mi{padding:16px 22px;border-right:1px solid var(--stroke-soft)}
+  .mi:nth-child(2n){border-right:none}
+  .mi:nth-child(-n+2){border-bottom:1px solid var(--stroke-soft)}
+  .mi .k{font-family:var(--font-mono);font-size:.54rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  .mi .v{font-weight:600;font-size:.95rem;margin-top:4px}
+
+  .conv-cols{display:grid;grid-template-columns:1.3fr .7fr;gap:14px;margin-top:14px;align-items:start}
+  @media(max-width:860px){.conv-cols{grid-template-columns:1fr}}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid var(--stroke-soft);font-family:var(--font-mono);font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .panel-head b{color:var(--teal);font-weight:400}
+  .plist{list-style:none;padding:8px}
+  .plist li{display:flex;align-items:center;gap:14px;padding:9px 16px;border-radius:14px;transition:background .15s ease}
+  .plist li:hover{background:rgba(255,255,255,.05)}
+  .pnum{
+    width:29px;height:29px;flex:none;display:grid;place-items:center;border-radius:9px;
+    font-family:var(--font-mono);font-size:.68rem;font-weight:700;
+    background:linear-gradient(135deg,rgba(45,212,191,.25),rgba(167,139,250,.25));
+    border:1px solid rgba(45,212,191,.3);color:var(--ink);
+  }
+  .pname{font-weight:600;font-size:.93rem}
+  .prole{margin-left:auto;font-family:var(--font-mono);font-size:.56rem;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+  .staff-list{list-style:none;padding:8px}
+  .staff-list li{display:flex;justify-content:space-between;gap:14px;align-items:baseline;padding:11px 16px;border-radius:14px;font-size:.9rem}
+  .staff-list li:hover{background:rgba(255,255,255,.05)}
+  .staff-list .k{font-family:var(--font-mono);font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+  .staff-list .v{font-weight:600;text-align:right}
+  .notes-glass{margin-top:14px;padding:22px 24px;border-radius:20px;background:rgba(252,211,77,.06);border:1px solid rgba(252,211,77,.22)}
+  .notes-glass .k{font-family:var(--font-serif);font-style:italic;font-size:1.25rem;color:var(--amber);margin-bottom:7px}
+  .notes-glass p{font-size:.92rem;color:var(--ink)}
+</style>
+</head>
+<body>
+
+<div class="aurora" aria-hidden="true">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+</div>
+<div class="grain"></div>
+
+<nav>
+  <div class="nav-in">
+    <a class="brand" href="#">
+      <span class="mark">TH</span>
+      <span class="brand-name">THOF<small>REGISTRO ATTIVITÀ</small></span>
+    </a>
+    <div class="tabs">
+      <button class="tab active" data-page="home">Home</button>
+      <button class="tab" data-page="login">Accesso</button>
+      <button class="tab" data-page="registro">Registro</button>
+      <button class="tab" data-page="conv">Convocazioni</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <!-- ============ HOME ============ -->
+  <section id="page-home" class="page active">
+    <div class="hero">
+      <div>
+        <span class="eyebrow">✦ Stagione 2025 / 2026</span>
+        <h1 class="hero-title">Il club,<br><span class="serif">in tutta chiarezza.</span></h1>
+        <p class="hero-sub"><strong>The Home of Football</strong> in un unico spazio luminoso: presenze, allenamenti e convocazioni fluiscono insieme, senza attrito.</p>
+        <div class="hero-cta">
+          <button class="btn-primary" onclick="go('registro')">Apri il registro</button>
+          <button class="btn-ghost">Scopri le sezioni</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="shead reveal">
+      <h2>La settimana <em>in movimento</em></h2><span class="line"></span><span class="tag">planning allenamenti</span>
+    </div>
+    <div class="sched reveal">
+      <div class="day-pill glass"><div class="dow">Lun</div><div class="date-n">18 AGO</div>
+        <div class="ev">Allievi<span class="t">18:30</span></div><div class="ev">Pulcini<span class="t">19:00</span></div></div>
+      <div class="day-pill glass"><div class="dow">Mar</div><div class="date-n">19 AGO</div>
+        <div class="ev gk">Portieri<span class="t">19:00</span></div></div>
+      <div class="day-pill glass now"><div class="dow">Mer <span class="today-tag">OGGI</span></div><div class="date-n">20 AGO</div>
+        <div class="ev">Primi Calci<span class="t">17:30</span></div><div class="ev">Allievi<span class="t">18:30</span></div><div class="ev gk">Portieri<span class="t">19:00</span></div></div>
+      <div class="day-pill glass"><div class="dow">Gio</div><div class="date-n">21 AGO</div>
+        <div class="ev">Pulcini<span class="t">18:30</span></div><div class="ev">Esordienti<span class="t">19:00</span></div></div>
+      <div class="day-pill glass"><div class="dow">Ven</div><div class="date-n">22 AGO</div>
+        <div class="ev">Prima Squadra<span class="t">20:30</span></div></div>
+      <div class="day-pill glass"><div class="dow">Sab</div><div class="date-n">23 AGO</div>
+        <div class="ev">Torneo<span class="t">09:00</span></div><div class="ev">Allievi<span class="t">10:30</span></div></div>
+      <div class="day-pill glass"><div class="dow">Dom</div><div class="date-n">24 AGO</div>
+        <div class="rest">riposo…</div></div>
+    </div>
+
+    <div class="shead reveal">
+      <h2>Ogni area, <em>al suo posto</em></h2><span class="line"></span><span class="tag">sezioni del registro</span>
+    </div>
+    <div class="areas reveal">
+      <a class="area glass" href="#" onclick="go('registro');return false;">
+        <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></span>
+        <span class="k">Allenatori &amp; Mister</span>
+        <h3>Gestione Squadre</h3>
+        <p>Presenze, lavagna tattica e reportistica di ogni categoria, sempre a portata di mano.</p>
+        <span class="apri">Apri la sezione →</span>
+      </a>
+      <a class="area glass" href="#">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M17 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V4a2 2 0 00-2-2z"/><path d="M12 6v4M12 14h.01"/></svg></span>
+        <span class="k">Segreteria</span>
+        <h3>Gestione Segreteria</h3>
+        <p>Iscrizioni online, rate e pagamenti, Open Day e documenti dei tesserati.</p>
+        <span class="apri">Apri la sezione →</span>
+      </a>
+      <a class="area glass" href="#">
+        <span class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 15.2c2.8.3 5 2.1 5 4.8"/></svg></span>
+        <span class="k">Dirigenti</span>
+        <h3>Gestione Responsabili</h3>
+        <p>Categorie assegnate, partite del weekend, spogliatoi e campi pronti per la gara.</p>
+        <span class="apri">Apri la sezione →</span>
+      </a>
+      <a class="area glass" href="#">
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <span class="k">Infermeria</span>
+        <h3>Gestione Infermeria</h3>
+        <p>Infortuni con scadenze automatiche e certificati medici sempre sotto controllo.</p>
+        <span class="apri">Apri la sezione →</span>
+      </a>
+    </div>
+
+    <footer class="colophon">
+      <span>The Home Of Football Club</span>
+      <span>Mockup grafico — non collegato al sito reale</span>
+    </footer>
+  </section>
+
+  <!-- ============ LOGIN ============ -->
+  <section id="page-login" class="page">
+    <div class="gate-wrap">
+      <div class="gate-card glass glow-ring reveal in">
+        <div class="gate-mark">TH</div>
+        <div class="gate-k">Area riservata · Soci &amp; Staff</div>
+        <h2>Bentornato <span class="serif">nel club.</span></h2>
+        <p class="gate-sub">Accedi per entrare nel registro della società.</p>
+        <div class="field"><label>Nome utente</label><input type="text" placeholder="es. m.rossi" autocomplete="off" /></div>
+        <div class="field"><label>Password</label><input type="password" placeholder="••••••••" /></div>
+        <div class="opts">
+          <label><input type="checkbox" checked /> Ricordami</label>
+          <a href="#">Password dimenticata?</a>
+        </div>
+        <button class="btn-primary">Accedi al registro</button>
+        <div class="or-line">oppure</div>
+        <button class="btn-google">
+          <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.4 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.3-7.7 2.3-6.3 0-11.7-3.9-13.6-9.3l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+          Continua con Google
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REGISTRO ============ -->
+  <section id="page-registro" class="page">
+    <div class="shead reveal in">
+      <h2>Registro <em>delle presenze</em></h2><span class="line"></span><span class="tag">Allievi 2012 · Marzo 2026</span>
+    </div>
+
+    <div class="reg-toolbar reveal in">
+      <select class="chip-select"><option>Allievi 2012</option><option>Esordienti 2014</option><option>Pulcini 2016</option><option>Portieri</option></select>
+      <select class="chip-select"><option>Marzo 2026</option><option>Febbraio 2026</option><option>Gennaio 2026</option></select>
+      <span class="chip-month">// mese corrente</span>
+    </div>
+
+    <div class="legend reveal in">
+      <span class="lg"><b class="cd-x">X</b>Presente</span>
+      <span class="lg"><b class="cd-p">P</b>Permesso</span>
+      <span class="lg"><b class="cd-r">R</b>Recupero</span>
+      <span class="lg"><b class="cd-a">A</b>Assente</span>
+      <span class="lg"><b class="cd-ag">AG</b>Ass. giustificato</span>
+      <span class="lg"><b class="cd-ai">AI</b>Infortunio</span>
+    </div>
+
+    <div class="reg-card glass reveal in">
+      <div class="reg-scroll">
+        <table class="reg">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding-left:16px">Giocatore</th>
+              <th>Lun 02</th><th>Mer 04</th><th>Ven 06</th><th>Lun 09</th><th>Mer 11</th><th>Ven 13</th><th>Lun 16</th><th>Tot.</th><th>%</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="player"><span class="nr">7</span>Rossi Marco</td>
+              <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+              <td class="tot">6</td><td class="pct">86%</td></tr>
+            <tr><td class="player"><span class="nr">9</span>Bianchi Luca</td>
+              <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-r">R</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+              <td class="tot">6</td><td class="pct">86%</td></tr>
+            <tr class="inj"><td class="player"><span class="nr">4</span>Ferri Davide</td>
+              <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-ai">AI</span></td><td class="code"><span class="cd-ai">AI</span></td><td class="code"><span class="cd-ai">AI</span></td><td class="code"><span class="cd-ag">AG</span></td><td class="code"><span class="cd-ag">AG</span></td><td class="code"><span class="cd-ag">AG</span></td>
+              <td class="tot">1</td><td class="pct">14%</td></tr>
+            <tr><td class="player"><span class="nr">11</span>Esposito Andrea</td>
+              <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-a">A</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-x">X</span></td>
+              <td class="tot">5</td><td class="pct">71%</td></tr>
+            <tr><td class="player"><span class="nr">23</span>Colombo Simone</td>
+              <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+              <td class="tot">7</td><td class="pct">100%</td></tr>
+            <tr><td class="player"><span class="nr">5</span>Ricci Giulio</td>
+              <td class="code"><span class="cd-a">A</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-r">R</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+              <td class="tot">5</td><td class="pct">83%</td></tr>
+            <tr><td class="player"><span class="nr">17</span>Gallo Matteo</td>
+              <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-a">A</span></td><td class="code"><span class="cd-x">X</span></td>
+              <td class="tot">4</td><td class="pct">67%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="reg-summary reveal in">
+      <div class="rs glass"><div class="v" data-count="87">0</div><div class="l">presenze totali</div></div>
+      <div class="rs glass"><div class="v" data-count="91">0</div><div class="l">% media presenza</div></div>
+      <div class="rs glass"><div class="v" data-count="4">0</div><div class="l">permessi</div></div>
+      <div class="rs glass"><div class="v" data-count="1">0</div><div class="l">infortunio attivo</div></div>
+    </div>
+
+    <footer class="colophon">
+      <span>The Home Of Football Club</span>
+      <span>Mockup grafico — non collegato al sito reale</span>
+    </footer>
+  </section>
+
+  <!-- ============ CONVOCAZIONI ============ -->
+  <section id="page-conv" class="page">
+    <div class="shead reveal in">
+      <h2>Convocazioni <em>del weekend</em></h2><span class="line"></span><span class="tag">29 – 30 agosto · giornata 2</span>
+    </div>
+
+    <div class="match-card glass glow-ring reveal in">
+      <div class="mh-band"></div>
+      <div class="mh-comp"><span>Campionato Juniores · Girone B</span><span><b>Andata</b></span></div>
+      <div class="mh-main">
+        <div class="team home"><div class="tn">THOF <span class="serif">Juniores</span></div><div class="ts">Squadra di casa</div></div>
+        <div class="vs-badge">vs</div>
+        <div class="team"><div class="tn">AC Caronnese</div><div class="ts">Trasferta</div></div>
+      </div>
+      <div class="mh-info">
+        <div class="mi"><div class="k">Data</div><div class="v">Sabato 29 Agosto</div></div>
+        <div class="mi"><div class="k">Kick-off</div><div class="v">Ore 15:00</div></div>
+        <div class="mi"><div class="k">Campo</div><div class="v">Comunale n.1 — sintetico</div></div>
+        <div class="mi"><div class="k">Appuntamento</div><div class="v">13:45 · spogliatoi</div></div>
+      </div>
+    </div>
+
+    <div class="conv-cols">
+      <div class="glass reveal in" style="padding:8px 0 10px">
+        <div class="panel-head"><span>// Lista giocatori</span><b>14 convocati</b></div>
+        <ul class="plist">
+          <li><span class="pnum">1</span><span class="pname">Marini Tommaso</span><span class="prole">POR</span></li>
+          <li><span class="pnum">2</span><span class="pname">Ferretti Gabriele</span><span class="prole">DD</span></li>
+          <li><span class="pnum">4</span><span class="pname">Lombardi Filippo</span><span class="prole">DC</span></li>
+          <li><span class="pnum">5</span><span class="pname">Testa Alessio</span><span class="prole">DC</span></li>
+          <li><span class="pnum">3</span><span class="pname">Neri Jacopo</span><span class="prole">DS</span></li>
+          <li><span class="pnum">6</span><span class="pname">Villa Riccardo</span><span class="prole">MC</span></li>
+          <li><span class="pnum">8</span><span class="pname">Sanna Lorenzo</span><span class="prole">ME</span></li>
+          <li><span class="pnum">10</span><span class="pname">Greco Samuele</span><span class="prole">TREQ</span></li>
+          <li><span class="pnum">7</span><span class="pname">Mancini Pietro</span><span class="prole">AD</span></li>
+          <li><span class="pnum">11</span><span class="pname">Barone Federico</span><span class="prole">AS</span></li>
+          <li><span class="pnum">9</span><span class="pname">D'Amico Nicolò</span><span class="prole">ATT</span></li>
+          <li><span class="pnum">12</span><span class="pname">Pellegrini Enrico</span><span class="prole">POR</span></li>
+          <li><span class="pnum">14</span><span class="pname">Fabbri Emanuele</span><span class="prole">DC</span></li>
+          <li><span class="pnum">17</span><span class="pname">Moretti Davide</span><span class="prole">ATT</span></li>
+        </ul>
+      </div>
+      <div class="reveal in">
+        <div class="glass" style="padding:8px 0">
+          <div class="panel-head"><span>// Staff</span></div>
+          <ul class="staff-list">
+            <li><span class="k">Mister</span><span class="v">Marco Bellini</span></li>
+            <li><span class="k">Cellulare staff</span><span class="v">+39 333 000 0000</span></li>
+            <li><span class="k">Dirigente acc.</span><span class="v">Sig. Paolo Marconi</span></li>
+          </ul>
+        </div>
+        <div class="notes-glass">
+          <div class="k">Le note del mister,</div>
+          <p>presentarsi in tenuta completa con maglia rossa. Pullman societario con partenza puntuale alle 13:45 dal campo comunale — borraccia e snack nello zaino.</p>
+        </div>
+      </div>
+    </div>
+
+    <footer class="colophon">
+      <span>The Home Of Football Club</span>
+      <span>Mockup grafico — non collegato al sito reale</span>
+    </footer>
+  </section>
+</main>
+
+<script>
+  const tabs=document.querySelectorAll('.tab');
+  const pages={
+    home:document.getElementById('page-home'),
+    login:document.getElementById('page-login'),
+    registro:document.getElementById('page-registro'),
+    conv:document.getElementById('page-conv')
+  };
+  function go(id){
+    tabs.forEach(t=>t.classList.toggle('active',t.dataset.page===id));
+    Object.entries(pages).forEach(([k,p])=>p.classList.toggle('active',k===id));
+    window.scrollTo({top:0,behavior:'smooth'});
+    if(id==='home'){reveal();countUp();}else{reveal(true);}
+  }
+  tabs.forEach(t=>t.addEventListener('click',()=>go(t.dataset.page)));
+
+  const io=new IntersectionObserver(es=>es.forEach(e=>{
+    if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}
+  }),{threshold:.1});
+  function reveal(immediate){
+    document.querySelectorAll('.page.active .reveal').forEach((el,i)=>{
+      if(el.classList.contains('in'))return;
+      el.style.transitionDelay=(i*70)+'ms';
+      if(immediate){requestAnimationFrame(()=>el.classList.add('in'));}
+      else io.observe(el);
+    });
+  }
+  let counted=false;
+  function countUp(){
+    document.querySelectorAll('.page.active [data-count]').forEach(el=>{
+      if(counted&&el.textContent!=='0')return;
+      const target=+el.dataset.count;let n=0;
+      const step=Math.max(1,Math.ceil(target/38));
+      const t=setInterval(()=>{n+=step;if(n>=target){n=target;clearInterval(t);}el.textContent=n;},26);
+    });
+    counted=true;
+  }
+  reveal();countUp();
+</script>
+</body>
+</html>

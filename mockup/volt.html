@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THOF — Match Data Volt · Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;0,900;1,700&family=Barlow:wght@400;500;600;700&family=Chivo+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#050505;
+    --surface:#0c0c0c;
+    --surface-2:#111111;
+    --line:#232323;
+    --line-strong:#333333;
+    --volt:#c8f04a;
+    --volt-dim:rgba(200,240,74,.14);
+    --ink:#f4f4f4;
+    --muted:#8f8f8f;
+    --faint:#5a5a5a;
+    --red:#ff5449;
+    --amber:#ffb224;
+    --blue:#57a7ff;
+    --violet:#c07bff;
+    --font-display:'Barlow Condensed',sans-serif;
+    --font-body:'Barlow',sans-serif;
+    --font-mono:'Chivo Mono',monospace;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16px;line-height:1.55;
+    min-height:100vh;overflow-x:hidden;
+  }
+  ::selection{background:var(--volt);color:#050505}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:#0a0a0a}
+  ::-webkit-scrollbar-thumb{background:#2c2c2c;border-radius:5px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--volt)}
+
+  /* ---------- LED ticker ---------- */
+  .ticker{
+    background:var(--volt);color:#050505;
+    font-family:var(--font-mono);font-size:.72rem;font-weight:600;
+    letter-spacing:.08em;text-transform:uppercase;
+    overflow:hidden;white-space:nowrap;padding:6px 0;
+    border-bottom:2px solid #050505;
+  }
+  .ticker-track{display:inline-block;animation:ticker 32s linear infinite}
+  @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  /* ---------- Nav ---------- */
+  nav{
+    position:sticky;top:0;z-index:50;
+    background:rgba(5,5,5,.92);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-in{
+    max-width:1160px;margin:0 auto;padding:0 20px;
+    display:flex;align-items:center;gap:26px;height:62px;
+  }
+  .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;margin-right:auto}
+  .brand .mark{
+    width:38px;height:38px;background:var(--volt);color:#050505;
+    display:grid;place-items:center;
+    font-family:var(--font-display);font-weight:900;font-size:1.05rem;
+  }
+  .brand .name{font-family:var(--font-display);font-weight:800;font-size:1.25rem;letter-spacing:.02em;line-height:1}
+  .brand small{display:block;font-family:var(--font-mono);font-weight:500;font-size:.56rem;letter-spacing:.28em;color:var(--muted)}
+  .tabs{display:flex;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    appearance:none;background:none;border:1px solid transparent;color:var(--muted);
+    font-family:var(--font-mono);font-size:.68rem;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;
+    padding:8px 13px;cursor:pointer;white-space:nowrap;
+    transition:all .18s ease;
+  }
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:#050505;background:var(--volt)}
+
+  main{max-width:1160px;margin:0 auto;padding:0 20px}
+  .page{display:none}
+  .page.active{display:block;animation:pageIn .45s cubic-bezier(.22,.8,.3,1) both}
+  @keyframes pageIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  .reveal{opacity:0;transform:translateY(18px)}
+  .reveal.in{opacity:1;transform:none;transition:opacity .6s ease,transform .6s cubic-bezier(.22,.8,.3,1)}
+
+  /* ---------- Section head ---------- */
+  .shead{display:flex;align-items:center;gap:14px;margin:54px 0 20px}
+  .shead .num{
+    font-family:var(--font-mono);font-size:.66rem;font-weight:700;
+    color:#050505;background:var(--volt);padding:3px 8px;letter-spacing:.12em;
+  }
+  .shead h2{
+    font-family:var(--font-display);font-weight:800;font-size:clamp(1.5rem,3.6vw,2.2rem);
+    text-transform:uppercase;letter-spacing:.01em;line-height:1;
+  }
+  .shead .rule{flex:1;height:1px;background:var(--line)}
+  .shead .tag{font-family:var(--font-mono);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+  @media(max-width:640px){.shead .tag,.shead .rule{display:none}}
+
+  /* ---------- HOME ---------- */
+  .hero{padding:58px 0 8px}
+  @media(max-width:900px){.hero{padding-top:42px}}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:9px;
+    font-family:var(--font-mono);font-size:.68rem;font-weight:600;
+    letter-spacing:.2em;text-transform:uppercase;color:var(--volt);
+    border:1px solid rgba(200,240,74,.35);padding:6px 12px;margin-bottom:20px;
+  }
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--volt);animation:blink 1.6s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+  h1.big{
+    font-family:var(--font-display);font-weight:900;
+    font-size:clamp(3rem,8.5vw,6rem);line-height:.92;
+    text-transform:uppercase;letter-spacing:-.005em;
+  }
+  h1.big em{font-style:normal;color:var(--volt)}
+  .hero-sub{color:var(--muted);max-width:46ch;margin-top:18px;font-size:1.02rem}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:22px;margin-top:24px;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .hero-meta b{display:block;font-size:1rem;color:var(--ink);letter-spacing:.04em;margin-top:3px}
+
+  /* Planning */
+  .sched{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--line)}
+  @media(max-width:960px){.sched{grid-template-columns:repeat(2,1fr)}.day.rest-day{display:none}}
+  @media(max-width:560px){.sched{grid-template-columns:1fr}}
+  .day{border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface);transition:background .2s ease}
+  .day:last-child{border-right:none}
+  @media(max-width:960px){.day:nth-child(2n){border-right:none}}
+  .day:hover{background:var(--surface-2)}
+  .day.now{background:linear-gradient(180deg,var(--volt-dim),transparent 70%);box-shadow:inset 0 3px 0 var(--volt)}
+  .day-top{display:flex;justify-content:space-between;align-items:baseline;padding:13px 13px 9px;border-bottom:1px dashed var(--line)}
+  .dow{font-family:var(--font-display);font-weight:800;font-size:1.05rem;text-transform:uppercase}
+  .date{font-family:var(--font-mono);font-size:.6rem;letter-spacing:.1em;color:var(--faint)}
+  .live{font-family:var(--font-mono);font-size:.55rem;font-weight:700;letter-spacing:.18em;color:#050505;background:var(--volt);padding:2px 6px}
+  .day-body{padding:10px 13px 14px;min-height:96px;display:flex;flex-direction:column;gap:7px}
+  .ev{display:flex;align-items:center;gap:9px;font-family:var(--font-mono);font-size:.72rem;letter-spacing:.03em}
+  .ev .sq{width:8px;height:8px;background:var(--volt);flex:none}
+  .ev.gk .sq{background:none;border:1.5px solid var(--volt)}
+  .ev .t{margin-left:auto;color:var(--muted);font-size:.66rem}
+  .rest-note{margin-top:auto;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+
+  /* Sezioni */
+  .areas{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  @media(max-width:720px){.areas{grid-template-columns:1fr}}
+  a.area{
+    display:flex;align-items:flex-start;gap:16px;text-decoration:none;color:inherit;
+    background:var(--surface);border:1px solid var(--line);padding:22px;
+    transition:border-color .2s ease,transform .2s ease;position:relative;
+  }
+  a.area:hover{border-color:var(--volt);transform:translateY(-3px)}
+  a.area .idx{
+    position:absolute;top:14px;right:16px;
+    font-family:var(--font-mono);font-size:.62rem;color:var(--faint);letter-spacing:.14em;
+  }
+  a.area .ic{
+    width:46px;height:46px;flex:none;display:grid;place-items:center;
+    background:var(--volt-dim);color:var(--volt);
+  }
+  a.area .ic svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+  a.area .k{font-family:var(--font-mono);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  a.area h3{font-family:var(--font-display);font-weight:800;font-size:1.35rem;text-transform:uppercase;margin:3px 0 4px;line-height:1.05}
+  a.area p{color:var(--muted);font-size:.86rem;max-width:34ch}
+  a.area .go{
+    margin-left:auto;align-self:center;flex:none;
+    font-family:var(--font-mono);font-size:.66rem;font-weight:700;letter-spacing:.14em;color:var(--volt);
+  }
+  @media(max-width:520px){a.area .go{display:none}}
+
+  footer.colophon{
+    margin:70px 0 40px;padding-top:22px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    font-family:var(--font-mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  }
+
+  /* ---------- LOGIN ---------- */
+  .gate{min-height:calc(100vh - 140px);display:grid;place-items:center;padding:60px 0}
+  .gate-card{width:min(420px,100%);background:var(--surface);border:1px solid var(--line);padding:38px 34px;position:relative}
+  .gate-card::before{content:"";position:absolute;top:0;left:0;width:52px;height:3px;background:var(--volt)}
+  .gate-mark{width:46px;height:46px;background:var(--volt);color:#050505;display:grid;place-items:center;font-family:var(--font-display);font-weight:900;font-size:1.2rem;margin-bottom:18px}
+  .gate-k{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;color:var(--faint)}
+  .gate-card h2{font-family:var(--font-display);font-weight:800;font-size:2rem;text-transform:uppercase;line-height:1;margin:6px 0 4px}
+  .gate-sub{color:var(--muted);font-size:.88rem;margin-bottom:26px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-family:var(--font-mono);font-size:.62rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+  .field input{
+    width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);
+    font-family:var(--font-mono);font-size:.9rem;padding:13px 14px;outline:none;
+    transition:border-color .2s ease;
+  }
+  .field input:focus{border-color:var(--volt)}
+  .field input::placeholder{color:var(--faint)}
+  .opts{display:flex;justify-content:space-between;align-items:center;margin:4px 0 22px;font-size:.82rem;color:var(--muted)}
+  .opts label{display:flex;gap:8px;align-items:center;cursor:pointer}
+  .opts input{accent-color:var(--volt)}
+  .opts a{color:var(--volt);text-decoration:none}
+  .btn-volt{
+    width:100%;appearance:none;border:none;cursor:pointer;
+    background:var(--volt);color:#050505;
+    font-family:var(--font-display);font-weight:800;font-size:1.15rem;
+    letter-spacing:.06em;text-transform:uppercase;padding:14px;
+    transition:transform .15s ease,box-shadow .2s ease;
+  }
+  .btn-volt:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(200,240,74,.25)}
+  .btn-volt:active{transform:none}
+  .or-line{display:flex;align-items:center;gap:14px;margin:20px 0;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.2em;color:var(--faint);text-transform:uppercase}
+  .or-line::before,.or-line::after{content:"";flex:1;height:1px;background:var(--line)}
+  .btn-google{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:12px;
+    background:var(--surface-2);border:1px solid var(--line-strong);color:var(--ink);
+    padding:13px;font-family:var(--font-body);font-weight:600;font-size:.92rem;cursor:pointer;
+    transition:border-color .2s ease;
+  }
+  .btn-google:hover{border-color:var(--volt)}
+  .btn-google svg{width:19px;height:19px}
+
+  /* ---------- REGISTRO ---------- */
+  .reg-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:18px}
+  .reg-select{
+    appearance:none;background:var(--surface);border:1px solid var(--line);color:var(--ink);
+    font-family:var(--font-mono);font-size:.78rem;letter-spacing:.06em;padding:11px 38px 11px 14px;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238f8f8f' fill='none' stroke-width='1.6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 14px center;
+  }
+  .reg-month{
+    margin-left:auto;font-family:var(--font-mono);font-size:.72rem;font-weight:600;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--volt);
+    border:1px solid rgba(200,240,74,.35);padding:9px 14px;
+  }
+  @media(max-width:640px){.reg-month{margin-left:0}}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .lg{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);padding:5px 9px}
+  .lg b{width:17px;height:17px;display:grid;place-items:center;font-size:.6rem;font-weight:700}
+  .cd-x{background:var(--volt);color:#050505}
+  .cd-p{border:1.5px solid var(--blue);color:var(--blue)}
+  .cd-r{border:1.5px dashed var(--amber);color:var(--amber)}
+  .cd-a{background:var(--red);color:#fff}
+  .cd-ag{background:rgba(255,178,36,.16);color:var(--amber)}
+  .cd-ai{background:var(--violet);color:#fff}
+
+  .reg-wrap{border:1px solid var(--line);overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--surface)}
+  table.reg{border-collapse:collapse;width:100%;min-width:780px}
+  table.reg th,table.reg td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);text-align:center;padding:0}
+  table.reg th:last-child,table.reg td:last-child{border-right:none}
+  thead th{
+    font-family:var(--font-mono);font-size:.6rem;font-weight:600;letter-spacing:.1em;
+    color:var(--faint);text-transform:uppercase;padding:12px 6px;background:var(--bg);
+  }
+  thead th.day-h{color:var(--volt)}
+  tbody tr{transition:background .15s ease}
+  tbody tr:hover{background:var(--surface-2)}
+  td.player{
+    text-align:left;padding:11px 14px;min-width:190px;white-space:nowrap;
+    font-family:var(--font-body);font-weight:600;font-size:.9rem;
+  }
+  td.player .nr{
+    display:inline-grid;place-items:center;width:24px;height:24px;margin-right:10px;
+    font-family:var(--font-mono);font-size:.66rem;font-weight:700;color:var(--volt);
+    border:1px solid var(--line-strong);
+  }
+  td.code{width:52px;height:47px}
+  td.code span{
+    display:inline-grid;place-items:center;width:26px;height:26px;
+    font-family:var(--font-mono);font-size:.68rem;font-weight:700;
+  }
+  td.tot{font-family:var(--font-mono);font-size:.82rem;font-weight:700;color:var(--volt);width:64px;font-variant-numeric:tabular-nums}
+  td.pct{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);width:70px;font-variant-numeric:tabular-nums}
+  tr.inj td.player{color:var(--violet)}
+  tr.inj td.player::after{content:"INFOR.";font-family:var(--font-mono);font-size:.52rem;letter-spacing:.14em;color:#fff;background:var(--violet);padding:2px 5px;margin-left:10px;vertical-align:middle}
+
+  .reg-summary{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);margin-top:14px}
+  @media(max-width:640px){.reg-summary{grid-template-columns:repeat(2,1fr)}}
+  .rs{padding:18px;border-right:1px solid var(--line)}
+  .rs:nth-child(2n){border-right:none}
+  .rs:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .rs .v{font-family:var(--font-mono);font-weight:700;font-size:1.7rem;color:var(--volt);font-variant-numeric:tabular-nums}
+  .rs .l{font-family:var(--font-mono);font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+
+  /* ---------- CONVOCAZIONI ---------- */
+  .match-hero{border:1px solid var(--line);background:
+      linear-gradient(90deg,rgba(200,240,74,.09),transparent 42%),var(--surface);}
+  .mh-comp{display:flex;justify-content:space-between;align-items:center;padding:13px 20px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+  .mh-comp b{color:var(--volt)}
+  .mh-main{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;padding:34px 26px}
+  @media(max-width:640px){.mh-main{grid-template-columns:1fr;gap:10px;text-align:center}}
+  .team{text-align:center}
+  .team .tn{font-family:var(--font-display);font-weight:900;font-size:clamp(1.7rem,4.5vw,2.7rem);text-transform:uppercase;line-height:.95}
+  .team.home .tn{color:var(--volt)}
+  .team .ts{font-family:var(--font-mono);font-size:.6rem;letter-spacing:.2em;color:var(--faint);text-transform:uppercase;margin-top:7px}
+  .vs{
+    font-family:var(--font-mono);font-weight:700;font-size:.85rem;color:#050505;background:var(--volt);
+    padding:9px 12px;letter-spacing:.06em;
+  }
+  .mh-info{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+  @media(max-width:720px){.mh-info{grid-template-columns:repeat(2,1fr)}}
+  .mi{padding:15px 18px;border-right:1px solid var(--line)}
+  .mi:nth-child(2n){border-right:none}
+  .mi:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .mi .k{font-family:var(--font-mono);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  .mi .v{font-weight:600;font-size:.94rem;margin-top:4px}
+
+  .conv-cols{display:grid;grid-template-columns:1.35fr .65fr;gap:14px;margin-top:14px;align-items:start}
+  @media(max-width:860px){.conv-cols{grid-template-columns:1fr}}
+  .panel{background:var(--surface);border:1px solid var(--line)}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);font-family:var(--font-mono);font-size:.64rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .panel-head b{color:var(--volt)}
+  .plist{list-style:none}
+  .plist li{display:flex;align-items:center;gap:14px;padding:10px 20px;border-bottom:1px solid var(--line);transition:background .15s ease}
+  .plist li:last-child{border-bottom:none}
+  .plist li:hover{background:var(--surface-2)}
+  .pnum{
+    width:30px;height:30px;flex:none;display:grid;place-items:center;
+    font-family:var(--font-mono);font-size:.78rem;font-weight:700;color:#050505;background:var(--volt);
+  }
+  .pname{font-weight:600;font-size:.94rem}
+  .prole{margin-left:auto;font-family:var(--font-mono);font-size:.6rem;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+  .staff{padding:18px 20px;border-bottom:1px solid var(--line)}
+  .staff .k{font-family:var(--font-mono);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  .staff .v{font-weight:600;margin-top:3px}
+  .notes{padding:18px 20px;background:var(--volt-dim)}
+  .notes .k{font-family:var(--font-mono);font-size:.58rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--volt);margin-bottom:7px}
+  .notes p{font-size:.9rem;color:var(--ink)}
+</style>
+</head>
+<body>
+
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track">
+    <span>&nbsp;ULTIMA GARA&nbsp;&nbsp;//&nbsp;&nbsp;ALLIEVI 3–1 AC ROSSOBLU&nbsp;&nbsp;//&nbsp;&nbsp;PROSSIMO WEEKEND: JUNIOREVS IN TRASFERTA A CARONNO&nbsp;&nbsp;//&nbsp;&nbsp;CERTIFICATI IN SCADENZA: 3&nbsp;&nbsp;//&nbsp;&nbsp;OPEN DAY SABATO ORE 9:00&nbsp;&nbsp;//&nbsp;&nbsp;CONVOCAZIONI PRIMA SQUADRA ONLINE&nbsp;&nbsp;//&nbsp;</span><span>&nbsp;ULTIMA GARA&nbsp;&nbsp;//&nbsp;&nbsp;ALLIEVI 3–1 AC ROSSOBLU&nbsp;&nbsp;//&nbsp;&nbsp;PROSSIMO WEEKEND: JUNIOREVS IN TRASFERTA A CARONNO&nbsp;&nbsp;//&nbsp;&nbsp;CERTIFICATI IN SCADENZA: 3&nbsp;&nbsp;//&nbsp;&nbsp;OPEN DAY SABATO ORE 9:00&nbsp;&nbsp;//&nbsp;&nbsp;CONVOCAZIONI PRIMA SQUADRA ONLINE&nbsp;&nbsp;//&nbsp;</span>
+  </div>
+</div>
+
+<nav>
+  <div class="nav-in">
+    <a class="brand" href="#">
+      <span class="mark">TH</span>
+      <span class="name">THOF<small>REGISTRO ATTIVITÀ</small></span>
+    </a>
+    <div class="tabs">
+      <button class="tab active" data-page="home">Dashboard</button>
+      <button class="tab" data-page="login">Accesso</button>
+      <button class="tab" data-page="registro">Registro</button>
+      <button class="tab" data-page="conv">Convocazioni</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <!-- ============ HOME ============ -->
+  <section id="page-home" class="page active">
+    <div class="hero">
+      <div>
+        <span class="eyebrow"><span class="dot"></span>Stagione 2025 / 2026</span>
+        <h1 class="big">The Home<br>Of <em>Football</em></h1>
+        <p class="hero-sub">Il registro della società in tempo reale: presenze, allenamenti e convocazioni. Tutto sotto controllo, tutto in un'unica griglia.</p>
+        <div class="hero-meta">
+          <span>Giornata<b>34</b></span>
+          <span>Aggiornato<b>OGGI 20:00</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="shead reveal">
+      <span class="num">01</span><h2>Planning Settimana</h2><span class="rule"></span><span class="tag">allenamenti &amp; gare</span>
+    </div>
+    <div class="sched reveal">
+      <div class="day"><div class="day-top"><span class="dow">Lun</span><span class="date">18 AGO</span></div>
+        <div class="day-body"><div class="ev"><span class="sq"></span>Allievi<span class="t">18:30</span></div><div class="ev"><span class="sq"></span>Pulcini<span class="t">19:00</span></div></div></div>
+      <div class="day"><div class="day-top"><span class="dow">Mar</span><span class="date">19 AGO</span></div>
+        <div class="day-body"><div class="ev"><span class="sq"></span>Esordienti<span class="t">18:30</span></div><div class="ev gk"><span class="sq"></span>Portieri<span class="t">19:00</span></div></div></div>
+      <div class="day now"><div class="day-top"><span class="dow">Mer</span><span class="live">OGGI</span></div>
+        <div class="day-body"><div class="ev"><span class="sq"></span>Primi Calci<span class="t">17:30</span></div><div class="ev"><span class="sq"></span>Allievi<span class="t">18:30</span></div><div class="ev gk"><span class="sq"></span>Portieri<span class="t">19:00</span></div></div></div>
+      <div class="day"><div class="day-top"><span class="dow">Gio</span><span class="date">21 AGO</span></div>
+        <div class="day-body"><div class="ev"><span class="sq"></span>Pulcini<span class="t">18:30</span></div><div class="ev"><span class="sq"></span>Esordienti<span class="t">19:00</span></div></div></div>
+      <div class="day"><div class="day-top"><span class="dow">Ven</span><span class="date">22 AGO</span></div>
+        <div class="day-body"><div class="ev"><span class="sq"></span>Prima Squadra<span class="t">20:30</span></div></div></div>
+      <div class="day"><div class="day-top"><span class="dow">Sab</span><span class="date">23 AGO</span></div>
+        <div class="day-body"><div class="ev"><span class="sq"></span>Torneo<span class="t">09:00</span></div><div class="ev"><span class="sq"></span>Allievi<span class="t">10:30</span></div></div></div>
+      <div class="day rest-day"><div class="day-top"><span class="dow">Dom</span><span class="date">24 AGO</span></div>
+        <div class="day-body"><span class="rest-note">// riposo</span></div></div>
+    </div>
+
+    <div class="shead reveal">
+      <span class="num">02</span><h2>Aree del Club</h2><span class="rule"></span><span class="tag">sezioni riservate</span>
+    </div>
+    <div class="areas reveal">
+      <a class="area" href="#" onclick="go('registro');return false;">
+        <span class="idx">/01</span>
+        <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></span>
+        <span><span class="k">Allenatori &amp; Mister</span><h3>Gestione Squadre</h3><p>Registro presenze, allenamenti, lavagna tattica e reportistica per ogni categoria.</p></span>
+        <span class="go">APRI →</span>
+      </a>
+      <a class="area" href="#">
+        <span class="idx">/02</span>
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M17 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V4a2 2 0 00-2-2z"/><path d="M12 6v4M12 14h.01"/></svg></span>
+        <span><span class="k">Segreteria</span><h3>Gestione Segreteria</h3><p>Iscrizioni, pagamenti e rate, Open Day e documenti dei tesserati.</p></span>
+        <span class="go">APRI →</span>
+      </a>
+      <a class="area" href="#">
+        <span class="idx">/03</span>
+        <span class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 15.2c2.8.3 5 2.1 5 4.8"/></svg></span>
+        <span><span class="k">Dirigenti</span><h3>Gestione Responsabili</h3><p>Assegnazione categorie, ruoli, partite del weekend, spogliatoi e campi.</p></span>
+        <span class="go">APRI →</span>
+      </a>
+      <a class="area" href="#">
+        <span class="idx">/04</span>
+        <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <span><span class="k">Infermeria</span><h3>Gestione Infermeria</h3><p>Registro infortuni con scadenze automatiche e certificati medici in scadenza.</p></span>
+        <span class="go">APRI →</span>
+      </a>
+    </div>
+
+    <footer class="colophon">
+      <span>The Home Of Football Club</span>
+      <span>Mockup grafico — non collegato al sito reale</span>
+    </footer>
+  </section>
+
+  <!-- ============ LOGIN ============ -->
+  <section id="page-login" class="page">
+    <div class="gate">
+      <div class="gate-card reveal in">
+        <div class="gate-mark">TH</div>
+        <div class="gate-k">Area riservata · Soci &amp; Staff</div>
+        <h2>Member Access</h2>
+        <p class="gate-sub">Accedi al registro notturno della società.</p>
+        <div class="field"><label>Nome utente</label><input type="text" placeholder="es. m.rossi" autocomplete="off" /></div>
+        <div class="field"><label>Password</label><input type="password" placeholder="••••••••" /></div>
+        <div class="opts">
+          <label><input type="checkbox" checked /> Ricordami</label>
+          <a href="#">Dimenticata?</a>
+        </div>
+        <button class="btn-volt">Entra nel Registro</button>
+        <div class="or-line">oppure</div>
+        <button class="btn-google">
+          <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.4 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.3-7.7 2.3-6.3 0-11.7-3.9-13.6-9.3l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+          Continua con Google
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REGISTRO ============ -->
+  <section id="page-registro" class="page">
+    <div class="shead reveal in">
+      <span class="num">03</span><h2>Registro Presenze</h2><span class="rule"></span><span class="tag">Allievi 2012 · Marzo 2026</span>
+    </div>
+
+    <div class="reg-toolbar reveal in">
+      <select class="reg-select"><option>Allievi 2012</option><option>Esordienti 2014</option><option>Pulcini 2016</option><option>Portieri</option></select>
+      <select class="reg-select"><option>Marzo 2026</option><option>Febbraio 2026</option><option>Gennaio 2026</option></select>
+      <span class="reg-month">// MESE CORRENTE</span>
+    </div>
+
+    <div class="legend reveal in">
+      <span class="lg"><b class="cd-x">X</b>Presente</span>
+      <span class="lg"><b class="cd-p">P</b>Permesso</span>
+      <span class="lg"><b class="cd-r">R</b>Recupero</span>
+      <span class="lg"><b class="cd-a">A</b>Assente</span>
+      <span class="lg"><b class="cd-ag">AG</b>Ass. giustificato</span>
+      <span class="lg"><b class="cd-ai">AI</b>Infortunio</span>
+    </div>
+
+    <div class="reg-wrap reveal in">
+      <table class="reg">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding-left:14px">Giocatore</th>
+            <th class="day-h">Lun 02</th><th class="day-h">Mer 04</th><th class="day-h">Ven 06</th><th class="day-h">Lun 09</th><th class="day-h">Mer 11</th><th class="day-h">Ven 13</th><th class="day-h">Lun 16</th><th class="day-h">Tot</th><th>%</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="player"><span class="nr">7</span>Rossi Marco</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">6</td><td class="pct">86%</td></tr>
+          <tr><td class="player"><span class="nr">9</span>Bianchi Luca</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-r">R</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">6</td><td class="pct">86%</td></tr>
+          <tr class="inj"><td class="player"><span class="nr">4</span>Ferri Davide</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-ai">AI</span></td><td class="code"><span class="cd-ai">AI</span></td><td class="code"><span class="cd-ai">AI</span></td><td class="code"><span class="cd-ag">AG</span></td><td class="code"><span class="cd-ag">AG</span></td><td class="code"><span class="cd-ag">AG</span></td>
+            <td class="tot">1</td><td class="pct">14%</td></tr>
+          <tr><td class="player"><span class="nr">11</span>Esposito Andrea</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-a">A</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">5</td><td class="pct">71%</td></tr>
+          <tr><td class="player"><span class="nr">23</span>Colombo Simone</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">7</td><td class="pct">100%</td></tr>
+          <tr><td class="player"><span class="nr">5</span>Ricci Giulio</td>
+            <td class="code"><span class="cd-a">A</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-r">R</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">5</td><td class="pct">83%</td></tr>
+          <tr><td class="player"><span class="nr">17</span>Gallo Matteo</td>
+            <td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-p">P</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-x">X</span></td><td class="code"><span class="cd-a">A</span></td><td class="code"><span class="cd-x">X</span></td>
+            <td class="tot">4</td><td class="pct">67%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="reg-summary reveal in">
+      <div class="rs"><div class="v" data-count="87">0</div><div class="l">Presenze totali</div></div>
+      <div class="rs"><div class="v" data-count="91">0</div><div class="l">% presenza media</div></div>
+      <div class="rs"><div class="v" data-count="4">0</div><div class="l">Permessi</div></div>
+      <div class="rs"><div class="v" data-count="1">0</div><div class="l">Infortuni attivi</div></div>
+    </div>
+
+    <footer class="colophon">
+      <span>The Home Of Football Club</span>
+      <span>Mockup grafico — non collegato al sito reale</span>
+    </footer>
+  </section>
+
+  <!-- ============ CONVOCAZIONI ============ -->
+  <section id="page-conv" class="page">
+    <div class="shead reveal in">
+      <span class="num">04</span><h2>Convocazioni</h2><span class="rule"></span><span class="tag">weekend 29 – 30 agosto</span>
+    </div>
+
+    <div class="match-hero reveal in">
+      <div class="mh-comp"><span>Campionato Juniores · Girone B</span><span><b>GIORNATA 2</b> // ANDATA</span></div>
+      <div class="mh-main">
+        <div class="team home"><div class="tn">THOF<br>Juniores</div><div class="ts">Squadra di casa</div></div>
+        <div class="vs">VS</div>
+        <div class="team"><div class="tn">AC Caronnese</div><div class="ts">Trasferta</div></div>
+      </div>
+      <div class="mh-info">
+        <div class="mi"><div class="k">Data</div><div class="v">Sabato 29 Agosto</div></div>
+        <div class="mi"><div class="k">Kick-off</div><div class="v">Ore 15:00</div></div>
+        <div class="mi"><div class="k">Campo</div><div class="v">Comunale n.1 — sintetico</div></div>
+        <div class="mi"><div class="k">Appuntamento</div><div class="v">13:45 · spogliatoi</div></div>
+      </div>
+    </div>
+
+    <div class="conv-cols">
+      <div class="panel reveal in">
+        <div class="panel-head"><span>// Lista giocatori</span><b>14 convocati</b></div>
+        <ul class="plist">
+          <li><span class="pnum">1</span><span class="pname">Marini Tommaso</span><span class="prole">POR</span></li>
+          <li><span class="pnum">2</span><span class="pname">Ferretti Gabriele</span><span class="prole">DD</span></li>
+          <li><span class="pnum">4</span><span class="pname">Lombardi Filippo</span><span class="prole">DC</span></li>
+          <li><span class="pnum">5</span><span class="pname">Testa Alessio</span><span class="prole">DC</span></li>
+          <li><span class="pnum">3</span><span class="pname">Neri Jacopo</span><span class="prole">DS</span></li>
+          <li><span class="pnum">6</span><span class="pname">Villa Riccardo</span><span class="prole">MC</span></li>
+          <li><span class="pnum">8</span><span class="pname">Sanna Lorenzo</span><span class="prole">ME</span></li>
+          <li><span class="pnum">10</span><span class="pname">Greco Samuele</span><span class="prole">TREQ</span></li>
+          <li><span class="pnum">7</span><span class="pname">Mancini Pietro</span><span class="prole">AD</span></li>
+          <li><span class="pnum">11</span><span class="pname">Barone Federico</span><span class="prole">AS</span></li>
+          <li><span class="pnum">9</span><span class="pname">D'Amico Nicolò</span><span class="prole">ATT</span></li>
+          <li><span class="pnum">12</span><span class="pname">Pellegrini Enrico</span><span class="prole">POR</span></li>
+          <li><span class="pnum">14</span><span class="pname">Fabbri Emanuele</span><span class="prole">DC</span></li>
+          <li><span class="pnum">17</span><span class="pname">Moretti Davide</span><span class="prole">ATT</span></li>
+        </ul>
+      </div>
+      <div class="panel reveal in">
+        <div class="panel-head"><span>// Staff &amp; note</span></div>
+        <div class="staff"><div class="k">Mister</div><div class="v">Marco Bellini</div></div>
+        <div class="staff"><div class="k">Cellulare staff</div><div class="v">+39 333 000 0000</div></div>
+        <div class="staff"><div class="k">Dirigente accompagnatore</div><div class="v">Sign. Paolo Marconi</div></div>
+        <div class="notes">
+          <div class="k">!! Note</div>
+          <p>Presentarsi in tenuta completa di squadra con maglia rossa. Trasferta in pullman societario — partenza puntuali alle 13:45 dal campo comunale. Portare borraccia e snack.</p>
+        </div>
+      </div>
+    </div>
+
+    <footer class="colophon">
+      <span>The Home Of Football Club</span>
+      <span>Mockup grafico — non collegato al sito reale</span>
+    </footer>
+  </section>
+</main>
+
+<script>
+  const tabs=document.querySelectorAll('.tab');
+  const pages={
+    home:document.getElementById('page-home'),
+    login:document.getElementById('page-login'),
+    registro:document.getElementById('page-registro'),
+    conv:document.getElementById('page-conv')
+  };
+  function go(id){
+    tabs.forEach(t=>t.classList.toggle('active',t.dataset.page===id));
+    Object.entries(pages).forEach(([k,p])=>p.classList.toggle('active',k===id));
+    window.scrollTo({top:0,behavior:'smooth'});
+    if(id==='home'){reveal();countUp();}
+    else{reveal(true);}
+  }
+  tabs.forEach(t=>t.addEventListener('click',()=>go(t.dataset.page)));
+
+  const io=new IntersectionObserver(es=>es.forEach(e=>{
+    if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}
+  }),{threshold:.1});
+  function reveal(immediate){
+    document.querySelectorAll('.page.active .reveal').forEach((el,i)=>{
+      if(el.classList.contains('in'))return;
+      el.style.transitionDelay=(i*70)+'ms';
+      if(immediate){requestAnimationFrame(()=>el.classList.add('in'));}
+      else io.observe(el);
+    });
+  }
+  let counted=false;
+  function countUp(){
+    document.querySelectorAll('.page.active [data-count]').forEach(el=>{
+      if(counted&&el.textContent!=='0')return;
+      el.dataset.done='';
+      const target=+el.dataset.count;let n=0;
+      const step=Math.max(1,Math.ceil(target/38));
+      const t=setInterval(()=>{n+=step;if(n>=target){n=target;clearInterval(t);}el.textContent=n;},26);
+    });
+    counted=true;
+  }
+  reveal();countUp();
+</script>
+</body>
+</html>

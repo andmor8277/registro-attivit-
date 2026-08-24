@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
   --color-primary: #dc2626;
@@ -14,17 +14,17 @@
   --color-error: #dc2626;
   --color-info: #3b82f6;
   
-  --color-bg: #000000;
-  --color-surface: #141414;
-  --color-surface-elevated: #1a1a1a;
-  --color-border: #2a2a2a;
-  --color-border-light: #1a1a1a;
+  --color-bg: #eef1f5;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-border: #dde2ea;
+  --color-border-light: #e8ebf1;
   
-  --color-text: #ffffff;
-  --color-text-secondary: #aaaaaa;
-  --color-text-muted: #666666;
+  --color-text: #16181d;
+  --color-text-secondary: #565d68;
+  --color-text-muted: #8b93a1;
   
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Schibsted Grotesk', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   
   --radius-sm: 6px;
@@ -124,11 +124,11 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #111111;
+  background: #e8ebf1;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #444444;
+  background: #c3cad6;
   border-radius: 4px;
 }
 
@@ -151,8 +151,24 @@ input, select, textarea {
 }
 
 select option {
-  background: #1a1a1a;
-  color: #ffffff;
+  background: #ffffff;
+  color: #16181d;
+}
+
+/* ── Look operativo (da mockup app.html): niente decorazioni da tema scuro ── */
+.bg-glow {
+  display: none !important;
+}
+
+.name-gradient {
+  background: none !important;
+  -webkit-text-fill-color: var(--color-text) !important;
+  color: var(--color-text);
+}
+
+.society-name,
+.category-name {
+  font-size: clamp(1.5rem, 3vw, 2rem) !important;
 }
 
 @keyframes fadeIn {
