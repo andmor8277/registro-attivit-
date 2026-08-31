@@ -63,8 +63,18 @@
                 <input v-model="giocatoreEdit.data_nascita" :disabled="!editMode" type="date" />
               </div>
               <div class="form-field">
+                <label>NATO/A A</label>
+                <input v-model="scheda.comune_nato" :disabled="!editMode" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
                 <label>SCAD. CERTIFICATO</label>
                 <input v-model="giocatoreEdit.scadenza_certificato" :disabled="!editMode" type="date" />
+              </div>
+              <div class="form-field">
+                <label>CITTADINANZA</label>
+                <input v-model="scheda.cittadinanza" :disabled="!editMode" />
               </div>
             </div>
             <div class="form-row">
@@ -79,12 +89,19 @@
             </div>
             <div class="form-row">
               <div class="form-field">
-                <label>CITTADINANZA</label>
-                <input v-model="scheda.cittadinanza" :disabled="!editMode" />
+                <label>SESSO</label>
+                <select v-model="giocatoreEdit.sesso" :disabled="!editMode">
+                  <option value="">-</option>
+                  <option value="M">Maschio</option>
+                  <option value="F">Femmina</option>
+                </select>
               </div>
               <div class="form-field">
                 <label>CODICE FISCALE</label>
-                <input v-model="giocatoreEdit.codice_fiscale" :disabled="!editMode" maxlength="16" />
+                <div class="cf-input-row">
+                  <input v-model="giocatoreEdit.codice_fiscale" :disabled="!editMode" maxlength="16" />
+                  <button class="btn-genera-cf" :disabled="!editMode" @click="generaCf">Genera CF</button>
+                </div>
               </div>
             </div>
           </div>
@@ -251,7 +268,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPersone, updatePersona, createPersona, getCategorie } from '../api'
+import { getPersone, updatePersona, createPersona, getCategorie, generaCf as generaCfApi } from '../api'
 import { useStore } from '../store'
 
 const route = useRoute()
@@ -269,6 +286,7 @@ const giocatoreEdit = reactive({
   cognome: '',
   nome: '',
   data_nascita: '',
+  sesso: '',
   numero_maglia: '',
   matricola: '',
   codice_fiscale: '',
@@ -394,6 +412,7 @@ function caricaDatiGiocatore() {
   giocatoreEdit.cognome = giocatore.value.cognome || ''
   giocatoreEdit.nome = giocatore.value.nome || ''
   giocatoreEdit.data_nascita = giocatore.value.data_nascita || ''
+  giocatoreEdit.sesso = giocatore.value.sesso || ''
   giocatoreEdit.numero_maglia = giocatore.value.numero_maglia || ''
   giocatoreEdit.matricola = giocatore.value.matricola || ''
   giocatoreEdit.codice_fiscale = giocatore.value.codice_fiscale || ''
@@ -433,6 +452,41 @@ function stampaPDF() {
   setTimeout(() => { document.title = originali }, 1000)
 }
 
+async function generaCf() {
+  saveError.value = ''
+  if (!giocatoreEdit.nome || !giocatoreEdit.cognome) {
+    saveError.value = 'Inserisci nome e cognome per generare il CF'
+    return
+  }
+  if (!giocatoreEdit.data_nascita) {
+    saveError.value = 'Inserisci la data di nascita per generare il CF'
+    return
+  }
+  if (!giocatoreEdit.sesso) {
+    saveError.value = 'Seleziona il sesso per generare il CF'
+    return
+  }
+  if (!scheda.comune_nato) {
+    saveError.value = 'Inserisci il comune di nascita per generare il CF'
+    return
+  }
+  try {
+    const res = await generaCfApi({
+      nome: giocatoreEdit.nome,
+      cognome: giocatoreEdit.cognome,
+      data_nascita: giocatoreEdit.data_nascita,
+      sesso: giocatoreEdit.sesso,
+      comune_nato: scheda.comune_nato
+    })
+    const cf = res?.data?.codice_fiscale ?? res?.codice_fiscale
+    if (cf) {
+      giocatoreEdit.codice_fiscale = cf
+    }
+  } catch(e) {
+    saveError.value = e.response?.data?.detail || 'Errore nella generazione del CF'
+  }
+}
+
 async function salvaDati() {
   saveError.value = ''
   try {
@@ -440,6 +494,7 @@ async function salvaDati() {
       nome: giocatoreEdit.nome,
       cognome: giocatoreEdit.cognome,
       data_nascita: giocatoreEdit.data_nascita || null,
+      sesso: giocatoreEdit.sesso || null,
       matricola: giocatoreEdit.matricola || null,
       numero_maglia: giocatoreEdit.numero_maglia !== '' && giocatoreEdit.numero_maglia != null ? giocatoreEdit.numero_maglia : null,
       codice_fiscale: giocatoreEdit.codice_fiscale || null,
@@ -695,6 +750,40 @@ onBeforeUnmount(() => {
 
 .form-field textarea {
   resize: none;
+}
+
+.cf-input-row {
+  display: flex;
+  gap: 1mm;
+  align-items: stretch;
+}
+
+.cf-input-row input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
+.btn-genera-cf {
+  padding: 0 2mm;
+  border: 1px solid #5b7fff;
+  border-radius: 2px;
+  background: #5b7fff;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn-genera-cf:hover:not(:disabled) {
+  background: #4a6bef;
+}
+
+.btn-genera-cf:disabled {
+  background: #a8b6d8;
+  border-color: #a8b6d8;
+  cursor: not-allowed;
 }
 
 .equip-list {

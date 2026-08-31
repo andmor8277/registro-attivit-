@@ -88,14 +88,14 @@
               <span class="check-label"><strong>{{ infortuniCount }}</strong>&nbsp;{{ infortuniCount === 1 ? 'giocatore infortunato' : 'giocatori infortunati' }}</span>
               <svg class="check-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
             </button>
-            <button v-if="canSegreteria && certScaduti > 0" class="check-row" @click="router.push('/infermeria/certificati')">
+            <button v-if="canSegreteria && (certScaduti > 0 || certSenza > 0)" class="check-row" @click="router.push('/infermeria/certificati')">
               <span class="check-ic amber">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M9 15l2 2 4-4"/></svg>
               </span>
-              <span class="check-label"><strong>{{ certScaduti }}</strong>&nbsp;{{ certScaduti === 1 ? 'certificato scaduto' : 'certificati scaduti' }}</span>
+              <span class="check-label"><strong>{{ certScaduti + certSenza }}</strong>&nbsp;certificati da verificare ({{ certScaduti }} scaduti · {{ certSenza }} senza)</span>
               <svg class="check-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
             </button>
-            <p v-if="!((canInfermeria && infortuniCount > 0) || (canSegreteria && certScaduti > 0))" class="empty-note">Tutto in ordine</p>
+            <p v-if="!((canInfermeria && infortuniCount > 0) || (canSegreteria && (certScaduti > 0 || certSenza > 0)))" class="empty-note">Tutto in ordine</p>
           </div>
           <div v-else-if="isMister && allCategories.length" class="check-list">
             <div v-for="cat in allCategories" :key="cat.id" class="check-row" @click="apriRegistro(cat)">
@@ -206,6 +206,7 @@ const allCategories = ref([])
 const partite = ref([])
 const infortuniCount = ref(0)
 const certScaduti = ref(0)
+const certSenza = ref(0)
 const convocazioniUpcoming = ref([])
 
 const m = new Date().getMonth() + 1
@@ -422,7 +423,9 @@ async function loadCertificati() {
     const currentCatIds = new Set(
       allCategories.value.filter(c => c.parent_id !== null && !c.is_archiviata).map(c => c.id)
     )
-    certScaduti.value = list.filter(p => currentCatIds.has(p.categoria_id) && isCertScaduto(p.scadenza_certificato)).length
+    const current = list.filter(p => currentCatIds.has(p.categoria_id))
+    certScaduti.value = current.filter(p => isCertScaduto(p.scadenza_certificato)).length
+    certSenza.value = current.filter(p => !p.scadenza_certificato).length
   } catch (e) {
     console.error('Errore caricamento certificati:', e)
   }

@@ -45,6 +45,7 @@ class Persona(Base):
     gruppo_id = Column(Integer, ForeignKey("gruppi.id"))
     categoria_id = Column(Integer, ForeignKey("categorie.id"))
     data_nascita = Column(Date, nullable=True)
+    sesso = Column(String(1), nullable=True)
     codice_fiscale = Column(String(16), nullable=True)
     matricola = Column(String(50), nullable=True)
     numero_maglia = Column(Integer, nullable=True)

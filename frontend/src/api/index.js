@@ -90,6 +90,7 @@ export const upsertRegistro = (entry) => api.post('/registro/', entry)
 export const createPersona = (data) => api.post('/persone/', data)
 export const updatePersona = (id, data) => api.put('/persone/' + id, data)
 export const deletePersona = (id) => api.delete('/persone/' + id)
+export const generaCf = (data) => api.post('/persone/genera-cf', data)
 
 export const getConvocazioni = (categoriaId) => api.get('/convocazioni/?categoria_id=' + categoriaId)
 export const getConvocazione = (id) => api.get('/convocazioni/' + id)
