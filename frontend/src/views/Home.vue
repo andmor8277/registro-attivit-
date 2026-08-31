@@ -418,7 +418,11 @@ async function loadCertificati() {
   try {
     const res = await getPersone()
     const list = res.data || []
-    certScaduti.value = list.filter(p => isCertScaduto(p.scadenza_certificato)).length
+    // Solo giocatori della stagione in corso (categorie non archiviate)
+    const currentCatIds = new Set(
+      allCategories.value.filter(c => c.parent_id !== null && !c.is_archiviata).map(c => c.id)
+    )
+    certScaduti.value = list.filter(p => currentCatIds.has(p.categoria_id) && isCertScaduto(p.scadenza_certificato)).length
   } catch (e) {
     console.error('Errore caricamento certificati:', e)
   }
