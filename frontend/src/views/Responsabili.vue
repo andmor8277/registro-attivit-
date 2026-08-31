@@ -77,7 +77,7 @@
         <div class="card-arrow">→</div>
       </div>
 
-      <div v-if="utenteAttivo?.is_admin" class="hub-card gestione-stagione" @click="apriGestioneStagione">
+      <div v-if="utenteAttivo?.is_admin || isSuperAdmin" class="hub-card gestione-stagione" @click="apriGestioneStagione">
         <div class="card-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
@@ -91,7 +91,7 @@
         <div class="card-arrow">→</div>
       </div>
 
-      <div v-if="utenteAttivo?.is_admin" class="hub-card nuovo-utente" @click="apriInvito">
+      <div v-if="utenteAttivo?.is_admin || isSuperAdmin" class="hub-card nuovo-utente" @click="apriInvito">
         <div class="card-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>

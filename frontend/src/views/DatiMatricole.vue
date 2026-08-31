@@ -119,7 +119,8 @@
     <div v-if="gdprModal.show" class="modal-overlay" @click.self="gdprModal.show = false">
       <div class="modal modal-small">
         <h3>🔒 Sblocco Dati Sensibili</h3>
-        <p class="gdpr-info">Confermi di voler visualizzare i dati sensibili (CF, telefoni)?</p>
+        <p class="gdpr-info">Per sbloccare i dati sensibili (CF, telefoni) inserisci il tuo codice fiscale:</p>
+        <input v-model="gdprModal.password" @keyup.enter="verificaPasswordGdpr" class="gdpr-cf-input" placeholder="Codice fiscale" maxlength="16" autocomplete="off" />
         <p v-if="gdprModal.errore" class="error-msg">{{ gdprModal.errore }}</p>
         <div class="modal-actions">
           <button class="btn-annulla" @click="gdprModal.show = false">Annulla</button>
@@ -284,16 +285,22 @@ function apriSbloccoGdpr() {
 }
 
 async function verificaPasswordGdpr() {
+  gdprModal.value.errore = ''
+  if (!gdprModal.value.password) {
+    gdprModal.value.errore = 'Inserisci il tuo codice fiscale'
+    return
+  }
   try {
-    const res = await fetch(`/api/auth/verify-gdpr?categoria_id=${categoriaId}`, {
+    const res = await fetch(`/api/auth/verify-gdpr?categoria_id=${categoriaId}&codice_fiscale=${encodeURIComponent(gdprModal.value.password)}`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
     })
     if (res.ok) {
       gdprSbloccato.value = true
       gdprModal.value.show = false
+      gdprModal.value.password = ''
     } else {
-      gdprModal.value.errore = 'Non autorizzato'
+      gdprModal.value.errore = 'Codice fiscale non valido'
     }
   } catch (e) {
     gdprModal.value.errore = 'Errore di verifica'
@@ -671,7 +678,7 @@ onMounted(async () => {
 }
 
 .name-gradient {
-  background: linear-gradient(135deg, #ffffff 0%, #ffffff 40%, var(--color-primary) 100%);
+  background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text) 40%, var(--color-primary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -949,6 +956,17 @@ tr:last-child td { border-bottom: none; }
   color: var(--color-text-muted);
   margin-bottom: 1.25rem;
   line-height: 1.5;
+}
+
+.gdpr-cf-input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  text-transform: uppercase;
 }
 
 .error-msg {

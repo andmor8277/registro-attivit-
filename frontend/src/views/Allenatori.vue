@@ -856,7 +856,7 @@ onMounted(() => {
 }
 
 .title-gradient {
-  background: linear-gradient(135deg, #ffffff 0%, #ffffff 40%, #22c55e 100%);
+  background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text) 40%, #22c55e 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

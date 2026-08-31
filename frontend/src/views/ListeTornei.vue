@@ -143,7 +143,9 @@
     <div v-if="gdprModal.show" class="modal-overlay" @click.self="gdprModal.show = false">
       <div class="modal modal-small">
         <h3>Sblocca Dati Sensibili</h3>
-        <p class="gdpr-hint">Confermi di voler visualizzare i dati sensibili (CF, telefoni)?</p>
+        <p class="gdpr-hint">Per sbloccare i dati sensibili (CF, telefoni) inserisci il tuo codice fiscale:</p>
+        <input v-model="gdprModal.password" @keyup.enter="sbloccaGdpr" class="gdpr-cf-input" placeholder="Codice fiscale" maxlength="16" autocomplete="off" />
+        <p v-if="gdprModal.errore" class="gdpr-error-msg">{{ gdprModal.errore }}</p>
         <div class="modal-actions">
           <button class="btn-annulla" @click="gdprModal.show = false">Annulla</button>
           <button class="btn-salva" @click="sbloccaGdpr">Sblocca</button>
@@ -173,7 +175,7 @@ const tuttiGiocatori = ref([])
 const searchPlayer = ref('')
 const nuovaListaModal = ref({ show: false, nome: '' })
 const gdprSbloccato = ref(false)
-const gdprModal = ref({ show: false, password: '' })
+const gdprModal = ref({ show: false, password: '', errore: '' })
 const colonneMenu = ref(false)
 
 const colonneDisponibili = [
@@ -210,19 +212,24 @@ function toggleColonna(key) {
 }
 
 async function sbloccaGdpr() {
+  gdprModal.value.errore = ''
+  if (!gdprModal.value.password) {
+    gdprModal.value.errore = 'Inserisci il tuo codice fiscale'
+    return
+  }
   try {
-    const res = await fetch(`/api/auth/verify-gdpr?categoria_id=${categoriaId}`, {
+    const res = await fetch(`/api/auth/verify-gdpr?categoria_id=${categoriaId}&codice_fiscale=${encodeURIComponent(gdprModal.value.password)}`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
     })
     if (res.ok) {
       gdprSbloccato.value = true
       sessionStorage.setItem('gdpr_sbloccato', 'true')
+      gdprModal.value = { show: false, password: '', errore: '' }
     } else {
-      alert('Non autorizzato')
+      gdprModal.value.errore = 'Codice fiscale non valido'
     }
-  } catch(e) { alert('Errore di connessione') }
-  gdprModal.value = { show: false, password: '' }
+  } catch(e) { gdprModal.value.errore = 'Errore di verifica' }
 }
 
 function formattaData(d) {
@@ -658,6 +665,23 @@ onMounted(async () => {
   color: var(--color-text-muted, #6b7280);
   margin-bottom: 1rem;
   line-height: 1.4;
+}
+
+.gdpr-cf-input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background: var(--color-bg, #f5f6f8);
+  border: 2px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  color: var(--color-text, #141a24);
+  text-transform: uppercase;
+}
+
+.gdpr-error-msg {
+  color: #ef4444;
+  font-size: 0.8125rem;
+  margin-bottom: 0.5rem;
 }
 
 .search-input {

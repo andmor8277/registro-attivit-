@@ -344,7 +344,12 @@ def cambia_password(uid: int, data: PasswordChange, current_user: Utente = Depen
     db.commit()
     return {"ok": True}
 @router.post("/verify-gdpr")
-def verify_gdpr(categoria_id: Optional[int] = None, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
+def verify_gdpr(codice_fiscale: Optional[str] = Query(None), categoria_id: Optional[int] = Query(None), current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Verifica obbligatoria: il codice fiscale della persona loggata
+    if not codice_fiscale or not current_user.codice_fiscale:
+        raise HTTPException(status_code=403, detail="Codice fiscale non valido")
+    if codice_fiscale.strip().upper() != current_user.codice_fiscale.strip().upper():
+        raise HTTPException(status_code=403, detail="Codice fiscale non valido")
     # Admin, segreteria e infermeria possono sempre sbloccare
     if current_user.is_admin or current_user.ruolo in ('segreteria', 'infermeria'):
         return {"ok": True}

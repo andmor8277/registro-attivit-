@@ -354,7 +354,13 @@ const route = useRoute()
 const { categoriaAttiva, setCategoria, utenteAttivo } = useStore()
 const categoria = categoriaAttiva
 const isDirigente = computed(() => ['dirigente', 'segreteria', 'infermeria'].includes(utenteAttivo.value?.ruolo))
-const isAgonistica = computed(() => categoria.value?.nome?.startsWith('Under') || false)
+const categorieTutte = ref([])
+const isAgonistica = computed(() => {
+  const cat = categoria.value
+  if (!cat || !cat.parent_id) return false
+  const parent = categorieTutte.value.find(c => c.id === cat.parent_id)
+  return (parent?.nome || '').toLowerCase() === 'agonistica'
+})
 const currentSeason = computed(() => {
   const s = categoria.value?.stagione
   return s ? `${s}/${s + 1}` : '2025/2026'
@@ -591,15 +597,15 @@ watch(() => route.params.id, async (newId) => {
 })
 
 async function loadCategoriaFromRoute() {
-  if (categoria.value) return
-  const catId = parseInt(route.params.id)
-  if (!catId) return
   try {
     const res = await getCategorie()
     const all = res.data || []
-    const found = all.find(c => c.id === catId)
-    if (found) {
-      setCategoria(found)
+    categorieTutte.value = all
+    if (!categoria.value) {
+      const catId = parseInt(route.params.id)
+      if (!catId) return
+      const found = all.find(c => c.id === catId)
+      if (found) setCategoria(found)
     }
   } catch (e) {
     console.error('Errore caricamento categoria:', e)
@@ -799,7 +805,7 @@ function selezionaCategoria(cat) {
 }
 
 .name-gradient {
-  background: linear-gradient(135deg, #ffffff 0%, #ffffff 40%, var(--color-primary) 100%);
+  background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text) 40%, var(--color-primary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

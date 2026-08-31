@@ -93,9 +93,13 @@ router.beforeEach((to, from, next) => {
   }
   // Redirect diretto da home per ruoli specifici
   if (to.path === '/') {
-    if (user?.ruolo === 'mister') return next('/allenatori')
     if (user?.ruolo === 'segreteria') return next('/segreteria')
     if (user?.ruolo === 'infermeria') return next('/infermeria')
+  }
+  // Il mister non accede a Gestione Squadre (solo amministrazione) →
+  // vede la Panoramica (riepilogo) alla Home
+  if (to.path === '/allenatori') {
+    if (user?.ruolo === 'mister' || user?.ruolo === 'dirigente') return next('/')
   }
   next()
 })
