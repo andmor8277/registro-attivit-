@@ -318,7 +318,7 @@ function handleLogosponsorUpload(event) {
   }
 }
 const router = useRouter()
-const { setToken, utenteAttivo, setSocietaAttiva, setListaSocieta, societaAttiva } = useStore()
+const { setToken, utenteAttivo, setSocietaAttiva, setListaSocieta, societaAttiva, setCategoria } = useStore()
 
 function loginGoogle() {
   googleAuthorize(invitoToken.value)
@@ -365,18 +365,15 @@ async function doLogin() {
       return router.push('/infermeria')
     }
 
-    // Mister e Dirigente: categoria assegnata o pagina di default
+    // Mister e Dirigente: imposta la categoria assegnata e va in Panoramica
     if (ruolo === 'mister' || ruolo === 'dirigente') {
       try {
-        const catRes = await getCategorie()
+        const catRes = await getCategorie(societaAttiva.value?.id)
         const cats = catRes.data || []
-        if (cats.length === 1) {
-          return router.push('/scelta/' + cats[0].id)
+        if (cats.length) {
+          setCategoria(cats[0])
         }
-        if (ruolo === 'mister') {
-          return router.push('/allenatori')
-        }
-        // Dirigente con più categorie: home
+        return router.push('/')
       } catch {}
     }
 
@@ -405,17 +402,15 @@ async function confermaSocieta() {
     return router.push('/infermeria')
   }
 
-  // Mister e Dirigente: categoria assegnata o pagina di default
+  // Mister e Dirigente: imposta la categoria assegnata e va in Panoramica
   if (ruolo === 'mister' || ruolo === 'dirigente') {
     try {
-      const catRes = await getCategorie()
+      const catRes = await getCategorie(societaAttiva.value?.id)
       const cats = catRes.data || []
-      if (cats.length === 1) {
-        return router.push('/scelta/' + cats[0].id)
+      if (cats.length) {
+        setCategoria(cats[0])
       }
-      if (ruolo === 'mister') {
-        return router.push('/allenatori')
-      }
+      return router.push('/')
     } catch {}
   }
 

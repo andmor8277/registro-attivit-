@@ -533,6 +533,15 @@ function formatData(d) {
   return d.split('-').reverse().join('/')
 }
 
+// Inizio stagione: usa data_inizio_stagione impostata dall'admin della
+// categoria; se non impostata, ripiega all'inizio anno di stagione.
+function stagioneInizio(cat) {
+  if (cat?.data_inizio_stagione) return cat.data_inizio_stagione
+  const oggi = new Date()
+  const anno = cat?.stagione || (oggi.getMonth() + 1 >= 8 ? oggi.getFullYear() : oggi.getFullYear() - 1)
+  return anno + '-01-01'
+}
+
 async function ricalcolaDati() {
   if (!dataInizio.value || !dataFine.value) return
 
@@ -739,7 +748,7 @@ async function indivOnPlayerChange() {
 
 async function indivCalcolaStatsStagionali() {
   const cat = categoria.value
-  const dataInizio = cat?.data_inizio_stagione || new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]
+  const dataInizio = stagioneInizio(cat)
   const dataFine = cat?.data_fine_stagione || new Date().toISOString().split('T')[0]
   const pid = indivSelectedPlayerId.value
   const mesiArr = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
@@ -867,8 +876,11 @@ onMounted(async () => {
     categoria.value = cats.find(c => c.id === categoriaId)
     if (categoria.value) {
       setCategoria(categoria.value)
-      dataInizio.value = categoria.value.data_inizio_stagione || new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]
+      dataInizio.value = stagioneInizio(categoria.value)
       dataFine.value = categoria.value.data_fine_stagione || new Date().toISOString().split('T')[0]
+      const datastart = new Date(dataInizio.value)
+      meseSelezionato.value = datastart.getMonth() + 1
+      annoSelezionato.value = datastart.getFullYear()
     }
 
     const ppl = personeRes.data || []
@@ -988,7 +1000,7 @@ onMounted(async () => {
 }
 
 .name-gradient {
-  background: linear-gradient(135deg, #ffffff 0%, #ffffff 40%, var(--color-primary) 100%);
+  background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text) 40%, var(--color-primary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

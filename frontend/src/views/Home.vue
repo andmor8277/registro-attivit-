@@ -3,7 +3,7 @@
     <!-- Page head -->
     <div class="home-head">
       <div class="home-head-txt">
-        <h1 class="society-name">{{ societaAttiva?.nome || 'Benvenuto' }}</h1>
+        <h1 class="society-name"><span class="name-gradient">{{ societaAttiva?.nome || 'Benvenuto' }}</span></h1>
         <p class="header-subtitle">Pannello di controllo · {{ oggiLabel }}</p>
       </div>
       <div class="home-head-actions">
@@ -48,26 +48,26 @@
           <span v-if="prossimaGara" class="pill pill-blue">{{ countdown }}</span>
         </div>
         <div class="card-body">
-          <div v-if="prossimaGara" class="match-box">
-            <div class="match-teams">
-              <span class="team">{{ prossimaGara.casa_fuori === 'fuori' ? (prossimaGara.avversario || 'TBD') : (societaAttiva?.nome_breve || 'Noi') }}</span>
-              <span class="match-vs">vs</span>
-              <span class="team">{{ prossimaGara.casa_fuori === 'fuori' ? (societaAttiva?.nome_breve || 'Noi') : (prossimaGara.avversario || 'TBD') }}</span>
-            </div>
-            <div class="match-meta">
-              <span class="meta-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                {{ dataGaraLabel }}
-              </span>
-              <span v-if="prossimaGara.ora" class="meta-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-                {{ prossimaGara.ora.slice(0, 5) }}
-              </span>
-              <span v-if="prossimaGara.campo" class="meta-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                {{ prossimaGara.campo }}
-              </span>
-              <span class="pill pill-violet" v-if="categoriaGaraNome">{{ prossimaGara.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa' }} · {{ categoriaGaraNome }}</span>
+          <div v-if="prossimeGare.length" class="match-box">
+            <div v-for="(g, gi) in prossimeGare" :key="'g-' + gi" class="match-row">
+              <div class="match-teams">
+                <span class="team">{{ partitaLabel(g) }}</span>
+                <span class="pill pill-violet" v-if="catNome(g.categoria_id)">{{ badgeLabel(g) }} · {{ catNome(g.categoria_id) }}</span>
+              </div>
+              <div class="match-meta">
+                <span class="meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  {{ dataLabel(g.data) }}
+                </span>
+                <span v-if="g.ora" class="meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                  {{ g.ora.slice(0, 5) }}
+                </span>
+                <span v-if="g.campo" class="meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  {{ g.campo }}
+                </span>
+              </div>
             </div>
           </div>
           <p v-else class="empty-note">Nessuna gara in programma</p>
@@ -97,6 +97,15 @@
             </button>
             <p v-if="!((canInfermeria && infortuniCount > 0) || (canSegreteria && certScaduti > 0))" class="empty-note">Tutto in ordine</p>
           </div>
+          <div v-else-if="isMister && allCategories.length" class="check-list">
+            <div v-for="cat in allCategories" :key="cat.id" class="check-row" @click="apriRegistro(cat)">
+              <span class="check-ic" :class="cat.is_portieri ? 'violet' : 'green'">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+              </span>
+              <span class="check-label">{{ cat.nome }}<span class="check-sub">{{ cat.is_portieri ? 'Portieri' : cat.anno }}</span></span>
+              <svg class="check-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
           <p v-else class="empty-note">Nessuna voce da controllare</p>
         </div>
       </section>
@@ -108,19 +117,19 @@
         </div>
         <div class="card-body">
           <div class="quick-grid">
-            <button class="quick" @click="apriRegistroPrimo">
+            <button v-if="!isAdminSocieta" class="quick" @click="apriRegistroPrimo">
               <span class="quick-ic red">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5M14 16l2 2 3-3"/></svg>
               </span>
               <span>Apri registro</span>
             </button>
-            <button class="quick" @click="vaiConvocazioni">
+            <button v-if="!isAdminSocieta" class="quick" @click="vaiConvocazioni">
               <span class="quick-ic blue">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
               </span>
               <span>Convocazioni</span>
             </button>
-            <button class="quick" @click="router.push('/allenatori')">
+            <button v-if="!isMister" class="quick" @click="router.push('/allenatori')">
               <span class="quick-ic violet">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 15.3c2.7.4 4.5 2.2 4.5 4.7"/></svg>
               </span>
@@ -146,7 +155,7 @@
       <section class="card span2">
         <div class="card-h">
           <h2>Programmazione settimana</h2>
-          <span class="card-date">Tutte le categorie</span>
+          <span class="card-date">{{ isMister ? 'Le tue categorie' : 'Tutte le categorie' }}</span>
         </div>
         <div class="card-body">
           <div class="week-list">
@@ -183,11 +192,13 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useStore } from "../store.js"
-import { getSocieta, getAllCategorie, getInfortuni, getPartite, getPersone } from "../api/index.js"
+import { getSocieta, getCategorie, getInfortuni, getPartite, getPersone, getConvocazioni, getConvocazione } from "../api/index.js"
 
 const router = useRouter()
 const { utenteAttivo, societaAttiva, setSocietaAttiva } = useStore()
 const isSuperAdmin = computed(() => utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'super_admin')
+const isMister = computed(() => utenteAttivo.value?.ruolo === 'mister')
+const isAdminSocieta = computed(() => !!utenteAttivo.value?.is_admin && !isSuperAdmin.value)
 const canInfermeria = computed(() => ['infermeria', 'admin', 'super_admin'].includes(utenteAttivo.value?.ruolo))
 const canSegreteria = computed(() => ['segreteria', 'admin', 'super_admin'].includes(utenteAttivo.value?.ruolo))
 
@@ -195,6 +206,7 @@ const allCategories = ref([])
 const partite = ref([])
 const infortuniCount = ref(0)
 const certScaduti = ref(0)
+const convocazioniUpcoming = ref([])
 
 const m = new Date().getMonth() + 1
 const currentSeason = ref(`${m >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1}/${m >= 8 ? new Date().getFullYear() + 1 : new Date().getFullYear()}`)
@@ -239,12 +251,12 @@ function isToday(giornoVal) {
 }
 
 function apriRegistro(cat) {
-  router.push("/scelta/" + cat.id)
+  router.push("/registro/" + cat.id)
 }
 
 function apriRegistroPrimo() {
   const cat = allCategories.value.find(c => c.parent_id !== null) || allCategories.value[0]
-  if (cat) router.push("/scelta/" + cat.id)
+  if (cat) router.push("/registro/" + cat.id)
   else router.push("/allenatori")
 }
 
@@ -259,31 +271,79 @@ function vaiSelezioneSocieta() {
 }
 
 // ── Prossima gara ──
-const prossimaGara = computed(() => {
-  const now = new Date()
-  const future = partite.value
-    .filter(p => p.data_partite && !p.risultato)
-    .map(p => {
-      const d = new Date(p.data_partite + 'T' + (p.ora ? p.ora.slice(0, 5) : '00:00'))
-      return { ...p, _dt: isNaN(d) ? null : d }
-    })
-    .filter(p => p._dt && p._dt > now)
-  if (!future.length) return null
-  future.sort((a, b) => a._dt - b._dt)
-  return future[0]
-})
+function todayStr() { return new Date().toISOString().split('T')[0] }
 
-const categoriaGaraNome = computed(() => {
-  if (!prossimaGara.value) return ''
-  const cat = allCategories.value.find(c => c.id === prossimaGara.value.categoria_id)
+function catNome(catId) {
+  const cat = allCategories.value.find(c => c.id === catId)
   return cat?.nome || ''
+}
+
+function dataLabel(ds) {
+  if (!ds) return ''
+  const d = new Date(ds + 'T12:00:00')
+  if (isNaN(d)) return ''
+  return d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
+function partitaLabel(p) {
+  if (p.source === 'convocazione') return p.title || 'Gara'
+  const avv = p.avversario || 'TBD'
+  const noi = societaAttiva.value?.nome_breve || 'Noi'
+  return p.casa_fuori === 'fuori' ? `${avv} vs ${noi}` : `${noi} vs ${avv}`
+}
+
+function badgeLabel(p) {
+  if (p.source === 'convocazione') return 'Gara'
+  return p.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa'
+}
+
+const prossimeGare = computed(() => {
+  const today = todayStr()
+  const partiteFuture = partite.value.filter(p => p.data_partite && !p.risultato && p.data_partite >= today)
+  const convFuture = convocazioniUpcoming.value.filter(c =>
+    c.data_fine ? c.data_fine >= today : (c.data_inizio && c.data_inizio >= today)
+  )
+
+  const events = []
+  for (const p of partiteFuture) {
+    const d = new Date(p.data_partite + 'T' + (p.ora ? p.ora.slice(0, 5) : '00:00'))
+    if (isNaN(d)) continue
+    events.push({ ...p, data: p.data_partite, ora: p.ora || '', _dt: d, source: 'partita' })
+  }
+  for (const c of convFuture) {
+    for (const g of c.gare || []) {
+      const dataGara = g.data || c.data_inizio
+      if (!dataGara) continue
+      const d = new Date(dataGara + 'T' + (g.inizio_gara ? g.inizio_gara.slice(0, 5) : '00:00'))
+      if (isNaN(d)) continue
+      events.push({ ...g, categoria_id: c.categoria_id, convocazione_id: c.id, data: dataGara, ora: g.inizio_gara || '', title: g.gara || '', _dt: d, source: 'convocazione' })
+    }
+  }
+  events.sort((a, b) => a._dt - b._dt)
+
+  let winStart = null
+  let winEnd = null
+  const convSorted = convFuture.slice().sort((a, b) => (a.data_inizio || '').localeCompare(b.data_inizio || ''))
+  if (convSorted.length > 0) {
+    winStart = convSorted[0].data_inizio
+    winEnd = convSorted[0].data_fine || convSorted[0].data_inizio
+  } else if (events.length > 0) {
+    const dow = events[0]._dt.getDay()
+    const sab = new Date(events[0]._dt)
+    sab.setDate(sab.getDate() - ((dow + 1) % 7))
+    const dom = new Date(sab)
+    dom.setDate(sab.getDate() + 1)
+    winStart = sab.toISOString().split('T')[0]
+    winEnd = dom.toISOString().split('T')[0]
+  }
+  if (!winStart) return []
+
+  return events
+    .filter(e => e.data >= winStart && e.data <= winEnd)
+    .sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.ora || '').localeCompare(b.ora || ''))
 })
 
-const dataGaraLabel = computed(() => {
-  if (!prossimaGara.value) return ''
-  const d = new Date(prossimaGara.value.data_partite)
-  return d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
-})
+const prossimaGara = computed(() => prossimeGare.value[0] || null)
 
 const countdown = computed(() => {
   if (!prossimaGara.value?._dt) return ''
@@ -306,7 +366,7 @@ function isCertScaduto(dateStr) {
 async function loadPlanning() {
   const societaId = societaAttiva.value?.id || null
   try {
-    const res = await getAllCategorie(societaId)
+    const res = await getCategorie(societaId)
     allCategories.value = res.data || []
     const activeCat = allCategories.value.find(c => c.parent_id !== null && c.stagione)
     currentSeason.value = activeCat ? `${activeCat.stagione}/${activeCat.stagione + 1}` : currentSeason.value
@@ -322,6 +382,25 @@ async function loadPartite() {
   } catch (e) {
     console.error('Errore caricamento partite:', e)
   }
+}
+
+async function loadConvocazioni() {
+  if (allCategories.value.length === 0) return
+  const today = todayStr()
+  const upcoming = []
+  for (const c of allCategories.value) {
+    try {
+      const listRes = await getConvocazioni(c.id)
+      const list = (listRes.data || []).filter(cc => cc.data_fine ? cc.data_fine >= today : (cc.data_inizio && cc.data_inizio >= today))
+      for (const cc of list) {
+        try {
+          const detRes = await getConvocazione(cc.id)
+          upcoming.push(detRes.data)
+        } catch (e) { /* ignora convocazione non accessibile */ }
+      }
+    } catch (e) { /* ignora categoria non accessibile */ }
+  }
+  convocazioniUpcoming.value = upcoming
 }
 
 async function loadInfortuni() {
@@ -360,10 +439,11 @@ onMounted(async () => {
     }
   }
 
-  loadPlanning()
+  await loadPlanning()
   loadPartite()
   loadInfortuni()
   loadCertificati()
+  loadConvocazioni()
 })
 </script>
 
@@ -386,11 +466,17 @@ onMounted(async () => {
 }
 
 .society-name {
-  font-size: clamp(1.35rem, 2.6vw, 1.7rem);
+  font-size: clamp(2rem, 6vw, 3.5rem);
   font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--color-text);
-  line-height: 1.1;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.name-gradient {
+  background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text) 40%, var(--color-primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .header-subtitle {
@@ -571,6 +657,14 @@ onMounted(async () => {
   gap: 12px;
 }
 
+.match-row {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.match-row:last-child { border-bottom: none; padding-bottom: 0; }
+.match-row .match-teams .team { text-align: left; }
+.match-row .match-teams .pill { flex-shrink: 0; }
+
 .match-teams {
   display: flex;
   align-items: center;
@@ -659,15 +753,38 @@ onMounted(async () => {
   color: var(--color-warning);
 }
 
+.check-ic.green {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.check-ic.violet {
+  background: var(--color-violet-soft);
+  color: var(--color-violet);
+}
+
 .check-label {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text);
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .check-label strong {
   font-weight: 800;
+}
+
+.check-sub {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 1px 6px;
 }
 
 .check-arrow {

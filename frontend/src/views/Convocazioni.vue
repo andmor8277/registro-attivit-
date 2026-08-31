@@ -2,13 +2,7 @@
   <div class="conv-page">
     <header class="page-header">
       <div class="header-left">
-        <button class="icon-btn" @click="mobileMenuOpen = true; window.scrollTo(0, 0)" aria-label="Menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
-        <button class="icon-btn" @click="router.push('/scelta/' + route.params.id)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        </button>
-        <button class="icon-btn" @click="router.push('/')">
+        <button class="icon-btn" @click="router.push('/')" aria-label="Home">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         </button>
       </div>
@@ -21,45 +15,40 @@
       </div>
     </header>
 
-    <!-- MOBILE MENU -->
-    <div v-if="mobileMenuOpen" class="mobile-overlay" @click="mobileMenuOpen = false">
-      <div class="mobile-drawer" @click.stop>
-        <div class="mobile-drawer-header">
-          <span class="mobile-drawer-title">Menu</span>
-          <button class="icon-btn" @click="mobileMenuOpen = false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div class="mobile-drawer-body">
-          <div class="drawer-section">
-            <div class="drawer-section-title">Storico</div>
-            <div v-for="c in storico" :key="c.id" :class="['drawer-link', { active: convocazioneId === c.id }]" @click="caricaConvocazione(c.id); mobileMenuOpen = false">
-              {{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' — ' + formatDataShort(c.data_fine) : '' }}
-            </div>
-            <div v-if="storico.length === 0" class="drawer-empty">Nessun storico</div>
-          </div>
-          <div class="drawer-section">
-            <div class="drawer-section-title">Mister</div>
-            <div v-for="r in responsabili" :key="r.id" class="drawer-mister">
-              <span class="mister-name">{{ r.cognome }}</span>
-              <span class="mister-tel">{{ r.cellulare }}</span>
-            </div>
-            <div v-if="responsabili.length === 0" class="drawer-empty">Nessun mister</div>
-          </div>
-          <div class="drawer-section">
-            <div class="drawer-section-title">Weekend Gare</div>
-            <div v-for="w in weekendDisponibili" :key="w.id" class="drawer-link drawer-weekend-link" @click="creaConvocazioneDaWeekend(w); mobileMenuOpen = false">
-              <span>{{ w.nome || 'Weekend' }}</span>
-              <span class="drawer-weekend-meta">{{ formatDataShort(w.data_inizio) }} · {{ w.partite.length }} gara{{ w.partite.length > 1 ? 'e' : '' }}</span>
-            </div>
-            <div v-if="weekendDisponibili.length === 0" class="drawer-empty">Nessun weekend</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div class="conv-body">
       <main class="editor">
+        <!-- WEEKEND CHIPS -->
+        <div class="weekend-chips">
+          <button v-for="c in convocazioniAttive" :key="'a-' + c.id" :class="['wk', { active: convocazioneId === c.id }]" @click="caricaConvocazione(c.id)">
+            {{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' \u2013 ' + formatDataShort(c.data_fine) : '' }}
+          </button>
+          <button v-for="w in weekendDisponibili" :key="'w-' + w.id" class="wk wk-new" @click="creaConvocazioneDaWeekend(w)">
+            + {{ w.nome || formatDataShort(w.data_inizio) }}
+          </button>
+          <button class="wk wk-new" @click="nuovaConvocazione()">+ nuovo</button>
+        </div>
+
+        <!-- STORICO -->
+        <div v-if="convocazioniStorico.length > 0" class="storico-section">
+          <div class="storico-title">Storico</div>
+          <div class="storico-chips">
+            <button v-for="c in convocazioniStorico" :key="'s-' + c.id" :class="['wk', 'wk-storico', { active: convocazioneId === c.id }]" @click="caricaConvocazione(c.id)">
+              {{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' \u2013 ' + formatDataShort(c.data_fine) : '' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- MISTER -->
+        <div v-if="responsabili.length > 0" class="mister-section">
+          <div class="mister-title">Mister</div>
+          <div class="mister-list">
+            <div v-for="r in responsabili" :key="r.id" class="mister-row">
+              <span class="mister-name">{{ r.cognome }} {{ r.nome }}</span>
+              <span class="mister-tel">{{ r.cellulare }}</span>
+            </div>
+          </div>
+        </div>
+
         <template v-if="convocazione">
           <!-- TOPBAR: date + azioni -->
           <div class="editor-topbar">
@@ -122,17 +111,6 @@
             </button>
           </div>
 
-          <!-- WEEKEND CHIPS -->
-          <div class="weekend-chips">
-            <button v-for="c in storico" :key="'s-' + c.id" :class="['wk', { active: convocazioneId === c.id }]" @click="caricaConvocazione(c.id)">
-              {{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' \u2013 ' + formatDataShort(c.data_fine) : '' }}
-            </button>
-            <button v-for="w in weekendDisponibili" :key="'w-' + w.id" class="wk wk-new" @click="creaConvocazioneDaWeekend(w)">
-              + {{ w.nome || formatDataShort(w.data_inizio) }}
-            </button>
-            <button class="wk wk-new" @click="nuovaConvocazione()">+ nuovo</button>
-          </div>
-
           <!-- GARE TABS -->
           <div class="gara-tabs" v-if="convocazione.gare.length > 0">
             <button v-for="(g, gi) in convocazione.gare" :key="'t-' + gi" :class="['gtab', { active: gi === activeGaraIdx }]" @click="activeGaraIdx = gi">
@@ -144,7 +122,7 @@
           <div class="conv-grid" v-if="garaAttiva">
             <div class="card">
               <div class="card-h">
-                <h2><input v-model="garaAttiva.gara" class="gara-title-inline" placeholder="THOF vs Avversario" /></h2>
+                <h2><input v-model="garaAttiva.gara" class="gara-title-inline" :placeholder="nomeSocieta + ' vs Avversario'" /></h2>
                 <span class="conv-count">{{ countAssigned(garaAttiva) }} convocati</span>
               </div>
               <ul class="roster">
@@ -174,7 +152,7 @@
                   <li><span class="k">Data</span><span class="v"><input type="date" v-model="garaAttiva.data" /></span></li>
                   <li><span class="k">Campo</span><span class="v"><input v-model="garaAttiva.campo" placeholder="Comunale n.1" /></span></li>
                   <li><span class="k">Indirizzo</span><span class="v"><input v-model="garaAttiva.indirizzo" placeholder="&mdash;" /></span></li>
-                  <li><span class="k">Ritrovo</span><span class="v"><input v-model="garaAttiva.appuntamento" placeholder="13:45 &middot; spogliatoi" /></span></li>
+                  <li><span class="k">Orario Appuntamento</span><span class="v"><input v-model="garaAttiva.appuntamento" placeholder="13:45 &middot; spogliatoi" /></span></li>
                   <li><span class="k">Inizio gara</span><span class="v"><input v-model="garaAttiva.inizio_gara" placeholder="15:00" /></span></li>
                   <li><span class="k">Mister</span>
                     <span class="v">
@@ -231,7 +209,7 @@
           </div>
         </template>
 
-        <div v-else class="empty-state">
+        <div v-if="!convocazione" class="empty-state">
           <div class="empty-icon">&#9917;</div>
           <div class="empty-title">Nessuna convocazione attiva</div>
           <div class="empty-sub">Seleziona un weekend dai chip sopra o crea una nuova convocazione</div>
@@ -257,6 +235,8 @@ const route = useRoute()
 const { categoriaAttiva, societaAttiva, stagioneCorrente } = useStore()
 const categoriaId = parseInt(route.params.id)
 
+const nomeSocieta = computed(() => societaAttiva.value?.nome_breve || societaAttiva.value?.nome || 'Noi')
+
 const base = '/api'
 const token = () => localStorage.getItem('token')
 const headers = () => ({ Authorization: 'Bearer ' + token() })
@@ -268,7 +248,6 @@ const persone = ref([])
 const responsabili = ref([])
 const numPartite = ref(1)
 const registro = ref([])
-const mobileMenuOpen = ref(false)
 const weekendDisponibili = ref([])
 const pickerOpen = ref(false)
 const pickerGara = ref(null)
@@ -277,6 +256,20 @@ const pickerSearch = ref('')
 const activeGaraIdx = ref(0)
 
 const garaAttiva = computed(() => convocazione.value?.gare?.[activeGaraIdx.value] || null)
+
+function todayStr() { return new Date().toISOString().split('T')[0] }
+
+const convocazioniAttive = computed(() =>
+  storico.value
+    .filter(c => !c.data_fine || c.data_fine >= todayStr())
+    .sort((a, b) => a.data_inizio.localeCompare(b.data_inizio))
+)
+
+const convocazioniStorico = computed(() =>
+  storico.value
+    .filter(c => c.data_fine && c.data_fine < todayStr())
+    .sort((a, b) => b.data_inizio.localeCompare(a.data_inizio))
+)
 
 const filteredPickerPlayers = computed(() => {
   const players = getGiocatoriSettimanaPrecedente()
@@ -747,6 +740,7 @@ onMounted(async () => {
   await loadStorico()
   await loadMisters()
   await loadWeekendDisponibili()
+  if (convocazioniAttive.value.length > 0) await caricaConvocazione(convocazioniAttive.value[0].id)
 })
 </script>
 
@@ -1001,6 +995,58 @@ onMounted(async () => {
 .wk.active { background: var(--color-text); border-color: var(--color-text); color: #fff; }
 .wk-new { border-style: dashed; color: #dc2626; border-color: rgba(220, 38, 38, 0.4); background: transparent; }
 .wk-new:hover { border-color: #dc2626; background: rgba(220, 38, 38, 0.05); color: #dc2626; }
+
+/* ---- STORICO ---- */
+.storico-section { margin-bottom: 14px; }
+.storico-title {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+.storico-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.storico-chips::-webkit-scrollbar { display: none; }
+.wk-storico { opacity: 0.6; }
+.wk-storico:hover { opacity: 1; }
+.wk-storico.active { opacity: 1; }
+
+/* ---- MISTER ---- */
+.mister-section { margin-bottom: 14px; }
+.mister-title {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+.mister-list {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.mister-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: 0.85rem;
+}
+.mister-row:last-child { border-bottom: none; }
+.mister-row .mister-name { color: var(--color-text); font-weight: 600; }
+.mister-row .mister-tel { color: var(--color-text-muted); font-family: var(--font-mono, monospace); }
 
 /* ---- GARA TABS ---- */
 .gara-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -1364,71 +1410,6 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
 .picker-surname { font-size: 0.7rem; color: var(--color-text-muted); }
 .picker-check { color: #dc2626; flex-shrink: 0; }
 .picker-check svg { width: 16px; height: 16px; }
-
-/* ---- MOBILE MENU ---- */
-.mobile-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(22, 24, 29, 0.45);
-  z-index: 200;
-  animation: fadeIn 0.2s ease-out;
-  backdrop-filter: blur(6px);
-}
-.mobile-drawer {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 280px;
-  max-width: 85vw;
-  background: var(--color-surface);
-  animation: slideInLeft 0.3s ease-out;
-  overflow-y: auto;
-  border-right: 1px solid var(--color-border);
-}
-.mobile-drawer-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--color-border-light);
-  background: var(--color-surface);
-}
-.mobile-drawer-title { font-weight: 700; font-size: 0.9rem; color: var(--color-text); }
-.mobile-drawer-body { padding: 1rem; }
-.drawer-section { margin-bottom: 1.25rem; }
-.drawer-section-title {
-  font-weight: 700;
-  font-size: 0.6rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  margin-bottom: 0.5rem;
-}
-.drawer-link {
-  padding: 0.6rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  margin-bottom: 2px;
-  transition: all 0.15s;
-}
-.drawer-link:hover { background: var(--color-bg); color: var(--color-text); }
-.drawer-link.active { background: #dc2626; color: #fff; font-weight: 600; }
-.drawer-weekend-link { display: flex; flex-direction: column; gap: 2px; }
-.drawer-weekend-meta { font-size: 0.65rem; color: var(--color-text-muted); }
-.drawer-mister {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.4rem 0.75rem;
-  font-size: 0.8rem;
-  border-bottom: 1px solid var(--color-border-light);
-}
-.drawer-mister:last-child { border-bottom: none; }
-.mister-name { color: var(--color-text); font-weight: 600; }
-.mister-tel { color: var(--color-text-muted); }
-.drawer-empty { font-size: 0.7rem; color: var(--color-text-muted); padding: 0.5rem; text-align: center; }
 
 /* ---- ANIMATIONS ---- */
 @keyframes slideInLeft {

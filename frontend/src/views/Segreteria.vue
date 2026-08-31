@@ -39,7 +39,8 @@
             </button>
           </div>
           <div class="modal-body">
-            <p class="gdpr-info">Confermi di voler visualizzare i dati sensibili (CF, telefoni)?</p>
+            <p class="gdpr-info">Per sbloccare i dati sensibili (CF, telefoni) inserisci il tuo codice fiscale:</p>
+            <input v-model="gdprModal.password" @keyup.enter="sbloccaGdpr" class="gdpr-cf-input" placeholder="Codice fiscale" maxlength="16" autocomplete="off" />
             <button class="btn-sblocca" @click="sbloccaGdpr">Sblocca</button>
             <p v-if="gdprModal.error" class="gdpr-error">{{ gdprModal.error }}</p>
           </div>
@@ -264,17 +265,22 @@ const daRecuperare = computed(() => {
 
 async function sbloccaGdpr() {
   gdprModal.value.error = ''
+  if (!gdprModal.value.password) {
+    gdprModal.value.error = 'Inserisci il tuo codice fiscale'
+    return
+  }
   try {
-    const res = await fetch('/api/auth/verify-gdpr', {
+    const res = await fetch(`/api/auth/verify-gdpr?codice_fiscale=${encodeURIComponent(gdprModal.value.password)}`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
     })
     if (res.ok) {
       gdprSbloccato.value = true
       gdprModal.value.show = false
+      gdprModal.value.password = ''
       sessionStorage.setItem('gdpr_sbloccato', 'true')
     } else {
-      gdprModal.value.error = 'Non autorizzato'
+      gdprModal.value.error = 'Codice fiscale non valido'
     }
   } catch(e) {
     gdprModal.value.error = 'Errore di verifica'
@@ -611,6 +617,17 @@ async function sbloccaGdpr() {
   font-size: 0.875rem;
   color: var(--color-text-secondary);
   margin-bottom: 1rem;
+}
+
+.gdpr-cf-input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  text-transform: uppercase;
 }
 
 .form-group {

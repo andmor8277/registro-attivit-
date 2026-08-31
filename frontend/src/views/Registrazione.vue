@@ -80,7 +80,7 @@ import { googleCallback, registraUtenteGoogle } from '../api/index.js'
 import { useStore } from '../store.js'
 
 const router = useRouter()
-const { setToken, utenteAttivo, setSocietaAttiva } = useStore()
+const { setToken, utenteAttivo, setSocietaAttiva, societaAttiva, setCategoria } = useStore()
 
 const loading = ref(false)
 const errore = ref('')
@@ -180,11 +180,18 @@ async function goHomeByRole(user) {
     const ruolo = user?.ruolo
     if (ruolo === 'segreteria') return router.replace('/segreteria')
     if (ruolo === 'infermeria') return router.replace('/infermeria')
+    if (user?.societa_id && !societaAttiva.value) {
+      const { getSocietaById } = await import('../api/index.js')
+      try {
+        const socRes = await getSocietaById(user.societa_id)
+        setSocietaAttiva(socRes.data)
+      } catch (e) {}
+    }
     if (ruolo === 'mister' || ruolo === 'dirigente') {
       const { getCategorie } = await import('../api/index.js')
-      const cats = (await getCategorie()).data || []
-      if (cats.length === 1) return router.replace('/scelta/' + cats[0].id)
-      if (ruolo === 'mister') return router.replace('/allenatori')
+      const cats = (await getCategorie(societaAttiva.value?.id)).data || []
+      if (cats.length) setCategoria(cats[0])
+      return router.replace('/')
     }
   } catch (e) {}
   router.replace('/')

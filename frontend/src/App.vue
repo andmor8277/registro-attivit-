@@ -16,17 +16,33 @@
           <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
           <span>Panoramica</span>
         </router-link>
-        <button class="side-item" :class="{ active: isActive(['/scelta', '/registro', '/dati', '/scheda-allenamento']) }" @click="vaiPaginaCategoria('scelta')">
+        <router-link v-if="!isMister" to="/allenatori" class="side-item" :class="{ active: isActive(['/allenatori']) }">
+          <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 15.3c2.7.4 4.5 2.2 4.5 4.7"/></svg>
+          <span>Gestione Squadre</span>
+        </router-link>
+        <button v-if="!isAdminSocieta" class="side-item" :class="{ active: isActive(['/scelta', '/registro', '/dati', '/scheda-allenamento']) }" @click="vaiPaginaCategoria('registro')">
           <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
           <span>Presenze</span>
         </button>
-        <button class="side-item" :class="{ active: isActive(['/convocazioni']) }" @click="vaiPaginaCategoria('convocazioni')">
+        <button v-if="!isAdminSocieta" class="side-item" :class="{ active: isActive(['/convocazioni']) }" @click="vaiPaginaCategoria('convocazioni')">
           <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
           <span>Convocazioni</span>
         </button>
-        <button class="side-item" :class="{ active: isActive(['/allenamenti']) }" @click="vaiPaginaCategoria('allenamenti')">
+        <button v-if="!isAdminSocieta" class="side-item" :class="{ active: isActive(['/allenamenti']) }" @click="vaiPaginaCategoria('allenamenti')">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
           <span>Allenamenti</span>
+        </button>
+        <button v-if="!isAdminSocieta" class="side-item" :class="{ active: isActive(['/dati']) }" @click="vaiPaginaCategoria('dati')">
+          <svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6M9 13h6M9 17h6M9 9h2"/></svg>
+          <span>Dati &amp; Matricole</span>
+        </button>
+        <button v-if="!isAdminSocieta" class="side-item" :class="{ active: isActive(['/reportistica']) }" @click="vaiPaginaCategoria('reportistica')">
+          <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
+          <span>Reportistica</span>
+        </button>
+        <button v-if="!isAdminSocieta" class="side-item" :class="{ active: isActive(['/valutazioni']) }" @click="vaiPaginaCategoria('valutazioni')">
+          <svg viewBox="0 0 24 24"><path d="M12 2l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3 6.2 19.9l1.1-6.5L2.6 8.8l6.5-.9z"/></svg>
+          <span>Valutazioni</span>
         </button>
         <router-link v-if="canInfermeria" to="/infermeria" class="side-item" :class="{ active: isActive(['/infermeria']) }">
           <svg viewBox="0 0 24 24"><path d="M12 21C7 17 3 13.5 3 9.5A5.5 5.5 0 0113.6 6H12a5.5 5.5 0 018 3.5c0 4-4 7.5-8 11.5z"/></svg>
@@ -38,12 +54,8 @@
           <span>Segreteria</span>
         </router-link>
 
-        <div class="nav-label">Amministrazione</div>
-        <router-link to="/allenatori" class="side-item" :class="{ active: isActive(['/allenatori']) }">
-          <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 15.3c2.7.4 4.5 2.2 4.5 4.7"/></svg>
-          <span>Squadre e ruoli</span>
-        </router-link>
-        <router-link v-if="isAdminUtente && !isSuperAdmin" to="/responsabili" class="side-item" :class="{ active: isActive(['/responsabili']) }">
+        <div class="nav-label" v-if="!isMister">Amministrazione</div>
+        <router-link v-if="isAdminUtente || isSuperAdmin" to="/responsabili" class="side-item" :class="{ active: isActive(['/responsabili']) }">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg>
           <span>Responsabili</span>
         </router-link>
@@ -51,7 +63,7 @@
           <svg viewBox="0 0 24 24"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
           <span>Cambia societ&agrave;</span>
         </button>
-        <router-link v-if="isAdminUtente || isSuperAdmin" to="/admin" class="side-item" :class="{ active: isActive(['/admin']) }">
+        <router-link v-if="isSuperAdmin" to="/admin" class="side-item" :class="{ active: isActive(['/admin']) }">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
           <span>Impostazioni</span>
         </router-link>
@@ -247,14 +259,14 @@
         </svg>
         <span>Panoramica</span>
       </button>
-      <button class="bottom-nav-item" :class="{ active: isActive(['/scelta', '/registro', '/dati']) }" @click="vaiPaginaCategoria('scelta')">
+      <button v-if="!isAdminSocieta" class="bottom-nav-item" :class="{ active: isActive(['/scelta', '/registro', '/dati']) }" @click="vaiPaginaCategoria('registro')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="3" y="4" width="18" height="17" rx="2"/>
           <path d="M3 9h18M8 2v4M16 2v4"/>
         </svg>
         <span>Presenze</span>
       </button>
-      <button class="bottom-nav-item" :class="{ active: isActive(['/convocazioni']) }" @click="vaiPaginaCategoria('convocazioni')">
+      <button v-if="!isAdminSocieta" class="bottom-nav-item" :class="{ active: isActive(['/convocazioni']) }" @click="vaiPaginaCategoria('convocazioni')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M4 6h16M4 12h16M4 18h10"/>
         </svg>
@@ -327,7 +339,9 @@ const passwordErrore = ref('')
 const passwordSuccess = ref('')
 const passwordLoading = ref(false)
 const isSuperAdmin = computed(() => utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'super_admin')
+const isMister = computed(() => utenteAttivo.value?.ruolo === 'mister')
 const isAdminUtente = computed(() => !!utenteAttivo.value?.is_admin)
+const isAdminSocieta = computed(() => isAdminUtente.value && !isSuperAdmin.value)
 const canSegreteria = computed(() => utenteAttivo.value?.ruolo === 'segreteria' || isAdminUtente.value || isSuperAdmin.value)
 const canInfermeria = computed(() => ['infermeria', 'admin', 'super_admin'].includes(utenteAttivo.value?.ruolo))
 const infortuniCount = ref(0)

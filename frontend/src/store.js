@@ -29,7 +29,16 @@ function applySocietaColors(societa) {
 }
 
 export function useStore() {
-  function setCategoria(cat) { categoriaAttiva.value = cat }
+  function setCategoria(cat) {
+    categoriaAttiva.value = cat
+    if (cat && cat.id) {
+      localStorage.setItem('categoria_id', cat.id)
+      localStorage.setItem('categoria_data', JSON.stringify(cat))
+    } else {
+      localStorage.removeItem('categoria_id')
+      localStorage.removeItem('categoria_data')
+    }
+  }
   function setToken(t) { token.value = t; localStorage.setItem('token', t) }
   function setStagioneCorrente(s) {
     stagioneCorrente.value = s
@@ -55,6 +64,7 @@ export function useStore() {
     token.value = null; 
     utenteAttivo.value = null; 
     societaAttiva.value = null
+    categoriaAttiva.value = null
     stagioneCorrente.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('societa_id')
@@ -62,6 +72,8 @@ export function useStore() {
     localStorage.removeItem('stagione_corrente')
     localStorage.removeItem('is_super_admin')
     localStorage.removeItem('is_admin')
+    localStorage.removeItem('categoria_id')
+    localStorage.removeItem('categoria_data')
   }
   
   // Carica società salvata
@@ -84,6 +96,19 @@ export function useStore() {
     try {
       stagioneCorrente.value = parseInt(savedStagione)
     } catch {}
+  }
+
+  // Carica categoria salvata
+  const savedCategoriaData = localStorage.getItem('categoria_data')
+  if (savedCategoriaData) {
+    try {
+      categoriaAttiva.value = JSON.parse(savedCategoriaData)
+    } catch (e) {
+      const savedCatId = localStorage.getItem('categoria_id')
+      if (savedCatId) {
+        categoriaAttiva.value = { id: parseInt(savedCatId) }
+      }
+    }
   }
   
   return { 
