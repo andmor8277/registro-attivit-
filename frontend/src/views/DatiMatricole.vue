@@ -150,8 +150,31 @@
             <input v-model="modal.data_nascita" type="date" />
           </div>
           <div class="form-field">
+            <label>Sesso</label>
+            <select v-model="modal.sesso">
+              <option value="">-</option>
+              <option value="M">Maschio</option>
+              <option value="F">Femmina</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Comune di Nascita</label>
+            <input v-model="modal.comune_nato" placeholder="es. Milano" />
+          </div>
+          <div class="form-field">
             <label>Codice Fiscale</label>
-            <input v-model="modal.codice_fiscale" maxlength="16" />
+            <div class="cf-input-row">
+              <input v-model="modal.codice_fiscale" maxlength="16" placeholder="Genera o inserisci" />
+              <button class="btn-genera-cf" type="button" @click="generaCf" title="Genera CF da nome, cognome, data nascita, sesso e comune">Genera</button>
+            </div>
+          </div>
+          <div class="form-field">
+            <label>Residenza</label>
+            <input v-model="modal.residenza" placeholder="Comune di residenza" />
+          </div>
+          <div class="form-field">
+            <label>Via</label>
+            <input v-model="modal.indirizzo" placeholder="Via / civico" />
           </div>
           <div class="form-field">
             <label>Tel. Papà</label>
@@ -261,7 +284,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../store.js'
-import { getPersone, updatePersona, createPersona, deletePersona, getGruppi, createGruppo, deleteGruppo, updateGruppo } from '../api/index.js'
+import { getPersone, updatePersona, createPersona, deletePersona, getGruppi, createGruppo, deleteGruppo, updateGruppo, generaCf as generaCfApi } from '../api/index.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -278,7 +301,7 @@ const isDirigente = computed(() => ['dirigente', 'segreteria', 'infermeria'].inc
 const gdprSbloccato = ref(false)
 const gdprModal = ref({ show: false, password: '', errore: '' })
 
-const modal = ref({ show: false, isNuovo: false, id: null, cognome: '', nome: '', numero_maglia: '', data_nascita: '', codice_fiscale: '', tel_papa: '', tel_mamma: '', matricola: '', scadenza_certificato: '', gruppo_id: 1 })
+const modal = ref({ show: false, isNuovo: false, id: null, cognome: '', nome: '', numero_maglia: '', data_nascita: '', sesso: '', comune_nato: '', codice_fiscale: '', cfGenerato: false, tel_papa: '', tel_mamma: '', matricola: '', scadenza_certificato: '', residenza: '', indirizzo: '', gruppo_id: 1 })
 
 function apriSbloccoGdpr() {
   gdprModal.value = { show: true, password: '', errore: '' }
@@ -349,11 +372,16 @@ function apriModifica(p) {
     nome: p.nome,
     numero_maglia: p.numero_maglia || '',
     data_nascita: p.data_nascita || '',
+    sesso: p.sesso || '',
+    comune_nato: p.comune_nato || '',
     codice_fiscale: mascheraDato(p.codice_fiscale),
+    cfGenerato: false,
     tel_papa: mascheraDato(p.tel_papa),
     tel_mamma: mascheraDato(p.tel_mamma),
     matricola: p.matricola || '',
     scadenza_certificato: p.scadenza_certificato || '',
+    residenza: p.residenza || '',
+    indirizzo: p.indirizzo || '',
     gruppo_id: p.gruppo_id || 1
   }
 }
@@ -367,12 +395,52 @@ function apriNuovo() {
     nome: '',
     numero_maglia: '',
     data_nascita: '',
+    sesso: '',
+    comune_nato: '',
     codice_fiscale: '',
+    cfGenerato: false,
     tel_papa: '',
     tel_mamma: '',
     matricola: '',
     scadenza_certificato: '',
+    residenza: '',
+    indirizzo: '',
     gruppo_id: gruppiList.value.length > 0 ? (gruppiList.value.find(g => !g.nome.toLowerCase().includes('portieri')) || gruppiList.value[0]).id : null
+  }
+}
+
+async function generaCf() {
+  if (!modal.value.nome || !modal.value.cognome) {
+    alert('Inserisci nome e cognome per generare il CF')
+    return
+  }
+  if (!modal.value.data_nascita) {
+    alert('Inserisci la data di nascita per generare il CF')
+    return
+  }
+  if (!modal.value.sesso) {
+    alert('Seleziona il sesso per generare il CF')
+    return
+  }
+  if (!modal.value.comune_nato) {
+    alert('Inserisci il comune di nascita per generare il CF')
+    return
+  }
+  try {
+    const res = await generaCfApi({
+      nome: modal.value.nome,
+      cognome: modal.value.cognome,
+      data_nascita: modal.value.data_nascita,
+      sesso: modal.value.sesso,
+      comune_nato: modal.value.comune_nato
+    })
+    const cf = res?.data?.codice_fiscale ?? res?.codice_fiscale
+    if (cf) {
+      modal.value.codice_fiscale = cf
+      modal.value.cfGenerato = true
+    }
+  } catch (e) {
+    alert(e.response?.data?.detail || 'Errore nella generazione del CF')
   }
 }
 
@@ -382,11 +450,13 @@ async function salva() {
     return
   }
   
-  if (!modal.value.isNuovo && !gdprSbloccato.value && (modal.value.codice_fiscale || modal.value.tel_papa || modal.value.tel_mamma)) {
+  const cfModificato = modal.value.codice_fiscale && !modal.value.codice_fiscale.startsWith('••') && !modal.value.cfGenerato
+  const telModificato = (modal.value.tel_papa && !modal.value.tel_papa.startsWith('••')) || (modal.value.tel_mamma && !modal.value.tel_mamma.startsWith('••'))
+  if (!modal.value.isNuovo && !gdprSbloccato.value && (cfModificato || telModificato)) {
     alert('Sblocca i dati GDPR prima di modificare CF o telefoni')
     return
   }
-  
+
   try {
     const data = {
       nome: modal.value.nome,
@@ -394,12 +464,16 @@ async function salva() {
       gruppo_id: modal.value.gruppo_id || 1,
       categoria_id: categoriaId,
       data_nascita: modal.value.data_nascita || null,
+      sesso: modal.value.sesso || null,
+      comune_nato: modal.value.comune_nato || null,
       codice_fiscale: modal.value.codice_fiscale?.startsWith('••') ? null : (modal.value.codice_fiscale || null),
       tel_papa: modal.value.tel_papa?.startsWith('••') ? null : (modal.value.tel_papa || null),
       tel_mamma: modal.value.tel_mamma?.startsWith('••') ? null : (modal.value.tel_mamma || null),
       matricola: modal.value.matricola || null,
       numero_maglia: modal.value.numero_maglia ? parseInt(modal.value.numero_maglia) : null,
-      scadenza_certificato: modal.value.scadenza_certificato || null
+      scadenza_certificato: modal.value.scadenza_certificato || null,
+      residenza: modal.value.residenza || null,
+      indirizzo: modal.value.indirizzo || null
     }
     
     if (modal.value.isNuovo) {
@@ -1013,6 +1087,35 @@ tr:last-child td { border-bottom: none; }
   outline: none;
   border-color: rgba(220, 38, 38, 0.4);
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08);
+}
+
+.cf-input-row {
+  display: flex;
+  gap: 0.375rem;
+  align-items: stretch;
+}
+
+.cf-input-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.btn-genera-cf {
+  padding: 0 0.75rem;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  border-radius: 10px;
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-genera-cf:hover {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.5);
 }
 
 .modal-actions {

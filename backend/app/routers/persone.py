@@ -133,7 +133,7 @@ def get_persone(request: Request, categoria_id: Optional[int] = None, db: Sessio
     else:
         query = f"""
             SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id,
-                    p.data_nascita, p.matricola,
+                    p.data_nascita, p.sesso, p.comune_nato, p.matricola,
                     p.numero_maglia, p.scadenza_certificato, p.societa_id,
                     p.residenza, p.indirizzo, p.cittadinanza,
                     p.email1, p.email2, p.taglia, p.note
