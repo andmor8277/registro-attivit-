@@ -61,7 +61,8 @@ def get_giocatori_lista(lista_id: int, db: Session = Depends(get_db), current_us
     if societa_id and lista.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     result = db.execute(text("""
-        SELECT p.id as persona_id, p.nome, p.cognome, p.data_nascita, p.codice_fiscale,
+        SELECT p.id as persona_id, p.nome, p.cognome, p.data_nascita, p.sesso,
+               p.comune_nato, p.residenza, p.indirizzo, p.codice_fiscale,
                p.matricola, p.numero_maglia, p.scadenza_certificato,
                p.tel_papa, p.tel_mamma, p.email1,
                g.nome as gruppo_nome, g.is_misto as gruppo_is_misto,
@@ -76,6 +77,10 @@ def get_giocatori_lista(lista_id: int, db: Session = Depends(get_db), current_us
         "id": r.id, "persona_id": r.persona_id,
         "nome": r.nome, "cognome": r.cognome,
         "data_nascita": str(r.data_nascita) if r.data_nascita else None,
+        "sesso": r.sesso,
+        "comune_nato": r.comune_nato,
+        "residenza": r.residenza,
+        "indirizzo": r.indirizzo,
         "codice_fiscale": r.codice_fiscale,
         "matricola": r.matricola,
         "numero_maglia": r.numero_maglia,

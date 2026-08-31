@@ -180,6 +180,10 @@ const colonneMenu = ref(false)
 
 const colonneDisponibili = [
   { key: 'data_nascita', label: 'Data Nascita', gdpr: true },
+  { key: 'sesso', label: 'Sesso', gdpr: false },
+  { key: 'comune_nato', label: 'Comune Nascita', gdpr: false },
+  { key: 'residenza', label: 'Residenza', gdpr: false },
+  { key: 'indirizzo', label: 'Via', gdpr: false },
   { key: 'codice_fiscale', label: 'Codice Fiscale', gdpr: true },
   { key: 'matricola', label: 'Matricola', gdpr: false },
   { key: 'numero_maglia', label: 'Nr. Maglia', gdpr: false },
