@@ -185,8 +185,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Generazione automatica codice fiscale, campo Sesso, certificati da verificare in Home
-
-## [7.2.0] - 2026-08-31
-
-### Added
-- Dati&Matricole e Liste Tornei: campi anagrafici completi (sesso, comune nascita, residenza, via) + generazione CF
