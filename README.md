@@ -63,7 +63,7 @@ registro_presenze/
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v7.1.0**.
+La versione attuale è **v7.2.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
 
@@ -72,6 +72,12 @@ Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
 - **Generazione Automatica Codice Fiscale**: nuovo pulsante "Genera CF" nella Scheda Giocatore che calcola il CF completo (16 caratteri) da nome, cognome, data di nascita, sesso e comune di nascita (lookup CUP su 8170 comuni), con nuovo campo "Sesso" (M/F) e migrazione DB
 - **Endpoint `POST /persone/genera-cf`**: calcolo lato server con algoritmo ufficiale (carattere di controllo modulo 26, giorno +40 per le femmine)
 - **Home - Certificati da Verificare**: la Panoramica mostra ora anche i giocatori senza certificato medico, non solo quelli scaduti
+
+### 🎉 Novità v7.2.0
+
+- **Dati & Matricole - Campi Anagrafici Completi**: nuovi campi Sesso (M/F), Comune di Nascita, Residenza (comune) e Via (indirizzo) nel modale giocatore, con pulsante "Genera" per calcolare il CF direttamente dalla pagina dati
+- **Liste Tornei - Colonne Anagrafiche**: nuove colonne selezionabili (Sesso, Comune Nascita, Residenza, Via) nella tabella e nell'export PDF della lista torneo, per creare le liste con tutti i dati anagrafici
+- **GDPR affinato**: i dati sensibili invariati (mascherati) non bloccano più il salvataggio dei campi non sensibili; il CF generato può essere salvato senza sblocco
 
 ### Novità v7.0.0 (Major Release)
 
@@ -208,7 +214,7 @@ Le credenziali sono configurate nel database. Contattare l'amministratore per l'
 - ✅ Raggruppamento per gruppi di allenamento
 
 ### Dati & Matricole
-- ✅ Tabella giocatori completa (nome, cognome, nr. maglia, data nascita, codice fiscale, telefono, matricola, scadenza certificato, gruppo)
+- ✅ Tabella giocatori completa (nome, cognome, nr. maglia, data nascita, sesso, comune nascita, residenza, via, codice fiscale, telefono, matricola, scadenza certificato, gruppo)
 - ✅ Ricerca per nome, cognome o matricola
 - ✅ Filtro per gruppo di allenamento
 - ✅ CRUD completo: creare, modificare, eliminare giocatori
@@ -240,6 +246,12 @@ Le credenziali sono configurate nel database. Contattare l'amministratore per l'
 - ✅ Dati mister con cellulare
 - ✅ Note per la convocazione
 - ✅ **Esportazione PDF** professionale
+
+### Liste Tornei
+- ✅ Creazione di più liste per categoria (es. una per torneo)
+- ✅ Selezione giocatori con ricerca
+- ✅ Colonne selezionabili: data nascita, sesso, comune nascita, residenza, via, codice fiscale, matricola, nr. maglia, telefoni, email, scadenza certificato, gruppo
+- ✅ **Esportazione PDF** con le colonne scelte
 
 ### Stagioni Calcistiche
 - ✅ Impostazione stagione corrente per tutte le categorie
