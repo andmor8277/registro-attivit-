@@ -180,8 +180,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Design system light, titoli a doppio colore leggibili, Panoramica Prossima gara unificata, Convocazioni attivo/storico/mister, Scheda Allenamento per gruppo Agonistica, GDPR CF
-
-## [7.1.0] - 2026-08-31
-
-### Added
-- Generazione automatica codice fiscale, campo Sesso, certificati da verificare in Home
