@@ -63,9 +63,23 @@ registro_presenze/
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v6.0.0**.
+La versione attuale è **v7.1.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
+
+### 🎉 Novità v7.1.0
+
+- **Generazione Automatica Codice Fiscale**: nuovo pulsante "Genera CF" nella Scheda Giocatore che calcola il CF completo (16 caratteri) da nome, cognome, data di nascita, sesso e comune di nascita (lookup CUP su 8170 comuni), con nuovo campo "Sesso" (M/F) e migrazione DB
+- **Endpoint `POST /persone/genera-cf`**: calcolo lato server con algoritmo ufficiale (carattere di controllo modulo 26, giorno +40 per le femmine)
+- **Home - Certificati da Verificare**: la Panoramica mostra ora anche i giocatori senza certificato medico, non solo quelli scaduti
+
+### Novità v7.0.0 (Major Release)
+
+- **Design System Light**: tema chiaro globale, titoli a doppio colore leggibili, pulizia residui dark in tutte le view
+- **Panoramica Prossima Gara Unificata**: sezione Home unica per la prossima gara
+- **Convocazioni Attivo/Storico/Mister**: separazione viste e gestione per ruolo
+- **Scheda Allenamento per Gruppo Agonistica**: metriche GPS a livello di gruppo
+- **GDPR CF**: gestione dati sensibili del codice fiscale
 
 ### 🎉 Novità v6.0.0 (Major Release)
 
@@ -198,6 +212,7 @@ Le credenziali sono configurate nel database. Contattare l'amministratore per l'
 - ✅ Ricerca per nome, cognome o matricola
 - ✅ Filtro per gruppo di allenamento
 - ✅ CRUD completo: creare, modificare, eliminare giocatori
+- ✅ Generazione automatica **Codice Fiscale** da dati anagrafici (nome, cognome, data nascita, sesso, comune di nascita)
 - ✅ Evidenziazione righe con certificato scaduto (arancione)
 - ✅ Protezione **GDPR**: dati sensibili (CF, telefono, data nascita) nascosti dietro password
 

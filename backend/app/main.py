@@ -779,6 +779,22 @@ def run_migrations():
                 print(f"Migration warning (resize tel): {e}")
                 conn.rollback()
 
+            # Add sesso to persone
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'persone' AND column_name = 'sesso'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text(
+                        "ALTER TABLE persone ADD COLUMN sesso VARCHAR(1)"
+                    ))
+                    conn.commit()
+                    print("Migration: Added sesso to persone")
+            except Exception as e:
+                print(f"Migration warning (persone sesso): {e}")
+                conn.rollback()
+
             # Add is_misto to gruppi
             try:
                 result = conn.execute(text(

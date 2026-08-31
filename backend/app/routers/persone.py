@@ -7,6 +7,7 @@ from ..database import get_db
 from ..routers.auth import get_current_user, get_super_admin
 from ..models import Utente
 from ..rate_limit import limiter
+from ..utils.codice_fiscale import genera_codice_fiscale
 from typing import Optional
 import logging
 
@@ -119,7 +120,7 @@ def get_persone(request: Request, categoria_id: Optional[int] = None, db: Sessio
     if is_admin:
         query = f"""
             SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id,
-                    p.data_nascita, p.codice_fiscale, p.matricola,
+                    p.data_nascita, p.sesso, p.codice_fiscale, p.matricola,
                     p.numero_maglia, p.scadenza_certificato, p.societa_id,
                     p.residenza, p.indirizzo, p.cittadinanza, p.tel_papa, p.tel_mamma,
                     p.email1, p.email2, p.prof_papa, p.prof_mamma, p.nome_papa, p.nome_mamma, p.comune_nato,
@@ -228,6 +229,20 @@ def delete_persona(persona_id: int, db: Session = Depends(get_db), current_user:
     db.delete(persona)
     db.commit()
     return {"ok": True}
+
+@router.post("/genera-cf")
+def genera_cf(data: dict, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    try:
+        cf = genera_codice_fiscale(
+            nome=data.get("nome"),
+            cognome=data.get("cognome"),
+            data_nascita=data.get("data_nascita"),
+            sesso=data.get("sesso"),
+            comune_nato=data.get("comune_nato"),
+        )
+        return {"codice_fiscale": cf}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # --- Public endpoints (no authentication required) ---
 
