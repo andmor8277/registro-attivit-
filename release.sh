@@ -7,10 +7,19 @@
 
 set -e
 
-# Leggi l'ultima versione dal CHANGELOG
+# Leggi l'ultima versione: considera SOLO tag semver (vX.Y.Z) raggiungibili da HEAD,
+# così i tag non-semver (es. checkpoint) non rompono il calcolo.
 get_last_version() {
-    local last_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-    echo "${last_tag#v}"
+    local last_tag
+    last_tag=$(git tag --merged HEAD 2>/dev/null \
+        | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+        | sort -t. -k1.2,1n -k2,2n -k3,3n \
+        | tail -1)
+    if [ -z "$last_tag" ]; then
+        echo "0.0.0"
+    else
+        echo "${last_tag#v}"
+    fi
 }
 
 # Calcola la nuova versione
