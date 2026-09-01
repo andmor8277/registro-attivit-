@@ -6,7 +6,7 @@ from ..database import get_db
 from ..routers.auth import get_current_user, get_admin
 from ..models import Utente, UtenteCategoria
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import date
 
 router = APIRouter(prefix="/categorie", tags=["categorie"])
@@ -17,6 +17,7 @@ class CategoriaCreate(BaseModel):
     stagione: Optional[int] = None
     giorni: Optional[str] = None
     ora_allenamento: Optional[str] = None
+    orari_giorni: Optional[Dict[str, str]] = None
     is_portieri: bool = False
     societa_id: Optional[int] = None
     parent_id: Optional[int] = None
@@ -179,6 +180,7 @@ def create_categoria(c: CategoriaCreate, db: Session = Depends(get_db), current_
         stagione=c.stagione,
         giorni=c.giorni,
         ora_allenamento=c.ora_allenamento,
+        orari_giorni=c.orari_giorni,
         is_portieri=1 if c.is_portieri else 0,
         parent_id=c.parent_id,
         data_inizio_stagione=c.data_inizio_stagione,
@@ -207,6 +209,7 @@ def update_categoria(categoria_id: int, c: CategoriaCreate, db: Session = Depend
     cat.stagione = c.stagione
     cat.giorni = c.giorni
     cat.ora_allenamento = c.ora_allenamento
+    cat.orari_giorni = c.orari_giorni
     cat.is_portieri = 1 if c.is_portieri else 0
     cat.parent_id = c.parent_id
     cat.data_inizio_stagione = c.data_inizio_stagione

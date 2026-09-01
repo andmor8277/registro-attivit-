@@ -485,6 +485,8 @@ async function impostaStagioneTutte() {
         anno: cat.anno,
         stagione: parseInt(stagioneModal.value.stagione),
         giorni: cat.giorni,
+        ora_allenamento: cat.ora_allenamento || null,
+        orari_giorni: cat.orari_giorni || null,
         is_portieri: cat.is_portieri === 1,
         data_inizio_stagione: stagioneModal.value.data_inizio_stagione || null,
         data_fine_stagione: stagioneModal.value.data_fine_stagione || null

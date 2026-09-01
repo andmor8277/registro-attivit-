@@ -674,6 +674,7 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useStore } from "../store.js"
+import { oraPerGiorno } from "../composables/categoriaOrari.js"
 import {
   getAllCategorie,
   getSpogliatoi,
@@ -798,9 +799,10 @@ function getCategorieGiorno(dataGiorno) {
 
 function categoriePerOrario(dataGiorno) {
   const cats = getCategorieGiorno(dataGiorno)
+  const dow = new Date(dataGiorno).getDay()
   const grouped = {}
   cats.forEach(c => {
-    const ora = c.ora_allenamento || 'Senza orario'
+    const ora = oraPerGiorno(c, dow)
     if (!grouped[ora]) grouped[ora] = []
     grouped[ora].push(c)
   })
@@ -875,9 +877,11 @@ function getAssegnazioneSpogliatoioGiorno(catId, itemId, dataGiorno) {
   return assegSpogliatoioSettimanali.value[key] !== undefined
 }
 
-function getOraCategoria(catId) {
+function getOraCategoria(catId, dataGiorno) {
   const cat = categorie.value.find(c => c.id === catId)
-  return cat ? (cat.ora_allenamento || 'Senza orario') : 'Senza orario'
+  if (!cat) return 'Senza orario'
+  const dow = new Date(dataGiorno).getDay()
+  return oraPerGiorno(cat, dow)
 }
 
 function getNonCensitaGlobalIdx(lista, squadra) {
@@ -885,12 +889,12 @@ function getNonCensitaGlobalIdx(lista, squadra) {
 }
 
 function isSpogliatoioOccupatoFascia(catId, itemId, dataGiorno) {
-  const ora = getOraCategoria(catId)
+  const ora = getOraCategoria(catId, dataGiorno)
   const dow = new Date(dataGiorno).getDay()
   if (categorie.value.some(c =>
     c.id !== catId &&
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora &&
+    oraPerGiorno(c, dow) === ora &&
     assegSpogliatoioSettimanali.value[`${c.id}_${itemId}_${dataGiorno}`] !== undefined
   )) return true
   return squadreNonCensiteSettimanali.value.some(s =>
@@ -900,11 +904,11 @@ function isSpogliatoioOccupatoFascia(catId, itemId, dataGiorno) {
 }
 
 function isCampoOccupatoFascia(catId, itemId, dataGiorno, metacampo) {
-  const ora = getOraCategoria(catId)
+  const ora = getOraCategoria(catId, dataGiorno)
   const dow = new Date(dataGiorno).getDay()
   const allCats = categorie.value.filter(c =>
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora
+    oraPerGiorno(c, dow) === ora
   )
   const ncSquadre = squadreNonCensiteSettimanali.value.filter(s =>
     s.ora === ora && s.dataGiorno === dataGiorno
@@ -933,11 +937,11 @@ function isCampoOccupatoFascia(catId, itemId, dataGiorno, metacampo) {
 }
 
 function isCampoTuttoOccupatoFascia(catId, itemId, dataGiorno) {
-  const ora = getOraCategoria(catId)
+  const ora = getOraCategoria(catId, dataGiorno)
   const dow = new Date(dataGiorno).getDay()
   const allCats = categorie.value.filter(c =>
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora
+    oraPerGiorno(c, dow) === ora
   )
   const ncSquadre = squadreNonCensiteSettimanali.value.filter(s =>
     s.ora === ora && s.dataGiorno === dataGiorno
@@ -961,7 +965,7 @@ function isSpogliatoioOccupatoNonCensitaGiorno(idx, itemId, dataGiorno) {
   const dow = new Date(dataGiorno).getDay()
   if (categorie.value.some(c =>
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora &&
+    oraPerGiorno(c, dow) === ora &&
     assegSpogliatoioSettimanali.value[`${c.id}_${itemId}_${dataGiorno}`] !== undefined
   )) return true
   return squadreNonCensiteSettimanali.value.some(s =>
@@ -977,7 +981,7 @@ function isCampoOccupatoNonCensitaGiorno(idx, itemId, dataGiorno, metacampo) {
   const dow = new Date(dataGiorno).getDay()
   const allCats = categorie.value.filter(c =>
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora
+    oraPerGiorno(c, dow) === ora
   )
   const ncSquadre = squadreNonCensiteSettimanali.value.filter(s =>
     s.ora === ora && s.dataGiorno === dataGiorno
@@ -1010,7 +1014,7 @@ function isCampoTuttoOccupatoNonCensitaGiorno(idx, itemId, dataGiorno) {
   const dow = new Date(dataGiorno).getDay()
   const allCats = categorie.value.filter(c =>
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora
+    oraPerGiorno(c, dow) === ora
   )
   const ncSquadre = squadreNonCensiteSettimanali.value.filter(s =>
     s.ora === ora && s.dataGiorno === dataGiorno
@@ -1132,12 +1136,12 @@ function toggleAssegnazioneSpogliatoioGiorno(catId, itemId, dataGiorno) {
   if (assegSpogliatoioSettimanali.value[key]) {
     delete assegSpogliatoioSettimanali.value[key]
   } else {
-    const ora = getOraCategoria(catId)
+    const ora = getOraCategoria(catId, dataGiorno)
     const dow = new Date(dataGiorno).getDay()
     const categorieStessaFascia = categorie.value.filter(c =>
       c.id !== catId &&
       (c.giorni || '').split(',').map(Number).includes(dow) &&
-      (c.ora_allenamento || 'Senza orario') === ora
+      oraPerGiorno(c, dow) === ora
     )
     categorieStessaFascia.forEach(c => {
       const otherKey = `${c.id}_${itemId}_${dataGiorno}`
@@ -1169,7 +1173,7 @@ function toggleAssegnazioneSpogliatoioNonCensitaGiorno(idx, itemId, dataGiorno) 
     const dow = new Date(dataGiorno).getDay()
     categorie.value.filter(c =>
       (c.giorni || '').split(',').map(Number).includes(dow) &&
-      (c.ora_allenamento || 'Senza orario') === ora
+      oraPerGiorno(c, dow) === ora
     ).forEach(c => {
       const otherKey = `${c.id}_${itemId}_${dataGiorno}`
       delete assegSpogliatoioSettimanali.value[otherKey]
@@ -1325,12 +1329,12 @@ function toggleAssegnazioneCampoGiorno(catId, itemId, dataGiorno, metacampo) {
     delete assegCampoSettimanali.value[key]
     return
   }
-  const ora = getOraCategoria(catId)
+  const ora = getOraCategoria(catId, dataGiorno)
   const dow = new Date(dataGiorno).getDay()
   const categorieStessaFascia = categorie.value.filter(c =>
     c.id !== catId &&
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora
+    oraPerGiorno(c, dow) === ora
   )
   if (metacampo == null || metacampo === 'FULL') {
     categorieStessaFascia.forEach(c => {
@@ -1386,7 +1390,7 @@ function toggleAssegnazioneCampoNonCensitaGiorno(idx, itemId, dataGiorno, metaca
   const dow = new Date(dataGiorno).getDay()
   const allCats = categorie.value.filter(c =>
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora
+    oraPerGiorno(c, dow) === ora
   )
   if (metacampo == null || metacampo === 'FULL') {
     allCats.forEach(c => {
@@ -1632,12 +1636,12 @@ function getAssegnazioneSpogliatoioDefault(catId, itemId, dataGiorno) {
 }
 
 function isSpogliatoioOccupatoDefault(catId, itemId, dataGiorno) {
-  const ora = getOraCategoria(catId)
+  const ora = getOraCategoria(catId, dataGiorno)
   const dow = new Date(dataGiorno).getDay()
   return categorie.value.some(c =>
     c.id !== catId &&
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora &&
+    oraPerGiorno(c, dow) === ora &&
     !!assegSpogliatoioDefault.value[`${c.id}_${itemId}_${dataGiorno}`]
   )
 }
@@ -1647,12 +1651,12 @@ function toggleAssegnazioneSpogliatoioDefault(catId, itemId, dataGiorno) {
   if (assegSpogliatoioDefault.value[key]) {
     delete assegSpogliatoioDefault.value[key]
   } else {
-    const ora = getOraCategoria(catId)
+    const ora = getOraCategoria(catId, dataGiorno)
     const dow = new Date(dataGiorno).getDay()
     categorie.value.filter(c =>
       c.id !== catId &&
       (c.giorni || '').split(',').map(Number).includes(dow) &&
-      (c.ora_allenamento || 'Senza orario') === ora
+      oraPerGiorno(c, dow) === ora
     ).forEach(c => {
       delete assegSpogliatoioDefault.value[`${c.id}_${itemId}_${dataGiorno}`]
     })
@@ -1680,11 +1684,11 @@ function getCampoLabelSuffissoDefault(catId, itemId, dataGiorno) {
 }
 
 function isCampoOccupatoDefault(catId, itemId, dataGiorno, metacampo) {
-  const ora = getOraCategoria(catId)
+  const ora = getOraCategoria(catId, dataGiorno)
   const dow = new Date(dataGiorno).getDay()
   const allCats = categorie.value.filter(c =>
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora
+    oraPerGiorno(c, dow) === ora
   )
   if (metacampo === 'A' || metacampo === 'B') {
     for (const c of allCats) {
@@ -1702,11 +1706,11 @@ function isCampoOccupatoDefault(catId, itemId, dataGiorno, metacampo) {
 }
 
 function isCampoTuttoOccupatoDefault(catId, itemId, dataGiorno) {
-  const ora = getOraCategoria(catId)
+  const ora = getOraCategoria(catId, dataGiorno)
   const dow = new Date(dataGiorno).getDay()
   const allCats = categorie.value.filter(c =>
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora
+    oraPerGiorno(c, dow) === ora
   )
   for (const c of allCats) {
     if (c.id === catId) continue
@@ -1723,12 +1727,12 @@ function toggleAssegnazioneCampoDefault(catId, itemId, dataGiorno, metacampo) {
     delete assegCampoDefault.value[key]
     return
   }
-  const ora = getOraCategoria(catId)
+  const ora = getOraCategoria(catId, dataGiorno)
   const dow = new Date(dataGiorno).getDay()
   const categorieStessaFascia = categorie.value.filter(c =>
     c.id !== catId &&
     (c.giorni || '').split(',').map(Number).includes(dow) &&
-    (c.ora_allenamento || 'Senza orario') === ora
+    oraPerGiorno(c, dow) === ora
   )
   if (metacampo == null || metacampo === 'FULL') {
     categorieStessaFascia.forEach(c => {

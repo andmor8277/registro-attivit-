@@ -273,8 +273,14 @@
               </div>
             </div>
             <div class="form-group">
-              <label>Orario di allenamento</label>
+              <label>Orario di allenamento (predefinito)</label>
               <input type="time" v-model="modal.ora_allenamento" step="900" />
+              <div class="orari-giorni-list" v-if="giorniOrdinati.length">
+                <div v-for="g in giorniOrdinati" :key="g.val" class="ora-giorno-row">
+                  <span class="ora-giorno-nome">{{ g.nome }}</span>
+                  <input type="time" v-model="modal.orari_giorni[g.val]" step="900" />
+                </div>
+              </div>
             </div>
             <div class="form-group" v-if="utenteAttivo?.is_admin && modal.id">
               <label>Utenti che possono accedere</label>
@@ -481,7 +487,10 @@ function isToday(giornoVal) {
   return new Date().getDay() === giornoVal
 }
 
-const modal = ref({ show: false, id: null, nome: "", anno: null, stagione: new Date().getFullYear(), giorniSel: [], ora_allenamento: "", is_portieri: false, parent_id: null, data_inizio_stagione: "", data_fine_stagione: "" })
+const modal = ref({ show: false, id: null, nome: "", anno: null, stagione: new Date().getFullYear(), giorniSel: [], ora_allenamento: "", orari_giorni: {}, is_portieri: false, parent_id: null, data_inizio_stagione: "", data_fine_stagione: "" })
+
+// Giorni selezionati nell'ordine Lun->Dom, per mostrare un campo orario per ciascuno
+const giorniOrdinati = computed(() => tuttiGiorni.filter(g => modal.value.giorniSel.includes(g.val)))
 
 function chiudiModal() {
   modal.value.show = false
@@ -490,7 +499,7 @@ function chiudiModal() {
 
 function apriNuova() {
   const currentYear = new Date().getMonth() >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1
-  modal.value = { show: true, id: null, nome: "", anno: null, stagione: currentYear, giorniSel: [], ora_allenamento: "", is_portieri: false, parent_id: null, data_inizio_stagione: "", data_fine_stagione: "" }
+  modal.value = { show: true, id: null, nome: "", anno: null, stagione: currentYear, giorniSel: [], ora_allenamento: "", orari_giorni: {}, is_portieri: false, parent_id: null, data_inizio_stagione: "", data_fine_stagione: "" }
   modalUtentiSel.value = []
   errore.value = ''
 }
@@ -549,6 +558,7 @@ async function apriModifica(cat) {
     show: true, id: cat.id, nome: cat.nome, anno: cat.anno, stagione: cat.stagione,
     giorniSel: cat.giorni ? cat.giorni.split(",").map(Number) : [],
     ora_allenamento: cat.ora_allenamento || "",
+    orari_giorni: { ...(cat.orari_giorni || {}) },
     is_portieri: cat.is_portieri === 1 || cat.is_portieri === true,
     parent_id: cat.parent_id || null,
     data_inizio_stagione: cat.data_inizio_stagione || "",
@@ -599,12 +609,15 @@ async function salvaCategoria() {
 
   const societaId = societaAttiva.value?.id || null
 
+  const orariGg = Object.fromEntries(Object.entries(modal.value.orari_giorni || {}).filter(([k, v]) => v))
+
   const payload = {
     nome: modal.value.nome,
     anno: modal.value.is_portieri ? null : parseInt(modal.value.anno),
     stagione: parseInt(modal.value.stagione),
     giorni: modal.value.giorniSel.sort().join(",") || null,
     ora_allenamento: modal.value.ora_allenamento || null,
+    orari_giorni: Object.keys(orariGg).length ? orariGg : null,
     is_portieri: modal.value.is_portieri,
     parent_id: modal.value.parent_id || null,
     societa_id: societaId,
@@ -1667,6 +1680,36 @@ onMounted(() => {
 
 .giorno-check input {
   display: none;
+}
+
+.orari-giorni-list {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.ora-giorno-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ora-giorno-nome {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  min-width: 90px;
+}
+
+.ora-giorno-row input[type="time"] {
+  flex: 1;
+  max-width: 160px;
 }
 
 .utenti-grid {
