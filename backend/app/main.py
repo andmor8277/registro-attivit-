@@ -635,6 +635,22 @@ def run_migrations():
                 print(f"Migration warning (categorie parent_id): {e}")
                 conn.rollback()
 
+            # orari_giorni on categorie for per-day training times
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'categorie' AND column_name = 'orari_giorni'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text(
+                        "ALTER TABLE categorie ADD COLUMN orari_giorni JSONB"
+                    ))
+                    conn.commit()
+                    print("Migration: Added orari_giorni to categorie")
+            except Exception as e:
+                print(f"Migration warning (categorie orari_giorni): {e}")
+                conn.rollback()
+
             # Create Agonistica and Scuola Calcio parent categories and Under categories
             try:
                 result = conn.execute(text(

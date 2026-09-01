@@ -21,7 +21,8 @@ class Categoria(Base):
     anno = Column(Integer, nullable=True)  # anno di nascita (es. 2014)
     stagione = Column(Integer, nullable=True)  # anno inizio stagione (es. 2025 per 2025/2026)
     giorni = Column(String(20), nullable=True)  # es. "1,3,5" = Lun,Mer,Ven
-    ora_allenamento = Column(String(10), nullable=True)  # es. "15:15", "17:30", "19:00"
+    ora_allenamento = Column(String(10), nullable=True)  # es. "15:15", "17:30", "19:00" (default)
+    orari_giorni = Column(JSONB, nullable=True)  # es. {"1": "18:00", "3": "19:00"} orario per giorno
     is_portieri = Column(Integer, default=0)  # 1 = portieri (cross-year)
     is_archiviata = Column(Integer, default=0)  # 1 = categoria archiviata
     parent_id = Column(Integer, ForeignKey("categorie.id"), nullable=True)  # categoria padre
