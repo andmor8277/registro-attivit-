@@ -29,7 +29,7 @@
           Home
         </button>
       </div>
-      <div class="header-main">
+      <div v-if="!selectedDay" class="header-main">
         <h1 class="category-name">
           <span class="name-gradient">{{ categoriaAttiva?.nome }} {{ categoriaAttiva?.anno }}</span>
         </h1>
@@ -494,6 +494,17 @@ async function loadCatalogo() {
   }
 }
 
+// Larghezza reale del campo dentro l'iframe (riportata dalla lavagna);
+// il pannello strumenti a lato riduce il campo rispetto al contenitore .board-area.
+function getBoardWidth() {
+  const refs = tacticalBoardRefs.value || []
+  for (let i = 0; i < refs.length; i++) {
+    const w = refs[i] && refs[i].boardWidth
+    if (w && w > 0) return w
+  }
+  return (document.querySelector('.board-area')?.clientWidth) || 650
+}
+
 function drawCatalogoPreviews() {
   catalogoEsercizi.value.forEach((ex, idx) => {
     const canvas = document.getElementById('cat-canvas-' + idx)
@@ -502,7 +513,7 @@ function drawCatalogoPreviews() {
     const fieldMode = ex.campo_con_righe === 'half' ? 'half' : (ex.campo_con_righe === 'blank' ? 'blank' : 'full')
     // Stesso rendering del PDF, in miniatura (elementi leggermente ingranditi per leggibilità)
     const rect = drawFieldCanvas(ctx, canvas.width, canvas.height, fieldMode)
-    const boardW = (document.querySelector('.board-area')?.clientWidth) || 650
+    const boardW = getBoardWidth()
     drawElementsCanvas(ctx, ex.elementi, rect, rect.fw / boardW, 1.8)
   })
 }
@@ -1172,7 +1183,7 @@ async function exportPdf() {
     const rect = drawFieldCanvas(ctx, canvasWidth, canvasHeight, fieldMode)
 
     // Elementi proporzionati al campo: riferimento = larghezza reale della lavagna a schermo
-    const boardW = (document.querySelector('.board-area')?.clientWidth) || 650
+    const boardW = getBoardWidth()
     drawElementsCanvas(ctx, ex.elementi, rect, rect.fw / boardW)
 
     // Aggiungi immagine al PDF

@@ -30,6 +30,7 @@ const emit = defineEmits(['update:elements', 'update:fieldMode'])
 const boardIframe = ref(null)
 const iframeSrc = ref('/lavagna-20250702.html')
 const boardHeight = ref(0)
+const boardWidth = ref(0)
 const containerStyle = computed(() => ({
   height: boardHeight.value > 0 ? boardHeight.value + 'px' : '60vh'
 }))
@@ -85,6 +86,8 @@ function handleMessage(event) {
   if (event.data && event.data.type === 'requestHeight') {
     const h = Math.round(event.data.height || 0)
     if (h > 0) boardHeight.value = Math.max(240, h)
+    const w = Math.round(event.data.width || 0)
+    if (w > 0) boardWidth.value = w
     return
   }
 
@@ -164,7 +167,7 @@ function requestElements() {
   })
 }
 
-defineExpose({ requestElements })
+defineExpose({ requestElements, boardWidth })
 </script>
 
 <style scoped>
