@@ -108,6 +108,12 @@
                 <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
               </svg>
             </button>
+            <button @click="rinviaEmail(inv)" class="btn-rinvia" :disabled="inv.rinvio_in_corso" title="Rinvia email">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </button>
             <button @click="eliminaInvitoUtente(inv.id)" class="btn-elimina" title="Elimina">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6"/>
@@ -190,7 +196,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '../store.js'
-import { getUtenti, deleteUtente, resetPassword, assegnaCategorie, getCategorie, getCategoriaUtenti, getSocieta, api, creaInvito, listaInviti, eliminaInvito } from '../api/index.js'
+import { getUtenti, deleteUtente, resetPassword, assegnaCategorie, getCategorie, getCategoriaUtenti, getSocieta, api, creaInvito, listaInviti, eliminaInvito, rinviaInvito } from '../api/index.js'
 
 const router = useRouter()
 const { societaAttiva, utenteAttivo } = useStore()
@@ -234,7 +240,10 @@ async function caricaInviti() {
   try {
     const socId = isSuperAdmin.value ? societaIdSelezionata.value : societaAttiva.value?.id
     const res = await listaInviti(socId)
-    inviti.value = res.data.filter(i => !i.usato)
+    const now = new Date()
+    inviti.value = res.data
+      .filter(i => !i.usato && new Date(i.scade) > now)
+      .map(i => ({ ...i, rinvio_in_corso: false }))
   } catch (e) {
     console.error('Errore caricamento inviti:', e)
   }
@@ -267,6 +276,22 @@ async function eliminaInvitoUtente(id) {
   } catch (e) {
     invitoError.value = true
     invitoMsg.value = 'Errore nell\'eliminazione'
+  }
+}
+
+async function rinviaEmail(inv) {
+  inv.rinvio_in_corso = true
+  invitoMsg.value = ''
+  invitoError.value = false
+  try {
+    await rinviaInvito(inv.id)
+    invitoMsg.value = 'Email rinviata a ' + inv.email
+    invitoError.value = false
+  } catch (e) {
+    invitoError.value = true
+    invitoMsg.value = e.response?.data?.detail || 'Errore nel rinvio dell\'email'
+  } finally {
+    inv.rinvio_in_corso = false
   }
 }
 
@@ -1148,6 +1173,7 @@ onMounted(() => {
 }
 
 .btn-copia,
+.btn-rinvia,
 .btn-elimina {
   background: transparent;
   border: 1px solid var(--color-border);
@@ -1165,12 +1191,23 @@ onMounted(() => {
   color: #dc2626;
 }
 
+.btn-rinvia:hover {
+  border-color: #10b981;
+  color: #10b981;
+}
+
+.btn-rinvia:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-elimina:hover {
   border-color: #ef4444;
   color: #ef4444;
 }
 
 .btn-copia svg,
+.btn-rinvia svg,
 .btn-elimina svg {
   width: 16px;
   height: 16px;

@@ -23,6 +23,24 @@ class InvitoCreate(BaseModel):
     societa_id: Optional[int] = None
 
 
+def costruisci_email_invito(societa_nome: str, ruolo: str, invite_link: str) -> str:
+    return f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Invito a {societa_nome}</h2>
+        <p>Sei stato invitato a unirti a <strong>{societa_nome}</strong> come <strong>{ruolo}</strong>.</p>
+        <p>Clicca sul link sottostante per accedere:</p>
+        <p>
+            <a href="{invite_link}" style="background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Accedi con Google
+            </a>
+        </p>
+        <p style="color: #666; font-size: 14px;">Questo link scadrà tra 30 giorni.</p>
+    </body>
+    </html>
+    """
+
+
 @router.post("/")
 def crea_invito(
     data: InvitoCreate,
@@ -87,21 +105,7 @@ def crea_invito(
 
     # Invia email
     societa_nome = societa.nome
-    body_html = f"""
-    <html>
-    <body style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Invito a {societa_nome}</h2>
-        <p>Sei stato invitato a unirti a <strong>{societa_nome}</strong> come <strong>{data.ruolo}</strong>.</p>
-        <p>Clicca sul link sottostante per accedere:</p>
-        <p>
-            <a href="{invite_link}" style="background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                Accedi con Google
-            </a>
-        </p>
-        <p style="color: #666; font-size: 14px;">Questo link scadrà tra 30 giorni.</p>
-    </body>
-    </html>
-    """
+    body_html = costruisci_email_invito(societa_nome, data.ruolo, invite_link)
     send_email(data.email, f"Invito a {societa_nome}", body_html)
 
     return {
@@ -166,6 +170,36 @@ def elimina_invito(
     db.delete(invito)
     db.commit()
     return {"ok": True}
+
+
+@router.post("/{invito_id}/rinvia")
+def rinvia_invito(
+    invito_id: int,
+    current_user: Utente = Depends(get_admin),
+    db: Session = Depends(get_db)
+):
+    invito = db.query(Invito).filter(Invito.id == invito_id).first()
+    if not invito:
+        raise HTTPException(status_code=404, detail="Invito non trovato")
+
+    # Verifica permessi
+    if not current_user.is_super_admin and invito.societa_id != current_user.societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+
+    if invito.usato:
+        raise HTTPException(status_code=400, detail="Invito già utilizzato")
+    if invito.scade < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Invito scaduto. Crea un nuovo invito.")
+
+    societa = db.query(Societa).filter(Societa.id == invito.societa_id).first()
+    if not societa:
+        raise HTTPException(status_code=404, detail="Società non trovata")
+
+    invite_link = f"{FRONTEND_URL}/login?invito={invito.token}"
+    body_html = costruisci_email_invito(societa.nome, invito.ruolo, invite_link)
+    send_email(invito.email, f"Invito a {societa.nome}", body_html)
+
+    return {"ok": True, "email": invito.email}
 
 
 @router.get("/verifica/{token}")

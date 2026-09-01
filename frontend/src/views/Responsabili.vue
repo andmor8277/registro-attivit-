@@ -102,6 +102,7 @@
           <span class="card-title">Invita Utente</span>
           <span class="card-desc">Invia un link di invito con Google OAuth</span>
         </div>
+        <span v-if="invitiAttivi.length" class="card-badge">{{ invitiAttivi.length }}</span>
         <div class="card-arrow">→</div>
       </div>
     </div>
@@ -224,7 +225,7 @@
 
     <Teleport to="body">
       <div v-if="invitoModal.show" class="modal-overlay" @click.self="invitoModal.show = false">
-        <div class="modal">
+        <div class="modal modal-inviti">
           <div class="modal-header">
             <h3>Invita Utente con Google</h3>
             <button class="modal-close" @click="invitoModal.show = false">
@@ -261,6 +262,38 @@
           </div>
           <p v-if="invitoModal.msg" class="invito-msg success">{{ invitoModal.msg }}</p>
           <p v-if="invitoModal.errore" class="errore-msg">{{ invitoModal.errore }}</p>
+
+          <div v-if="invitiAttivi.length" class="inviti-pendenti">
+            <h4>Inviti in attesa di registrazione</h4>
+            <p class="inviti-pendenti-info">Se l'utente ha perso il link, copialo o rinvia l'email.</p>
+            <div v-for="inv in invitiAttivi" :key="inv.id" class="invito-pendente-row">
+              <div class="invito-pendente-info">
+                <span class="invito-pendente-email">{{ inv.email }}</span>
+                <span class="invito-pendente-meta">
+                  <span class="invito-pendente-ruolo">{{ inv.ruolo }}</span>
+                  <span class="invito-pendente-scadenza">Scade {{ new Date(inv.scade).toLocaleDateString('it-IT') }}</span>
+                </span>
+              </div>
+              <div class="invito-pendente-actions">
+                <button class="btn-copia-link" @click="copiaLink(inv.link)" title="Copia il link di invito">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                  Copia link
+                </button>
+                <button class="btn-rinvia" @click="rinviaEmail(inv)" :disabled="inv.rinvio_in_corso" title="Rinvia l'email con il link">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                  <template v-if="inv.rinvio_in_corso">Invio...</template>
+                  <template v-else>Rinvia email</template>
+                </button>
+              </div>
+            </div>
+          </div>
+          <p v-if="invitiMsg" class="inviti-msg" :class="{ 'success': !invitiError, 'error': invitiError }">{{ invitiMsg }}</p>
         </div>
       </div>
     </Teleport>
@@ -271,7 +304,7 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useStore } from "../store.js"
-import { getAllCategorie, updateCategoria, archiviaStagione, creaInvito as apiCreaInvito } from "../api/index.js"
+import { getAllCategorie, updateCategoria, archiviaStagione, creaInvito as apiCreaInvito, listaInviti, rinviaInvito } from "../api/index.js"
 
 const router = useRouter()
 const { utenteAttivo, societaAttiva } = useStore()
@@ -301,9 +334,28 @@ const stagioneModal = ref({ show: false, stagione: new Date().getFullYear(), dat
 const archiviaModal = ref({ show: false, loading: false, stagione: null })
 
 const invitoModal = ref({ show: false, email: '', ruolo: '', loading: false, errore: '', msg: '' })
+const invitiAttivi = ref([])
+const invitiMsg = ref('')
+const invitiError = ref(false)
+
+async function caricaInviti() {
+  try {
+    const socId = isSuperAdmin.value ? null : (societaAttiva.value?.id || null)
+    const res = await listaInviti(socId)
+    const now = new Date()
+    invitiAttivi.value = (res.data || [])
+      .filter(i => !i.usato && new Date(i.scade) > now)
+      .map(i => ({ ...i, rinvio_in_corso: false }))
+  } catch (e) {
+    console.error('Errore caricamento inviti:', e)
+  }
+}
 
 function apriInvito() {
   invitoModal.value = { show: true, email: '', ruolo: '', loading: false, errore: '', msg: '' }
+  invitiMsg.value = ''
+  invitiError.value = false
+  caricaInviti()
 }
 
 async function creaInvito() {
@@ -329,11 +381,38 @@ async function creaInvito() {
     m.msg = 'Invito inviato con successo!'
     m.email = ''
     m.ruolo = ''
+    caricaInviti()
     setTimeout(() => { m.show = false }, 2000)
   } catch (e) {
     m.errore = e.response?.data?.detail || 'Errore nell\'invio dell\'invito'
   } finally {
     m.loading = false
+  }
+}
+
+function copiaLink(link) {
+  navigator.clipboard.writeText(link).then(() => {
+    invitiMsg.value = 'Link copiato negli appunti!'
+    invitiError.value = false
+  }).catch(() => {
+    invitiError.value = true
+    invitiMsg.value = 'Impossibile copiare il link'
+  })
+}
+
+async function rinviaEmail(inv) {
+  inv.rinvio_in_corso = true
+  invitiMsg.value = ''
+  invitiError.value = false
+  try {
+    await rinviaInvito(inv.id)
+    invitiMsg.value = 'Email rinviata a ' + inv.email
+    invitiError.value = false
+  } catch (e) {
+    invitiError.value = true
+    invitiMsg.value = e.response?.data?.detail || 'Errore nel rinvio dell\'email'
+  } finally {
+    inv.rinvio_in_corso = false
   }
 }
 
@@ -456,6 +535,9 @@ async function confermaArchiviazione() {
 
 onMounted(() => {
   loadCategorie()
+  if (utenteAttivo.value?.is_admin || isSuperAdmin.value) {
+    caricaInviti()
+  }
 })
 </script>
 
@@ -797,6 +879,175 @@ onMounted(() => {
   margin-top: 0.75rem;
   font-size: 0.8125rem;
   color: #22c55e;
+}
+
+/* ── Badge inviti pendenti ── */
+.card-badge {
+  position: absolute;
+  top: 0.75rem;
+  right: 2.75rem;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: #10b981;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Modale inviti ── */
+.modal-inviti {
+  max-width: 520px;
+}
+
+.inviti-pendenti {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.inviti-pendenti h4 {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.25rem;
+}
+
+.inviti-pendenti-info {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.invito-pendente-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: 0.5rem;
+}
+
+.invito-pendente-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.invito-pendente-email {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invito-pendente-meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.invito-pendente-ruolo {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+}
+
+.invito-pendente-scadenza {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.invito-pendente-actions {
+  display: flex;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+.btn-copia-link,
+.btn-rinvia {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.btn-copia-link {
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.btn-copia-link:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.btn-rinvia {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.btn-rinvia:hover {
+  background: rgba(16, 185, 129, 0.22);
+}
+
+.btn-rinvia:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-copia-link svg,
+.btn-rinvia svg {
+  width: 14px;
+  height: 14px;
+}
+
+.inviti-msg {
+  margin-top: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.inviti-msg.success {
+  color: #22c55e;
+}
+
+.inviti-msg.error {
+  color: #ef4444;
+}
+
+@media (max-width: 640px) {
+  .invito-pendente-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .invito-pendente-actions {
+    justify-content: flex-end;
+  }
 }
 
 @keyframes slideUp {

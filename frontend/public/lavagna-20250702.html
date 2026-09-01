@@ -20,45 +20,33 @@
     .btn-icon:active{background:#475569}
     .btn-save{background:#2563eb!important}
     .btn-save:active{background:#1d4ed8!important}
-    .canvas-wrap{flex:1;position:relative;overflow:hidden;min-height:0;background:#166534}
     .rotate-device{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0f172a;z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:16px}
     .rotate-device svg{width:64px;height:64px;animation:rotateHint 2s ease-in-out infinite}
     .rotate-device p{font-size:16px;color:#94a3b8;text-align:center}
     @keyframes rotateHint{0%,100%{transform:rotate(0deg)}50%{transform:rotate(90deg)}}
-    .color-picker{display:flex;gap:6px;padding:8px 12px;overflow-x:auto}
-    .color-swatch{width:32px;height:32px;border-radius:50%;border:3px solid transparent;cursor:pointer;flex-shrink:0}
+    .main-row{display:flex;flex:1;min-height:0}
+    .canvas-wrap{flex:1;position:relative;overflow:hidden;min-height:0;min-width:0;background:#166534}
+    .side-panel{width:190px;flex-shrink:0;background:#1e293b;border-left:1px solid #334155;display:flex;flex-direction:column;overflow:hidden}
+    .color-picker{display:flex;flex-wrap:wrap;gap:4px;padding:7px 10px;border-bottom:1px solid #334155;flex-shrink:0}
+    .color-swatch{width:20px;height:20px;border-radius:50%;border:3px solid transparent;cursor:pointer;flex-shrink:0}
     .color-swatch.active{border-color:#fff;transform:scale(1.15)}
-    .field-toggle{display:flex;gap:6px;padding:6px 12px;border-top:1px solid #334155}
-    .field-chip{padding:6px 12px;background:#334155;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;color:#fff;border:none}
+    .field-toggle{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:5px 10px;border-bottom:1px solid #334155;flex-shrink:0}
+    .field-chip{padding:4px 3px;background:#334155;border-radius:6px;font-size:10px;font-weight:500;cursor:pointer;color:#fff;border:none;text-align:center}
     .field-chip.active{background:#3b82f6}
-    .toolbar{display:flex;flex-direction:column;flex-wrap:nowrap;gap:6px;padding:6px 8px;border-top:1px solid #334155;overflow-y:auto;flex-shrink:0;-webkit-overflow-scrolling:touch}
-    .tool-section-title{font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;padding-left:2px}
+    .toolbar{display:flex;flex-direction:column;gap:7px;padding:8px 10px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    .tool-section-title{font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;padding-left:2px}
     .tool-grid{display:flex;flex-wrap:wrap;gap:4px}
-    .tool-btn{width:calc(25% - 4px);height:50px;border:2px solid transparent;background:#334155;color:#fff;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;font-size:9px;font-weight:500;line-height:1.1}
+    .tool-btn{width:calc((100% - 8px)/3);height:38px;border:2px solid transparent;background:#334155;color:#fff;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;font-size:9px;font-weight:500;line-height:1.1;padding:2px}
+    .tool-btn .tool-lbl{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .tool-btn.active{border-color:#3b82f6;background:#1d4ed8}
     .tool-btn:active{transform:scale(0.95)}
     @media(max-width:768px){
       .header{position:absolute;top:8px;left:8px;right:8px;z-index:50;background:rgba(30,41,59,0.85);backdrop-filter:blur(8px);border-radius:10px;padding:6px 10px;border:1px solid rgba(51,65,85,0.6)}
       .header h1{font-size:12px}
       .btn-icon{width:30px;height:30px;font-size:14px}
-      .fab-btn{position:absolute;bottom:16px;right:16px;z-index:60;width:56px;height:56px;border-radius:16px;border:none;background:#3b82f6;color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.4);cursor:pointer}
-      .fab-btn:active{transform:scale(0.92)}
-      .bottom-drawer{position:fixed;bottom:0;left:0;right:0;background:#1e293b;z-index:100;transform:translateY(100%);transition:transform 0.3s ease;display:flex;flex-direction:column;max-height:70vh;border-top-left-radius:16px;border-top-right-radius:16px}
-      .bottom-drawer.open{transform:translateY(0)}
-      .drawer-handle{display:flex;align-items:center;justify-content:center;height:36px;cursor:pointer;flex-shrink:0}
-      .drawer-handle-bar{width:40px;height:4px;background:#64748b;border-radius:2px}
-      .drawer-content{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1}
-      .drawer-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:90;display:none}
-      .drawer-overlay.show{display:block}
-    }
-    @media(min-width:769px){
-      .bottom-drawer{transform:none;max-height:none;border-top:1px solid #334155;flex-shrink:0}
-      .drawer-handle{display:none}
-      .drawer-content{overflow:visible}
-      .fab-btn{display:none}
-      .drawer-overlay{display:none!important}
-      .toolbar{flex-wrap:nowrap;overflow-y:auto;flex-shrink:0;-webkit-overflow-scrolling:touch}
-      .tool-btn{width:calc(12.5% - 4px);min-width:58px;height:52px}
+      .side-panel{width:158px}
+      .tool-btn{height:36px;font-size:8px}
+      .color-swatch{width:18px;height:18px}
     }
   </style>
 </head>
@@ -79,15 +67,9 @@
         <button class="btn-icon" id="clearBtn" title="Pulisci">✕</button>
       </div>
     </div>
-    <div class="canvas-wrap" id="canvasWrap">
-      <button class="fab-btn" id="fabBtn">☰</button>
-    </div>
-    <div class="drawer-overlay" id="drawerOverlay"></div>
-    <div class="bottom-drawer" id="bottomDrawer">
-      <div class="drawer-handle" id="drawerHandle">
-        <div class="drawer-handle-bar"></div>
-      </div>
-      <div class="drawer-content">
+    <div class="main-row">
+      <div class="canvas-wrap" id="canvasWrap"></div>
+      <aside class="side-panel" id="sidePanel">
         <div class="color-picker" id="colorPicker"></div>
         <div class="field-toggle">
           <div class="field-chip active" data-mode="full">Intero</div>
@@ -95,7 +77,7 @@
           <div class="field-chip" data-mode="blank">Vuoto</div>
         </div>
         <div class="toolbar" id="toolbar"></div>
-      </div>
+      </aside>
     </div>
   </div>
 <script>
@@ -137,7 +119,6 @@
   var playerCounters={player:0,'player-bib':0,'player-jolly':0,gk:0};
   var colors=['#3b82f6','#ef4444','#22c55e','#f59e0b','#f97316','#ffffff','#a78bfa','#ec4899','#06b6d4','#6b7280'];
   var lineTools=['pass','dribble','wallpass','shot','movement','line'];
-  var drawerOpen=false;
 
   var toolSections=[
     {title:'',tools:[
@@ -179,10 +160,6 @@
   var wrap=document.getElementById('canvasWrap');
   var toolbar=document.getElementById('toolbar');
   var colorPicker=document.getElementById('colorPicker');
-  var bottomDrawer=document.getElementById('bottomDrawer');
-  var drawerHandle=document.getElementById('drawerHandle');
-  var fabBtn=document.getElementById('fabBtn');
-  var drawerOverlay=document.getElementById('drawerOverlay');
   var rotateOverlay=document.getElementById('rotateOverlay');
 
   var stage=new Konva.Stage({container:'canvasWrap',width:wrap.clientWidth,height:wrap.clientHeight});
@@ -576,7 +553,7 @@
     var ratio=fieldMode==='half'?(105/2)/68:105/68;
     var chrome=window.innerHeight-wrap.clientHeight;
     var needed=Math.round(wrap.clientWidth/ratio+chrome);
-    if(needed>0){parent.postMessage({type:'requestHeight',height:needed},'*')}
+    if(needed>0){parent.postMessage({type:'requestHeight',height:needed,width:Math.round(wrap.clientWidth)},'*')}
   }
 
   function drawField(){
@@ -868,7 +845,6 @@ function createBall(x,y){var g=new Konva.Group({x:x,y:y,draggable:true});g.setAt
 
   function resizeStage(){
     var w=wrap.clientWidth,h=wrap.clientHeight;
-    if(drawerOpen&&bottomDrawer&&window.innerWidth<=768){h-=bottomDrawer.offsetHeight}
     if(w!==stage.width()||h!==stage.height()){stage.width(w);stage.height(h)}
     drawField();
     repositionElements();
@@ -890,7 +866,8 @@ function createBall(x,y){var g=new Konva.Group({x:x,y:y,draggable:true});g.setAt
       section.tools.forEach(function(tool){
         var btn=document.createElement('button');
         btn.className='tool-btn'+(tool.type===currentTool?' active':'');
-        btn.innerHTML='<span style="font-size:20px;line-height:1">'+tool.icon+'</span><span>'+tool.label+'</span>';
+        btn.innerHTML='<span style="font-size:15px;line-height:1">'+tool.icon+'</span><span class="tool-lbl">'+tool.label+'</span>';
+        btn.title=tool.label;
         btn.onclick=function(){
           document.querySelectorAll('.tool-btn').forEach(function(b){b.classList.remove('active')});
           btn.classList.add('active');currentTool=tool.type;transformer.nodes([]);
@@ -1002,17 +979,6 @@ function createBall(x,y){var g=new Konva.Group({x:x,y:y,draggable:true});g.setAt
   window.addEventListener('orientationchange',function(){setTimeout(checkOrientation,100)});
   window.addEventListener('resize',checkOrientation);
   checkOrientation();
-
-  function toggleDrawer(){
-    drawerOpen=!drawerOpen;
-    bottomDrawer.classList.toggle('open',drawerOpen);
-    if(fabBtn)fabBtn.style.display=drawerOpen?'none':'flex';
-    if(drawerOverlay)drawerOverlay.classList.toggle('show',drawerOpen);
-    setTimeout(function(){resizeStage();repositionElements()},310);
-  }
-  if(fabBtn)fabBtn.addEventListener('click',toggleDrawer);
-  if(drawerHandle)drawerHandle.addEventListener('click',function(){if(drawerOpen)toggleDrawer()});
-  if(drawerOverlay)drawerOverlay.addEventListener('click',function(){if(drawerOpen)toggleDrawer()});
 
   drawField();
 })();
