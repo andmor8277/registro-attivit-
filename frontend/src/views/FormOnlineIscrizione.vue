@@ -283,11 +283,13 @@ async function salvaDati() {
   padding-bottom: 100px;
   display: flex;
   justify-content: center;
+  overflow-x: hidden;
 }
 
 .form-container {
   max-width: 900px;
   width: 100%;
+  min-width: 0;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.1);
@@ -364,6 +366,7 @@ async function salvaDati() {
 .form-field {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .form-field.full {
@@ -390,6 +393,7 @@ async function salvaDati() {
   font-family: inherit;
   box-sizing: border-box;
   width: 100%;
+  min-width: 0;
 }
 
 .form-field input:focus,
