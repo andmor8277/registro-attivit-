@@ -246,7 +246,7 @@
           <div class="section note">
             <h3>NOTE</h3>
             <div class="note-area">
-              <textarea v-model="scheda.note" :disabled="!editMode" rows="2"></textarea>
+              <textarea v-model="scheda.note" :disabled="!editMode" rows="12"></textarea>
             </div>
             <div class="firma-row">
               <label>FIRMA DEL GENITORE</label>
@@ -983,6 +983,8 @@ onBeforeUnmount(() => {
 }
 
 .note-area textarea {
+  width: 100%;
+  box-sizing: border-box;
   margin-bottom: 1.5mm;
 }
 

@@ -1603,6 +1603,8 @@ onMounted(() => {
 
 .modal-body {
   padding: 1.25rem 1.5rem;
+  max-height: 70vh;
+  overflow-y: auto;
 }
 
 .form-group {
@@ -1684,8 +1686,8 @@ onMounted(() => {
 
 .orari-giorni-list {
   margin-top: 0.75rem;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
   padding: 0.75rem;
   background: var(--color-bg);
@@ -1704,7 +1706,7 @@ onMounted(() => {
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--color-text-secondary);
-  min-width: 90px;
+  min-width: 70px;
 }
 
 .ora-giorno-row input[type="time"] {
