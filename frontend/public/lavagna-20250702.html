@@ -91,7 +91,7 @@
     if(tipo==='player-bib')return '#ef4444';
     if(tipo==='player-jolly')return '#f59e0b';
     if(tipo==='gk')return '#f97316';
-    if(tipo==='ball')return '#ffffff';
+    if(tipo==='ball')return '#000000';
     if(tipo==='cone')return '#f97316';
     if(tipo==='disc')return '#a78bfa';
     if(tipo==='flag')return '#eab308';
@@ -425,7 +425,11 @@
       var c=toCanvas(el.x||0,el.y||0);
       newEl=createBall(c.x,c.y);
       newEl.setAttr('fieldX',el.x);newEl.setAttr('fieldY',el.y);
-      newEl.children.forEach(function(ch){if(ch.stroke&&ch.stroke())ch.stroke(col);if(ch.fill&&ch.fill()&&ch.fill()!=='transparent')ch.fill(col)});
+      newEl.children.forEach(function(ch){
+        if(ch.stroke&&ch.stroke())ch.stroke(col);
+        if(ch.getAttr&&ch.getAttr('fixedFill'))return;
+        if(ch.fill&&ch.fill()&&ch.fill()!=='transparent')ch.fill(col);
+      });
       if(sX!==1||sY!==1){newEl.scaleX(sX);newEl.scaleY(sY)}
     }else if(el.tipo==='cone'){
       var c=toCanvas(el.x||0,el.y||0);
@@ -627,7 +631,24 @@
     }
     return g;
   }
-function createBall(x,y){var g=new Konva.Group({x:x,y:y,draggable:true});g.setAttr('dataElement','ball');g.add(new Konva.Circle({radius:14,stroke:currentColor,strokeWidth:2}));g.add(new Konva.Circle({radius:4,fill:currentColor}));return g}
+function createBall(x,y){
+    var g=new Konva.Group({x:x,y:y,draggable:true});
+    g.setAttr('dataElement','ball');
+    // Corpo bianco del pallone (il fill bianco non va ricolorato a reload)
+    var body=new Konva.Circle({radius:14,fill:'#ffffff',stroke:currentColor,strokeWidth:2});
+    body.setAttr('fixedFill',true);
+    g.add(body);
+    // Pentagono centrale
+    var r=6.5,pts=[];
+    for(var i=0;i<5;i++){var a=(-90+i*72)*Math.PI/180;pts.push(r*Math.cos(a),r*Math.sin(a));}
+    g.add(new Konva.Line({points:pts,closed:true,fill:currentColor,stroke:currentColor,strokeWidth:1}));
+    // 5 raggi dal pentagono al bordo
+    for(var i=0;i<5;i++){
+      var a=(-90+i*72)*Math.PI/180;
+      g.add(new Konva.Line({points:[r*Math.cos(a),r*Math.sin(a),13.5*Math.cos(a),13.5*Math.sin(a)],stroke:currentColor,strokeWidth:1.5}));
+    }
+    return g;
+  }
   function createCone(x,y){
     var g=new Konva.Group({x:x,y:y,draggable:true});
     g.setAttr('dataElement','cone');
