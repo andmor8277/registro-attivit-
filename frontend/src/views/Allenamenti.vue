@@ -514,7 +514,9 @@ function drawCatalogoPreviews() {
     // Stesso rendering del PDF, in miniatura (elementi leggermente ingranditi per leggibilità)
     const rect = drawFieldCanvas(ctx, canvas.width, canvas.height, fieldMode)
     const boardW = getBoardWidth()
-    drawElementsCanvas(ctx, ex.elementi, rect, rect.fw / boardW, 1.8)
+    // baseScale costante (canvas.width/boardW): la lavagna NON ridimensiona gli
+    // elementi cambiando modalità campo (Metà/Vuoto), quindi non va scalato con rect.fw
+    drawElementsCanvas(ctx, ex.elementi, rect, canvas.width / boardW, 1.8)
   })
 }
 
@@ -609,23 +611,29 @@ const MANNEQUIN_SVG_PATH = 'M120 1280 L60 700 L40 400 A100 100 0 0 1 130 300 A80
 
 // Disegna il campo su un canvas 2D e ritorna il rettangolo utile {fx, fy, fw, fh}
 function drawFieldCanvas(ctx, W, H, fieldMode) {
-  if (fieldMode === 'blank') {
-    ctx.fillStyle = '#2d8a4e'
-    ctx.fillRect(0, 0, W, H)
-    return { fx: 0, fy: 0, fw: W, fh: H }
-  }
-  ctx.fillStyle = '#1a2535'
-  ctx.fillRect(0, 0, W, H)
-
+  const isBlank = fieldMode === 'blank'
+  const isHalfC = fieldMode === 'half'
   // Stessa geometria della lavagna: rapporto 105:68 (intero) o 52.5:68 (metà), pad 2%
-  const ratio = fieldMode === 'half' ? (105 / 2) / 68 : 105 / 68
+  const ratio = isHalfC ? (105 / 2) / 68 : 105 / 68
   const pad = H * 0.02
   const availW = W - pad * 2
   const availH = H - pad * 2
   let fw, fh
-  if (availW / availH > ratio) { fh = availH; fw = fh * ratio } else { fw = availW; fh = fw / ratio }
+  // La lavagna NORMALIZZA le coordinate nel rettangolo campo anche per 'blank'
+  // (vedi getFieldRect: isBlank non modifica il rect). Quindi il rect di ritorno
+  // è quello standard, sia per blank che per full; solo lo sfondo cambia.
+  if (isHalfC) { fw = Math.min(availW / 2, availH * ratio); fh = fw / ratio }
+  else if (availW / availH > ratio) { fh = availH; fw = fh * ratio } else { fw = availW; fh = fw / ratio }
   const fx = (W - fw) / 2
   const fy = (H - fh) / 2
+
+  if (isBlank) {
+    ctx.fillStyle = '#2d8a4e'
+    ctx.fillRect(0, 0, W, H)
+    return { fx, fy, fw, fh }
+  }
+  ctx.fillStyle = '#1a2535'
+  ctx.fillRect(0, 0, W, H)
 
   // Strisce verdi dentro il campo
   const stripeCount = 11
@@ -689,7 +697,11 @@ function drawFieldCanvas(ctx, W, H, fieldMode) {
     ctx.strokeRect(fx - gW, gY, gW, gH)
     ctx.strokeRect(fx + fw, gY, gW, gH)
   } else {
-    // Metà campo: area e porta solo sul lato destro (come in lavagna)
+    // Metà campo (metà larghezza): linea di metà a sinistra, area e porta a destra
+    ctx.beginPath()
+    ctx.moveTo(fx, fy)
+    ctx.lineTo(fx, fy + fh)
+    ctx.stroke()
     const paH = fh * 0.384
     const paW = fw * 0.157
     const paY = fy + (fh - paH) / 2
@@ -1171,8 +1183,8 @@ async function exportPdf() {
 
     const fieldMode = ex.campo_con_righe === 'half' ? 'half' : (ex.campo_con_righe === 'blank' ? 'blank' : 'full')
     const isHalf = fieldMode === 'half'
-    // Canvas con lo stesso rapporto del campo (105:68 intero, 52.5:68 metà)
-    const canvasWidth = isHalf ? 500 : 800
+    // Canvas con lo stesso rapporto del campo: 105:68 intero, 52.5:68 metà (metà larghezza)
+    const canvasWidth = isHalf ? 400 : 800
     const canvasHeight = Math.round(canvasWidth * 68 / (isHalf ? 52.5 : 105))
     const exportCanvas = document.createElement('canvas')
     exportCanvas.width = canvasWidth
@@ -1184,7 +1196,9 @@ async function exportPdf() {
 
     // Elementi proporzionati al campo: riferimento = larghezza reale della lavagna a schermo
     const boardW = getBoardWidth()
-    drawElementsCanvas(ctx, ex.elementi, rect, rect.fw / boardW)
+    // baseScale costante (canvasWidth/boardW): la lavagna NON ridimensiona gli
+    // elementi cambiando modalità campo (Metà/Vuoto), quindi non va scalato con rect.fw
+    drawElementsCanvas(ctx, ex.elementi, rect, canvasWidth / boardW)
 
     // Aggiungi immagine al PDF
     const imgData = exportCanvas.toDataURL('image/png')
