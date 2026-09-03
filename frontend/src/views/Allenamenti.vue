@@ -798,15 +798,36 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       ctx.translate(ex_, ey)
       ctx.rotate((rotation * Math.PI) / 180)
       ctx.scale(sX, sY)
+      // Corpo bianco del pallone
       ctx.beginPath()
       ctx.arc(0, 0, 14, 0, Math.PI * 2)
+      ctx.fillStyle = '#ffffff'
+      ctx.fill()
       ctx.strokeStyle = color
       ctx.lineWidth = 2
       ctx.stroke()
+      // Pentagono centrale
+      const r = 6.5
       ctx.beginPath()
-      ctx.arc(0, 0, 4, 0, Math.PI * 2)
+      for (let i = 0; i < 5; i++) {
+        const a = ((-90 + i * 72) * Math.PI) / 180
+        const px = r * Math.cos(a), py = r * Math.sin(a)
+        if (i === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+      ctx.closePath()
       ctx.fillStyle = color
       ctx.fill()
+      // 5 raggi dal pentagono al bordo
+      ctx.lineWidth = 1.5
+      for (let i = 0; i < 5; i++) {
+        const a = ((-90 + i * 72) * Math.PI) / 180
+        ctx.beginPath()
+        ctx.moveTo(r * Math.cos(a), r * Math.sin(a))
+        ctx.lineTo(13.5 * Math.cos(a), 13.5 * Math.sin(a))
+        ctx.strokeStyle = color
+        ctx.stroke()
+      }
       ctx.restore()
     } else if (tipo === 'cone') {
       ctx.save()
