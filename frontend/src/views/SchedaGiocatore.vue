@@ -1047,7 +1047,7 @@ onBeforeUnmount(() => {
   }
   
   html, body {
-    width: 297mm;
+    width: 100%;
     height: 210mm;
     margin: 0;
     padding: 0;
@@ -1069,12 +1069,12 @@ onBeforeUnmount(() => {
   }
   
   .scheda-container {
-    width: 297mm;
+    width: 100%;
     height: 210mm;
     max-width: none;
     max-height: none;
-    padding: 2.5mm 4mm;
-    margin: 0 auto;
+    padding: 2.5mm 2mm;
+    margin: 0;
     box-shadow: none;
     background: #fff;
     overflow: hidden;
@@ -1138,21 +1138,19 @@ onBeforeUnmount(() => {
   }
   
   .col-bottom-right .section.note {
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
   
   .col-bottom-right .note-area {
-    flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
   }
   
   .col-bottom-right .note-area textarea {
-    flex: 1;
     min-height: 0;
   }
   
