@@ -697,6 +697,7 @@ function createBall(x,y){
     g.add(new Konva.Ellipse({x:20.5,y:4.5,radiusX:5,radiusY:2,fill:currentColor}));
     return g;
   }
+  var MANNEQUIN_PATH='M120 1280 L60 700 L40 400 A100 100 0 0 1 130 300 A80 80 0 0 0 190 180 L170 140 A86 86 0 1 1 330 140 L310 180 A80 80 0 0 0 370 300 A100 100 0 0 1 460 400 L440 700 L380 1280 Z';
   function createMannequin(x,y){
     var g=new Konva.Group({x:x,y:y,draggable:true});
     g.setAttr('dataElement','mannequin');
