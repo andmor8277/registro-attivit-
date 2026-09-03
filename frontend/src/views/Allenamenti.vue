@@ -561,11 +561,11 @@ function selezionaDaCatalogo(ex) {
     campo_con_righe: ex.campo_con_righe,
     elementi: (ex.elementi || []).map(el => ({
       id: generateId('el_'),
-      type: el.tipo ?? el.type ?? '',
+      tipo: el.tipo ?? el.type ?? '',
       x: el.x ?? null,
       y: el.y ?? null,
-      color: el.colore ?? el.color ?? '#3b82f6',
-      num: el.numero ?? el.num ?? null,
+      colore: el.colore ?? el.color ?? '#3b82f6',
+      numero: el.numero ?? el.num ?? null,
       size: el.size ?? 28,
       w: el.w ?? null,
       h: el.h ?? null,
@@ -585,6 +585,8 @@ function selezionaDaCatalogo(ex) {
     catalogoTitolo: ex.titolo
   })
   selectedExercise.value = esercizi.value[esercizi.value.length - 1]
+  markDirty()
+  debouncedSave()
   closeCatalogo()
 }
 
