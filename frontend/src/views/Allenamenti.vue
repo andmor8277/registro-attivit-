@@ -1050,7 +1050,8 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       const len = Math.sqrt(dx * dx + dy * dy)
       if (len > 0) {
         const angle = Math.atan2(dy, dx)
-        ctx.translate(ex1, ey1)
+        // Centro la freccia sul punto medio (da x1,y1 a x2,y2), non sul punto di partenza
+        ctx.translate((ex1 + ex2) / 2, (ey1 + ey2) / 2)
         ctx.rotate(angle)
         ctx.scale(sb, sb)
 
@@ -1205,10 +1206,10 @@ async function exportPdf() {
     await nextTick()
 
     const fieldMode = ex.campo_con_righe === 'half' ? 'half' : (ex.campo_con_righe === 'blank' ? 'blank' : 'full')
-    const isHalf = fieldMode === 'half'
-    // Canvas con lo stesso rapporto del campo: 105:68 intero, 52.5:68 metà (metà larghezza)
-    const canvasWidth = isHalf ? 400 : 800
-    const canvasHeight = Math.round(canvasWidth * 68 / (isHalf ? 52.5 : 105))
+    // Canvas sempre a piena larghezza (come la lavagna): il campo a metà è
+    // centrato e limitato a metà larghezza da drawFieldCanvas, non il canvas
+    const canvasWidth = 800
+    const canvasHeight = Math.round(canvasWidth * 68 / 105)
     const exportCanvas = document.createElement('canvas')
     exportCanvas.width = canvasWidth
     exportCanvas.height = canvasHeight
