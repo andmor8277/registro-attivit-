@@ -2145,9 +2145,13 @@ function stampa() {
 
 function stampaGiornoSingolo(dataGiorno) {
   if (!dataGiorno) return
-  const w = window.open('', '_blank', 'noopener,noreferrer')
   const g = giorniSettimana.value.find(d => d.data === dataGiorno)
   if (!g) return
+  const w = window.open('', '_blank')
+  if (!w) {
+    alert('Popup bloccato dal browser. Consenti i popup per stampare.')
+    return
+  }
   const slots = categoriePerOrario(dataGiorno)
   let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(g.nomeLungo)} ${esc(g.giorno)}</title>
   <style>
