@@ -507,6 +507,9 @@
       newEl.setAttr('fieldX',el.x);newEl.setAttr('fieldY',el.y);
       if(sX!==1||sY!==1){newEl.scaleX(sX);newEl.scaleY(sY)}
     }
+    if(newEl && el.rotazione && el.tipo!=='line' && ['pass','dribble','wallpass','shot','movement'].indexOf(el.tipo)<0){
+      newEl.rotation(el.rotazione);
+    }
     return newEl;
   }
 
