@@ -576,7 +576,11 @@ function esc(s) {
 
 async function stampaWeekend() {
   if (!weekendSelezionato.value) return
-  const win = window.open('', '_blank', 'noopener,noreferrer')
+  const win = window.open('', '_blank')
+  if (!win) {
+    alert('Popup bloccato dal browser. Consenti i popup per stampare.')
+    return
+  }
   const sorted = weekendPartiteGrouped.value.map(g => ({
     cat: g.cat,
     partite: g.partite.sort((a, b) => a.data_partite.localeCompare(b.data_partite))
