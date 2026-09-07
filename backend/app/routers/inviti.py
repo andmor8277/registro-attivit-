@@ -106,16 +106,20 @@ def crea_invito(
     # Invia email
     societa_nome = societa.nome
     body_html = costruisci_email_invito(societa_nome, data.ruolo, invite_link)
-    send_email(data.email, f"Invito a {societa_nome}", body_html)
+    email_ok = send_email(data.email, f"Invito a {societa_nome}", body_html)
 
-    return {
+    result = {
         "ok": True,
         "id": invito.id,
         "email": invito.email,
         "ruolo": invito.ruolo,
         "scade": invito.scade.isoformat(),
-        "link": invite_link
+        "link": invite_link,
+        "email_inviata": email_ok
     }
+    if not email_ok:
+        result["avviso"] = "Invito creato ma invio email fallito. Usa 'Rinvia' per riprovare."
+    return result
 
 
 @router.get("/")
@@ -197,7 +201,9 @@ def rinvia_invito(
 
     invite_link = f"{FRONTEND_URL}/login?invito={invito.token}"
     body_html = costruisci_email_invito(societa.nome, invito.ruolo, invite_link)
-    send_email(invito.email, f"Invito a {societa.nome}", body_html)
+    email_ok = send_email(invito.email, f"Invito a {societa.nome}", body_html)
+    if not email_ok:
+        raise HTTPException(status_code=502, detail="Invio email fallito. Riprova tra qualche istante.")
 
     return {"ok": True, "email": invito.email}
 

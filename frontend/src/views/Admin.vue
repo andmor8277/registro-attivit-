@@ -258,9 +258,14 @@ async function creaInvitoUtente() {
     if (isSuperAdmin.value) {
       data.societa_id = nuovoInvito.value.societa_id || societaIdSelezionata.value
     }
-    await creaInvito(data)
-    invitoMsg.value = 'Invito inviato a ' + nuovoInvito.value.email
-    nuovoInvito.value = { email: '', ruolo: '', societa_id: '' }
+    const res = await creaInvito(data)
+    if (res.data?.email_inviata === false) {
+      invitoError.value = true
+      invitoMsg.value = res.data.avviso || "Invito creato ma invio email fallito. Usa 'Rinvia' per riprovare."
+    } else {
+      invitoMsg.value = 'Invito inviato a ' + nuovoInvito.value.email
+      nuovoInvito.value = { email: '', ruolo: '', societa_id: '' }
+    }
     caricaInviti()
   } catch (e) {
     invitoError.value = true

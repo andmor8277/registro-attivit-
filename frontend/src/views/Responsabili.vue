@@ -373,16 +373,20 @@ async function creaInvito() {
   m.errore = ''
   m.msg = ''
   try {
-    await apiCreaInvito({
+    const res = await apiCreaInvito({
       email: m.email,
       ruolo: m.ruolo,
       societa_id: targetSocieta
     })
-    m.msg = 'Invito inviato con successo!'
-    m.email = ''
-    m.ruolo = ''
+    if (res.data?.email_inviata === false) {
+      m.errore = res.data.avviso || "Invito creato ma invio email fallito. Usa 'Rinvia' per riprovare."
+    } else {
+      m.msg = 'Invito inviato con successo!'
+      m.email = ''
+      m.ruolo = ''
+      setTimeout(() => { m.show = false }, 2000)
+    }
     caricaInviti()
-    setTimeout(() => { m.show = false }, 2000)
   } catch (e) {
     m.errore = e.response?.data?.detail || 'Errore nell\'invio dell\'invito'
   } finally {
