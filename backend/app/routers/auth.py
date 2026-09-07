@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, date, timezone
@@ -501,15 +501,30 @@ async def google_callback(
     if not email_verified:
         raise HTTPException(status_code=400, detail="Email Google non verificata")
 
+    # In un flusso di invito, l'invito va validato prima del login esistente
+    invito_token = request.cookies.get("oauth_invito")
+    invito = None
+    if invito_token:
+        invito = db.query(Invito).filter(Invito.token == invito_token).first()
+        if not invito:
+            raise HTTPException(status_code=404, detail="Invito non trovato")
+        if invito.usato:
+            raise HTTPException(status_code=400, detail="Invito già utilizzato")
+        if invito.scade < datetime.utcnow():
+            raise HTTPException(status_code=400, detail="Invito scaduto")
+        if invito.email.lower() != google_email:
+            raise HTTPException(status_code=400, detail="L'email Google non corrisponde a quella dell'invito")
+
     # Match utente per google_sub prima, poi per email (backward compat)
     existing_user = db.query(Utente).filter(Utente.google_sub == google_sub).first()
     if not existing_user:
-        existing_user = db.query(Utente).filter(Utente.username == google_email).first()
-        if existing_user:
-            existing_user.google_sub = google_sub
-            db.commit()
+        existing_user = db.query(Utente).filter(func.lower(Utente.username) == google_email).first()
 
     if existing_user:
+        if invito:
+            raise HTTPException(status_code=400, detail="Utente già registrato. Contatta un amministratore.")
+        existing_user.google_sub = google_sub
+        db.commit()
         # Return existing JWT
         token = create_token({
             "sub": existing_user.username,
@@ -534,20 +549,8 @@ async def google_callback(
         })
         return _clear_oauth_cookies(resp)
 
-    # New user: read invitation token from cookie (non trustable da client)
-    invito_token = request.cookies.get("oauth_invito")
-    if not invito_token:
-        raise HTTPException(status_code=400, detail="Nessun invito trovato. Contatta un amministratore.")
-
-    invito = db.query(Invito).filter(Invito.token == invito_token).first()
     if not invito:
-        raise HTTPException(status_code=404, detail="Invito non trovato")
-    if invito.usato:
-        raise HTTPException(status_code=400, detail="Invito già utilizzato")
-    if invito.scade < datetime.utcnow():
-        raise HTTPException(status_code=400, detail="Invito scaduto")
-    if invito.email.lower() != google_email:
-        raise HTTPException(status_code=400, detail="L'email Google non corrisponde a quella dell'invito")
+        raise HTTPException(status_code=400, detail="Nessun invito trovato. Contatta un amministratore.")
 
     # Verify society exists
     societa = db.query(Societa).filter(Societa.id == invito.societa_id).first()
@@ -616,9 +619,11 @@ def registra_utente_google(
     if invito.scade < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Invito scaduto")
 
-    # Check user doesn't already exist
-    if db.query(Utente).filter(Utente.username == invito.email).first():
+    email_norm = invito.email.lower()
+    if db.query(Utente).filter(func.lower(Utente.username) == email_norm).first():
         raise HTTPException(status_code=400, detail="Utente già esistente")
+    if google_sub and db.query(Utente).filter(Utente.google_sub == google_sub).first():
+        raise HTTPException(status_code=400, detail="Account Google già associato a un altro utente")
 
     # Parse date
     try:
@@ -631,7 +636,7 @@ def registra_utente_google(
     is_super = 1 if invito.ruolo == "super_admin" else 0
 
     utente = Utente(
-        username=invito.email,
+        username=email_norm,
         password_hash=None,
         google_sub=google_sub or None,
         is_admin=is_admin,

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timedelta
@@ -55,13 +56,15 @@ def crea_invito(
         if data.ruolo not in RUOLI_PERMESSI_ADMIN:
             raise HTTPException(status_code=403, detail=f"Ruolo non permesso. Puoi invitare: {', '.join(RUOLI_PERMESSI_ADMIN)}")
 
+    data.email = data.email.strip().lower()
+
     # Verifica email valida
     if "@" not in data.email or "." not in data.email:
         raise HTTPException(status_code=400, detail="Email non valida")
 
     # Verifica che non esista già un invito attivo per questa email
     invitoo_esistente = db.query(Invito).filter(
-        Invito.email == data.email,
+        func.lower(Invito.email) == data.email,
         Invito.usato == False,
         Invito.scade > datetime.utcnow()
     ).first()
@@ -69,7 +72,7 @@ def crea_invito(
         raise HTTPException(status_code=400, detail="Esiste già un invito attivo per questa email")
 
     # Verifica che l'utente non esista già
-    utente_esistente = db.query(Utente).filter(Utente.username == data.email).first()
+    utente_esistente = db.query(Utente).filter(func.lower(Utente.username) == data.email).first()
     if utente_esistente:
         raise HTTPException(status_code=400, detail="Un utente con questa email esiste già")
 
