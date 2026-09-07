@@ -272,6 +272,7 @@ onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
   const invToken = params.get('invito')
   if (invToken) {
+    clearToken()
     invitoToken.value = invToken
     try {
       const res = await verificaInvito(invToken)
@@ -318,7 +319,7 @@ function handleLogosponsorUpload(event) {
   }
 }
 const router = useRouter()
-const { setToken, utenteAttivo, setSocietaAttiva, setListaSocieta, societaAttiva, setCategoria } = useStore()
+const { setToken, clearToken, utenteAttivo, setSocietaAttiva, setListaSocieta, societaAttiva, setCategoria } = useStore()
 
 function loginGoogle() {
   googleAuthorize(invitoToken.value)
