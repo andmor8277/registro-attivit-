@@ -1032,6 +1032,65 @@ def run_migrations():
                 print(f"Migration warning (google_sub): {e}")
                 conn.rollback()
 
+            # Consolidate portiere attendance into the active Portieri category
+            try:
+                rows = conn.execute(text("""
+                    SELECT r.id AS home_id,
+                           r.persona_id,
+                           r.data,
+                           r.codice AS home_codice,
+                           r.societa_id,
+                           pc.id AS portieri_cat_id,
+                           pr.id AS portieri_id
+                    FROM registro r
+                    JOIN persone p ON p.id = r.persona_id
+                    JOIN gruppi g ON g.id = p.gruppo_id AND LOWER(g.nome) = 'portieri'
+                    JOIN categorie hc ON hc.id = r.categoria_id AND hc.is_portieri = 0
+                    JOIN categorie pc ON pc.is_portieri = 1
+                                      AND pc.is_archiviata = 0
+                                      AND pc.societa_id = COALESCE(r.societa_id, hc.societa_id)
+                    LEFT JOIN registro pr ON pr.persona_id = r.persona_id
+                                         AND pr.data = r.data
+                                         AND pr.categoria_id = pc.id
+                    WHERE hc.is_archiviata = 0
+                    ORDER BY r.id
+                """)).fetchall()
+                moved = 0
+                for row in rows:
+                    if row.portieri_id is None:
+                        conn.execute(text("""
+                            INSERT INTO registro (societa_id, persona_id, data, codice, categoria_id)
+                            VALUES (:sid, :pid, :data, :codice, :cid)
+                            ON CONFLICT (persona_id, data, categoria_id) DO UPDATE
+                            SET codice = EXCLUDED.codice,
+                                societa_id = EXCLUDED.societa_id
+                        """), {
+                            "sid": row.societa_id,
+                            "pid": row.persona_id,
+                            "data": row.data,
+                            "codice": row.home_codice,
+                            "cid": row.portieri_cat_id
+                        })
+                    else:
+                        conn.execute(text("""
+                            UPDATE registro
+                            SET codice = :codice,
+                                societa_id = :sid
+                            WHERE id = :id
+                        """), {
+                            "codice": row.home_codice,
+                            "sid": row.societa_id,
+                            "id": row.portieri_id
+                        })
+                    conn.execute(text("DELETE FROM registro WHERE id = :id"), {"id": row.home_id})
+                    moved += 1
+                conn.commit()
+                if moved:
+                    print(f"Migration: Consolidated {moved} portiere registro rows into Portieri category")
+            except Exception as e:
+                print(f"Migration warning (portiere registro consolidation): {e}")
+                conn.rollback()
+
         finally:
             conn.close()
 
