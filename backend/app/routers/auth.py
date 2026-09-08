@@ -516,8 +516,11 @@ async def google_callback(
 
     # Verifica email confirmata da Google
     if not email_verified:
-        print("Google OAuth: callback email non verificata")
+        print("Google OAuth: callback email Google non verificata")
         raise HTTPException(status_code=400, detail="Email Google non verificata")
+
+    email_domain = google_email.split("@")[-1] if "@" in google_email else "none"
+    print(f"Google OAuth: callback email_domain={email_domain} sub_len={len(google_sub)}")
 
     # In un flusso di invito, l'invito va validato prima del login esistente
     invito_token = request.cookies.get("oauth_invito")
@@ -538,16 +541,21 @@ async def google_callback(
             raise HTTPException(status_code=400, detail="L'email Google non corrisponde a quella dell'invito")
 
     # Match utente per google_sub prima, poi per email (backward compat)
-    existing_user = db.query(Utente).filter(Utente.google_sub == google_sub).first()
+    existing_user = None
+    if google_sub:
+        existing_user = db.query(Utente).filter(Utente.google_sub == google_sub).first()
     if not existing_user:
         existing_user = db.query(Utente).filter(func.lower(Utente.username) == google_email).first()
 
     if existing_user:
         if invito:
-            print("Google OAuth: callback utente già registrato con invito attivo")
+            match_tipo = "google_sub" if google_sub and existing_user.google_sub == google_sub else "email"
+            print(f"Google OAuth: callback utente già registrato (match={match_tipo}) con invito attivo")
             raise HTTPException(status_code=400, detail="Utente già registrato. Contatta un amministratore.")
-        existing_user.google_sub = google_sub
-        db.commit()
+
+        if google_sub:
+            existing_user.google_sub = google_sub
+            db.commit()
         # Return existing JWT
         token = create_token({
             "sub": existing_user.username,
