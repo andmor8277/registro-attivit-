@@ -77,7 +77,7 @@
               </td>
               <td v-for="g in giorniMese" :key="g.num"
                 class="cella"
-                :class="[getCodiceClasse(persona.id, g.num), { 'cella-readthrough': isReadthrough(persona.id, g.num), 'cella-locked': isAutoInfortunio(persona.id, g.num) }]"
+                :class="[getCodiceClasse(persona.id, g.num), { 'cella-locked': isAutoInfortunio(persona.id, g.num) }]"
                 :title="titoloCella(persona, g.num)"
                 @click="openEdit(persona, g.num)">
                 {{ getCodice(persona.id, g.num) }}
@@ -120,7 +120,7 @@
                   </td>
                   <td v-for="g in giorniMese" :key="g.num"
                     class="cella"
-                    :class="[getCodiceClasse(persona.id, g.num), { 'cella-readthrough': isReadthrough(persona.id, g.num), 'cella-locked': isAutoInfortunio(persona.id, g.num) }]"
+                    :class="[getCodiceClasse(persona.id, g.num), { 'cella-locked': isAutoInfortunio(persona.id, g.num) }]"
                     :title="titoloCella(persona, g.num)"
                     @click="openEdit(persona, g.num)">
                     {{ getCodice(persona.id, g.num) }}
@@ -173,7 +173,7 @@
                 </td>
                 <td v-for="g in getGiorniMese(gruppo)" :key="g.num"
                   class="cella"
-                  :class="[getCodiceClasse(persona.id, g.num), { 'cella-readthrough': isReadthrough(persona.id, g.num), 'cella-locked': isAutoInfortunio(persona.id, g.num) }]"
+                  :class="[getCodiceClasse(persona.id, g.num), { 'cella-locked': isAutoInfortunio(persona.id, g.num) }]"
                   :title="titoloCella(persona, g.num)"
                   @click="openEdit(persona, g.num)">
                   {{ getCodice(persona.id, g.num) }}
@@ -421,7 +421,7 @@ function getCodiceClasse(personaId, giorno) {
   return c.tipo + (codice ? " cod-" + codice.toLowerCase() : "") + auto
 }
 function totalePresenze(personaId) {
-  return registro.value.filter(r => r.persona_id === personaId && ["X","R"].includes(r.codice) && !r.is_portieri_readthrough && !hasActiveInfortunio(r.persona_id, r.data)).length
+  return registro.value.filter(r => r.persona_id === personaId && ["X","R"].includes(r.codice) && !hasActiveInfortunio(r.persona_id, r.data)).length
 }
 function totaleAssenze(personaId) {
   let count = 0
@@ -433,13 +433,7 @@ function totaleAssenze(personaId) {
   })
   return count
 }
-function isReadthrough(personaId, giorno) {
-  const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
-  const entry = registro.value.find(r => r.persona_id === personaId && r.data === d)
-  return entry && entry.is_portieri_readthrough
-}
 function openEdit(persona, giorno) {
-  if (isReadthrough(persona.id, giorno)) return
   if (hasActiveInfortunio(persona.id, giorno)) return
   editModal.value = { show: true, persona, giorno }
 }
@@ -461,7 +455,7 @@ async function salvaPresenza(codice) {
 function totGiornoGruppo(gruppo, giorno) {
   const ids = personePerGruppo(gruppo).map(p => p.id)
   const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
-  const entries = registro.value.filter(r => ids.includes(r.persona_id) && r.data === d && !r.is_portieri_readthrough && r.codice)
+  const entries = registro.value.filter(r => ids.includes(r.persona_id) && r.data === d && r.codice)
   let pres = 0
   let ass = 0
   entries.forEach(r => {
@@ -494,7 +488,7 @@ const totaliGiorno = computed(() => {
   const result = {}
   giorniMeseTutti.value.forEach(g => {
     const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(g.num).padStart(2,"0")
-    const entries = registro.value.filter(r => r.data === d && !r.is_portieri_readthrough && r.codice)
+    const entries = registro.value.filter(r => r.data === d && r.codice)
     const allIds = persone.value.map(p => p.id)
     let pres = 0
     let ass = 0
@@ -969,12 +963,6 @@ th {
   background: rgba(220, 38, 38, 0.16) !important;
   color: #991b1b !important;
   font-weight: 700;
-}
-
-.cella-readthrough {
-  opacity: 0.5;
-  cursor: default !important;
-  pointer-events: none;
 }
 
 .cella-locked {

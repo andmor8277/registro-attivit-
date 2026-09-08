@@ -113,6 +113,12 @@ def upsert_registro(entry: schemas.RegistroEntry, db: Session = Depends(get_db),
     )
     db.execute(stmt)
     db.commit()
+    if target_categoria_id is not None and target_categoria_id != entry.categoria_id:
+        db.execute(
+            text("DELETE FROM registro WHERE persona_id = :pid AND data = :data AND categoria_id = :cid"),
+            {"pid": entry.persona_id, "data": entry.data, "cid": entry.categoria_id}
+        )
+        db.commit()
     r = db.query(models.Registro).filter(
         models.Registro.persona_id == entry.persona_id,
         models.Registro.data == entry.data,
