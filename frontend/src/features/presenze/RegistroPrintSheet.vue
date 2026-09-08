@@ -62,6 +62,12 @@
             <span v-if="tipo === 'corrente'">{{ totalePresenze(persona.id) }}</span>
           </td>
         </tr>
+        <tr v-for="n in 6" :key="`riga-vuota-${n}`" class="row-extra">
+          <td class="col-num"></td>
+          <td class="col-nome"></td>
+          <td v-for="g in giorni" :key="g.num" class="col-day cell"></td>
+          <td class="col-tot"></td>
+        </tr>
       </tbody>
       <tfoot v-if="tipo === 'corrente'">
         <tr>
@@ -283,6 +289,10 @@ defineProps({
 
 .cell {
   height: 7.5mm;
+}
+
+.row-extra td {
+  height: 8mm;
 }
 
 .col-tot {
