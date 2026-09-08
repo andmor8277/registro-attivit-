@@ -299,6 +299,7 @@
           </div>
           <div class="print-preview">
             <RegistroPrintSheet
+              ref="previewSheetRef"
               :societa="societaAttiva"
               :categoria="categoriaAttiva"
               :mese-label="meseLabel"
@@ -336,6 +337,7 @@
           :get-codice="getCodice"
           :totale-presenze="totalePresenze"
           :totali-giorno="totaliGiorno"
+          :scale="printScale"
         />
       </div>
     </Teleport>
@@ -344,7 +346,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from "vue"
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { getPersone, getCodici, getRegistroMese, upsertRegistro, getCategorie, getGruppi, getInfortuni } from "../../api/index.js"
 import { useStore as useCategoria } from "../../store.js"
@@ -386,12 +388,29 @@ const giorniAllenamento = ref([])
 const giorniAllenamentoPortieriCat = ref([])
 const editModal = ref({ show: false, persona: null, giorno: null })
 const printModal = ref({ show: false, tipo: 'vuoto' })
+const printScale = ref(1)
+const previewSheetRef = ref(null)
+
+function calcolaScalaStampa() {
+  const el = previewSheetRef.value?.$el || previewSheetRef.value
+  if (!el) return
+  const mmToPx = 96 / 25.4
+  const printableWidth = 194 * mmToPx
+  const printableHeight = 281 * mmToPx
+  const width = el.scrollWidth || el.getBoundingClientRect().width || printableWidth
+  const height = el.scrollHeight || el.getBoundingClientRect().height || printableHeight
+  printScale.value = Math.min(1, printableWidth / width, printableHeight / height)
+}
 
 function apriStampa() {
   printModal.value = { show: true, tipo: 'vuoto' }
+  nextTick(calcolaScalaStampa)
 }
 
+watch(() => printModal.value.tipo, () => nextTick(calcolaScalaStampa))
+
 function stampa() {
+  calcolaScalaStampa()
   window.print()
 }
 

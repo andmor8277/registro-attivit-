@@ -1,5 +1,5 @@
 <template>
-  <div class="print-sheet">
+  <div class="print-sheet" :style="{ zoom: scale }">
     <header class="sheet-header">
       <div class="sheet-brand">
         <img v-if="societa?.logo" :src="`/uploads/${societa.logo}`" alt="Logo" class="sheet-logo" />
@@ -10,31 +10,11 @@
         </div>
       </div>
       <div class="sheet-meta">
-        <div>
-          <span>Categoria</span>
-          <strong>{{ categoria?.nome || '—' }}</strong>
-        </div>
-        <div>
-          <span>Stagione</span>
-          <strong>{{ categoria?.anno || '—' }}</strong>
-        </div>
-        <div>
-          <span>Periodo</span>
-          <strong>{{ meseLabel }} {{ anno }}</strong>
-        </div>
-        <div>
-          <span>Modalità</span>
-          <strong>{{ tipo === 'corrente' ? 'Con dati inseriti' : 'Da compilare a mano' }}</strong>
-        </div>
+        <span><small>Categoria</small> <strong>{{ categoria?.nome || '—' }}</strong></span>
+        <span><small>Stagione</small> <strong>{{ categoria?.anno || '—' }}</strong></span>
+        <span><small>Periodo</small> <strong>{{ meseLabel }} {{ anno }}</strong></span>
       </div>
     </header>
-
-    <div class="sheet-legend">
-      <span v-for="c in codici" :key="c.codice">
-        <b>{{ c.codice }}</b>
-        {{ c.descrizione }}
-      </span>
-    </div>
 
     <table class="sheet-table">
       <thead>
@@ -105,7 +85,8 @@ defineProps({
   isPortieri: { type: Boolean, default: false },
   getCodice: { type: Function, required: true },
   totalePresenze: { type: Function, required: true },
-  totaliGiorno: { type: Object, default: () => ({}) }
+  totaliGiorno: { type: Object, default: () => ({}) },
+  scale: { type: Number, default: 1 }
 })
 </script>
 
@@ -113,7 +94,9 @@ defineProps({
 .print-sheet {
   background: #fff;
   color: #111;
-  padding: 4mm;
+  width: 194mm;
+  box-sizing: border-box;
+  padding: 3mm;
   font-family: var(--font-sans, 'Schibsted Grotesk', system-ui, sans-serif);
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
@@ -122,24 +105,24 @@ defineProps({
 .sheet-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 6mm;
-  padding-bottom: 4mm;
-  margin-bottom: 4mm;
-  border-bottom: 2pt solid #111;
+  align-items: center;
+  gap: 4mm;
+  padding-bottom: 2.5mm;
+  margin-bottom: 3mm;
+  border-bottom: 1.5pt solid #111;
 }
 
 .sheet-brand {
   display: flex;
   align-items: center;
-  gap: 4mm;
+  gap: 3mm;
 }
 
 .sheet-logo {
-  width: 13mm;
-  height: 13mm;
+  width: 10mm;
+  height: 10mm;
   object-fit: contain;
-  border-radius: 2mm;
+  border-radius: 1.5mm;
   border: 0.5pt solid #e5e7eb;
 }
 
@@ -148,67 +131,55 @@ defineProps({
 }
 
 .sheet-societa {
-  font-size: 9pt;
+  font-size: 7.5pt;
   font-weight: 700;
   color: #555;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
 }
 
 .sheet-title {
-  font-size: 15pt;
+  font-size: 12pt;
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.1;
 }
 
 .sheet-meta {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(24mm, auto));
-  gap: 2mm 6mm;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 5mm;
   text-align: right;
+  white-space: nowrap;
 }
 
 .sheet-meta span {
-  display: block;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1.5mm;
+  font-size: 8.5pt;
+  color: #111;
+}
+
+.sheet-meta small {
   font-size: 6.5pt;
   font-weight: 700;
   color: #777;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 0.5mm;
+  letter-spacing: 0.06em;
 }
 
 .sheet-meta strong {
-  font-size: 9.5pt;
+  font-size: 8.5pt;
   font-weight: 800;
   color: #111;
-}
-
-.sheet-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2mm 4mm;
-  margin-bottom: 3mm;
-  font-size: 7.5pt;
-  color: #333;
-}
-
-.sheet-legend b {
-  display: inline-block;
-  margin-right: 1.5mm;
-  padding: 0.5mm 1.8mm;
-  border-radius: 1mm;
-  background: #111;
-  color: #fff;
-  font-family: var(--font-mono, monospace);
-  font-size: 7pt;
 }
 
 .sheet-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 8.5pt;
+  font-size: 7.5pt;
 }
 
 .sheet-table thead {
@@ -223,11 +194,11 @@ defineProps({
   background: #111;
   color: #fff;
   border: 0.5pt solid #111;
-  padding: 2mm;
-  font-size: 7pt;
+  padding: 1.2mm 1.5mm;
+  font-size: 6.5pt;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-align: center;
 }
 
@@ -238,7 +209,7 @@ defineProps({
 
 .sheet-table td {
   border: 0.5pt solid #d4d4d4;
-  padding: 1.8mm 2mm;
+  padding: 0.8mm 1.5mm;
   text-align: center;
   vertical-align: middle;
 }
@@ -248,14 +219,14 @@ defineProps({
 }
 
 .col-num {
-  width: 8mm;
+  width: 7mm;
   color: #777;
-  font-size: 7.5pt;
+  font-size: 6.5pt;
   font-weight: 600;
 }
 
 .col-nome {
-  min-width: 40mm;
+  min-width: 36mm;
   font-weight: 600;
 }
 
@@ -271,13 +242,13 @@ defineProps({
 }
 
 .col-day {
-  width: 8mm;
-  min-width: 8mm;
+  width: 7mm;
+  min-width: 7mm;
 }
 
 .col-day small {
   display: block;
-  font-size: 6pt;
+  font-size: 5.5pt;
   color: #d4d4d4;
   text-transform: uppercase;
 }
@@ -288,15 +259,15 @@ defineProps({
 }
 
 .cell {
-  height: 7.5mm;
+  height: 5.5mm;
 }
 
 .row-extra td {
-  height: 8mm;
+  height: 6mm;
 }
 
 .col-tot {
-  width: 10mm;
+  width: 9mm;
   font-family: var(--font-mono, monospace);
   font-weight: 700;
 }
@@ -310,8 +281,8 @@ defineProps({
 .sheet-footer {
   display: flex;
   justify-content: space-between;
-  margin-top: 12mm;
-  font-size: 8pt;
+  margin-top: 6mm;
+  font-size: 7pt;
   color: #333;
 }
 
@@ -319,14 +290,14 @@ defineProps({
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2mm;
-  width: 54mm;
+  gap: 1.5mm;
+  width: 46mm;
 }
 
 .signature i {
   display: block;
   width: 100%;
-  height: 8mm;
+  height: 6mm;
   border-bottom: 0.75pt solid #111;
 }
 </style>
@@ -339,7 +310,7 @@ defineProps({
 @media print {
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 8mm;
   }
 
   html,
