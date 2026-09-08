@@ -322,6 +322,9 @@ const router = useRouter()
 const { setToken, clearToken, utenteAttivo, setSocietaAttiva, setListaSocieta, societaAttiva, setCategoria } = useStore()
 
 function loginGoogle() {
+  if (invitoToken.value) {
+    sessionStorage.setItem('google_invito_token', invitoToken.value)
+  }
   googleAuthorize(invitoToken.value)
 }
 

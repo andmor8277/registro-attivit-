@@ -6,7 +6,19 @@
     </div>
   </div>
 
-  <div v-else-if="!completed">
+  <div v-else-if="oauthErrore" class="registrazione-wrapper">
+    <div class="registrazione-card error-card">
+      <div class="error-icon">!</div>
+      <h1>Problema con l'accesso Google</h1>
+      <p class="error-text">{{ oauthErrore }}</p>
+      <div class="error-actions">
+        <button v-if="canRetryGoogle" type="button" class="btn-primary submit-btn" @click="retryGoogle">Riprova con Google</button>
+        <button type="button" class="btn-secondary" @click="vaiLogin">Torna al login</button>
+      </div>
+    </div>
+  </div>
+
+  <div v-else-if="!completed && invitationData">
     <div class="registrazione-wrapper">
     <div class="registrazione-card">
       <div class="card-header">
@@ -64,6 +76,17 @@
     </div>
   </div>
 
+  <div v-else-if="!completed" class="registrazione-wrapper">
+    <div class="registrazione-card error-card">
+      <div class="error-icon">!</div>
+      <h1>Sessione non valida</h1>
+      <p class="error-text">Apri di nuovo il link di invito dall'email per riprovare.</p>
+      <div class="error-actions">
+        <button type="button" class="btn-secondary" @click="vaiLogin">Torna al login</button>
+      </div>
+    </div>
+  </div>
+
   <div v-else class="registrazione-wrapper">
     <div class="registrazione-card success-card">
       <div class="success-icon">&#10003;</div>
@@ -76,14 +99,19 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { googleCallback, registraUtenteGoogle } from '../api/index.js'
+import { googleCallback, registraUtenteGoogle, googleAuthorize } from '../api/index.js'
 import { useStore } from '../store.js'
 
 const router = useRouter()
 const { setToken, utenteAttivo, setSocietaAttiva, societaAttiva, setCategoria } = useStore()
 
+const SESSION_KEY = 'google_registrazione'
+const INVITO_KEY = 'google_invito_token'
+
 const loading = ref(false)
 const errore = ref('')
+const oauthErrore = ref('')
+const canRetryGoogle = ref(false)
 const completed = ref(false)
 const checking = ref(true)
 const invitationData = ref(null)
@@ -97,6 +125,30 @@ const form = ref({
   tesserino: ''
 })
 
+function clearSession() {
+  sessionStorage.removeItem(SESSION_KEY)
+  sessionStorage.removeItem(INVITO_KEY)
+}
+
+function applyInvitationData(data) {
+  invitationData.value = data
+  form.value.nome = data.google_nome || ''
+  form.value.cognome = data.google_cognome || ''
+}
+
+function retryGoogle() {
+  const token = sessionStorage.getItem(INVITO_KEY)
+  if (token) {
+    googleAuthorize(token)
+  } else {
+    vaiLogin()
+  }
+}
+
+function vaiLogin() {
+  router.replace('/login')
+}
+
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
   const code = params.get('code')
@@ -104,7 +156,7 @@ onMounted(async () => {
   const directToken = params.get('invito')
 
   if (directToken && !code) {
-    // User came directly from invitation link, redirect to Google login
+    sessionStorage.setItem(INVITO_KEY, directToken)
     window.location.href = '/auth/google/authorize?invito=' + directToken
     return
   }
@@ -115,25 +167,36 @@ onMounted(async () => {
       const data = res.data
 
       if (data.requires_registration) {
+        applyInvitationData(data)
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(data))
+        window.history.replaceState(null, '', '/registrazione')
         checking.value = false
-        invitationData.value = data
-        form.value.nome = data.google_nome || ''
-        form.value.cognome = data.google_cognome || ''
       } else {
-        // User already exists, login directly
+        clearSession()
         setToken(data.access_token)
         utenteAttivo.value = data.user
         goHomeByRole(data.user)
       }
     } catch (e) {
       checking.value = false
-      errore.value = e.response?.data?.detail || 'Errore durante il login Google'
-      setTimeout(() => router.replace('/login'), 5000)
+      oauthErrore.value = e.response?.data?.detail || 'Errore durante il login Google'
+      canRetryGoogle.value = Boolean(sessionStorage.getItem(INVITO_KEY))
     }
-  } else if (!directToken) {
+  } else {
+    const saved = sessionStorage.getItem(SESSION_KEY)
+    if (saved) {
+      try {
+        const data = JSON.parse(saved)
+        if (data?.reg_token) {
+          applyInvitationData(data)
+        } else {
+          sessionStorage.removeItem(SESSION_KEY)
+        }
+      } catch {
+        sessionStorage.removeItem(SESSION_KEY)
+      }
+    }
     checking.value = false
-    errore.value = 'Nessun token di autenticazione. Torna al login.'
-    setTimeout(() => router.replace('/login'), 5000)
   }
 })
 
@@ -154,6 +217,7 @@ async function submitRegistration() {
       reg_token: invitationData.value.reg_token
     })
 
+    clearSession()
     setToken(res.data.access_token)
     utenteAttivo.value = res.data.user
 
@@ -169,7 +233,14 @@ async function submitRegistration() {
     completed.value = true
     setTimeout(() => goHomeByRole(res.data.user), 2000)
   } catch (e) {
-    errore.value = e.response?.data?.detail || 'Errore nella registrazione'
+    const detail = e.response?.data?.detail || 'Errore nella registrazione'
+    errore.value = detail
+    if (e.response?.status === 400 && /token|sessione|scadut/i.test(detail)) {
+      sessionStorage.removeItem(SESSION_KEY)
+      invitationData.value = null
+      oauthErrore.value = detail
+      canRetryGoogle.value = Boolean(sessionStorage.getItem(INVITO_KEY))
+    }
   } finally {
     loading.value = false
   }
@@ -307,6 +378,52 @@ async function goHomeByRole(user) {
   color: #ef4444;
   font-size: 0.85rem;
   text-align: center;
+}
+
+.error-card {
+  text-align: center;
+}
+
+.error-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: white;
+  font-size: 2rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+}
+
+.error-text {
+  color: var(--color-text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.error-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.btn-secondary {
+  padding: 0.85rem;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .success-card {
