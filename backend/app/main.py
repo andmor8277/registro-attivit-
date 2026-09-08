@@ -1032,6 +1032,14 @@ def run_migrations():
                 print(f"Migration warning (google_sub): {e}")
                 conn.rollback()
 
+            # Normalizza google_sub vuoto in NULL per evitare match errati
+            try:
+                conn.execute(text("UPDATE utenti SET google_sub = NULL WHERE google_sub = ''"))
+                conn.commit()
+            except Exception as e:
+                print(f"Migration warning (google_sub normalize): {e}")
+                conn.rollback()
+
             # Consolidate portiere attendance into the active Portieri category
             try:
                 rows = conn.execute(text("""
