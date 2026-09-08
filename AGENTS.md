@@ -19,10 +19,20 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 ```
 
 ## Entry Points
-- `backend/app/main.py` — FastAPI entry, middleware, router mounts, auto-migrations
-- `frontend/src/main.js` — Router, auth guard, all route registrations
+- `backend/app/main.py` — FastAPI entry, middleware, router mounts; calls `run_migrations()`
+- `backend/app/migrations/run.py` — startup migrations, no Alembic
+- `frontend/src/main.js` — app bootstrap only
+- `frontend/src/core/router.js` — router, auth guard, all route registrations
 - `frontend/src/store.js` — Global state (token, user, societa, categoria as Vue refs)
-- `frontend/src/api/index.js` — Axios instance (`api` + `apiPublic`), all API calls
+- `frontend/src/api/index.js` — barrel re-export of `frontend/src/core/api/*`
+
+## Backend Structure
+- `backend/app/core/` — `security.py`, `encryption.py`, `naming.py`, `deps.py`
+- `backend/app/models/` — ORM models per dominio (`auth`, `societa`, `anagrafica`, `presenze`, `allenamenti`, `partite`, `segreteria`, `infermeria`)
+- `backend/app/schemas/` — Pydantic schemas per dominio
+- `backend/app/migrations/` — `run_migrations()` da `main.py`
+- `backend/app/services/` — `email.py`, `invitations.py`, `oauth_google.py`
+- `backend/app/routers/` — router flat, prefix API invariati
 
 ## Backend Routers (20)
 | Router | Prefix | Auth |
@@ -47,6 +57,20 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 | `openday.py` | `/openday` | login |
 | `planning_eventi.py` | `/planning-eventi` | login |
 | `schede_allenamento.py` | `/schede-allenamento` | login |
+
+## Frontend Structure
+- `frontend/src/core/router.js` — route e guard
+- `frontend/src/core/api/` — `client.js`, `auth.js`, `admin.js`, `anagrafica.js`, `presenze.js`, `allenamenti.js`, `partite.js`, `segreteria.js`, `infermeria.js`, `inviti.js`, `public.js`
+- `frontend/src/features/auth/` — Login, Registrazione, FormOnlineIscrizione
+- `frontend/src/features/home/` — Home, Scelta
+- `frontend/src/features/presenze/` — Registro
+- `frontend/src/features/allenatori/` — Allenatori, Responsabili, ResponsabiliCategoria, PresenzeAllenatori
+- `frontend/src/features/partite/` — ProgrammazionePartite, Convocazioni, ListeTornei, Spogliatoi
+- `frontend/src/features/allenamenti/` — Allenamenti, SchedaAllenamento
+- `frontend/src/features/segreteria/` — Segreteria, SegreteriaCategoria, SchedaGiocatore, Openday, PresenzeSegreteria, Valutazioni, DatiMatricole
+- `frontend/src/features/infermeria/` — Infermeria, CertificatoMedico, Infortunati
+- `frontend/src/features/reportistica/` — Reportistica
+- `frontend/src/features/admin/` — Admin, Societa
 
 ## DB Models (25)
 `Societa`, `Categoria` (+`parent_id` self-referencing FK), `Gruppo`, `Persona`, `CodicePresenza`, `Registro`, `Utente`, `UtenteCategoria`, `Convocazione`, `ConvocazioneGara`, `ConvocazioneGiocatore`, `Allenatore`, `Allenamento`, `AllenamentoMese`, `AllenamentoSettimana`, `AllenamentoGiorno`, `AllenamentoEsercizio`, `AllenamentoElemento`, `PresenzaAllenatore`, `CatalogoEsercizio`, `Valutazione`, `Infortunio`, `Openday`, `PlanningEvento`, `SchedaAllenamento`
@@ -80,7 +104,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 /admin/societa                    → Societa.vue
 /form-iscrizione                  → FormOnlineIscrizione.vue (public, no auth)
 ```
-**CRITICAL**: `/segreteria/scheda/:id` MUST be BEFORE `/segreteria/:id` in main.js.
+**CRITICAL**: `/segreteria/scheda/:id` MUST be BEFORE `/segreteria/:id` in `frontend/src/core/router.js`.
 **CRITICAL**: `/infermeria/infortunati` routes to `Infortunati.vue` (not `Infermeria.vue`).
 
 ## Environment
@@ -99,7 +123,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - Remote `origin` e `github` puntano entrambi a `github.com/andmor8277/registro-attivit-.git`. `deploy.sh` (prod) e i push partono da `origin/master`.
 
 ## Migrations
-- **NO Alembic.** All migrations in `main.py:run_migrations()`, run on backend startup.
+- **NO Alembic.** All migrations in `backend/app/migrations/run.py:run_migrations()`, run on backend startup.
 - `init.sql` seeds `gruppi` and `codici` tables.
 - To add a new table/column: append idempotent block to `run_migrations()`.
 
@@ -131,7 +155,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - Italian language in UI and code.
 - Roles: `super_admin` (all societies), `admin` (own society), `mister` (assigned categories), `dirigente` (read-only), `segreteria`, `infermeria`.
 - No linting or type-checking configured.
-- Tactical board logic: `composables/useTacticalBoard.js` + `components/TacticalBoard.vue`.
+- Tactical board logic: `components/TacticalBoard.vue`.
 
 ## Testing
 - **No test suite.** Manual verification or logs:

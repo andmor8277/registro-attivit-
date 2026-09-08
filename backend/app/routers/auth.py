@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from datetime import datetime, timedelta, date, timezone
 from pydantic import BaseModel
 from typing import Optional, List
@@ -12,83 +11,28 @@ from urllib.parse import urlencode
 from ..database import get_db
 from ..models import Utente, UtenteCategoria, Categoria, Invito, Societa
 from ..rate_limit import limiter
-import os
-import re
-import json
-import httpx
+from ..core.security import (
+    SECRET_KEY,
+    DEFAULT_PASSWORD,
+    ALGORITHM,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    pwd_context,
+    oauth2_scheme,
+    verify_password,
+    hash_password,
+    validate_password,
+    create_token,
+    get_current_user,
+    get_admin,
+    get_super_admin,
+    check_societa,
+)
+from ..core.naming import format_nome, format_cognome
+from ..services.oauth_google import get_google_config, get_google_authorize_url, exchange_google_code
+from ..services.invitations import get_invitation, is_invitation_used, is_invitation_expired
 import secrets
 
-def format_cognome(val):
-    return val.upper() if val else val
-
-def format_nome(val):
-    if not val: return val
-    return ' '.join(w[:1].upper() + w[1:].lower() for w in val.split())
-
-SECRET_KEY = os.environ.get("SECRET_KEY")
-if not SECRET_KEY:
-    raise RuntimeError("SECRET_KEY environment variable is required")
-DEFAULT_PASSWORD = os.environ.get("DEFAULT_PASSWORD")
-if not DEFAULT_PASSWORD:
-    raise RuntimeError("DEFAULT_PASSWORD environment variable is required")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-def verify_password(plain, hashed):
-    return pwd_context.verify(plain, hashed)
-
-def hash_password(password):
-    return pwd_context.hash(password)
-
-def validate_password(password: str):
-    if len(password) < 8:
-        raise HTTPException(status_code=400, detail="La password deve avere almeno 8 caratteri")
-    if not re.search(r'[A-Z]', password):
-        raise HTTPException(status_code=400, detail="La password deve contenere almeno un carattere maiuscolo")
-    if not re.search(r'[a-z]', password):
-        raise HTTPException(status_code=400, detail="La password deve contenere almeno un carattere minuscolo")
-    if not re.search(r'\d', password):
-        raise HTTPException(status_code=400, detail="La password deve contenere almeno un numero")
-    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-        raise HTTPException(status_code=400, detail="La password deve contenere almeno un carattere speciale")
-
-def create_token(data: dict):
-    to_encode = data.copy()
-    to_encode["exp"] = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
-        if not username:
-            raise HTTPException(status_code=401, detail="Token non valido")
-        user = db.query(Utente).filter(Utente.username == username).first()
-        if not user:
-            raise HTTPException(status_code=401, detail="Utente non trovato")
-        return user
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Token non valido")
-
-def get_admin(current_user: Utente = Depends(get_current_user)):
-    if not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Solo admin")
-    return current_user
-
-def get_super_admin(current_user: Utente = Depends(get_current_user)):
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Solo super admin")
-    return current_user
-
-def check_societa(current_user: Utente, societa_id: int):
-    """Verifica che l'utente appartenga alla societa specificata o sia super_admin."""
-    if not current_user.is_super_admin and current_user.societa_id != societa_id:
-        raise HTTPException(status_code=403, detail="Non autorizzato a operare su questa società")
-    return current_user
 
 class UtenteCreate(BaseModel):
     username: str
@@ -366,47 +310,6 @@ def verify_gdpr(codice_fiscale: Optional[str] = Query(None), categoria_id: Optio
 
 # ── Google OAuth ──
 
-GOOGLE_CREDENTIALS_PATH = os.environ.get("GOOGLE_CREDENTIALS_PATH", "/app/google-credentials.json")
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
-
-_google_config = None
-
-def get_google_config():
-    global _google_config
-    if _google_config:
-        return _google_config
-    try:
-        with open(GOOGLE_CREDENTIALS_PATH) as f:
-            _google_config = json.load(f)
-        if isinstance(_google_config, dict) and "web" in _google_config:
-            _google_config = _google_config["web"]
-    except Exception as e:
-        print(f"Google credentials error: {e}")
-        _google_config = None
-    return _google_config
-
-
-def get_google_authorize_url(state: str, login_hint: Optional[str] = None):
-    config = get_google_config()
-    if not config:
-        raise HTTPException(status_code=500, detail="Google OAuth non configurato")
-
-    client_id = config.get("client_id")
-    redirect_uri = f"{FRONTEND_URL}/registrazione"
-
-    params = {
-        "client_id": client_id,
-        "redirect_uri": redirect_uri,
-        "response_type": "code",
-        "scope": "openid email profile",
-        "prompt": "select_account",
-        "state": state,
-    }
-    if login_hint:
-        params["login_hint"] = login_hint
-    return f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
-
-
 @router.get("/google/authorize")
 def google_authorize(request: Request, invito: Optional[str] = Query(None), db: Session = Depends(get_db)):
     """Redirect to Google OAuth. Pass ?invito=token to link invitation."""
@@ -414,14 +317,14 @@ def google_authorize(request: Request, invito: Optional[str] = Query(None), db: 
     state = secrets.token_urlsafe(32)
     login_hint = None
     if invito:
-        invito_row = db.query(Invito).filter(Invito.token == invito).first()
+        invito_row = get_invitation(db, invito)
         if not invito_row:
             print("Google OAuth: authorize invito non trovato")
             raise HTTPException(status_code=400, detail="Invito non valido")
-        if invito_row.usato:
+        if is_invitation_used(invito_row):
             print("Google OAuth: authorize invito già utilizzato")
             raise HTTPException(status_code=400, detail="Invito già utilizzato")
-        if invito_row.scade < datetime.utcnow():
+        if is_invitation_expired(invito_row):
             print("Google OAuth: authorize invito scaduto")
             raise HTTPException(status_code=400, detail="Invito scaduto")
         login_hint = invito_row.email
@@ -477,33 +380,7 @@ async def google_callback(
     if not config:
         raise HTTPException(status_code=500, detail="Google OAuth non configurato")
 
-    client_id = config.get("client_id")
-    client_secret = config.get("client_secret")
-    redirect_uri = f"{FRONTEND_URL}/registrazione"
-
-    # Exchange code for tokens
-    try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post("https://oauth2.googleapis.com/token", data={
-                "code": code,
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "redirect_uri": redirect_uri,
-                "grant_type": "authorization_code"
-            })
-            resp.raise_for_status()
-            token_data = resp.json()
-            access_token = token_data["access_token"]
-
-            # Get user info
-            resp = await client.get("https://www.googleapis.com/oauth2/v2/userinfo", headers={
-                "Authorization": f"Bearer {access_token}"
-            })
-            resp.raise_for_status()
-            google_user = resp.json()
-    except Exception as e:
-        print(f"Google OAuth: errore comunicazione Google: {e}")
-        raise HTTPException(status_code=400, detail="Errore nella comunicazione con Google")
+    google_user = await exchange_google_code(code, config)
 
     google_email = google_user.get("email", "").lower()
     google_name = google_user.get("name", "")
@@ -526,14 +403,14 @@ async def google_callback(
     invito_token = request.cookies.get("oauth_invito")
     invito = None
     if invito_token:
-        invito = db.query(Invito).filter(Invito.token == invito_token).first()
+        invito = get_invitation(db, invito_token)
         if not invito:
             print("Google OAuth: callback invito non trovato")
             raise HTTPException(status_code=404, detail="Invito non trovato")
-        if invito.usato:
+        if is_invitation_used(invito):
             print("Google OAuth: callback invito già utilizzato")
             raise HTTPException(status_code=400, detail="Invito già utilizzato")
-        if invito.scade < datetime.utcnow():
+        if is_invitation_expired(invito):
             print("Google OAuth: callback invito scaduto")
             raise HTTPException(status_code=400, detail="Invito scaduto")
         if invito.email.lower() != google_email:
@@ -645,12 +522,12 @@ def registra_utente_google(
         raise HTTPException(status_code=400, detail="Sessione di registrazione non valida")
 
     # Verify invitation
-    invito = db.query(Invito).filter(Invito.token == invito_token).first()
+    invito = get_invitation(db, invito_token)
     if not invito:
         raise HTTPException(status_code=404, detail="Invito non trovato")
-    if invito.usato:
+    if is_invitation_used(invito):
         raise HTTPException(status_code=400, detail="Invito già utilizzato")
-    if invito.scade < datetime.utcnow():
+    if is_invitation_expired(invito):
         raise HTTPException(status_code=400, detail="Invito scaduto")
 
     email_norm = invito.email.lower()
