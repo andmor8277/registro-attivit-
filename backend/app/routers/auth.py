@@ -386,7 +386,7 @@ def get_google_config():
     return _google_config
 
 
-def get_google_authorize_url(state: str):
+def get_google_authorize_url(state: str, login_hint: Optional[str] = None):
     config = get_google_config()
     if not config:
         raise HTTPException(status_code=500, detail="Google OAuth non configurato")
@@ -402,16 +402,31 @@ def get_google_authorize_url(state: str):
         "prompt": "select_account",
         "state": state,
     }
+    if login_hint:
+        params["login_hint"] = login_hint
     return f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
 
 
 @router.get("/google/authorize")
-def google_authorize(request: Request, invito: Optional[str] = Query(None)):
+def google_authorize(request: Request, invito: Optional[str] = Query(None), db: Session = Depends(get_db)):
     """Redirect to Google OAuth. Pass ?invito=token to link invitation."""
     # CSRF state: random, salvato in cookie httpOnly, verificato in callback
     state = secrets.token_urlsafe(32)
-    url = get_google_authorize_url(state)
-    secure = request.url.scheme == "https"
+    login_hint = None
+    if invito:
+        invito_row = db.query(Invito).filter(Invito.token == invito).first()
+        if not invito_row:
+            print("Google OAuth: authorize invito non trovato")
+            raise HTTPException(status_code=400, detail="Invito non valido")
+        if invito_row.usato:
+            print("Google OAuth: authorize invito già utilizzato")
+            raise HTTPException(status_code=400, detail="Invito già utilizzato")
+        if invito_row.scade < datetime.utcnow():
+            print("Google OAuth: authorize invito scaduto")
+            raise HTTPException(status_code=400, detail="Invito scaduto")
+        login_hint = invito_row.email
+    url = get_google_authorize_url(state, login_hint)
+    secure = request.url.scheme == "https" or request.headers.get("x-forwarded-proto", "").lower() == "https"
 
     resp = RedirectResponse(url=url)
     resp.set_cookie(
@@ -455,6 +470,7 @@ async def google_callback(
     # Verifica CSRF: il parametro state deve corrispondere al cookie
     cookie_state = request.cookies.get("oauth_state")
     if not cookie_state or not state or cookie_state != state:
+        print("Google OAuth: callback state mismatch")
         raise HTTPException(status_code=400, detail="Richiesta non valida (state mismatch)")
 
     config = get_google_config()
@@ -486,7 +502,7 @@ async def google_callback(
             resp.raise_for_status()
             google_user = resp.json()
     except Exception as e:
-        print(f"Google OAuth error: {e}")
+        print(f"Google OAuth: errore comunicazione Google: {e}")
         raise HTTPException(status_code=400, detail="Errore nella comunicazione con Google")
 
     google_email = google_user.get("email", "").lower()
@@ -495,10 +511,12 @@ async def google_callback(
     email_verified = google_user.get("verified_email", False)
 
     if not google_email:
+        print("Google OAuth: callback email non trovata")
         raise HTTPException(status_code=400, detail="Email non trovata")
 
     # Verifica email confirmata da Google
     if not email_verified:
+        print("Google OAuth: callback email non verificata")
         raise HTTPException(status_code=400, detail="Email Google non verificata")
 
     # In un flusso di invito, l'invito va validato prima del login esistente
@@ -507,12 +525,16 @@ async def google_callback(
     if invito_token:
         invito = db.query(Invito).filter(Invito.token == invito_token).first()
         if not invito:
+            print("Google OAuth: callback invito non trovato")
             raise HTTPException(status_code=404, detail="Invito non trovato")
         if invito.usato:
+            print("Google OAuth: callback invito già utilizzato")
             raise HTTPException(status_code=400, detail="Invito già utilizzato")
         if invito.scade < datetime.utcnow():
+            print("Google OAuth: callback invito scaduto")
             raise HTTPException(status_code=400, detail="Invito scaduto")
         if invito.email.lower() != google_email:
+            print("Google OAuth: callback email Google non corrispondente all'invito")
             raise HTTPException(status_code=400, detail="L'email Google non corrisponde a quella dell'invito")
 
     # Match utente per google_sub prima, poi per email (backward compat)
@@ -522,6 +544,7 @@ async def google_callback(
 
     if existing_user:
         if invito:
+            print("Google OAuth: callback utente già registrato con invito attivo")
             raise HTTPException(status_code=400, detail="Utente già registrato. Contatta un amministratore.")
         existing_user.google_sub = google_sub
         db.commit()
@@ -550,13 +573,16 @@ async def google_callback(
         return _clear_oauth_cookies(resp)
 
     if not invito:
+        print("Google OAuth: callback senza invito")
         raise HTTPException(status_code=400, detail="Nessun invito trovato. Contatta un amministratore.")
 
     # Verify society exists
     societa = db.query(Societa).filter(Societa.id == invito.societa_id).first()
     if not societa:
+        print("Google OAuth: callback società non trovata")
         raise HTTPException(status_code=404, detail="Società non trovata")
 
+    print("Google OAuth: callback ok, emissione reg_token")
     # Emi un reg_token temporaneo firmato: prova che questo utente ha
     # completato la callback OAuth. Serve a POST /google/registra.
     reg_token = jwt.encode({
