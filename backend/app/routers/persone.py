@@ -1,4 +1,3 @@
-import os
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -8,96 +7,18 @@ from ..routers.auth import get_current_user, get_super_admin
 from ..models import Utente
 from ..rate_limit import limiter
 from ..utils.codice_fiscale import genera_codice_fiscale
+from ..core import encryption
+from ..core.naming import format_nome, format_cognome
+from ..core.deps import get_societa_filter
+from ..core.encryption import (
+    safe_encrypt,
+    safe_decrypt,
+    safe_decrypt_with_key,
+    safe_encrypt_with_key,
+)
 from typing import Optional
-import logging
-
-logger = logging.getLogger(__name__)
-
-ENCRYPTION_KEY = os.environ.get("ENCRYPTION_KEY")
-if not ENCRYPTION_KEY:
-    raise RuntimeError("ENCRYPTION_KEY environment variable is required")
-
-PGCRYPTO_AVAILABLE = os.environ.get("PGCRYPTO_AVAILABLE", "false").lower() == "true"
-
-def safe_encrypt(db: Session, value: str) -> str:
-    """Safely encrypt a value using parameterized query."""
-    if not value or not PGCRYPTO_AVAILABLE:
-        return value
-    try:
-        result = db.execute(
-            text("SELECT encode(encrypt(CAST(:val AS bytea), :enc_key, 'aes'), 'hex')"),
-            {"val": value, "enc_key": ENCRYPTION_KEY}
-        ).scalar()
-        return result
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Encryption failed: {e}")
-        raise
-
-def safe_decrypt(db: Session, value: str) -> str:
-    """Safely decrypt a value using parameterized query."""
-    if not value or not PGCRYPTO_AVAILABLE:
-        return value
-    if not isinstance(value, str) or len(value) < 32 or not all(c in '0123456789abcdef' for c in value):
-        return value
-    try:
-        db.rollback()
-        decrypted = db.execute(
-            text("SELECT convert_from(decrypt(decode(:val, 'hex'), :enc_key, 'aes'), 'UTF8')"),
-            {"val": value, "enc_key": ENCRYPTION_KEY}
-        ).scalar()
-        return decrypted if decrypted else value
-    except Exception as e:
-        db.rollback()
-        logger.warning(f"Could not decrypt: {e}")
-        return value
-
-def safe_decrypt_with_key(db: Session, value: str, key: str) -> str:
-    """Safely decrypt a value with a specific key using parameterized query."""
-    if not value or not PGCRYPTO_AVAILABLE:
-        return None
-    if not isinstance(value, str) or len(value) < 32 or not all(c in '0123456789abcdef' for c in value):
-        return None
-    try:
-        db.rollback()
-        decrypted = db.execute(
-            text("SELECT convert_from(decrypt(decode(:val, 'hex'), :enc_key, 'aes'), 'UTF8')"),
-            {"val": value, "enc_key": key}
-        ).scalar()
-        return decrypted
-    except Exception:
-        db.rollback()
-        return None
-
-def safe_encrypt_with_key(db: Session, value: str, key: str) -> str:
-    """Safely encrypt a value with a specific key using parameterized query."""
-    if not value or not PGCRYPTO_AVAILABLE:
-        return value
-    try:
-        result = db.execute(
-            text("SELECT encode(encrypt(CAST(:val AS bytea), :enc_key, 'aes'), 'hex')"),
-            {"val": value, "enc_key": key}
-        ).scalar()
-        return result
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Encryption failed: {e}")
-        raise
 
 router = APIRouter(prefix="/persone", tags=["persone"])
-
-def format_cognome(val: str) -> str:
-    if not val: return val
-    return val.upper()
-
-def format_nome(val: str) -> str:
-    if not val: return val
-    return ' '.join(w[:1].upper() + w[1:].lower() for w in val.split())
-
-def get_societa_filter(current_user: Utente):
-    if current_user.is_super_admin:
-        return None
-    return current_user.societa_id
 
 SENSITIVE_FIELDS = frozenset(['codice_fiscale', 'tel_papa', 'tel_mamma', 'anamnesi',
                                'prof_papa', 'prof_mamma', 'nome_papa', 'nome_mamma', 'comune_nato',
@@ -330,7 +251,7 @@ def update_encryption_key(
     reencrypt: bool = False
 ):
     new_key = data.get("key")
-    old_key = data.get("old_key", ENCRYPTION_KEY)
+    old_key = data.get("old_key", encryption.ENCRYPTION_KEY)
     if not new_key or not isinstance(new_key, str) or len(new_key) < 16:
         raise HTTPException(status_code=400, detail="Chiave non valida (min 16 caratteri)")
     
@@ -345,15 +266,15 @@ def update_encryption_key(
 
             decrypted_cf = safe_decrypt_with_key(db, old_cf, old_key)
             if not decrypted_cf:
-                decrypted_cf = safe_decrypt_with_key(db, old_cf, ENCRYPTION_KEY)
+                decrypted_cf = safe_decrypt_with_key(db, old_cf, encryption.ENCRYPTION_KEY)
 
             decrypted_papa = safe_decrypt_with_key(db, old_papa, old_key)
             if not decrypted_papa:
-                decrypted_papa = safe_decrypt_with_key(db, old_papa, ENCRYPTION_KEY)
+                decrypted_papa = safe_decrypt_with_key(db, old_papa, encryption.ENCRYPTION_KEY)
 
             decrypted_mamma = safe_decrypt_with_key(db, old_mamma, old_key)
             if not decrypted_mamma:
-                decrypted_mamma = safe_decrypt_with_key(db, old_mamma, ENCRYPTION_KEY)
+                decrypted_mamma = safe_decrypt_with_key(db, old_mamma, encryption.ENCRYPTION_KEY)
 
             if decrypted_cf or decrypted_papa or decrypted_mamma:
                 new_cf = safe_encrypt_with_key(db, decrypted_cf, new_key) if decrypted_cf else None
@@ -366,10 +287,8 @@ def update_encryption_key(
                 updated += 1
 
         db.commit()
-        os.environ["ENCRYPTION_KEY"] = new_key
-        globals()["ENCRYPTION_KEY"] = new_key
+        encryption.set_encryption_key(new_key)
         return {"ok": True, "message": f"Chiave aggiornata e {updated} record ricifrati"}
 
-    os.environ["ENCRYPTION_KEY"] = new_key
-    globals()["ENCRYPTION_KEY"] = new_key
+    encryption.set_encryption_key(new_key)
     return {"ok": True, "message": "Chiave aggiornata"}

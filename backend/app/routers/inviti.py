@@ -8,38 +8,24 @@ from uuid import uuid4
 from ..database import get_db
 from ..models import Invito, Utente, Societa
 from ..routers.auth import get_admin, get_super_admin
-from ..utils.email import send_email
-import os
+from ..services.invitations import (
+    FRONTEND_URL,
+    RUOLI_PERMESSI_ADMIN,
+    build_invite_link,
+    costruisci_email_invito,
+    get_invitation,
+    is_invitation_used,
+    is_invitation_expired,
+)
+from ..services.email import send_email
 
 router = APIRouter(prefix="/inviti", tags=["inviti"])
-
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
-
-RUOLI_PERMESSI_ADMIN = {"mister", "dirigente", "segreteria", "infermeria"}
 
 
 class InvitoCreate(BaseModel):
     email: str
     ruolo: str
     societa_id: Optional[int] = None
-
-
-def costruisci_email_invito(societa_nome: str, ruolo: str, invite_link: str) -> str:
-    return f"""
-    <html>
-    <body style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Invito a {societa_nome}</h2>
-        <p>Sei stato invitato a unirti a <strong>{societa_nome}</strong> come <strong>{ruolo}</strong>.</p>
-        <p>Clicca sul link sottostante per accedere:</p>
-        <p>
-            <a href="{invite_link}" style="background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                Accedi con Google
-            </a>
-        </p>
-        <p style="color: #666; font-size: 14px;">Questo link scadrà tra 30 giorni.</p>
-    </body>
-    </html>
-    """
 
 
 @router.post("/")
@@ -104,7 +90,7 @@ def crea_invito(
     db.refresh(invito)
 
     # Costruisce il link di invito
-    invite_link = f"{FRONTEND_URL}/login?invito={token}"
+    invite_link = build_invite_link(token)
 
     # Invia email
     societa_nome = societa.nome
@@ -155,7 +141,7 @@ def lista_inviti(
             "creato_il": inv.creato_il.isoformat() if inv.creato_il else None,
             "scade": inv.scade.isoformat(),
             "usato": inv.usato,
-            "link": f"{FRONTEND_URL}/login?invito={inv.token}"
+            "link": build_invite_link(inv.token)
         })
     return result
 
@@ -193,16 +179,16 @@ def rinvia_invito(
     if not current_user.is_super_admin and invito.societa_id != current_user.societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
 
-    if invito.usato:
+    if is_invitation_used(invito):
         raise HTTPException(status_code=400, detail="Invito già utilizzato")
-    if invito.scade < datetime.utcnow():
+    if is_invitation_expired(invito):
         raise HTTPException(status_code=400, detail="Invito scaduto. Crea un nuovo invito.")
 
     societa = db.query(Societa).filter(Societa.id == invito.societa_id).first()
     if not societa:
         raise HTTPException(status_code=404, detail="Società non trovata")
 
-    invite_link = f"{FRONTEND_URL}/login?invito={invito.token}"
+    invite_link = build_invite_link(invito.token)
     body_html = costruisci_email_invito(societa.nome, invito.ruolo, invite_link)
     email_ok = send_email(invito.email, f"Invito a {societa.nome}", body_html)
     if not email_ok:
@@ -214,12 +200,12 @@ def rinvia_invito(
 @router.get("/verifica/{token}")
 def verifica_invito(token: str, db: Session = Depends(get_db)):
     """Endpoint pubblico: verifica se un token invito è valido."""
-    invito = db.query(Invito).filter(Invito.token == token).first()
+    invito = get_invitation(db, token)
     if not invito:
         raise HTTPException(status_code=404, detail="Invito non trovato")
-    if invito.usato:
+    if is_invitation_used(invito):
         raise HTTPException(status_code=400, detail="Invito già utilizzato")
-    if invito.scade < datetime.utcnow():
+    if is_invitation_expired(invito):
         raise HTTPException(status_code=400, detail="Invito scaduto")
 
     societa = db.query(Societa).filter(Societa.id == invito.societa_id).first()
