@@ -179,6 +179,7 @@ defineProps({
 .sheet-table {
   width: 100%;
   border-collapse: collapse;
+  border: 1.5pt solid #111;
   font-size: 7.5pt;
 }
 
@@ -193,7 +194,7 @@ defineProps({
 .sheet-table th {
   background: #111;
   color: #fff;
-  border: 0.5pt solid #111;
+  border: 1pt solid #111;
   padding: 1.2mm 1.5mm;
   font-size: 6.5pt;
   font-weight: 700;
@@ -208,7 +209,7 @@ defineProps({
 }
 
 .sheet-table td {
-  border: 0.5pt solid #d4d4d4;
+  border: 1pt solid #111;
   padding: 0.8mm 1.5mm;
   text-align: center;
   vertical-align: middle;
@@ -274,7 +275,7 @@ defineProps({
 
 .sheet-table tfoot td {
   background: #f3f4f6 !important;
-  border-top: 1pt solid #111;
+  border-top: 1.5pt solid #111;
   font-weight: 800;
 }
 
