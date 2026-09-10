@@ -909,6 +909,44 @@ def run_migrations():
                 conn.rollback()
 
             try:
+                legacy_fk = conn.execute(text(
+                    "SELECT conname FROM pg_constraint "
+                    "WHERE conrelid = 'presenze_allenatori'::regclass "
+                    "AND confrelid = to_regclass('allenatori') "
+                    "AND contype = 'f'"
+                )).fetchone()
+                if legacy_fk:
+                    conn.execute(text(f"ALTER TABLE presenze_allenatori DROP CONSTRAINT IF EXISTS {legacy_fk[0]}"))
+                    conn.commit()
+                    print(f"Migration: Dropped legacy FK {legacy_fk[0]} on presenze_allenatori")
+            except Exception as e:
+                print(f"Migration warning (presenze_allenatori legacy FK): {e}")
+                conn.rollback()
+
+            try:
+                utente_fk = conn.execute(text(
+                    "SELECT 1 FROM pg_constraint "
+                    "WHERE conrelid = 'presenze_allenatori'::regclass "
+                    "AND confrelid = to_regclass('utenti') "
+                    "AND contype = 'f'"
+                )).fetchone()
+                if utente_fk is None:
+                    conn.execute(text("""
+                        DELETE FROM presenze_allenatori p
+                        WHERE NOT EXISTS (SELECT 1 FROM utenti u WHERE u.id = p.utente_id)
+                    """))
+                    conn.execute(text("""
+                        ALTER TABLE presenze_allenatori
+                        ADD CONSTRAINT presenze_allenatori_utente_id_fkey
+                        FOREIGN KEY (utente_id) REFERENCES utenti(id)
+                    """))
+                    conn.commit()
+                    print("Migration: Added FK presenze_allenatori.utente_id -> utenti.id")
+            except Exception as e:
+                print(f"Migration warning (presenze_allenatori utente FK): {e}")
+                conn.rollback()
+
+            try:
                 conn.execute(text("""
                     ALTER TABLE allenamenti_esercizio ALTER COLUMN campo_con_righe TYPE VARCHAR(10)
                         USING CASE WHEN campo_con_righe IS TRUE THEN 'full' ELSE 'blank' END
