@@ -492,6 +492,7 @@ async function impostaStagioneTutte() {
         ora_allenamento: cat.ora_allenamento || null,
         orari_giorni: cat.orari_giorni || null,
         is_portieri: cat.is_portieri === 1,
+        parent_id: cat.parent_id || null,
         data_inizio_stagione: stagioneModal.value.data_inizio_stagione || null,
         data_fine_stagione: stagioneModal.value.data_fine_stagione || null
       })

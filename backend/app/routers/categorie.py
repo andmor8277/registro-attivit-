@@ -204,16 +204,12 @@ def update_categoria(categoria_id: int, c: CategoriaCreate, db: Session = Depend
     if not current_user.is_super_admin:
         if cat.societa_id != current_user.societa_id:
             raise HTTPException(status_code=403, detail="Non autorizzato")
-    cat.nome = c.nome
-    cat.anno = c.anno
-    cat.stagione = c.stagione
-    cat.giorni = c.giorni
-    cat.ora_allenamento = c.ora_allenamento
-    cat.orari_giorni = c.orari_giorni
-    cat.is_portieri = 1 if c.is_portieri else 0
-    cat.parent_id = c.parent_id
-    cat.data_inizio_stagione = c.data_inizio_stagione
-    cat.data_fine_stagione = c.data_fine_stagione
+    data = c.model_dump(exclude_unset=True)
+    data.pop("societa_id", None)
+    for campo, valore in data.items():
+        if campo == "is_portieri":
+            valore = 1 if valore else 0
+        setattr(cat, campo, valore)
     db.commit(); db.refresh(cat)
     return cat
 
