@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import extract
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from typing import Optional
+from datetime import date
 from pydantic import BaseModel
 from ..database import get_db
 from ..models import PresenzaAllenatore, Utente, UtenteCategoria, Categoria
@@ -17,13 +18,13 @@ def get_societa_filter(current_user: Utente):
 
 class PresenzaAllenatoreIn(BaseModel):
     utente_id: int
-    data: str
+    data: date
     codice: Optional[str] = None
 
 class PresenzaAllenatoreOut(BaseModel):
     id: int
     utente_id: int
-    data: str
+    data: date
     codice: Optional[str] = None
 
     class Config:
