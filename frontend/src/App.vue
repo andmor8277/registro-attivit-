@@ -189,31 +189,127 @@
             </svg>
             {{ utenteAttivo?.cognome || utenteAttivo?.username }}
           </span>
-          <router-link v-if="!isSuperAdmin" to="/" class="mobile-menu-item" @click="mobileMenuOpen = false">
+
+          <div class="mobile-menu-label">Operativo</div>
+          <router-link v-if="!isSuperAdmin" to="/" class="mobile-menu-item" :class="{ active: route.path === '/' }" @click="mobileMenuOpen = false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
               <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
             Home
           </router-link>
-          <button v-else @click="vaiSelezioneSocieta(); mobileMenuOpen = false" class="mobile-menu-item">
+          <button v-else @click="vaiSelezioneSocieta(); mobileMenuOpen = false" class="mobile-menu-item" :class="{ active: route.path === '/' }">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
               <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
             Home
           </button>
+          <router-link v-if="!isMister" to="/allenatori" class="mobile-menu-item" :class="{ active: isActive(['/allenatori']) }" @click="mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+              <path d="M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+            Gestione Squadre
+          </router-link>
+          <button v-if="!isAdminSocieta" class="mobile-menu-item" :class="{ active: isActive(['/scelta', '/registro', '/dati', '/scheda-allenamento']) }" @click="vaiPaginaCategoria('registro'); mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="17" rx="2"/>
+              <path d="M3 9h18M8 2v4M16 2v4"/>
+            </svg>
+            Presenze
+          </button>
+          <button v-if="!isAdminSocieta" class="mobile-menu-item" :class="{ active: isActive(['/convocazioni']) }" @click="vaiPaginaCategoria('convocazioni'); mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h10"/>
+            </svg>
+            Convocazioni
+          </button>
+          <button v-if="!isAdminSocieta" class="mobile-menu-item" :class="{ active: isActive(['/allenamenti']) }" @click="vaiPaginaCategoria('allenamenti'); mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="17" rx="2"/>
+              <path d="M3 9h18M8 2v4M16 2v4"/>
+              <path d="M9 14l2 2 4-4"/>
+            </svg>
+            Allenamenti
+          </button>
+          <button v-if="!isAdminSocieta" class="mobile-menu-item" :class="{ active: isActive(['/dati']) }" @click="vaiPaginaCategoria('dati'); mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Dati &amp; Matricole
+          </button>
+          <button v-if="!isAdminSocieta" class="mobile-menu-item" :class="{ active: isActive(['/reportistica']) }" @click="vaiPaginaCategoria('reportistica'); mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.21 15.89A10 10 0 118 2.83"/>
+              <path d="M22 12A10 10 0 0012 2v10z"/>
+            </svg>
+            Reportistica
+          </button>
+          <button v-if="!isAdminSocieta" class="mobile-menu-item" :class="{ active: isActive(['/valutazioni']) }" @click="vaiPaginaCategoria('valutazioni'); mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+            Valutazioni
+          </button>
+          <router-link v-if="canInfermeria" to="/infermeria" class="mobile-menu-item" :class="{ active: isActive(['/infermeria']) }" @click="mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+            Infermeria
+          </router-link>
+          <router-link v-if="canSegreteria" to="/segreteria" class="mobile-menu-item" :class="{ active: isActive(['/segreteria']) }" @click="mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Segreteria
+          </router-link>
+
+          <div v-if="isAdminUtente || isSuperAdmin" class="mobile-menu-label">Amministrazione</div>
+          <router-link v-if="isAdminUtente || isSuperAdmin" to="/responsabili" class="mobile-menu-item" :class="{ active: isActive(['/responsabili']) }" @click="mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Responsabili
+          </router-link>
+          <button v-if="isSuperAdmin" class="mobile-menu-item" @click="vaiSelezioneSocieta(); mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Cambia società
+          </button>
+          <router-link v-if="isSuperAdmin" to="/admin" class="mobile-menu-item" :class="{ active: isActive(['/admin']) }" @click="mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+            </svg>
+            Impostazioni
+          </router-link>
+
+          <div class="mobile-menu-label">Account</div>
           <button @click="showPasswordModal = true; mobileMenuOpen = false" class="mobile-menu-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <rect x="3" y="11" width="18" height="11" rx="2"/>
               <path d="M7 11V7a5 5 0 0110 0v4"/>
             </svg>
             Password
           </button>
           <button v-if="!isSuperAdmin && societaAttiva" @click="modificaSocietaAttiva(); mobileMenuOpen = false" class="mobile-menu-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              <path d="M12 20h9"/>
+              <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
             </svg>
             Modifica Società
           </button>
@@ -1279,6 +1375,24 @@ watch(societaAttiva, async (newVal) => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.mobile-menu-label {
+  margin: 1rem 0.25rem 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.mobile-menu-label:first-of-type {
+  margin-top: 0.25rem;
+}
+
+.mobile-menu-item.active {
+  border-color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.08);
 }
 
 .mobile-menu .user-badge {
