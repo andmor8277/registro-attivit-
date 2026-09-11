@@ -493,10 +493,15 @@ async function salva() {
 }
 
 async function elimina() {
-  if (!confirm('Eliminare questo giocatore?')) return
-  await deletePersona(modal.value.id)
-  modal.value.show = false
-  await reloadData()
+  if (!confirm('Eliminare questo giocatore?\nVerranno eliminati anche i dati associati (presenze, valutazioni, infortuni, schede, liste, openday).')) return
+  try {
+    await deletePersona(modal.value.id)
+    modal.value.show = false
+    await reloadData()
+  } catch(e) {
+    console.error('Errore eliminazione:', e)
+    alert(e.response?.data?.detail || 'Errore durante l\'eliminazione')
+  }
 }
 
 // ── Gruppi management ──
