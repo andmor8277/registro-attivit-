@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from .. import models, schemas
 from ..database import get_db
 from ..routers.auth import get_current_user, get_super_admin
@@ -147,8 +148,19 @@ def delete_persona(persona_id: int, db: Session = Depends(get_db), current_user:
     societa_id = get_societa_filter(current_user)
     if societa_id and persona.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
-    db.delete(persona)
-    db.commit()
+    try:
+        db.query(models.Registro).filter(models.Registro.persona_id == persona_id).delete(synchronize_session=False)
+        db.query(models.Valutazione).filter(models.Valutazione.persona_id == persona_id).delete(synchronize_session=False)
+        db.query(models.Infortunio).filter(models.Infortunio.persona_id == persona_id).delete(synchronize_session=False)
+        db.query(models.SchedaAllenamento).filter(models.SchedaAllenamento.persona_id == persona_id).delete(synchronize_session=False)
+        db.query(models.ListaTorneoGiocatore).filter(models.ListaTorneoGiocatore.persona_id == persona_id).delete(synchronize_session=False)
+        db.query(models.ConvocazioneGiocatore).filter(models.ConvocazioneGiocatore.persona_id == persona_id).delete(synchronize_session=False)
+        db.query(models.Openday).filter(models.Openday.persona_id == persona_id).delete(synchronize_session=False)
+        db.delete(persona)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Eliminazione non riuscita: ci sono dati collegati che impediscono la cancellazione.")
     return {"ok": True}
 
 @router.post("/genera-cf")

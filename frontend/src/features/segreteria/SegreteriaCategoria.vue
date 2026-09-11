@@ -321,11 +321,14 @@ function apriScheda(p) {
 }
 
 async function eliminaGiocatore(p) {
-  if (!confirm(`Eliminare ${p.cognome} ${p.nome}?`)) return
+  if (!confirm(`Eliminare ${p.cognome} ${p.nome}?\nVerranno eliminati anche i dati associati (presenze, valutazioni, infortuni, schede, liste, openday).`)) return
   try {
     await deletePersona(p.id)
     await loadDati()
-  } catch(e) { console.error('Error deleting:', e) }
+  } catch(e) {
+    console.error('Error deleting:', e)
+    alert(e.response?.data?.detail || 'Errore durante l\'eliminazione')
+  }
 }
 
 async function updateRate(p, field, value) {
