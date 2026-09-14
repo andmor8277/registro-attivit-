@@ -228,7 +228,7 @@ import { useStore } from '../../store.js'
 import { getPersone, getRegistroMese, getPartite, getCategoriaResponsabili, getWeekend, getWeekendPartite } from '../../api/index.js'
 import axios from 'axios'
 import { jsPDF } from 'jspdf'
-import html2canvas from 'html2canvas'
+import 'jspdf-autotable'
 
 const router = useRouter()
 const route = useRoute()
@@ -627,99 +627,221 @@ function esc(s) {
 
 async function esportaPDF() {
   if (!convocazione.value) return
-  const numGare = convocazione.value.gare.length
-  const containerWidth = Math.max(800, numGare * 320) + 40
-  const personeMap = {}
-  persone.value.forEach(p => { personeMap[p.id] = p; personeMap[String(p.id)] = p; personeMap[Number(p.id)] = p })
-  let exportContainer = document.getElementById('pdf-export-container')
-  if (!exportContainer) { exportContainer = document.createElement('div'); exportContainer.id = 'pdf-export-container'; document.body.appendChild(exportContainer) }
-  exportContainer.style.cssText = `position: fixed !important; left: -9999px !important; top: 0px !important; width: ${containerWidth}px !important; background: #fff !important; padding: 0px !important; z-index: 9999 !important; overflow: visible !important; display: block !important;`
-  const getGiocatoreNome = (id) => { if (!id) return '—'; const p = personeMap[id] || personeMap[Number(id)] || persone.value.find(x => x.id === id || x.id === Number(id)); return p ? p.cognome : '—' }
-  const formatD = (d) => { if (!d) return '—'; const [y, m, g] = d.split('-'); return `${g}/${m}/${y}` }
-
-  const garaCards = convocazione.value.gare.map((gara, idx) => {
-    const giocatoriRows = gara.giocatori.map((pid, i) => {
-      const nome = getGiocatoreNome(pid)
-      const filled = pid !== null
-      const np = filled && gara.nonPresenti?.has(pid)
-      return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;${i < 13 ? 'border-bottom:1px solid #f0f0f0;' : ''}">
-        <span style="min-width:22px;height:22px;border-radius:50%;background:${np ? '#ef4444' : (filled ? '#dc2626' : '#f0f0f0')};color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;">${i + 1}</span>
-        <span style="font-size:12px;font-weight:${filled ? '700' : '400'};color:${np ? '#ef4444' : (filled ? '#1a1a1a' : '#ccc')};flex:1;${np ? 'text-decoration:line-through;opacity:0.7;' : ''}">${esc(nome)}${np ? ' (NP)' : ''}</span>
-      </div>`
-    }).join('')
-
-    return `<div style="background:#fff;border:2px solid #1a1a1a;border-radius:12px;overflow:hidden;box-shadow:4px 4px 0 #1a1a1a;">
-      <div style="background:#1a1a1a;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;">
-        <span style="font-size:28px;font-weight:900;line-height:1;">${idx + 1}</span>
-        <div style="flex:1;">
-          <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#dc2626;font-weight:700;">Gara ${idx + 1}</div>
-          <div style="font-size:14px;font-weight:800;letter-spacing:0.5px;">${esc(gara.gara || '—')}</div>
-        </div>
-      </div>
-      <div style="padding:12px 16px;background:#fafafa;border-bottom:1px solid #eee;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;">
-          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Data</span><br><span style="font-weight:700;color:#1a1a1a;">${esc(formatD(gara.data))}</span></div>
-          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Campo</span><br><span style="font-weight:700;color:#1a1a1a;">${esc(gara.campo || '—')}</span></div>
-          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Indirizzo</span><br><span style="font-weight:700;color:#1a1a1a;">${esc(gara.indirizzo || '—')}</span></div>
-          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Appuntamento</span><br><span style="font-weight:700;color:#1a1a1a;">${esc(gara.appuntamento || '—')}</span></div>
-          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Inizio Gara</span><br><span style="font-weight:700;color:#1a1a1a;">${esc(gara.inizio_gara || '—')}</span></div>
-          <div style="font-size:11px;"><span style="color:#999;text-transform:uppercase;letter-spacing:0.5px;">Allenatore</span><br><span style="font-weight:700;color:#1a1a1a;">${esc(gara.allenatore || '—')}</span></div>
-        </div>
-      </div>
-      <div style="padding:12px 16px;">
-        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#999;font-weight:700;margin-bottom:8px;">Squadra</div>
-        ${giocatoriRows}
-      </div>
-    </div>`
-  }).join('')
-
-  const stagioneTxt = stagioneCorrente.value ? `${stagioneCorrente.value}/${(stagioneCorrente.value || 0) + 1}` : ''
-
-  exportContainer.innerHTML = `<div style="background:#fff;font-family:'Helvetica Neue',Arial,sans-serif;width:100%;box-sizing:border-box;">
-    <div style="background:#1a1a1a;color:#fff;padding:24px 20px;text-align:center;position:relative;overflow:hidden;">
-      <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(90deg,transparent,transparent 40px,var(--color-surface) 40px,var(--color-surface) 41px);pointer-events:none;"></div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:20px;position:relative;z-index:1;">
-        <img src="${societaAttiva.value?.logosponsor ? '/uploads/' + societaAttiva.value.logosponsor : '/logosponsor.png'}" style="height:60px;width:60px;object-fit:contain;border-radius:50%;background:#fff;padding:4px;" />
-        <div>
-          <div style="font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#dc2626;font-weight:700;margin-bottom:4px;">Convocazione Gare</div>
-          <div style="font-size:28px;font-weight:900;letter-spacing:3px;line-height:1;">${esc(societaAttiva.value?.nome || 'SQUADRA')}</div>
-          <div style="font-size:16px;font-weight:700;color:#dc2626;margin-top:6px;letter-spacing:1px;">${esc(categoriaAttiva.value?.nome || '')} ${esc(categoriaAttiva.value?.anno || '')}</div>
-          <div style="font-size:11px;color:#999;margin-top:4px;letter-spacing:1px;">${esc(formatD(convocazione.value.data_inizio))}${convocazione.value.data_fine ? ' — ' + esc(formatD(convocazione.value.data_fine)) : ''}</div>
-        </div>
-        <img src="${societaAttiva.value?.logo ? '/uploads/' + societaAttiva.value.logo : '/logo.jpg'}" style="height:60px;width:60px;object-fit:contain;border-radius:50%;background:#fff;padding:4px;" />
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(${numGare},1fr);gap:20px;padding:20px;box-sizing:border-box;">
-      ${garaCards}
-    </div>
-    ${convocazione.value.note ? `
-    <div style="margin:0 20px 20px;padding:16px 20px;background:#fff8f0;border:1px solid #fde0c0;border-radius:8px;">
-      <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#dc2626;font-weight:700;margin-bottom:6px;">Note</div>
-      <div style="font-size:10px;color:#666;line-height:1.6;white-space:pre-wrap;">${esc(convocazione.value.note)}</div>
-    </div>` : ''}
-    <div style="text-align:center;padding:12px;border-top:2px solid #1a1a1a;margin-top:0;">
-      <span style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#ccc;">${esc(societaAttiva.value?.nome || '')} — Stagione ${esc(stagioneTxt)}</span>
-    </div>
-  </div>`
-
   try {
-    await new Promise(resolve => setTimeout(resolve, 500))
-    const actualHeight = exportContainer.scrollHeight
-    const captureHeight = Math.max(actualHeight + 100, 800)
-    const canvas = await html2canvas(exportContainer, { scale: 1.5, useCORS: true, logging: false, backgroundColor: '#ffffff', width: containerWidth, height: captureHeight, windowWidth: containerWidth, scrollX: 0, scrollY: 0, x: 0, y: 0 })
-    const pdf = new jsPDF('landscape', 'mm', 'a4')
-    const pdfWidth = pdf.internal.pageSize.getWidth()
-    const pdfHeight = pdf.internal.pageSize.getHeight()
-    const imgWidth = pdfWidth - 20
-    const imgHeight = (canvas.height / canvas.width) * imgWidth
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, imgWidth, Math.min(imgHeight, pdfHeight - 20))
+    const doc = new jsPDF('portrait', 'mm', 'a4')
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 14
+    const contentWidth = pageWidth - margin * 2
+    const accent = [220, 38, 38]
+    const dark = [17, 24, 39]
+    const gray = [107, 114, 128]
+    const light = [248, 250, 252]
+    const line = [226, 232, 240]
+
+    const personeMap = new Map()
+    persone.value.forEach(p => personeMap.set(p.id, p))
+    const getPersona = (id) => personeMap.get(id) || persone.value.find(p => p.id === id || p.id === Number(id))
+    const formatD = (d) => d ? d.split('-').reverse().join('/') : '—'
+    const stagioneTxt = stagioneCorrente.value ? `${stagioneCorrente.value}/${Number(stagioneCorrente.value) + 1}` : ''
+
+    async function loadImageData(url) {
+      if (!url) return null
+      try {
+        const res = await fetch(url)
+        if (!res.ok) return null
+        const blob = await res.blob()
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result)
+          reader.onerror = reject
+          reader.readAsDataURL(blob)
+        })
+        const img = new Image()
+        img.src = dataUrl
+        await img.decode()
+        const canvas = document.createElement('canvas')
+        const max = 256
+        const scale = Math.min(max / img.width, max / img.height, 1)
+        canvas.width = Math.max(1, Math.floor(img.width * scale))
+        canvas.height = Math.max(1, Math.floor(img.height * scale))
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        return canvas.toDataURL('image/png')
+      } catch {
+        return null
+      }
+    }
+
+    function addLogo(data, x, y, box) {
+      if (!data) return
+      try {
+        const props = doc.getImageProperties(data)
+        const scale = Math.min(box / props.width, box / props.height)
+        const w = props.width * scale
+        const h = props.height * scale
+        doc.addImage(data, 'PNG', x + (box - w) / 2, y + (box - h) / 2, w, h)
+      } catch {}
+    }
+
+    const logoData = await loadImageData(societaAttiva.value?.logo ? `/uploads/${societaAttiva.value.logo}` : '/logo.jpg')
+    const sponsorData = await loadImageData(societaAttiva.value?.logosponsor ? `/uploads/${societaAttiva.value.logosponsor}` : '/logosponsor.png')
+
+    let y = margin
+    const logoBox = 18
+    if (logoData) addLogo(logoData, margin, y, logoBox)
+    if (sponsorData) addLogo(sponsorData, pageWidth - margin - logoBox, y, logoBox)
+    const textX = logoData ? margin + logoBox + 4 : margin
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(17)
+    doc.setTextColor(...dark)
+    doc.text(societaAttiva.value?.nome || 'SQUADRA', textX, y + 6)
+
+    doc.setFontSize(8.5)
+    doc.setTextColor(...accent)
+    doc.text('CONVOCAZIONE GARE', textX, y + 11)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(11)
+    doc.setTextColor(...dark)
+    doc.text(`${categoriaAttiva.value?.nome || ''} ${categoriaAttiva.value?.anno || ''}`.trim(), textX, y + 17)
+
+    doc.setFontSize(9)
+    doc.setTextColor(...gray)
+    const dateRange = formatD(convocazione.value.data_inizio) + (convocazione.value.data_fine ? ' — ' + formatD(convocazione.value.data_fine) : '')
+    doc.text(`Weekend: ${dateRange}${stagioneTxt ? '   ·   Stagione ' + stagioneTxt : ''}`, textX, y + 22)
+
+    y += logoBox + 8
+    doc.setDrawColor(...accent)
+    doc.setLineWidth(0.6)
+    doc.line(margin, y, pageWidth - margin, y)
+    y += 7
+
+    if (convocazione.value.note) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8.5)
+      const noteLines = doc.splitTextToSize(convocazione.value.note, contentWidth - 8)
+      const noteHeight = noteLines.length * 3.9 + 10
+      if (y + noteHeight > pageHeight - 20) {
+        doc.addPage()
+        y = margin
+      }
+      doc.setFillColor(...light)
+      doc.setDrawColor(...line)
+      doc.setLineWidth(0.15)
+      doc.roundedRect(margin, y, contentWidth, noteHeight, 1.5, 1.5, 'FD')
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(7.5)
+      doc.setTextColor(...accent)
+      doc.text('NOTE', margin + 4, y + 5)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8.5)
+      doc.setTextColor(...dark)
+      doc.text(noteLines, margin + 4, y + 10)
+      y += noteHeight + 6
+    }
+
+    convocazione.value.gare.forEach((gara, idx) => {
+      if (y > pageHeight - 70) {
+        doc.addPage()
+        y = margin
+      }
+
+      doc.setFillColor(...accent)
+      doc.rect(margin, y, 2.5, 6, 'F')
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(12)
+      doc.setTextColor(...dark)
+      doc.text(`GARA ${idx + 1}`, margin + 5, y + 4.5)
+      if (gara.gara) {
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(10)
+        doc.setTextColor(...gray)
+        doc.text(gara.gara, margin + 24, y + 4.5, { maxWidth: pageWidth - margin - (margin + 24) })
+      }
+      y += 9
+
+      const details = [
+        ['Data', formatD(gara.data), 'Campo', gara.campo || '—'],
+        ['Indirizzo', gara.indirizzo || '—', 'Appuntamento', gara.appuntamento || '—'],
+        ['Inizio gara', gara.inizio_gara || '—', 'Allenatore', gara.allenatore || '—']
+      ]
+
+      doc.autoTable({
+        startY: y,
+        margin: { left: margin, right: margin, bottom: 18 },
+        tableWidth: contentWidth,
+        body: details,
+        theme: 'grid',
+        styles: { font: 'helvetica', fontSize: 9, cellPadding: 2.5, lineColor: line, lineWidth: 0.15, textColor: dark },
+        columnStyles: {
+          0: { cellWidth: 26, fontStyle: 'bold', fillColor: light, textColor: gray },
+          1: { cellWidth: contentWidth / 2 - 26 },
+          2: { cellWidth: 30, fontStyle: 'bold', fillColor: light, textColor: gray },
+          3: { cellWidth: contentWidth / 2 - 30 }
+        }
+      })
+      y = doc.lastAutoTable.finalY + 5
+
+      const rows = gara.giocatori
+        .map((pid, i) => {
+          if (!pid) return null
+          const p = getPersona(pid)
+          const np = gara.nonPresenti?.has(pid)
+          return [String(i + 1), p?.cognome || '—', p?.nome || '', p?.ruolo ? p.ruolo.toUpperCase() : '', np ? 'NON PRESENTE' : '']
+        })
+        .filter(Boolean)
+
+      doc.autoTable({
+        startY: y,
+        margin: { left: margin, right: margin, bottom: 18 },
+        tableWidth: contentWidth,
+        head: [['#', 'Cognome', 'Nome', 'Ruolo', 'Stato']],
+        body: rows.length ? rows : [['—', 'Nessun giocatore selezionato', '', '', '']],
+        theme: 'grid',
+        headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize: 9, cellPadding: 2.8 },
+        styles: { font: 'helvetica', fontSize: 9.5, cellPadding: 2.8, lineColor: line, lineWidth: 0.15, textColor: dark },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
+          1: { cellWidth: 48, fontStyle: 'bold' },
+          2: { cellWidth: 42 },
+          3: { cellWidth: 28 },
+          4: { cellWidth: 'auto', fontStyle: 'bold' }
+        },
+        didParseCell: (data) => {
+          if (data.section === 'body' && data.cell.column.index === 4 && data.cell.raw === 'NON PRESENTE') {
+            data.cell.styles.textColor = accent
+            data.cell.styles.fontStyle = 'bold'
+          }
+        }
+      })
+      y = doc.lastAutoTable.finalY + 9
+    })
+
+    const pageCount = doc.getNumberOfPages()
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i)
+      doc.setDrawColor(...line)
+      doc.setLineWidth(0.15)
+      doc.line(margin, pageHeight - 11, pageWidth - margin, pageHeight - 11)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7.5)
+      doc.setTextColor(148, 163, 184)
+      doc.text(`${societaAttiva.value?.nome || ''}${stagioneTxt ? ' · Stagione ' + stagioneTxt : ''}`, margin, pageHeight - 7)
+      doc.text(`Pagina ${i} di ${pageCount}`, pageWidth - margin, pageHeight - 7, { align: 'right' })
+    }
+
     const categoriaNome = categoriaAttiva.value?.nome || 'Categoria'
     const dataInizio = convocazione.value.data_inizio || ''
     const dataFine = convocazione.value.data_fine || ''
     const dataFormattata = dataInizio ? dataInizio.split('-').reverse().join('/') : 'data'
-    const dataFinale = dataFine ? dataInizio.split('-').reverse().join('/') + ' - ' + dataFine.split('-').reverse().join('/') : dataFormattata
-    pdf.save('Convocazioni ' + categoriaNome + ' del ' + dataFinale + '.pdf')
-  } catch (e) { console.error('Errore PDF:', e); alert('Errore nella generazione del PDF') }
+    const dataFinale = dataFine ? dataFormattata + '-' + dataFine.split('-').reverse().join('/') : dataFormattata
+    doc.save(`Convocazioni ${categoriaNome} ${dataFinale}.pdf`)
+  } catch (e) {
+    console.error('Errore PDF:', e)
+    alert('Errore nella generazione del PDF')
+  }
 }
 
 async function elimina() {
