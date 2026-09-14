@@ -56,7 +56,9 @@ def crea_societa(data: SocietaIn, db: Session = Depends(get_db), current_user=De
     return s
 
 @router.put("/{sid}", response_model=SocietaOut)
-def aggiorna_societa(sid: int, data: SocietaIn, db: Session = Depends(get_db), current_user=Depends(get_super_admin)):
+def aggiorna_societa(sid: int, data: SocietaIn, db: Session = Depends(get_db), current_user=Depends(get_admin)):
+    if not current_user.is_super_admin and current_user.societa_id != sid:
+        raise HTTPException(status_code=403, detail="Non autorizzato a modificare questa società")
     s = db.query(Societa).filter(Societa.id == sid).first()
     if not s:
         raise HTTPException(status_code=404, detail="Società non trovata")
