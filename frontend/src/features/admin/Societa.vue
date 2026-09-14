@@ -59,7 +59,7 @@
       
       <div class="form-actions">
         <button class="btn-secondary" @click="isSuperAdmin ? resetForm() : router.push('/')" v-if="editing">Annulla</button>
-        <button class="btn-primary" @click="salva">
+        <button class="btn-primary" @click="salva" :disabled="!isSuperAdmin && !editing">
           {{ editing ? 'Salva modifiche' : 'Crea società' }}
         </button>
       </div>
@@ -122,15 +122,15 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getSocieta, createSocieta, updateSocieta, deleteSocieta, uploadSocietaFile } from '../../api/index.js'
+import { getSocieta, createSocieta, updateSocieta, deleteSocieta, uploadSocietaFile, getMe } from '../../api/index.js'
 import { useStore } from '../../store.js'
 
-const { setSocietaAttiva } = useStore()
+const { setSocietaAttiva, societaAttiva } = useStore()
 
 const route = useRoute()
 const router = useRouter()
 
-const isSuperAdmin = computed(() => localStorage.getItem('is_super_admin') === 'true')
+const isSuperAdmin = ref(false)
 
 const societa = ref([])
 const editing = ref(null)
@@ -202,6 +202,7 @@ function modifica(s) {
 }
 
 async function salva() {
+  if (!isSuperAdmin.value && !editing.value) return
   if (!nuovo.value.nome) {
     alert('Inserisci il nome della società')
     return
@@ -248,12 +249,28 @@ async function elimina(id) {
 
 onMounted(async () => {
   await load()
-  // Se c'è un id nella query, modifica direttamente quella società
-  if (route.query.id) {
-    const s = societa.value.find(s => s.id === parseInt(route.query.id))
-    if (s) {
-      modifica(s)
+  try {
+    const meRes = await getMe()
+    const me = meRes.data
+    isSuperAdmin.value = !!me.is_super_admin || me.ruolo === 'super_admin'
+
+    if (!me.is_admin && !isSuperAdmin.value) {
+      router.push('/')
+      return
     }
+
+    if (isSuperAdmin.value) {
+      if (route.query.id) {
+        const s = societa.value.find(s => s.id === parseInt(route.query.id))
+        if (s) modifica(s)
+      }
+    } else {
+      const own = societa.value.find(s => s.id === me.societa_id)
+      if (own) modifica(own)
+      else router.push('/')
+    }
+  } catch {
+    router.push('/login')
   }
 })
 </script>

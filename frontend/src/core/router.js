@@ -22,7 +22,7 @@ export const router = createRouter({
     { path: '/allenamenti/:id', component: () => import('../features/allenamenti/Allenamenti.vue'), name: 'allenamenti', meta: { requiresAuth: true } },
     { path: '/scheda-allenamento/:id', component: () => import('../features/allenamenti/SchedaAllenamento.vue'), name: 'scheda-allenamento', meta: { requiresAuth: true } },
     { path: '/admin', component: () => import('../features/admin/Admin.vue'), name: 'admin', meta: { requiresAuth: true, requiresSuperAdmin: true } },
-    { path: '/admin/societa', component: () => import('../features/admin/Societa.vue'), name: 'societa', meta: { requiresAuth: true } },
+    { path: '/admin/societa', component: () => import('../features/admin/Societa.vue'), name: 'societa', meta: { requiresAuth: true, requiresAdmin: true } },
     { path: '/reportistica/:id', component: () => import('../features/reportistica/Reportistica.vue'), name: 'reportistica', meta: { requiresAuth: true } },
     { path: '/segreteria', component: () => import('../features/segreteria/Segreteria.vue'), name: 'segreteria', meta: { requiresAuth: true } },
     { path: '/segreteria/scheda/:id', component: () => import('../features/segreteria/SchedaGiocatore.vue'), name: 'scheda-giocatore', meta: { requiresAuth: true } },
@@ -49,7 +49,7 @@ router.beforeEach((to, from, next) => {
   }
   if (to.meta.requiresAdmin) {
     const isAdmin = user?.is_admin || user?.ruolo === 'admin' || isSuperAdmin
-    if (!isAdmin) return next('/')
+    if (user && !isAdmin) return next('/')
   }
   if (to.path === '/') {
     if (user?.ruolo === 'segreteria') return next('/segreteria')

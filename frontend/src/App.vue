@@ -82,7 +82,7 @@
           <a href="/guida.html" target="_blank" rel="noopener,noreferrer" class="mini-btn" title="Guida Utente">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           </a>
-          <button v-if="!isSuperAdmin && societaAttiva" class="mini-btn" title="Modifica Societ&agrave;" @click="modificaSocietaAttiva">
+          <button v-if="isAdminSocieta && societaAttiva" class="mini-btn" title="Modifica Societ&agrave;" @click="modificaSocietaAttiva">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
           <button class="mini-btn danger" title="Esci" @click="logout">
@@ -160,7 +160,7 @@
           </svg>
           Password
         </button>
-        <button v-if="!isSuperAdmin && societaAttiva" @click="modificaSocietaAttiva" class="btn-nav">
+        <button v-if="isAdminSocieta && societaAttiva" @click="modificaSocietaAttiva" class="btn-nav">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
             <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -306,7 +306,7 @@
             </svg>
             Password
           </button>
-          <button v-if="!isSuperAdmin && societaAttiva" @click="modificaSocietaAttiva(); mobileMenuOpen = false" class="mobile-menu-item">
+          <button v-if="isAdminSocieta && societaAttiva" @click="modificaSocietaAttiva(); mobileMenuOpen = false" class="mobile-menu-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 20h9"/>
               <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
