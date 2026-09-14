@@ -684,8 +684,8 @@ async function esportaPDF() {
       } catch {}
     }
 
-    const logoData = await loadImageData(societaAttiva.value?.logo ? `/uploads/${societaAttiva.value.logo}` : '/logo.jpg')
-    const sponsorData = await loadImageData(societaAttiva.value?.logosponsor ? `/uploads/${societaAttiva.value.logosponsor}` : '/logosponsor.png')
+    const logoData = await loadImageData(societaAttiva.value?.logo ? `/uploads/${societaAttiva.value.logo}` : null)
+    const sponsorData = await loadImageData(societaAttiva.value?.logosponsor ? `/uploads/${societaAttiva.value.logosponsor}` : null)
 
     let y = margin
     const logoBox = 18
@@ -813,7 +813,7 @@ async function esportaPDF() {
           4: { cellWidth: 'auto', fontStyle: 'bold' }
         },
         didParseCell: (data) => {
-          if (data.section === 'body' && data.cell.column.index === 4 && data.cell.raw === 'NON PRESENTE') {
+          if (data.section === 'body' && data.cell.raw === 'NON PRESENTE') {
             data.cell.styles.textColor = accent
             data.cell.styles.fontStyle = 'bold'
           }
