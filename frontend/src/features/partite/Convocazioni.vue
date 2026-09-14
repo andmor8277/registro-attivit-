@@ -40,7 +40,7 @@
 
         <!-- MISTER -->
         <div v-if="responsabili.length > 0" class="mister-section">
-          <div class="mister-title">Mister</div>
+          <div class="mister-title">Responsabili</div>
           <div class="mister-list">
             <div v-for="r in responsabili" :key="r.id" class="mister-row">
               <span class="mister-name">{{ r.cognome }} {{ r.nome }}</span>

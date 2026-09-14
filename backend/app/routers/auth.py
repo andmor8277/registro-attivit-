@@ -235,7 +235,7 @@ def assegna_categorie(uid: int, data: AssegnaCategorie, current_user: Utente = D
             raise HTTPException(status_code=400, detail=f"Non è possibile assegnare la categoria padre '{cat.nome}'")
     db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == uid).delete()
     for cid in data.categoria_ids:
-        db.add(UtenteCategoria(utente_id=uid, categoria_id=cid))
+        db.add(UtenteCategoria(utente_id=uid, categoria_id=cid, ruolo=utente.ruolo))
     db.commit()
     return {"ok": True}
 

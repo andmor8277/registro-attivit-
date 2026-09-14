@@ -11,6 +11,9 @@ from datetime import date
 
 router = APIRouter(prefix="/categorie", tags=["categorie"])
 
+RUOLI_ASSEGNABILI = {"admin", "mister", "dirigente", "segreteria", "infermeria"}
+RUOLI_RESPONSABILI = {"admin", "mister", "dirigente"}
+
 class CategoriaCreate(BaseModel):
     nome: str
     anno: Optional[int] = None
@@ -248,7 +251,7 @@ def assegna_utenti_categoria(categoria_id: int, data: AssegnaUtenti, db: Session
     # Re-add only the users in the new list
     for uid in data.utente_ids:
         user = db.query(Utente).filter(Utente.id == uid).first()
-        ruolo = user.ruolo if user and user.ruolo in ['mister', 'dirigente'] else None
+        ruolo = user.ruolo if user and user.ruolo in RUOLI_ASSEGNABILI else None
         
         if ruolo:
             db.add(UtenteCategoria(utente_id=uid, categoria_id=categoria_id, ruolo=ruolo))
@@ -264,7 +267,7 @@ def get_categoria_responsabili(categoria_id: int, db: Session = Depends(get_db),
     result = []
     for a in assegnazioni:
         u = db.query(Utente).filter(Utente.id == a.utente_id).first()
-        if u and u.ruolo in ('mister', 'dirigente'):
+        if u and u.ruolo in RUOLI_RESPONSABILI:
             result.append({
                 "id": u.id,
                 "cognome": u.cognome,

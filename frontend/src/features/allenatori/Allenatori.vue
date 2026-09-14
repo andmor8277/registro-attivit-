@@ -195,6 +195,14 @@
                   </span>
                 </div>
               </div>
+              <div v-if="getAdminsCat(cat.id).length > 0" class="meta-row">
+                <span class="meta-label">Admin</span>
+                <div class="people-badges">
+                  <span class="person-badge admin" v-for="a in getAdminsCat(cat.id)" :key="a.id">
+                    {{ a.cognome }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
           <div class="card-arrow">
@@ -470,6 +478,10 @@ function getMistersCat(catId) {
 
 function getDirigentiCat(catId) {
   return (responsabileMap.value[catId] || []).filter(r => r.ruolo === 'dirigente')
+}
+
+function getAdminsCat(catId) {
+  return (responsabileMap.value[catId] || []).filter(r => r.ruolo === 'admin')
 }
 
 const planningSettimana = computed(() => {
@@ -1490,6 +1502,11 @@ onMounted(() => {
 .person-badge.dirigente {
   background: rgba(59, 130, 246, 0.12);
   color: #60a5fa;
+}
+
+.person-badge.admin {
+  background: rgba(124, 58, 237, 0.12);
+  color: #a78bfa;
 }
 
 .card-arrow {
