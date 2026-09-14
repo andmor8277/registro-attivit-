@@ -28,6 +28,7 @@ class GaraIn(BaseModel):
     appuntamento: Optional[str] = None
     inizio_gara: Optional[str] = None
     allenatore: Optional[str] = None
+    allenatori: Optional[List[int]] = None
     giocatori: List[GiocatoreIn] = []
 
 class ConvocazioneIn(BaseModel):
@@ -67,7 +68,7 @@ def dettaglio(cid: int, db: Session = Depends(get_db), current_user: Utente = De
         result_gare.append({
             "id": g.id, "numero": g.numero, "gara": g.gara, "data": g.data,
             "campo": g.campo, "indirizzo": g.indirizzo, "appuntamento": g.appuntamento,
-            "inizio_gara": g.inizio_gara, "allenatore": g.allenatore, "giocatori": persone
+            "inizio_gara": g.inizio_gara, "allenatore": g.allenatore, "allenatori": g.allenatori or [], "giocatori": persone
         })
     return {"id": c.id, "categoria_id": c.categoria_id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "note": c.note, "esclusioni": c.esclusioni or [], "gare": result_gare}
 
@@ -86,7 +87,7 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
     for g in data.gare:
         gara = ConvocazioneGara(convocazione_id=c.id, numero=g.numero, gara=g.gara, data=g.data,
             campo=g.campo, indirizzo=g.indirizzo, appuntamento=g.appuntamento,
-            inizio_gara=g.inizio_gara, allenatore=g.allenatore)
+            inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [])
         db.add(gara)
         db.flush()
         for gk in g.giocatori:
@@ -115,7 +116,7 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
     for g in data.gare:
         gara = ConvocazioneGara(convocazione_id=cid, numero=g.numero, gara=g.gara, data=g.data,
             campo=g.campo, indirizzo=g.indirizzo, appuntamento=g.appuntamento,
-            inizio_gara=g.inizio_gara, allenatore=g.allenatore)
+            inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [])
         db.add(gara)
         db.flush()
         for gk in g.giocatori:

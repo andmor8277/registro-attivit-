@@ -1087,5 +1087,19 @@ def run_migrations():
                 print(f"Migration warning (portiere registro consolidation): {e}")
                 conn.rollback()
 
+            # Multi-allenatori per gara di convocazione
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'convocazione_gare' AND column_name = 'allenatori'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text("ALTER TABLE convocazione_gare ADD COLUMN allenatori JSONB"))
+                    conn.commit()
+                    print("Migration: Added allenatori to convocazione_gare")
+            except Exception as e:
+                print(f"Migration warning (convocazione_gare allenatori): {e}")
+                conn.rollback()
+
         finally:
             conn.close()

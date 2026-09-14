@@ -156,9 +156,8 @@
                   <li><span class="k">Inizio gara</span><span class="v"><input v-model="garaAttiva.inizio_gara" placeholder="15:00" /></span></li>
                   <li><span class="k">Mister</span>
                     <span class="v">
-                      <select v-model="garaAttiva.allenatore">
-                        <option value="">&mdash;</option>
-                        <option v-for="r in responsabili" :key="r.id" :value="r.cognome">{{ r.cognome }} &middot; {{ r.cellulare }}</option>
+                      <select multiple class="mister-multi" v-model="garaAttiva.allenatori">
+                        <option v-for="r in responsabili" :key="r.id" :value="r.id">{{ r.cognome }} &middot; {{ r.cellulare }}</option>
                       </select>
                     </span>
                   </li>
@@ -530,7 +529,7 @@ function formatDataShort(d) {
 }
 
 function garaVuota(numero) {
-  return { numero, gara: '', data: '', campo: '', indirizzo: '', appuntamento: '', inizio_gara: '', allenatore: '', giocatori: Array(10).fill(null), nonPresenti: new Set() }
+  return { numero, gara: '', data: '', campo: '', indirizzo: '', appuntamento: '', inizio_gara: '', allenatore: '', allenatori: [], giocatori: Array(10).fill(null), nonPresenti: new Set() }
 }
 
 async function caricaPartiteWeekend(dataInizio, dataFine) {
@@ -545,6 +544,21 @@ async function caricaPartiteWeekend(dataInizio, dataFine) {
 function getMisterCognome(misterId) {
   const m = responsabili.value.find(r => r.id === misterId)
   return m ? m.cognome : ''
+}
+
+function getAllenatoriLabel(gara) {
+  const ids = gara?.allenatori || []
+  if (ids.length) {
+    return ids
+      .map(id => {
+        const m = responsabili.value.find(r => r.id === id)
+        if (!m) return ''
+        return m.cellulare ? `${m.cognome} (${m.cellulare})` : m.cognome
+      })
+      .filter(Boolean)
+      .join(', ')
+  }
+  return gara?.allenatore || ''
 }
 
 function nuovaConvocazione() {
@@ -562,7 +576,7 @@ async function popolaConvocazione(dataInizio, dataFine) {
   const gare = partite.length > 0 ? partite.map((p, idx) => ({
     numero: idx + 1, gara: `${nomeSocieta} vs ${p.avversario || 'TBD'}`, data: p.data_partite, campo: p.campo || '',
     indirizzo: p.indirizzo || '', appuntamento: '', inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
-    allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null), nonPresenti: new Set()
+    allenatore: getMisterCognome(p.mister_id), allenatori: p.mister_id ? [p.mister_id] : [], giocatori: Array(10).fill(null), nonPresenti: new Set()
   })) : [garaVuota(1)]
   numPartite.value = gare.length
   activeGaraIdx.value = 0
@@ -584,7 +598,7 @@ async function caricaPartiteEsistenti() {
   const gare = partite.map((p, idx) => ({
     numero: idx + 1, gara: `${nomeSocieta} vs ${p.avversario || 'TBD'}`, data: p.data_partite, campo: p.campo || '',
     indirizzo: p.indirizzo || '', appuntamento: '', inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
-    allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null), nonPresenti: new Set()
+    allenatore: getMisterCognome(p.mister_id), allenatori: p.mister_id ? [p.mister_id] : [], giocatori: Array(10).fill(null), nonPresenti: new Set()
   }))
   convocazione.value.gare = gare
   numPartite.value = gare.length
@@ -603,6 +617,7 @@ async function caricaConvocazione(id) {
       const nonPresenti = new Set(giocatoriArr.filter(x => x.non_presente).map(x => x.persona_id))
       return {
         ...g, numero: g.numero || idx + 1, data: g.data || '',
+        allenatori: g.allenatori || [],
         giocatori: padGiocatori(giocatoriArr.map(x => x.persona_id)), nonPresenti
       }
     })
@@ -654,7 +669,7 @@ async function creaConvocazioneDaWeekend(weekend) {
     numero: idx + 1,
     gara: p.casa_fuori === 'fuori' ? `${p.avversario || 'TBD'} vs ${nomeSocieta}` : `${nomeSocieta} vs ${p.avversario || 'TBD'}`,
     data: p.data_partite, campo: p.campo || '', indirizzo: p.indirizzo || '', appuntamento: '',
-    inizio_gara: p.ora ? p.ora.slice(0, 5) : '', allenatore: getMisterCognome(p.mister_id), giocatori: Array(10).fill(null), nonPresenti: new Set()
+    inizio_gara: p.ora ? p.ora.slice(0, 5) : '', allenatore: getMisterCognome(p.mister_id), allenatori: p.mister_id ? [p.mister_id] : [], giocatori: Array(10).fill(null), nonPresenti: new Set()
   }))
   numPartite.value = gare.length
   activeGaraIdx.value = 0
@@ -676,11 +691,19 @@ async function salva() {
   const payload = {
     categoria_id: categoriaId, data_inizio: convocazione.value.data_inizio, data_fine: convocazione.value.data_fine,
     esclusioni: convocazione.value.esclusioni || [], note: convocazione.value.note,
-    gare: convocazione.value.gare.map((g, gi) => ({
-      numero: gi + 1, gara: g.gara, data: g.data || null, campo: g.campo, indirizzo: g.indirizzo,
-      appuntamento: g.appuntamento, inizio_gara: g.inizio_gara, allenatore: g.allenatore,
-      giocatori: g.giocatori.map((pid, i) => pid ? { persona_id: pid, posizione: i + 1, non_presente: g.nonPresenti?.has(pid) || false } : null).filter(Boolean)
-    }))
+    gare: convocazione.value.gare.map((g, gi) => {
+      const allenatori = g.allenatori || []
+      const allenatoriNomi = allenatori
+        .map(id => responsabili.value.find(r => r.id === id)?.cognome)
+        .filter(Boolean)
+      return {
+        numero: gi + 1, gara: g.gara, data: g.data || null, campo: g.campo, indirizzo: g.indirizzo,
+        appuntamento: g.appuntamento, inizio_gara: g.inizio_gara,
+        allenatore: allenatoriNomi.length ? allenatoriNomi.join(', ') : (g.allenatore || ''),
+        allenatori,
+        giocatori: g.giocatori.map((pid, i) => pid ? { persona_id: pid, posizione: i + 1, non_presente: g.nonPresenti?.has(pid) || false } : null).filter(Boolean)
+      }
+    })
   }
   if (convocazioneId.value) await axios.put(base + '/convocazioni/' + convocazioneId.value, payload, { headers: headers() })
   else { const res = await axios.post(base + '/convocazioni/', payload, { headers: headers() }); convocazioneId.value = res.data.id }
@@ -803,7 +826,7 @@ async function esportaPDF() {
         body: [
           ['Data', formatD(gara.data), 'Campo', gara.campo || '—'],
           ['Indirizzo', gara.indirizzo || '—', 'Appuntamento', gara.appuntamento || '—'],
-          ['Inizio gara', gara.inizio_gara || '—', 'Allenatore', gara.allenatore || '—']
+          ['Inizio gara', gara.inizio_gara || '—', 'Allenatore', getAllenatoriLabel(gara) || '—']
         ],
         theme: 'grid',
         styles: { font: 'helvetica', fontSize: 8, cellPadding: 1.5, lineColor: line, lineWidth: 0.15, textColor: dark },
@@ -930,7 +953,7 @@ async function esportaPDF() {
           ['Indirizzo', gara.indirizzo || '—'],
           ['Appuntamento', gara.appuntamento || '—'],
           ['Inizio gara', gara.inizio_gara || '—'],
-          ['Allenatore', gara.allenatore || '—']
+          ['Allenatore', getAllenatoriLabel(gara) || '—']
         ]
 
         doc.autoTable({
@@ -1553,6 +1576,25 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
 .info-dl .v input::placeholder { color: var(--color-text-muted); font-weight: 400; }
 .info-dl .v input:focus,
 .info-dl .v select:focus { border-bottom: 1px dashed #dc2626; background: var(--color-bg); }
+.info-dl .v select.mister-multi {
+  min-height: 72px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  text-align: left;
+  padding: 6px;
+}
+.info-dl .v select.mister-multi option {
+  text-align: left;
+  font-weight: 500;
+  padding: 6px 8px;
+  margin-bottom: 2px;
+  border-radius: 4px;
+}
+.info-dl .v select.mister-multi option:checked {
+  background: #dc2626 linear-gradient(0deg, #dc2626, #dc2626);
+  color: #fff;
+}
 
 .note-card { margin-top: 0; }
 .note-box { padding: 14px 18px; }

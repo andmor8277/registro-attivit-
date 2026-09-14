@@ -26,6 +26,7 @@ class ConvocazioneGara(Base):
     appuntamento = Column(String(50), nullable=True)
     inizio_gara = Column(String(50), nullable=True)
     allenatore = Column(String(200), nullable=True)
+    allenatori = Column(JSONB, nullable=True, default=list)
 
 
 class ConvocazioneGiocatore(Base):
