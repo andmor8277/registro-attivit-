@@ -197,7 +197,10 @@
                 <div v-for="p in filteredPickerPlayers" :key="p.id" class="picker-item" :class="{ selected: p.id === garaAttiva.giocatori[pickerPos] }" @click="selectPlayer(activeGaraIdx, pickerPos, p.id)">
                   <div class="picker-avatar">{{ p.cognome.charAt(0) }}{{ p.nome.charAt(0) }}</div>
                   <div class="picker-info">
-                    <span class="picker-name">{{ p.cognome }}</span>
+                    <div class="picker-name-row">
+                      <span class="picker-name">{{ p.cognome }}</span>
+                      <span v-if="getPlayerWarning(p)" class="picker-warning" :title="getPlayerWarningTitle(p)">{{ getPlayerWarning(p) }}</span>
+                    </div>
                     <span class="picker-surname">{{ p.nome }}</span>
                   </div>
                   <div class="picker-check" v-if="p.id === garaAttiva.giocatori[pickerPos]">
@@ -272,11 +275,10 @@ const convocazioniStorico = computed(() =>
 )
 
 const filteredPickerPlayers = computed(() => {
-  const players = getGiocatoriSettimanaPrecedente()
   const gara = pickerGara.value !== null ? convocazione.value?.gare?.[pickerGara.value] : null
   const currentId = gara && pickerPos.value !== null ? gara.giocatori[pickerPos.value] : null
   const assignedInGara = new Set((gara?.giocatori || []).filter(Boolean))
-  const available = players
+  const available = persone.value
     .filter(p => p.id === currentId || !assignedInGara.has(p.id))
     .sort((a, b) => a.cognome.localeCompare(b.cognome))
   if (!pickerSearch.value) return available
@@ -287,35 +289,94 @@ const filteredPickerPlayers = computed(() => {
 const oggi = new Date()
 const annoCorrente = oggi.getFullYear()
 const meseCorrente = oggi.getMonth() + 1
+const registroMesiCaricate = new Set()
 
-function getGiocatoriSettimanaPrecedente() {
-  if (!convocazione.value || !convocazione.value.data_inizio) return persone.value
-  const range = getWeekDateRange(convocazione.value.data_inizio)
-  if (!range) return persone.value
-  const presenzeCount = {}
-  const assenzeCount = {}
-  registro.value.filter(r => r.data >= range.monday && r.data <= range.friday).forEach(r => {
-    if (['X', 'P', 'R'].includes(r.codice)) presenzeCount[r.persona_id] = (presenzeCount[r.persona_id] || 0) + 1
-    if (['I', 'AI', 'AG'].includes(r.codice)) assenzeCount[r.persona_id] = (assenzeCount[r.persona_id] || 0) + 1
-  })
-  return persone.value.filter(p => presenzeCount[p.id] >= 2 && (assenzeCount[p.id] || 0) < 2)
+function parseLocalDate(value) {
+  const [y, m, d] = value.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+function formatLocalDate(date) {
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
+}
+
+function getPickerReferenceDate() {
+  const gara = pickerGara.value !== null ? convocazione.value?.gare?.[pickerGara.value] : null
+  return gara?.data || convocazione.value?.data_inizio || null
+}
+
+const pickerStats = computed(() => {
+  const referenceDate = getPickerReferenceDate()
+  const range = getWeekDateRange(referenceDate)
+  if (!range) return {}
+  const stats = {}
+  registro.value
+    .filter(r => r.data >= range.monday && r.data <= range.friday)
+    .forEach(r => {
+      if (!stats[r.persona_id]) stats[r.persona_id] = { presenze: 0, assenze: 0 }
+      if (['X', 'P', 'R'].includes(r.codice)) stats[r.persona_id].presenze += 1
+      if (['I', 'AI', 'AG'].includes(r.codice)) stats[r.persona_id].assenze += 1
+    })
+  return stats
+})
+
+function getPlayerWarning(player) {
+  const referenceDate = getPickerReferenceDate()
+  if (!referenceDate) return ''
+  const stats = pickerStats.value[player.id] || { presenze: 0, assenze: 0 }
+  if (stats.presenze >= 2 && stats.assenze < 2) return ''
+  return `${stats.presenze}P · ${stats.assenze}A`
+}
+
+function getPlayerWarningTitle(player) {
+  const stats = pickerStats.value[player.id] || { presenze: 0, assenze: 0 }
+  return `Settimana precedente: ${stats.presenze} presenze, ${stats.assenze} assenze`
+}
+
+async function caricaRegistroMese(anno, mese) {
+  const key = `${anno}-${String(mese).padStart(2, '0')}`
+  if (registroMesiCaricate.has(key)) return
+  const res = await getRegistroMese(categoriaId, anno, mese)
+  const existing = new Set(registro.value.map(r => r.id ?? `${r.persona_id}|${r.data}|${r.categoria_id}`))
+  registro.value = [
+    ...registro.value,
+    ...(res.data || []).filter(r => !existing.has(r.id ?? `${r.persona_id}|${r.data}|${r.categoria_id}`))
+  ]
+  registroMesiCaricate.add(key)
+}
+
+async function ensureRegistroPerData(dataStr) {
+  if (!dataStr) return
+  const range = getWeekDateRange(dataStr)
+  if (!range) return
+  const months = new Set([range.monday, range.friday].map(ds => {
+    const [y, m] = ds.split('-').map(Number)
+    return `${y}-${m}`
+  }))
+  for (const monthKey of months) {
+    const [y, m] = monthKey.split('-').map(Number)
+    try {
+      await caricaRegistroMese(y, m)
+    } catch (e) {
+      console.warn('Registro mese non caricato per avviso presenze', e)
+    }
+  }
 }
 
 function getWeekDateRange(dataGara) {
   if (!dataGara) return null
-  const data = new Date(dataGara)
-  const dayOfWeek = data.getDay()
+  const data = parseLocalDate(dataGara)
   let weekendSat = new Date(data)
-  if (dayOfWeek === 0) weekendSat.setDate(data.getDate() - 1)
-  else if (dayOfWeek !== 6) weekendSat = new Date(data)
+  if (data.getDay() === 0) weekendSat.setDate(data.getDate() - 1)
+  else if (data.getDay() !== 6) weekendSat = new Date(data)
   const daysToPrevMonday = weekendSat.getDay() === 0 ? 2 : weekendSat.getDay() + 1
   const mondayPrev = new Date(weekendSat)
   mondayPrev.setDate(weekendSat.getDate() - daysToPrevMonday)
   const fridayPrev = new Date(mondayPrev)
   fridayPrev.setDate(mondayPrev.getDate() + 4)
   return {
-    monday: mondayPrev.toISOString().split('T')[0],
-    friday: fridayPrev.toISOString().split('T')[0],
+    monday: formatLocalDate(mondayPrev),
+    friday: formatLocalDate(fridayPrev),
     mondayLabel: mondayPrev.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }),
     fridayLabel: fridayPrev.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
   }
@@ -400,10 +461,12 @@ function switchNonPresente(garaIdx, personaId) {
   else gara.nonPresenti.add(personaId)
 }
 
-function openPicker(garaIdx, pos) {
+async function openPicker(garaIdx, pos) {
   pickerGara.value = garaIdx
   pickerPos.value = pos
   pickerSearch.value = ''
+  const gara = convocazione.value?.gare?.[garaIdx]
+  await ensureRegistroPerData(gara?.data || convocazione.value?.data_inizio)
   pickerOpen.value = true
 }
 
@@ -534,14 +597,6 @@ async function caricaConvocazione(id) {
   convocazioneId.value = id
   const res = await axios.get(base + '/convocazioni/' + id, { headers: headers() })
   const d = res.data
-  const garaData = d.gare[0]?.data
-  if (garaData) {
-    const [y, m] = garaData.split('-')
-    if (parseInt(m) !== meseCorrente || parseInt(y) !== annoCorrente) {
-      const regRes = await getRegistroMese(categoriaId, parseInt(y), parseInt(m))
-      registro.value = regRes.data
-    }
-  }
   convocazione.value = {
     data_inizio: d.data_inizio, data_fine: d.data_fine || '', esclusioni: d.esclusioni || [],
     note: d.note || '',
@@ -556,6 +611,10 @@ async function caricaConvocazione(id) {
   }
   numPartite.value = convocazione.value.gare.length
   activeGaraIdx.value = 0
+  const referenceDates = [...new Set([d.data_inizio, ...(d.gare || []).map(g => g.data)].filter(Boolean))]
+  for (const referenceDate of referenceDates) {
+    await ensureRegistroPerData(referenceDate)
+  }
 }
 
 async function loadStorico() {
@@ -588,7 +647,7 @@ async function loadWeekendDisponibili() {
   } catch (e) { weekendDisponibili.value = [] }
 }
 
-function creaConvocazioneDaWeekend(weekend) {
+async function creaConvocazioneDaWeekend(weekend) {
   convocazioneId.value = null
   const dataInizio = weekend.data_inizio
   const dataFine = weekend.data_fine || dataInizio
@@ -604,10 +663,14 @@ function creaConvocazioneDaWeekend(weekend) {
   convocazione.value = {
     data_inizio: dataInizio, data_fine: dataFine, esclusioni: [],
     note: `PRESENTARSI ALL'APPUNTAMENTO IN ORARIO STABILITO ED IN TENUTA DA RAPPRESENTANZA GEMS (NO GIA CAMBIATI).
-SI GIOCA CON KIT GARA* (MAGLIA CALZONCINI E CALZETTONI) PORTARE FELPA D'ALLENAMENTO PER RISCALDAMENTO E K-WAY IN BORSA PER L'EVENIENZA.
-AVVISARE TEMPESTIVAMENTE L'ALLENATORE PRESENTE IN GARA IN CASO DI RITARDO O ASSENZA.
-*PORTARE COMUNQUE MAGLIA DI RICAMBIO, CALZONCINI E CALZETTONI PER MODIFICARE I COLORI IN BASE ALL'AVVERSARIO.`,
+ SI GIOCA CON KIT GARA* (MAGLIA CALZONCINI E CALZETTONI) PORTARE FELPA D'ALLENAMENTO PER RISCALDAMENTO E K-WAY IN BORSA PER L'EVENIENZA.
+ AVVISARE TEMPESTIVAMENTE L'ALLENATORE PRESENTE IN GARA IN CASO DI RITARDO O ASSENZA.
+ *PORTARE COMUNQUE MAGLIA DI RICAMBIO, CALZONCINI E CALZETTONI PER MODIFICARE I COLORI IN BASE ALL'AVVERSARIO.`,
     gare
+  }
+  const referenceDates = [...new Set([dataInizio, ...gare.map(g => g.data)].filter(Boolean))]
+  for (const referenceDate of referenceDates) {
+    await ensureRegistroPerData(referenceDate)
   }
 }
 
@@ -870,6 +933,7 @@ onMounted(async () => {
   persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
   const regRes = await getRegistroMese(categoriaId, annoCorrente, meseCorrente)
   registro.value = regRes.data
+  registroMesiCaricate.add(`${annoCorrente}-${String(meseCorrente).padStart(2, '0')}`)
   await loadStorico()
   await loadMisters()
   await loadWeekendDisponibili()
@@ -1539,7 +1603,20 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
 }
 .picker-item.selected .picker-avatar { background: #dc2626; color: #fff; }
 .picker-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.picker-name-row { display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
 .picker-name { font-size: 0.82rem; font-weight: 700; color: var(--color-text); }
+.picker-warning {
+  flex-shrink: 0;
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #b45309;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
 .picker-surname { font-size: 0.7rem; color: var(--color-text-muted); }
 .picker-check { color: #dc2626; flex-shrink: 0; }
 .picker-check svg { width: 16px; height: 16px; }
