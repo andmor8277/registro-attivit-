@@ -366,12 +366,10 @@ async function ensureRegistroPerData(dataStr) {
 function getWeekDateRange(dataGara) {
   if (!dataGara) return null
   const data = parseLocalDate(dataGara)
-  let weekendSat = new Date(data)
-  if (data.getDay() === 0) weekendSat.setDate(data.getDate() - 1)
-  else if (data.getDay() !== 6) weekendSat = new Date(data)
-  const daysToPrevMonday = weekendSat.getDay() === 0 ? 2 : weekendSat.getDay() + 1
-  const mondayPrev = new Date(weekendSat)
-  mondayPrev.setDate(weekendSat.getDate() - daysToPrevMonday)
+  const dow = data.getDay()
+  const daysSinceMonday = dow === 0 ? 6 : dow - 1
+  const mondayPrev = new Date(data)
+  mondayPrev.setDate(data.getDate() - daysSinceMonday)
   const fridayPrev = new Date(mondayPrev)
   fridayPrev.setDate(mondayPrev.getDate() + 4)
   return {
