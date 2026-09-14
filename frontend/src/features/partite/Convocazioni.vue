@@ -696,7 +696,9 @@ async function esportaPDF() {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(17)
     doc.setTextColor(...dark)
-    doc.text(societaAttiva.value?.nome || 'SQUADRA', textX, y + 6)
+    const societyMaxWidth = pageWidth - margin - textX - (sponsorData ? logoBox + 4 : 0)
+    const societyName = doc.splitTextToSize(societaAttiva.value?.nome || 'SQUADRA', societyMaxWidth)[0] || 'SQUADRA'
+    doc.text(societyName, textX, y + 6)
 
     doc.setFontSize(8.5)
     doc.setTextColor(...accent)
@@ -758,7 +760,8 @@ async function esportaPDF() {
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(10)
         doc.setTextColor(...gray)
-        doc.text(gara.gara, margin + 24, y + 4.5, { maxWidth: pageWidth - margin - (margin + 24) })
+        const garaTitle = doc.splitTextToSize(gara.gara, pageWidth - margin - (margin + 24))[0] || ''
+        doc.text(garaTitle, margin + 24, y + 4.5)
       }
       y += 9
 
