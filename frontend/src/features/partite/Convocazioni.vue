@@ -273,9 +273,15 @@ const convocazioniStorico = computed(() =>
 
 const filteredPickerPlayers = computed(() => {
   const players = getGiocatoriSettimanaPrecedente()
-  if (!pickerSearch.value) return players
+  const gara = pickerGara.value !== null ? convocazione.value?.gare?.[pickerGara.value] : null
+  const currentId = gara && pickerPos.value !== null ? gara.giocatori[pickerPos.value] : null
+  const assignedInGara = new Set((gara?.giocatori || []).filter(Boolean))
+  const available = players
+    .filter(p => p.id === currentId || !assignedInGara.has(p.id))
+    .sort((a, b) => a.cognome.localeCompare(b.cognome))
+  if (!pickerSearch.value) return available
   const s = pickerSearch.value.toLowerCase()
-  return players.filter(p => p.cognome.toLowerCase().includes(s) || p.nome.toLowerCase().includes(s))
+  return available.filter(p => p.cognome.toLowerCase().includes(s) || p.nome.toLowerCase().includes(s))
 })
 
 const oggi = new Date()
@@ -410,6 +416,8 @@ function closePicker() {
 
 function selectPlayer(garaIdx, pos, playerId) {
   const gara = convocazione.value.gare[garaIdx]
+  const alreadyInOtherSlot = gara.giocatori.some((id, idx) => id === playerId && idx !== pos)
+  if (playerId && alreadyInOtherSlot) return
   gara.giocatori[pos] = playerId
   closePicker()
 }
