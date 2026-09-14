@@ -546,10 +546,29 @@ function getMisterCognome(misterId) {
   return m ? m.cognome : ''
 }
 
+function trovaResponsabileDaNome(nome) {
+  const clean = String(nome || '').trim().toLowerCase()
+  if (!clean) return null
+  return responsabili.value.find(r =>
+    r.cognome?.toLowerCase() === clean ||
+    `${r.cognome} ${r.nome}`.trim().toLowerCase() === clean ||
+    `${r.nome} ${r.cognome}`.trim().toLowerCase() === clean
+  ) || null
+}
+
+function inferisciAllenatori(gara) {
+  if (Array.isArray(gara?.allenatori) && gara.allenatori.length) return gara.allenatori
+  if (!gara?.allenatore) return []
+  return gara.allenatore
+    .split(',')
+    .map(s => trovaResponsabileDaNome(s)?.id)
+    .filter(Boolean)
+}
+
 function getAllenatoriLabel(gara) {
-  const ids = gara?.allenatori || []
+  const ids = inferisciAllenatori(gara)
   if (ids.length) {
-    return ids
+    const label = ids
       .map(id => {
         const m = responsabili.value.find(r => r.id === id)
         if (!m) return ''
@@ -557,6 +576,7 @@ function getAllenatoriLabel(gara) {
       })
       .filter(Boolean)
       .join(', ')
+    if (label) return label
   }
   return gara?.allenatore || ''
 }
@@ -617,7 +637,7 @@ async function caricaConvocazione(id) {
       const nonPresenti = new Set(giocatoriArr.filter(x => x.non_presente).map(x => x.persona_id))
       return {
         ...g, numero: g.numero || idx + 1, data: g.data || '',
-        allenatori: g.allenatori || [],
+        allenatori: inferisciAllenatori(g),
         giocatori: padGiocatori(giocatoriArr.map(x => x.persona_id)), nonPresenti
       }
     })
