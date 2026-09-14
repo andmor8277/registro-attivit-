@@ -150,6 +150,7 @@ const nuovo = ref({
 function handleLogoUpload(event) {
   const file = event.target.files[0]
   if (file) {
+    if (logoPreview.value) URL.revokeObjectURL(logoPreview.value)
     logoFile.value = file
     logoPreview.value = URL.createObjectURL(file)
   }
@@ -158,18 +159,21 @@ function handleLogoUpload(event) {
 function handleLogosponsorUpload(event) {
   const file = event.target.files[0]
   if (file) {
+    if (logosponsorPreview.value) URL.revokeObjectURL(logosponsorPreview.value)
     logosponsorFile.value = file
     logosponsorPreview.value = URL.createObjectURL(file)
   }
 }
 
 function rimuoviLogo() {
+  if (logoPreview.value) URL.revokeObjectURL(logoPreview.value)
   logoFile.value = null
   logoPreview.value = null
   nuovo.value.logo = ''
 }
 
 function rimuoviLogosponsor() {
+  if (logosponsorPreview.value) URL.revokeObjectURL(logosponsorPreview.value)
   logosponsorFile.value = null
   logosponsorPreview.value = null
   nuovo.value.logosponsor = ''
@@ -182,6 +186,8 @@ async function load() {
 
 function resetForm() {
   editing.value = null
+  if (logoPreview.value) URL.revokeObjectURL(logoPreview.value)
+  if (logosponsorPreview.value) URL.revokeObjectURL(logosponsorPreview.value)
   logoFile.value = null
   logosponsorFile.value = null
   logoPreview.value = null
