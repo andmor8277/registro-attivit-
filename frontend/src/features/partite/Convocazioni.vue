@@ -814,7 +814,7 @@ async function esportaPDF() {
     }
 
     convocazione.value.gare.forEach((gara, idx) => {
-      if (y > pageHeight - 70) {
+      if (y > pageHeight - 130) {
         doc.addPage()
         y = margin
       }
@@ -832,63 +832,65 @@ async function esportaPDF() {
         const garaTitle = doc.splitTextToSize(gara.gara, pageWidth - margin - (margin + 24))[0] || ''
         doc.text(garaTitle, margin + 24, y + 4.5)
       }
-      y += 9
+      y += 10
 
-      const details = [
-        ['Data', formatD(gara.data), 'Campo', gara.campo || '—'],
-        ['Indirizzo', gara.indirizzo || '—', 'Appuntamento', gara.appuntamento || '—'],
-        ['Inizio gara', gara.inizio_gara || '—', 'Allenatore', gara.allenatore || '—']
-      ]
-
-      doc.autoTable({
-        startY: y,
-        margin: { left: margin, right: margin, bottom: 18 },
-        tableWidth: contentWidth,
-        body: details,
-        theme: 'grid',
-        styles: { font: 'helvetica', fontSize: 9, cellPadding: 2.5, lineColor: line, lineWidth: 0.15, textColor: dark },
-        columnStyles: {
-          0: { cellWidth: 26, fontStyle: 'bold', fillColor: light, textColor: gray },
-          1: { cellWidth: contentWidth / 2 - 26 },
-          2: { cellWidth: 30, fontStyle: 'bold', fillColor: light, textColor: gray },
-          3: { cellWidth: contentWidth / 2 - 30 }
-        }
-      })
-      y = doc.lastAutoTable.finalY + 5
+      const leftWidth = 105
+      const gap = 6
+      const rightX = margin + leftWidth + gap
+      const rightWidth = pageWidth - margin - rightX
+      const startY = y
 
       const rows = gara.giocatori
         .map((pid, i) => {
           if (!pid) return null
           const p = getPersona(pid)
-          const np = gara.nonPresenti?.has(pid)
-          return [String(i + 1), p?.cognome || '—', p?.nome || '', p?.ruolo ? p.ruolo.toUpperCase() : '', np ? 'NON PRESENTE' : '']
+          return [String(i + 1), p?.cognome || '—', p?.nome || '']
         })
         .filter(Boolean)
 
       doc.autoTable({
-        startY: y,
-        margin: { left: margin, right: margin, bottom: 18 },
-        tableWidth: contentWidth,
-        head: [['#', 'Cognome', 'Nome', 'Ruolo', 'Stato']],
-        body: rows.length ? rows : [['—', 'Nessun giocatore selezionato', '', '', '']],
+        startY,
+        margin: { left: margin, right: pageWidth - (margin + leftWidth), bottom: 18 },
+        tableWidth: leftWidth,
+        head: [['#', 'Cognome', 'Nome']],
+        body: rows.length ? rows : [['—', 'Nessun giocatore selezionato', '']],
         theme: 'grid',
         headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize: 9, cellPadding: 2.8 },
         styles: { font: 'helvetica', fontSize: 9.5, cellPadding: 2.8, lineColor: line, lineWidth: 0.15, textColor: dark },
         columnStyles: {
           0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
-          1: { cellWidth: 48, fontStyle: 'bold' },
-          2: { cellWidth: 42 },
-          3: { cellWidth: 28 },
-          4: { cellWidth: 'auto', fontStyle: 'bold' }
-        },
-        didParseCell: (data) => {
-          if (data.section === 'body' && data.cell.raw === 'NON PRESENTE') {
-            data.cell.styles.textColor = accent
-            data.cell.styles.fontStyle = 'bold'
-          }
+          1: { cellWidth: 55, fontStyle: 'bold' },
+          2: { cellWidth: 'auto' }
         }
       })
-      y = doc.lastAutoTable.finalY + 9
+      const leftFinalY = doc.lastAutoTable.finalY
+
+      const infoRows = [
+        ['Data', formatD(gara.data)],
+        ['Campo', gara.campo || '—'],
+        ['Indirizzo', gara.indirizzo || '—'],
+        ['Appuntamento', gara.appuntamento || '—'],
+        ['Inizio gara', gara.inizio_gara || '—'],
+        ['Allenatore', gara.allenatore || '—']
+      ]
+
+      doc.autoTable({
+        startY,
+        margin: { left: rightX, right: margin, bottom: 18 },
+        tableWidth: rightWidth,
+        head: [[{ content: 'INFO GARA', colSpan: 2 }]],
+        body: infoRows,
+        theme: 'grid',
+        headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize: 9, cellPadding: 2.8, halign: 'left' },
+        styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 2.5, lineColor: line, lineWidth: 0.15, textColor: dark, valign: 'top' },
+        columnStyles: {
+          0: { cellWidth: 26, fontStyle: 'bold', fillColor: light, textColor: gray },
+          1: { cellWidth: 'auto' }
+        }
+      })
+      const rightFinalY = doc.lastAutoTable.finalY
+
+      y = Math.max(leftFinalY, rightFinalY) + 9
     })
 
     const pageCount = doc.getNumberOfPages()
