@@ -740,8 +740,12 @@ function esc(s) {
 async function esportaPDF() {
   if (!convocazione.value) return
   try {
-    const multiGare = (convocazione.value.gare?.length || 0) > 1
-    const doc = new jsPDF(multiGare ? 'landscape' : 'portrait', 'mm', 'a4')
+    const gareList = convocazione.value.gare || []
+    const multiGare = gareList.length > 1
+    const singleGara = gareList.length === 1
+    const singleRows = singleGara ? (gareList[0]?.giocatori || []).filter(Boolean).length : 0
+    const useLandscape = multiGare || (singleGara && singleRows > 20)
+    const doc = new jsPDF(useLandscape ? 'landscape' : 'portrait', 'mm', 'a4')
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
     const margin = 14
@@ -751,6 +755,34 @@ async function esportaPDF() {
     const gray = [107, 114, 128]
     const light = [248, 250, 252]
     const line = [226, 232, 240]
+
+    const noteText = convocazione.value.note || ''
+    let noteLines = []
+    let noteHeight = 0
+    let noteFontSize = 8.5
+    let noteLineHeight = 3.9
+    if (noteText) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(noteFontSize)
+      noteLines = doc.splitTextToSize(noteText, contentWidth - 8)
+      noteHeight = noteLines.length * noteLineHeight + 10
+      if (singleGara) {
+        const maxNoteHeight = useLandscape ? 48 : 72
+        if (noteHeight > maxNoteHeight) {
+          noteFontSize = 7.5
+          noteLineHeight = 3.4
+          doc.setFontSize(noteFontSize)
+          noteLines = doc.splitTextToSize(noteText, contentWidth - 8)
+          const maxLines = Math.max(1, Math.floor((maxNoteHeight - 9) / noteLineHeight))
+          if (noteLines.length > maxLines) {
+            noteLines = noteLines.slice(0, maxLines)
+            noteLines[maxLines - 1] = `${noteLines[maxLines - 1].slice(0, Math.max(0, noteLines[maxLines - 1].length - 1))}…`
+          }
+          noteHeight = Math.min(maxNoteHeight, noteLines.length * noteLineHeight + 9)
+        }
+      }
+    }
+    const bottomMargin = singleGara && noteText ? 18 + noteHeight + 6 : 18
 
     const personeMap = new Map()
     persone.value.forEach(p => personeMap.set(p.id, p))
@@ -841,7 +873,7 @@ async function esportaPDF() {
     function renderInfoAbove(gara, x, width, startY) {
       doc.autoTable({
         startY,
-        margin: { left: x, right: pageWidth - (x + width), bottom: 18 },
+        margin: { left: x, right: pageWidth - (x + width), bottom: bottomMargin },
         tableWidth: width,
         body: [
           ['Data', formatD(gara.data), 'Campo', gara.campo || '—'],
@@ -855,57 +887,106 @@ async function esportaPDF() {
           1: { cellWidth: width / 2 - 24 },
           2: { cellWidth: 30, fontStyle: 'bold', fillColor: light, textColor: gray },
           3: { cellWidth: width / 2 - 30 }
-        }
+        },
+        pageBreak: 'avoid'
       })
       return doc.lastAutoTable.finalY + 3
     }
 
-    function renderPlayerTable(gara, x, width, startY, columns = 1) {
+    function chooseSinglePlayerLayout(rowsCount, startY) {
+      const available = Math.max(20, pageHeight - bottomMargin - startY)
+      const presets = [
+        { fontSize: 9.5, cellPadding: 2.8, rowHeight: 8.8 },
+        { fontSize: 9, cellPadding: 2.2, rowHeight: 8 },
+        { fontSize: 8.5, cellPadding: 1.8, rowHeight: 7.2 },
+        { fontSize: 8, cellPadding: 1.4, rowHeight: 6.6 },
+        { fontSize: 7.5, cellPadding: 1, rowHeight: 6.2 },
+        { fontSize: 7, cellPadding: 0.8, rowHeight: 5.8 }
+      ]
+      return presets.find(p => (rowsCount + 1) * p.rowHeight <= available) || presets[presets.length - 1]
+    }
+
+    function chooseMultiPlayerLayout(rowsCount, width, startY) {
+      const available = Math.max(20, pageHeight - bottomMargin - startY)
+      const presets = [
+        { columns: 2, fontSize: 8.5, cellPadding: 1.5, rowHeight: 6.6, minSubWidth: 42 },
+        { columns: 3, fontSize: 8.5, cellPadding: 1.5, rowHeight: 6.6, minSubWidth: 36 },
+        { columns: 4, fontSize: 8, cellPadding: 1.2, rowHeight: 6.8, minSubWidth: 32 },
+        { columns: 5, fontSize: 7.5, cellPadding: 1, rowHeight: 8, minSubWidth: 28 },
+        { columns: 6, fontSize: 7, cellPadding: 0.8, rowHeight: 7.5, minSubWidth: 24 },
+        { columns: 8, fontSize: 6.5, cellPadding: 0.6, rowHeight: 8, minSubWidth: 18 },
+        { columns: 10, fontSize: 6, cellPadding: 0.5, rowHeight: 8.5, minSubWidth: 16 },
+        { columns: 12, fontSize: 5.5, cellPadding: 0.4, rowHeight: 9.5, minSubWidth: 14 }
+      ]
+      for (const preset of presets) {
+        const rowsPerCol = Math.ceil(rowsCount / preset.columns)
+        const subWidth = width / preset.columns
+        if ((rowsPerCol + 1) * preset.rowHeight <= available && subWidth >= preset.minSubWidth) return preset
+      }
+      return presets[presets.length - 1]
+    }
+
+    function renderPlayerTable(gara, x, width, startY, columns = 'auto') {
       const rows = buildRows(gara)
-      const useColumns = columns > 1 && rows.length > 10
-      if (!useColumns) {
+      const forceSingle = columns === 1
+      const multiLayout = forceSingle ? null : chooseMultiPlayerLayout(rows.length, width, startY)
+      if (forceSingle || rows.length <= 10 || !multiLayout) {
+        const singleLayout = chooseSinglePlayerLayout(rows.length, startY)
         doc.autoTable({
           startY,
-          margin: { left: x, right: pageWidth - (x + width), bottom: 18 },
+          margin: { left: x, right: pageWidth - (x + width), bottom: bottomMargin },
           tableWidth: width,
           head: [['#', 'Cognome', 'Nome']],
           body: rows.length ? rows : [['—', 'Nessun giocatore selezionato', '']],
           theme: 'grid',
-          headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize: 9, cellPadding: 2.8 },
-          styles: { font: 'helvetica', fontSize: 9.5, cellPadding: 2.8, lineColor: line, lineWidth: 0.15, textColor: dark },
+          headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize: singleLayout.fontSize, cellPadding: singleLayout.cellPadding },
+          styles: { font: 'helvetica', fontSize: singleLayout.fontSize, cellPadding: singleLayout.cellPadding, lineColor: line, lineWidth: 0.15, textColor: dark },
           columnStyles: {
             0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
             1: { cellWidth: Math.max(35, width * 0.45), fontStyle: 'bold' },
             2: { cellWidth: 'auto' }
-          }
+          },
+          pageBreak: 'avoid'
         })
         return doc.lastAutoTable.finalY
       }
 
-      const innerGap = 4
-      const subWidth = (width - innerGap) / 2
-      const per = Math.ceil(rows.length / 2)
-      const chunks = [rows.slice(0, per), rows.slice(per)]
-      const finalYs = chunks.map((chunk, i) => {
-        const subX = x + i * (subWidth + innerGap)
-        doc.autoTable({
-          startY,
-          margin: { left: subX, right: pageWidth - (subX + subWidth), bottom: 18 },
-          tableWidth: subWidth,
-          head: [['#', 'Cognome', 'Nome']],
-          body: chunk.length ? chunk : [['—', 'Nessun giocatore selezionato', '']],
-          theme: 'grid',
-          headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize: 8.5, cellPadding: 1.5 },
-          styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 1.5, lineColor: line, lineWidth: 0.15, textColor: dark },
-          columnStyles: {
-            0: { cellWidth: 8, halign: 'center', fontStyle: 'bold' },
-            1: { cellWidth: subWidth * 0.55, fontStyle: 'bold' },
-            2: { cellWidth: 'auto' }
-          }
+      const colCount = multiLayout.columns
+      const per = Math.ceil(rows.length / colCount)
+      const chunks = Array.from({ length: colCount }, (_, i) => rows.slice(i * per, (i + 1) * per))
+      const maxRows = Math.max(...chunks.map(c => c.length), 1)
+      const body = Array.from({ length: maxRows }, (_, r) => {
+        const line = []
+        chunks.forEach(chunk => {
+          const row = chunk[r] || ['', '', '']
+          line.push(row[0], row[1], row[2])
         })
-        return doc.lastAutoTable.finalY
+        return line
       })
-      return Math.max(...finalYs)
+      const head = Array.from({ length: colCount }, () => ['#', 'Cognome', 'Nome']).flat()
+      const groupWidth = width / colCount
+      const numWidth = colCount > 8 ? 4 : colCount > 6 ? 5 : colCount > 4 ? 6 : colCount > 2 ? 7 : 8
+      const cognomeWidth = groupWidth * (colCount > 8 ? 0.5 : colCount > 4 ? 0.55 : colCount > 2 ? 0.5 : 0.55)
+      const nomeWidth = Math.max(1.5, groupWidth - numWidth - cognomeWidth)
+      const columnStyles = {}
+      for (let c = 0; c < colCount; c++) {
+        columnStyles[c * 3] = { cellWidth: numWidth, halign: 'center', fontStyle: 'bold' }
+        columnStyles[c * 3 + 1] = { cellWidth: cognomeWidth, fontStyle: 'bold' }
+        columnStyles[c * 3 + 2] = { cellWidth: nomeWidth }
+      }
+      doc.autoTable({
+        startY,
+        margin: { left: x, right: pageWidth - (x + width), bottom: bottomMargin },
+        tableWidth: width,
+        head: [head],
+        body,
+        theme: 'grid',
+        headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize: multiLayout.fontSize, cellPadding: multiLayout.cellPadding },
+        styles: { font: 'helvetica', fontSize: multiLayout.fontSize, cellPadding: multiLayout.cellPadding, lineColor: line, lineWidth: 0.15, textColor: dark },
+        columnStyles,
+        pageBreak: 'avoid'
+      })
+      return doc.lastAutoTable.finalY
     }
 
     function renderGaraColumn(gara, x, width, startY) {
@@ -920,18 +1001,13 @@ async function esportaPDF() {
       }
       let colY = startY + 8
       colY = renderInfoAbove(gara, x, width, colY)
-      colY = renderPlayerTable(gara, x, width, colY, 2)
+      colY = renderPlayerTable(gara, x, width, colY, 'auto')
       return colY
     }
 
     if (!multiGare) {
-      const gara = convocazione.value.gare[0]
+      const gara = gareList[0]
       if (gara) {
-        if (y > pageHeight - 130) {
-          doc.addPage()
-          y = margin
-        }
-
         doc.setFillColor(...accent)
         doc.rect(margin, y, 2.5, 6, 'F')
         if (gara.gara) {
@@ -943,30 +1019,6 @@ async function esportaPDF() {
         }
         y += 10
 
-        const leftWidth = 105
-        const gap = 6
-        const rightX = margin + leftWidth + gap
-        const rightWidth = pageWidth - margin - rightX
-        const startY = y
-
-        const rows = buildRows(gara)
-        doc.autoTable({
-          startY,
-          margin: { left: margin, right: pageWidth - (margin + leftWidth), bottom: 18 },
-          tableWidth: leftWidth,
-          head: [['#', 'Cognome', 'Nome']],
-          body: rows.length ? rows : [['—', 'Nessun giocatore selezionato', '']],
-          theme: 'grid',
-          headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize: 9, cellPadding: 2.8 },
-          styles: { font: 'helvetica', fontSize: 9.5, cellPadding: 2.8, lineColor: line, lineWidth: 0.15, textColor: dark },
-          columnStyles: {
-            0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
-            1: { cellWidth: 55, fontStyle: 'bold' },
-            2: { cellWidth: 'auto' }
-          }
-        })
-        const leftFinalY = doc.lastAutoTable.finalY
-
         const infoRows = [
           ['Data', formatD(gara.data)],
           ['Campo', gara.campo || '—'],
@@ -975,24 +1027,59 @@ async function esportaPDF() {
           ['Inizio gara', gara.inizio_gara || '—'],
           ['Allenatore', getAllenatoriLabel(gara) || '—']
         ]
+        const startY = y
 
-        doc.autoTable({
-          startY,
-          margin: { left: rightX, right: margin, bottom: 18 },
-          tableWidth: rightWidth,
-          head: [[{ content: 'INFO GARA', colSpan: 2 }]],
-          body: infoRows,
-          theme: 'grid',
-          headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize: 9, cellPadding: 2.8, halign: 'left' },
-          styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 2.5, lineColor: line, lineWidth: 0.15, textColor: dark, valign: 'top' },
-          columnStyles: {
-            0: { cellWidth: 26, fontStyle: 'bold', fillColor: light, textColor: gray },
-            1: { cellWidth: 'auto' }
-          }
-        })
-        const rightFinalY = doc.lastAutoTable.finalY
+        if (useLandscape) {
+          const infoWidth = 85
+          const gap = 6
+          const playerX = margin + infoWidth + gap
+          const playerWidth = pageWidth - margin - playerX
 
-        y = Math.max(leftFinalY, rightFinalY) + 9
+          doc.autoTable({
+            startY,
+            margin: { left: margin, right: pageWidth - (margin + infoWidth), bottom: bottomMargin },
+            tableWidth: infoWidth,
+            head: [[{ content: 'INFO GARA', colSpan: 2 }]],
+            body: infoRows,
+            theme: 'grid',
+            headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize: 9, cellPadding: 2.8, halign: 'left' },
+            styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 2.5, lineColor: line, lineWidth: 0.15, textColor: dark, valign: 'top' },
+            columnStyles: {
+              0: { cellWidth: 26, fontStyle: 'bold', fillColor: light, textColor: gray },
+              1: { cellWidth: 'auto' }
+            },
+            pageBreak: 'avoid'
+          })
+          const infoFinalY = doc.lastAutoTable.finalY
+          const playerFinalY = renderPlayerTable(gara, playerX, playerWidth, startY, 'auto')
+          y = Math.max(infoFinalY, playerFinalY) + 6
+        } else {
+          const leftWidth = 105
+          const gap = 6
+          const rightX = margin + leftWidth + gap
+          const rightWidth = pageWidth - margin - rightX
+
+          const leftFinalY = renderPlayerTable(gara, margin, leftWidth, startY, 1)
+
+          doc.autoTable({
+            startY,
+            margin: { left: rightX, right: margin, bottom: bottomMargin },
+            tableWidth: rightWidth,
+            head: [[{ content: 'INFO GARA', colSpan: 2 }]],
+            body: infoRows,
+            theme: 'grid',
+            headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize: 9, cellPadding: 2.8, halign: 'left' },
+            styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 2.5, lineColor: line, lineWidth: 0.15, textColor: dark, valign: 'top' },
+            columnStyles: {
+              0: { cellWidth: 26, fontStyle: 'bold', fillColor: light, textColor: gray },
+              1: { cellWidth: 'auto' }
+            },
+            pageBreak: 'avoid'
+          })
+          const rightFinalY = doc.lastAutoTable.finalY
+
+          y = Math.max(leftFinalY, rightFinalY) + 9
+        }
       }
     } else {
       const gap = 8
@@ -1012,13 +1099,9 @@ async function esportaPDF() {
       }
     }
 
-    if (convocazione.value.note) {
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8.5)
-      const noteLines = doc.splitTextToSize(convocazione.value.note, contentWidth - 8)
-      const noteHeight = noteLines.length * 3.9 + 10
-      const targetY = Math.max(margin, pageHeight - noteHeight - 22)
-      if (y + 6 > targetY) {
+    if (noteText) {
+      const targetY = Math.max(margin, pageHeight - noteHeight - 18)
+      if (multiGare && y + 6 > targetY) {
         doc.addPage()
       }
       y = targetY
@@ -1031,9 +1114,9 @@ async function esportaPDF() {
       doc.setTextColor(...accent)
       doc.text('NOTE', margin + 4, y + 5)
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8.5)
+      doc.setFontSize(noteFontSize)
       doc.setTextColor(...dark)
-      doc.text(noteLines, margin + 4, y + 10)
+      doc.text(noteLines, margin + 4, y + 10, { maxLineSpacing: noteLineHeight })
     }
 
     const pageCount = doc.getNumberOfPages()
