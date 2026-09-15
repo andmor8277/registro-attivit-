@@ -1101,5 +1101,20 @@ def run_migrations():
                 print(f"Migration warning (convocazione_gare allenatori): {e}")
                 conn.rollback()
 
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'persone' AND column_name = 'pagamenti_in_regola'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text(
+                        "ALTER TABLE persone ADD COLUMN pagamenti_in_regola BOOLEAN DEFAULT TRUE"
+                    ))
+                    conn.commit()
+                    print("Migration: Added pagamenti_in_regola to persone")
+            except Exception as e:
+                print(f"Migration warning (persone pagamenti_in_regola): {e}")
+                conn.rollback()
+
         finally:
             conn.close()

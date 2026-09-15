@@ -112,6 +112,10 @@
           <span class="mini-val" :class="{ 'debt': catRimane > 0 }">{{ catRimane }} €</span>
           <span class="mini-label">da recuperare</span>
         </div>
+        <div class="mini-stat">
+          <span class="mini-val" :class="{ 'debt': nonInRegola > 0 }">{{ nonInRegola }}</span>
+          <span class="mini-label">non in regola</span>
+        </div>
       </div>
 
       <div class="table-wrap">
@@ -129,6 +133,7 @@
               <th>R4</th>
               <th>Saldo</th>
               <th>Rimane</th>
+              <th title="Pagamenti in regola">Pag.</th>
               <th v-if="gdprSbloccato">Nascita</th>
               <th v-if="gdprSbloccato">CF</th>
               <th v-if="gdprSbloccato">Tel. Papà</th>
@@ -138,7 +143,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(p, idx) in filteredPlayers" :key="p.id" class="player-row" @click="apriScheda(p)">
+            <tr v-for="(p, idx) in filteredPlayers" :key="p.id" :class="['player-row', { 'non-in-regola': p.pagamenti_in_regola === false }]" @click="apriScheda(p)">
               <td>{{ idx + 1 }}</td>
               <td class="col-cognome">{{ p.cognome }}</td>
               <td>{{ p.nome }}</td>
@@ -165,6 +170,17 @@
               </td>
               <td class="col-rimane">
                 <span :class="{'ok': calcRimane(p) <= 0}">{{ calcRimane(p).toFixed(2) }}</span>
+              </td>
+              <td class="col-pagamenti">
+                <input
+                  type="checkbox"
+                  class="pagamenti-checkbox"
+                  :checked="p.pagamenti_in_regola !== false"
+                  :disabled="!puoModificarePagamenti"
+                  :title="p.pagamenti_in_regola === false ? 'Pagamenti non in regola' : 'Pagamenti in regola'"
+                  @click.stop
+                  @change="togglePagamentiInRegola(p, $event)"
+                />
               </td>
               <template v-if="gdprSbloccato">
                 <td class="col-small">{{ formatData(p.data_nascita) }}</td>
@@ -270,6 +286,8 @@ function calcRimane(p) {
 
 const catIncasso = computed(() => giocatori.value.reduce((s, p) => s + calcPagato(p), 0))
 const catRimane = computed(() => giocatori.value.reduce((s, p) => s + calcRimane(p), 0))
+const nonInRegola = computed(() => giocatori.value.filter(p => p.pagamenti_in_regola === false).length)
+const puoModificarePagamenti = computed(() => utenteAttivo.value?.is_admin || ['mister', 'segreteria'].includes(utenteAttivo.value?.ruolo))
 
 function formatData(d) {
   if (!d) return ''
@@ -336,6 +354,18 @@ async function updateRate(p, field, value) {
   const payload = { [field]: numVal }
   p[field] = numVal
   await updatePersona(p.id, payload)
+}
+
+async function togglePagamentiInRegola(p, event) {
+  const value = event.target.checked
+  p.pagamenti_in_regola = value
+  try {
+    await updatePersona(p.id, { pagamenti_in_regola: value })
+  } catch (e) {
+    p.pagamenti_in_regola = !value
+    console.error('Errore aggiornamento pagamenti:', e)
+    alert(e.response?.data?.detail || "Errore durante l'aggiornamento")
+  }
 }
 
 function apriPreiscrizione() {
@@ -598,6 +628,31 @@ function copiaLinkPreiscrizione() {
 }
 
 .col-rimane .ok { color: #16a34a; }
+
+.col-pagamenti {
+  width: 44px;
+  text-align: center;
+}
+
+.pagamenti-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #16a34a;
+  cursor: pointer;
+}
+
+.pagamenti-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.player-row.non-in-regola {
+  background: rgba(220, 38, 38, 0.06);
+}
+
+.player-row.non-in-regola:hover {
+  background: rgba(220, 38, 38, 0.1);
+}
 
 .col-small {
   white-space: nowrap;

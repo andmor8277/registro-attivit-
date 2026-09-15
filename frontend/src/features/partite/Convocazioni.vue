@@ -49,6 +49,14 @@
           </div>
         </div>
 
+        <!-- PAGAMENTI NON IN REGOLA -->
+        <div class="alert-box pagamenti-box" :class="{ 'ok': giocatoriNonInRegola.length === 0 }">
+          <span class="alert-icon">{{ giocatoriNonInRegola.length ? '⚠️' : '✅' }}</span>
+          <span class="alert-label">PAGAMENTI</span>
+          <span v-for="p in giocatoriNonInRegola" :key="p.id" class="alert-tag tag-non-regola">{{ p.cognome }} {{ p.nome }}</span>
+          <span v-if="giocatoriNonInRegola.length === 0" class="alert-none">Tutti in regola</span>
+        </div>
+
         <template v-if="convocazione">
           <!-- TOPBAR: date + azioni -->
           <div class="editor-topbar">
@@ -284,6 +292,12 @@ const filteredPickerPlayers = computed(() => {
   const s = pickerSearch.value.toLowerCase()
   return available.filter(p => p.cognome.toLowerCase().includes(s) || p.nome.toLowerCase().includes(s))
 })
+
+const giocatoriNonInRegola = computed(() =>
+  persone.value
+    .filter(p => p.pagamenti_in_regola === false)
+    .sort((a, b) => a.cognome.localeCompare(b.cognome))
+)
 
 const oggi = new Date()
 const annoCorrente = oggi.getFullYear()
@@ -1337,6 +1351,16 @@ onMounted(async () => {
   font-weight: 600;
 }
 .alert-none { font-size: 0.75rem; color: var(--color-text-muted); }
+
+.pagamenti-box.ok {
+  background: rgba(22, 163, 74, 0.06);
+  border-color: rgba(22, 163, 74, 0.25);
+}
+
+.tag-non-regola {
+  background: #dc2626;
+  color: #fff;
+}
 
 /* ---- ESCLUSIONI ---- */
 .esclusioni-grid {

@@ -65,3 +65,4 @@ class Persona(Base):
     rata3 = Column(Float, nullable=True)
     rata4 = Column(Float, nullable=True)
     rata_saldo = Column(Float, nullable=True)
+    pagamenti_in_regola = Column(Boolean, default=True)

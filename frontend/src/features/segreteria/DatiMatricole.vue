@@ -62,6 +62,7 @@
               <th>Cognome</th>
               <th>Nome</th>
               <th>Nr.</th>
+              <th title="Pagamenti in regola">Pag.</th>
               <th v-if="gdprSbloccato">Data Nascita</th>
               <th v-if="gdprSbloccato">Codice Fiscale</th>
               <th v-if="gdprSbloccato">Tel. Papà</th>
@@ -73,11 +74,21 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(p, idx) in filteredPersone" :key="p.id" :class="{ 'row-scad': !p.scadenza_certificato || isScaduta(p.scadenza_certificato) }">
+            <tr v-for="(p, idx) in filteredPersone" :key="p.id" :class="{ 'row-scad': !p.scadenza_certificato || isScaduta(p.scadenza_certificato), 'row-non-regola': p.pagamenti_in_regola === false }">
               <td class="cell-num">{{ idx + 1 }}</td>
               <td>{{ p.cognome }}</td>
               <td>{{ p.nome }}</td>
               <td class="cell-numero">{{ p.numero_maglia || '-' }}</td>
+              <td class="cell-pagamenti">
+                <input
+                  type="checkbox"
+                  class="pagamenti-checkbox"
+                  :checked="p.pagamenti_in_regola !== false"
+                  :disabled="!puoModificarePagamenti"
+                  :title="p.pagamenti_in_regola === false ? 'Pagamenti non in regola' : 'Pagamenti in regola'"
+                  @change="togglePagamentiInRegola(p, $event)"
+                />
+              </td>
               <template v-if="gdprSbloccato">
                 <td>{{ formatData(p.data_nascita) }}</td>
                 <td class="cell-cf">{{ gdprSbloccato ? (p.codice_fiscale || '-') : '••••••••••••' }}</td>
@@ -99,7 +110,7 @@
               </td>
             </tr>
             <tr v-if="filteredPersone.length === 0">
-              <td :colspan="isDirigente ? (gdprSbloccato ? 10 : 5) : (gdprSbloccato ? 12 : 7)" class="no-data">Nessun giocatore trovato</td>
+              <td :colspan="isDirigente ? (gdprSbloccato ? 11 : 6) : (gdprSbloccato ? 13 : 8)" class="no-data">Nessun giocatore trovato</td>
             </tr>
           </tbody>
         </table>
@@ -296,6 +307,7 @@ const search = ref('')
 const gruppoFilter = ref('')
 
 const isDirigente = computed(() => ['dirigente', 'segreteria', 'infermeria'].includes(utenteAttivo.value?.ruolo))
+const puoModificarePagamenti = computed(() => utenteAttivo.value?.is_admin || ['mister', 'segreteria'].includes(utenteAttivo.value?.ruolo))
 
 // GDPR state
 const gdprSbloccato = ref(false)
@@ -361,6 +373,18 @@ function mascheraDato(dato) {
   if (gdprSbloccato.value) return dato
   if (dato.length > 4) return '••••••••••••'
   return dato
+}
+
+async function togglePagamentiInRegola(p, event) {
+  const value = event.target.checked
+  p.pagamenti_in_regola = value
+  try {
+    await updatePersona(p.id, { pagamenti_in_regola: value })
+  } catch (e) {
+    p.pagamenti_in_regola = !value
+    console.error('Errore aggiornamento pagamenti:', e)
+    alert(e.response?.data?.detail || "Errore durante l'aggiornamento")
+  }
 }
 
 function apriModifica(p) {
@@ -869,6 +893,31 @@ tr:last-child td { border-bottom: none; }
 
 .tabella-giocatori tr.row-scad:hover {
   background: rgba(234, 88, 12, 0.14);
+}
+
+.tabella-giocatori tr.row-non-regola {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.tabella-giocatori tr.row-non-regola:hover {
+  background: rgba(220, 38, 38, 0.14);
+}
+
+.cell-pagamenti {
+  width: 44px;
+  text-align: center;
+}
+
+.pagamenti-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #16a34a;
+  cursor: pointer;
+}
+
+.pagamenti-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .cell-num {
