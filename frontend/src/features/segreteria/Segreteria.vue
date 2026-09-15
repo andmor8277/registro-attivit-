@@ -141,6 +141,10 @@
               <span class="cat-stat-value" :class="{ 'debt': mostraFinanze && calcRimaneCat(cat.id) > 0 }">{{ mostraFinanze ? calcRimaneCat(cat.id) + ' €' : '***' }}</span>
               <span class="cat-stat-label">da recuperare</span>
             </div>
+            <div class="cat-stat">
+              <span class="cat-stat-value" :class="{ 'debt': nonInRegolaCat(cat.id) > 0 }">{{ nonInRegolaCat(cat.id) }}</span>
+              <span class="cat-stat-label">non in regola</span>
+            </div>
           </div>
           <div class="cat-card-footer">
             <span class="cat-arrow">→</span>
@@ -251,6 +255,10 @@ function calcTotalePagato(catId) {
 
 function calcRimaneCat(catId) {
   return getGiocatoriCat(catId).reduce((sum, p) => sum + calcRimane(p), 0)
+}
+
+function nonInRegolaCat(catId) {
+  return getGiocatoriCat(catId).filter(p => p.pagamenti_in_regola === false).length
 }
 
 const totaleIscritti = computed(() => persone.value.length)

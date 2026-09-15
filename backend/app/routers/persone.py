@@ -47,7 +47,8 @@ def get_persone(request: Request, categoria_id: Optional[int] = None, db: Sessio
                     p.residenza, p.indirizzo, p.cittadinanza, p.tel_papa, p.tel_mamma,
                     p.email1, p.email2, p.prof_papa, p.prof_mamma, p.nome_papa, p.nome_mamma, p.comune_nato,
                     p.anamnesi, p.taglia, p.note,
-                    p.totale_da_pagare, p.rata_iscrizione, p.rata1, p.rata2, p.rata3, p.rata4, p.rata_saldo
+                    p.totale_da_pagare, p.rata_iscrizione, p.rata1, p.rata2, p.rata3, p.rata4, p.rata_saldo,
+                    p.pagamenti_in_regola
                     {cat_label}
             FROM persone p
             LEFT JOIN categorie pc ON p.categoria_id = pc.id
@@ -58,7 +59,8 @@ def get_persone(request: Request, categoria_id: Optional[int] = None, db: Sessio
                     p.data_nascita, p.sesso, p.comune_nato, p.matricola,
                     p.numero_maglia, p.scadenza_certificato, p.societa_id,
                     p.residenza, p.indirizzo, p.cittadinanza,
-                    p.email1, p.email2, p.taglia, p.note
+                    p.email1, p.email2, p.taglia, p.note,
+                    p.pagamenti_in_regola
                     {cat_label}
             FROM persone p
             LEFT JOIN categorie pc ON p.categoria_id = pc.id
@@ -102,6 +104,8 @@ def create_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db), curr
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     data = p.model_dump()
     data["societa_id"] = societa_id
+    if data.get("pagamenti_in_regola") is None:
+        data["pagamenti_in_regola"] = True
     data["cognome"] = format_cognome(data.get("cognome") or "")
     data["nome"] = format_nome(data.get("nome") or "")
     

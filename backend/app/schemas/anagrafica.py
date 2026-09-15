@@ -37,6 +37,7 @@ class PersonaCreate(BaseModel):
     rata3: Optional[float] = None
     rata4: Optional[float] = None
     rata_saldo: Optional[float] = None
+    pagamenti_in_regola: Optional[bool] = None
 
 
 class PersonaOut(BaseModel):
@@ -67,6 +68,7 @@ class PersonaOut(BaseModel):
     anamnesi: Optional[str] = None
     taglia: Optional[str] = None
     note: Optional[str] = None
+    pagamenti_in_regola: Optional[bool] = True
 
     class Config:
         from_attributes = True
