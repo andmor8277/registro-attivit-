@@ -1116,5 +1116,65 @@ def run_migrations():
                 print(f"Migration warning (persone pagamenti_in_regola): {e}")
                 conn.rollback()
 
+            # Scouting: segnalazioni e giocatori avversari
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS scouting_segnalazioni (
+                        id SERIAL PRIMARY KEY,
+                        societa_id INTEGER REFERENCES societa(id),
+                        categoria_id INTEGER REFERENCES categorie(id) ON DELETE CASCADE,
+                        convocazione_id INTEGER REFERENCES convocazioni(id) ON DELETE SET NULL,
+                        gara_id INTEGER REFERENCES convocazione_gare(id) ON DELETE SET NULL,
+                        autore_id INTEGER REFERENCES utenti(id),
+                        titolo VARCHAR(200),
+                        data_osservazione DATE,
+                        squadra_avversaria VARCHAR(100),
+                        note TEXT,
+                        stato VARCHAR(20) DEFAULT 'inviata',
+                        creato_il TIMESTAMP,
+                        aggiornato_il TIMESTAMP
+                    )
+                """))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_scouting_segnalazioni_societa ON scouting_segnalazioni(societa_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_scouting_segnalazioni_categoria ON scouting_segnalazioni(categoria_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_scouting_segnalazioni_autore ON scouting_segnalazioni(autore_id)"))
+                conn.commit()
+                print("Migration: Ensured scouting_segnalazioni table")
+            except Exception as e:
+                print(f"Migration warning (scouting_segnalazioni): {e}")
+                conn.rollback()
+
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS scouting_giocatori (
+                        id SERIAL PRIMARY KEY,
+                        segnalazione_id INTEGER REFERENCES scouting_segnalazioni(id) ON DELETE CASCADE,
+                        nome VARCHAR(100),
+                        cognome VARCHAR(100),
+                        squadra VARCHAR(100),
+                        ruolo VARCHAR(50),
+                        numero_maglia INTEGER,
+                        ordine INTEGER DEFAULT 0,
+                        tecnica INTEGER,
+                        velocita INTEGER,
+                        resistenza INTEGER,
+                        attitudine INTEGER,
+                        posizione INTEGER,
+                        gioco_di_testa INTEGER,
+                        tiro INTEGER,
+                        passaggio INTEGER,
+                        dribbling INTEGER,
+                        disciplina INTEGER,
+                        note TEXT,
+                        valutato_il TIMESTAMP
+                    )
+                """))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_scouting_giocatori_segnalazione ON scouting_giocatori(segnalazione_id)"))
+                conn.commit()
+                print("Migration: Ensured scouting_giocatori table")
+            except Exception as e:
+                print(f"Migration warning (scouting_giocatori): {e}")
+                conn.rollback()
+
         finally:
             conn.close()

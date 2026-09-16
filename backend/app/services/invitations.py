@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from ..models import Invito
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
-RUOLI_PERMESSI_ADMIN = {"mister", "dirigente", "segreteria", "infermeria"}
+RUOLI_PERMESSI_ADMIN = {"mister", "dirigente", "segreteria", "infermeria", "scouting"}
 
 
 def build_invite_link(token: str) -> str:

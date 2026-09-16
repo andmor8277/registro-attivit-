@@ -80,6 +80,7 @@
             <option value="dirigente">Dirigente</option>
             <option value="segreteria">Segreteria</option>
             <option value="infermeria">Infermeria</option>
+            <option value="scouting">Scouting</option>
           </select>
           <select v-if="isSuperAdmin" v-model="nuovoInvito.societa_id" class="ruolo-select">
             <option value="">Seleziona società...</option>
@@ -141,6 +142,7 @@
               <span class="badge-role badge-dirigente" v-if="u.ruolo === 'dirigente'">DIRIGENTE</span>
               <span class="badge-role badge-segreteria" v-if="u.ruolo === 'segreteria'">SEGRETERIA</span>
               <span class="badge-role badge-infermeria" v-if="u.ruolo === 'infermeria'">INFERMERIA</span>
+              <span class="badge-role badge-scouting" v-if="u.ruolo === 'scouting'">SCOUTING</span>
               <span class="badge-societa">{{ getSocietaNome(u.societa_id) }}</span>
             </div>
           </div>
@@ -844,6 +846,11 @@ onMounted(() => {
 
 .badge-infermeria {
   background: #059669;
+  color: white;
+}
+
+.badge-scouting {
+  background: #dc2626;
   color: white;
 }
 

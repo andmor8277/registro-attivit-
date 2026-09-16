@@ -113,6 +113,10 @@
               <h1>Convocazioni</h1>
               <p class="sub">Attiva o disattiva i giocatori con un tocco &middot; l'elenco va in PDF pronto da stampare</p>
             </div>
+            <button v-if="puoScouting" class="btn btn-ghost" :disabled="!convocazioneId || !garaAttiva?.id" @click="apriScouting" title="Crea segnalazione scouting per questa gara">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              Scouting
+            </button>
             <button class="btn btn-primary" @click="esportaPDF">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V6a6 6 0 0112 0v3"/><rect x="4" y="9" width="16" height="12" rx="2"/><path d="M12 14v3"/></svg>
               Esporta PDF
@@ -217,6 +221,56 @@
               </div>
             </div>
           </div>
+
+          <!-- SCOUTING MODAL -->
+          <div v-if="scoutingModal.open" class="scout-overlay" @click.self="scoutingModal.open = false">
+            <div class="scout-modal">
+              <div class="scout-header">
+                <h3>Segnalazione Scouting</h3>
+                <button class="scout-close" @click="scoutingModal.open = false">&times;</button>
+              </div>
+              <div class="scout-form">
+                <div class="scout-field">
+                  <label>Titolo</label>
+                  <input v-model="scoutingModal.titolo" placeholder="Es. Rilevamento attaccanti" />
+                </div>
+                <div class="scout-row">
+                  <div class="scout-field">
+                    <label>Data osservazione</label>
+                    <input type="date" v-model="scoutingModal.data_osservazione" />
+                  </div>
+                  <div class="scout-field">
+                    <label>Squadra avversaria</label>
+                    <input v-model="scoutingModal.squadra_avversaria" placeholder="Avversario" />
+                  </div>
+                </div>
+                <div class="scout-field">
+                  <label>Note</label>
+                  <textarea v-model="scoutingModal.note" rows="3" placeholder="Note generali sulla squadra avversaria..."></textarea>
+                </div>
+                <div class="scout-players">
+                  <div class="scout-players-header">
+                    <span>Giocatori da segnalare</span>
+                    <button type="button" class="btn btn-ghost btn-sm" @click="aggiungiGiocatoreScouting">+ Aggiungi</button>
+                  </div>
+                  <div v-for="(g, gi) in scoutingModal.giocatori" :key="'sg-' + gi" class="scout-player-row">
+                    <input v-model="g.nome" placeholder="Nome" class="scout-nome" />
+                    <input v-model="g.cognome" placeholder="Cognome" class="scout-cognome" />
+                    <input v-model="g.ruolo" placeholder="Ruolo" class="scout-ruolo" />
+                    <input v-model.number="g.numero_maglia" type="number" min="1" max="99" placeholder="N°" class="scout-num" />
+                    <button type="button" class="scout-remove" @click="rimuoviGiocatoreScouting(gi)" title="Rimuovi">&times;</button>
+                  </div>
+                  <p v-if="scoutingModal.giocatori.length === 0" class="scout-empty">Nessun giocatore aggiunto</p>
+                </div>
+                <div class="scout-actions">
+                  <button class="btn btn-ghost" @click="scoutingModal.open = false">Annulla</button>
+                  <button class="btn btn-primary" :disabled="scoutingModal.loading" @click="inviaScouting">
+                    {{ scoutingModal.loading ? 'Invio...' : 'Invia a Scouting' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </template>
 
         <div v-if="!convocazione" class="empty-state">
@@ -235,14 +289,14 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../../store.js'
-import { getPersone, getRegistroMese, getPartite, getCategoriaResponsabili, getWeekend, getWeekendPartite } from '../../api/index.js'
+import { getPersone, getRegistroMese, getPartite, getCategoriaResponsabili, getWeekend, getWeekendPartite, creaSegnalazioneScouting } from '../../api/index.js'
 import axios from 'axios'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 
 const router = useRouter()
 const route = useRoute()
-const { categoriaAttiva, societaAttiva, stagioneCorrente } = useStore()
+const { categoriaAttiva, societaAttiva, stagioneCorrente, utenteAttivo } = useStore()
 const categoriaId = parseInt(route.params.id)
 
 const nomeSocieta = computed(() => societaAttiva.value?.nome_breve || societaAttiva.value?.nome || 'Noi')
@@ -264,8 +318,10 @@ const pickerGara = ref(null)
 const pickerPos = ref(null)
 const pickerSearch = ref('')
 const activeGaraIdx = ref(0)
+const scoutingModal = ref({ open: false, loading: false, titolo: '', data_osservazione: '', squadra_avversaria: '', note: '', giocatori: [] })
 
 const garaAttiva = computed(() => convocazione.value?.gare?.[activeGaraIdx.value] || null)
+const puoScouting = computed(() => ['mister', 'admin', 'super_admin'].includes(utenteAttivo.value?.ruolo))
 
 function todayStr() { return new Date().toISOString().split('T')[0] }
 
@@ -1168,6 +1224,72 @@ async function elimina() {
   await loadWeekendDisponibili()
 }
 
+function estraiAvversario(testo) {
+  if (!testo) return ''
+  const parti = testo.split(' vs ')
+  if (parti.length === 2) {
+    return parti[0].trim() === nomeSocieta.value ? parti[1].trim() : parti[0].trim()
+  }
+  return ''
+}
+
+function nuovoGiocatoreScouting() {
+  return { nome: '', cognome: '', ruolo: '', numero_maglia: null, squadra: scoutingModal.value.squadra_avversaria || null }
+}
+
+function apriScouting() {
+  if (!convocazioneId.value || !garaAttiva.value?.id) {
+    alert('Salva prima la convocazione per poter creare una segnalazione scouting')
+    return
+  }
+  scoutingModal.value = {
+    open: true,
+    loading: false,
+    titolo: '',
+    data_osservazione: garaAttiva.value.data || new Date().toISOString().slice(0, 10),
+    squadra_avversaria: estraiAvversario(garaAttiva.value.gara),
+    note: '',
+    giocatori: [nuovoGiocatoreScouting()]
+  }
+}
+
+function aggiungiGiocatoreScouting() {
+  scoutingModal.value.giocatori.push(nuovoGiocatoreScouting())
+}
+
+function rimuoviGiocatoreScouting(idx) {
+  scoutingModal.value.giocatori.splice(idx, 1)
+}
+
+async function inviaScouting() {
+  const giocatori = scoutingModal.value.giocatori
+    .map(g => ({ ...g, squadra: g.squadra || scoutingModal.value.squadra_avversaria || null }))
+    .filter(g => g.nome || g.cognome)
+  if (giocatori.length === 0) {
+    alert('Aggiungi almeno un giocatore con nome o cognome')
+    return
+  }
+  scoutingModal.value.loading = true
+  try {
+    await creaSegnalazioneScouting({
+      categoria_id: categoriaId,
+      convocazione_id: convocazioneId.value,
+      gara_id: garaAttiva.value?.id || null,
+      titolo: scoutingModal.value.titolo || null,
+      data_osservazione: scoutingModal.value.data_osservazione || null,
+      squadra_avversaria: scoutingModal.value.squadra_avversaria || null,
+      note: scoutingModal.value.note || null,
+      giocatori
+    })
+    scoutingModal.value.open = false
+    alert('Segnalazione inviata a Scouting')
+  } catch (e) {
+    alert('Errore: ' + (e.response?.data?.detail || e.message))
+  } finally {
+    scoutingModal.value.loading = false
+  }
+}
+
 onMounted(async () => {
   const res = await getPersone(categoriaId)
   persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
@@ -1904,6 +2026,155 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
   to { opacity: 1; transform: scale(1); }
 }
 
+/* ---- SCOUTING MODAL ---- */
+.scout-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.18s ease-out;
+}
+.scout-modal {
+  width: 100%;
+  max-width: 640px;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: var(--color-bg, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22);
+  animation: scaleIn 0.2s ease-out;
+}
+.scout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+.scout-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-text, #0f172a);
+}
+.scout-close {
+  border: 0;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-text-muted, #64748b);
+  cursor: pointer;
+}
+.scout-form {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.scout-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+.scout-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.scout-field label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.scout-field input,
+.scout-field textarea {
+  width: 100%;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text, #0f172a);
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 0.55rem 0.75rem;
+  outline: none;
+}
+.scout-field input:focus,
+.scout-field textarea:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+.scout-players {
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 12px;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.scout-players-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text, #0f172a);
+}
+.scout-player-row {
+  display: grid;
+  grid-template-columns: 1.1fr 1.1fr 0.8fr 0.45fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+.scout-player-row input {
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text, #0f172a);
+  font-size: 0.85rem;
+  padding: 0.45rem 0.6rem;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+}
+.scout-player-row input:focus {
+  border-color: #dc2626;
+}
+.scout-remove {
+  border: 0;
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.scout-empty {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted, #64748b);
+  text-align: center;
+  padding: 0.5rem 0;
+}
+.scout-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+.btn-sm {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8rem;
+}
+
 /* ---- RESPONSIVE ---- */
 @media (max-width: 1024px) {
   .conv-grid { grid-template-columns: 1fr; }
@@ -1923,6 +2194,10 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
   .slot-x { opacity: 1; }
   .picker-modal { width: 95vw; max-width: 340px; }
   .info-dl li { padding: 8px 12px; }
+  .scout-row { grid-template-columns: 1fr; }
+  .scout-player-row { grid-template-columns: 1fr 1fr; }
+  .scout-actions { flex-direction: column; }
+  .scout-actions .btn { width: 100%; }
 }
 </style>
 

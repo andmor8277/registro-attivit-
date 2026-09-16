@@ -93,6 +93,7 @@ def requires_roles(*roles):
 
 get_segreteria = requires_roles("admin", "segreteria")
 get_infermeria = requires_roles("admin", "infermeria")
+get_scouting = requires_roles("admin", "scouting")
 get_persona_staff = requires_roles("admin", "segreteria", "mister")
 get_persona_admin = requires_roles("admin", "segreteria")
 get_staff_admin = requires_roles("admin")

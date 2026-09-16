@@ -1043,7 +1043,27 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
         ctx.stroke()
       }
       ctx.restore()
-    } else if (['pass', 'dribble', 'wallpass', 'shot', 'movement', 'line'].includes(tipo)) {
+    } else if (tipo === 'line') {
+      ctx.save()
+      ctx.strokeStyle = color
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.lineWidth = Math.max(1, 2 * sb)
+      if (Array.isArray(el.points) && el.points.length >= 4) {
+        ctx.beginPath()
+        ctx.moveTo(toX(el.points[0]), toY(el.points[1]))
+        for (let i = 2; i < el.points.length; i += 2) {
+          ctx.lineTo(toX(el.points[i]), toY(el.points[i + 1]))
+        }
+        ctx.stroke()
+      } else if (el.x1 != null && el.y1 != null && el.x2 != null && el.y2 != null) {
+        ctx.beginPath()
+        ctx.moveTo(ex1, ey1)
+        ctx.lineTo(ex2, ey2)
+        ctx.stroke()
+      }
+      ctx.restore()
+    } else if (['pass', 'dribble', 'wallpass', 'shot', 'movement'].includes(tipo)) {
       ctx.save()
       const dx = ex2 - ex1
       const dy = ey2 - ey1

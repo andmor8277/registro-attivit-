@@ -8,7 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 import os
 from .rate_limit import limiter
 from .database import Base, engine
-from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni, infortuni, openday, planning_eventi, schede_allenamento
+from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni, infortuni, openday, planning_eventi, schede_allenamento, scouting
 from .routers.gruppi import router as gruppi_router
 from .routers.liste_tornei import router as liste_tornei_router
 from .routers.inviti import router as inviti_router
@@ -73,6 +73,7 @@ app.include_router(spogliatoi.router, dependencies=[Depends(get_current_user)])
 app.include_router(campi.router, dependencies=[Depends(get_current_user)])
 app.include_router(presenze_allenatori.router, dependencies=[Depends(get_current_user)])
 app.include_router(valutazioni.router, dependencies=[Depends(get_current_user)])
+app.include_router(scouting.router, dependencies=[Depends(get_current_user)])
 app.include_router(infortuni.router, dependencies=[Depends(get_current_user)])
 app.include_router(openday.router, prefix="/openday", dependencies=[Depends(get_current_user)])
 app.include_router(planning_eventi.router, dependencies=[Depends(get_current_user)])
