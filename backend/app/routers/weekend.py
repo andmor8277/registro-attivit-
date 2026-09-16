@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from ..database import get_db
 from ..routers.auth import get_current_user, check_societa
+from ..core.security import get_staff_admin
 from ..schemas import WeekendCreate, WeekendUpdate
 
 router = APIRouter(prefix="/weekend", tags=["weekend"])
@@ -46,7 +47,7 @@ def weekend_partite(weekend_id: int, db=Depends(get_db), user=Depends(get_curren
     return [dict(r._mapping) for r in rows]
 
 @router.post("/")
-def crea_weekend(data: WeekendCreate, db=Depends(get_db), user=Depends(get_current_user)):
+def crea_weekend(data: WeekendCreate, db=Depends(get_db), user=Depends(get_staff_admin)):
     societa_id = data.societa_id
     if not societa_id and not user.is_super_admin:
         societa_id = user.societa_id
@@ -69,7 +70,7 @@ def crea_weekend(data: WeekendCreate, db=Depends(get_db), user=Depends(get_curre
     return dict(row._mapping)
 
 @router.put("/{weekend_id}")
-def aggiorna_weekend(weekend_id: int, data: WeekendUpdate, db=Depends(get_db), user=Depends(get_current_user)):
+def aggiorna_weekend(weekend_id: int, data: WeekendUpdate, db=Depends(get_db), user=Depends(get_staff_admin)):
     check_weekend_access(db, weekend_id, user)
     res = db.execute(
         text("""
@@ -94,7 +95,7 @@ def aggiorna_weekend(weekend_id: int, data: WeekendUpdate, db=Depends(get_db), u
     return dict(row._mapping)
 
 @router.delete("/{weekend_id}")
-def elimina_weekend(weekend_id: int, db=Depends(get_db), user=Depends(get_current_user)):
+def elimina_weekend(weekend_id: int, db=Depends(get_db), user=Depends(get_staff_admin)):
     check_weekend_access(db, weekend_id, user)
     db.execute(text("DELETE FROM weekend WHERE id = :id"), {"id": weekend_id})
     db.commit()

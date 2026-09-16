@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from ..database import get_db
 from ..routers.auth import get_current_user, check_societa
+from ..core.security import get_staff_admin
 from ..schemas import PartitaCreate, PartitaUpdate
 
 router = APIRouter(prefix="/partite", tags=["partite"])
@@ -45,7 +46,7 @@ def lista_partite(categoria_id: int = None, societa_id: int = None, db=Depends(g
     return [dict(r._mapping) for r in rows]
 
 @router.post("/")
-def crea_partita(data: PartitaCreate, db=Depends(get_db), user=Depends(get_current_user)):
+def crea_partita(data: PartitaCreate, db=Depends(get_db), user=Depends(get_staff_admin)):
     societa_id = data.societa_id
     if not societa_id and not user.is_super_admin:
         societa_id = user.societa_id
@@ -80,7 +81,7 @@ def crea_partita(data: PartitaCreate, db=Depends(get_db), user=Depends(get_curre
     return dict(row._mapping)
 
 @router.put("/{partita_id}")
-def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), user=Depends(get_current_user)):
+def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), user=Depends(get_staff_admin)):
     check_partite_access(db, partita_id, user)
     check_categoria(db, user, data.categoria_id)
     res = db.execute(
@@ -128,7 +129,7 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
     return dict(row._mapping)
 
 @router.delete("/{partita_id}")
-def elimina_partita(partita_id: int, db=Depends(get_db), user=Depends(get_current_user)):
+def elimina_partita(partita_id: int, db=Depends(get_db), user=Depends(get_staff_admin)):
     check_partite_access(db, partita_id, user)
     db.execute(text("DELETE FROM partite WHERE id = :id"), {"id": partita_id})
     db.commit()

@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from .. import models, schemas
 from ..database import get_db
 from ..routers.auth import get_current_user, get_super_admin
+from ..core.security import get_persona_staff, get_persona_admin
 from ..models import Utente
 from ..rate_limit import limiter
 from ..utils.codice_fiscale import genera_codice_fiscale
@@ -29,7 +30,7 @@ SENSITIVE_FIELDS = frozenset(['codice_fiscale', 'tel_papa', 'tel_mamma', 'anamne
 @limiter.limit("60/minute")
 def get_persone(request: Request, categoria_id: Optional[int] = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     societa_id = get_societa_filter(current_user)
-    is_admin = current_user.is_admin or current_user.is_super_admin
+    is_admin = current_user.is_admin or current_user.is_super_admin or current_user.ruolo == 'segreteria'
 
     # Se la categoria è Portieri (is_portieri=1), restituisci tutti i portieri di tutte le categorie
     is_portieri = False
@@ -100,7 +101,7 @@ def get_persone(request: Request, categoria_id: Optional[int] = None, db: Sessio
     return results
 
 @router.post("/")
-def create_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def create_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_persona_staff)):
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     data = p.model_dump()
     data["societa_id"] = societa_id
@@ -121,7 +122,7 @@ def create_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db), curr
     return persona
 
 @router.put("/{persona_id}")
-def update_persona(persona_id: int, p: schemas.PersonaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def update_persona(persona_id: int, p: schemas.PersonaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_persona_staff)):
     persona = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
     if not persona:
         raise HTTPException(status_code=404, detail="Persona non trovata")
@@ -145,7 +146,7 @@ def update_persona(persona_id: int, p: schemas.PersonaCreate, db: Session = Depe
     return persona
 
 @router.delete("/{persona_id}")
-def delete_persona(persona_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def delete_persona(persona_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_persona_admin)):
     persona = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
     if not persona:
         raise HTTPException(status_code=404, detail="Persona non trovata")
@@ -168,7 +169,7 @@ def delete_persona(persona_id: int, db: Session = Depends(get_db), current_user:
     return {"ok": True}
 
 @router.post("/genera-cf")
-def genera_cf(data: dict, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def genera_cf(data: dict, db: Session = Depends(get_db), current_user: Utente = Depends(get_persona_staff)):
     try:
         cf = genera_codice_fiscale(
             nome=data.get("nome"),

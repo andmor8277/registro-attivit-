@@ -79,6 +79,25 @@ def get_super_admin(current_user: Utente = Depends(get_current_user)):
     return current_user
 
 
+def requires_roles(*roles):
+    def dependency(current_user: Utente = Depends(get_current_user)):
+        if current_user.is_super_admin:
+            return current_user
+        if current_user.is_admin and "admin" in roles:
+            return current_user
+        if current_user.ruolo in roles:
+            return current_user
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    return dependency
+
+
+get_segreteria = requires_roles("admin", "segreteria")
+get_infermeria = requires_roles("admin", "infermeria")
+get_persona_staff = requires_roles("admin", "segreteria", "mister")
+get_persona_admin = requires_roles("admin", "segreteria")
+get_staff_admin = requires_roles("admin")
+
+
 def check_societa(current_user: Utente, societa_id: int):
     if not current_user.is_super_admin and current_user.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato a operare su questa società")

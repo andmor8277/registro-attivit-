@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from ..database import get_db
 from ..routers.auth import get_current_user, check_societa
+from ..core.security import get_staff_admin
 from ..schemas import CampoCreate, CampoUpdate, CampoAssegnazioneCreate, CampoAssegnazioneUpdate
 
 router = APIRouter(prefix="/campi", tags=["campi"])
@@ -103,7 +104,7 @@ def assegnazioni_weekend(weekend_id: int, db=Depends(get_db), user=Depends(get_c
     return [dict(r._mapping) for r in rows]
 
 @router.post("/")
-def crea_campo(data: CampoCreate, db=Depends(get_db), user=Depends(get_current_user)):
+def crea_campo(data: CampoCreate, db=Depends(get_db), user=Depends(get_staff_admin)):
     societa_id = data.societa_id
     if not societa_id and not user.is_super_admin:
         societa_id = user.societa_id
@@ -126,7 +127,7 @@ def crea_campo(data: CampoCreate, db=Depends(get_db), user=Depends(get_current_u
     return dict(row._mapping)
 
 @router.put("/{campo_id}")
-def aggiorna_campo(campo_id: int, data: CampoUpdate, db=Depends(get_db), user=Depends(get_current_user)):
+def aggiorna_campo(campo_id: int, data: CampoUpdate, db=Depends(get_db), user=Depends(get_staff_admin)):
     check_campo_access(db, campo_id, user)
     res = db.execute(
         text("""
@@ -151,7 +152,7 @@ def aggiorna_campo(campo_id: int, data: CampoUpdate, db=Depends(get_db), user=De
     return dict(row._mapping)
 
 @router.delete("/{campo_id}")
-def elimina_campo(campo_id: int, db=Depends(get_db), user=Depends(get_current_user)):
+def elimina_campo(campo_id: int, db=Depends(get_db), user=Depends(get_staff_admin)):
     check_campo_access(db, campo_id, user)
     db.execute(text("DELETE FROM campi_assegnazioni WHERE campo_id = :id"), {"id": campo_id})
     db.execute(text("DELETE FROM campi_da_gioco WHERE id = :id"), {"id": campo_id})
@@ -161,7 +162,7 @@ def elimina_campo(campo_id: int, db=Depends(get_db), user=Depends(get_current_us
 # ── Assegnazioni CRUD ──
 
 @router.post("/assegnazioni")
-def crea_assegnazione(data: CampoAssegnazioneCreate, db=Depends(get_db), user=Depends(get_current_user)):
+def crea_assegnazione(data: CampoAssegnazioneCreate, db=Depends(get_db), user=Depends(get_staff_admin)):
     societa_id = data.societa_id
     if not societa_id and not user.is_super_admin:
         societa_id = user.societa_id
@@ -196,7 +197,7 @@ def crea_assegnazione(data: CampoAssegnazioneCreate, db=Depends(get_db), user=De
     return dict(row._mapping)
 
 @router.put("/assegnazioni/{assegnazione_id}")
-def aggiorna_assegnazione(assegnazione_id: int, data: CampoAssegnazioneUpdate, db=Depends(get_db), user=Depends(get_current_user)):
+def aggiorna_assegnazione(assegnazione_id: int, data: CampoAssegnazioneUpdate, db=Depends(get_db), user=Depends(get_staff_admin)):
     if not user.is_super_admin:
         res = db.execute(text("SELECT societa_id FROM campi_assegnazioni WHERE id = :id"), {"id": assegnazione_id})
         row = res.fetchone()
@@ -236,7 +237,7 @@ def aggiorna_assegnazione(assegnazione_id: int, data: CampoAssegnazioneUpdate, d
     return dict(row._mapping)
 
 @router.delete("/assegnazioni/{assegnazione_id}")
-def elimina_assegnazione(assegnazione_id: int, db=Depends(get_db), user=Depends(get_current_user)):
+def elimina_assegnazione(assegnazione_id: int, db=Depends(get_db), user=Depends(get_staff_admin)):
     if not user.is_super_admin:
         res = db.execute(text("SELECT societa_id FROM campi_assegnazioni WHERE id = :id"), {"id": assegnazione_id})
         row = res.fetchone()
@@ -273,7 +274,7 @@ def assegnazioni_default(db=Depends(get_db), user=Depends(get_current_user)):
     return [dict(r._mapping) for r in rows]
 
 @router.post("/assegnazioni/default/apply")
-def apply_default_week(data_inizio: str, db=Depends(get_db), user=Depends(get_current_user)):
+def apply_default_week(data_inizio: str, db=Depends(get_db), user=Depends(get_staff_admin)):
     societa_id = user.societa_id if not user.is_super_admin else None
     if societa_id:
         db.execute(text("DELETE FROM campi_assegnazioni WHERE data_inizio = :di AND is_default = FALSE AND societa_id = :sid"), {"di": data_inizio, "sid": societa_id})

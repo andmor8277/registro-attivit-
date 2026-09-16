@@ -5,6 +5,7 @@ from typing import Optional
 from ..database import get_db
 from ..models import Allenatore
 from .auth import get_current_user
+from ..core.security import get_staff_admin
 
 router = APIRouter(prefix="/allenatori", tags=["allenatori"])
 
@@ -32,7 +33,7 @@ def lista(db: Session = Depends(get_db), current_user=Depends(get_current_user))
     return query.order_by(Allenatore.cognome).all()
 
 @router.post("/", response_model=AllenatoreOut)
-def crea(data: AllenatoreIn, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def crea(data: AllenatoreIn, db: Session = Depends(get_db), current_user=Depends(get_staff_admin)):
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     a = Allenatore(cognome=data.cognome, societa_id=societa_id)
     db.add(a)
@@ -41,7 +42,7 @@ def crea(data: AllenatoreIn, db: Session = Depends(get_db), current_user=Depends
     return a
 
 @router.put("/{aid}", response_model=AllenatoreOut)
-def aggiorna(aid: int, data: AllenatoreIn, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def aggiorna(aid: int, data: AllenatoreIn, db: Session = Depends(get_db), current_user=Depends(get_staff_admin)):
     a = _get_owned(aid, current_user, db)
     a.cognome = data.cognome
     db.commit()
@@ -49,7 +50,7 @@ def aggiorna(aid: int, data: AllenatoreIn, db: Session = Depends(get_db), curren
     return a
 
 @router.delete("/{aid}")
-def elimina(aid: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def elimina(aid: int, db: Session = Depends(get_db), current_user=Depends(get_staff_admin)):
     a = _get_owned(aid, current_user, db)
     db.delete(a)
     db.commit()
