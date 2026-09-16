@@ -251,6 +251,7 @@ async function goHomeByRole(user) {
     const ruolo = user?.ruolo
     if (ruolo === 'segreteria') return router.replace('/segreteria')
     if (ruolo === 'infermeria') return router.replace('/infermeria')
+    if (ruolo === 'scouting') return router.replace('/scouting')
     if (user?.societa_id && !societaAttiva.value) {
       const { getSocietaById } = await import('../../api/index.js')
       try {

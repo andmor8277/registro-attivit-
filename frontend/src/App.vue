@@ -44,6 +44,10 @@
           <svg viewBox="0 0 24 24"><path d="M12 2l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3 6.2 19.9l1.1-6.5L2.6 8.8l6.5-.9z"/></svg>
           <span>Valutazioni</span>
         </button>
+        <router-link v-if="canScouting" to="/scouting" class="side-item" :class="{ active: isActive(['/scouting']) }">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <span>Scouting</span>
+        </router-link>
         <router-link v-if="canInfermeria" to="/infermeria" class="side-item" :class="{ active: isActive(['/infermeria']) }">
           <svg viewBox="0 0 24 24"><path d="M12 21C7 17 3 13.5 3 9.5A5.5 5.5 0 0113.6 6H12a5.5 5.5 0 018 3.5c0 4-4 7.5-8 11.5z"/></svg>
           <span>Infermeria</span>
@@ -258,6 +262,13 @@
             </svg>
             Valutazioni
           </button>
+          <router-link v-if="canScouting" to="/scouting" class="mobile-menu-item" :class="{ active: isActive(['/scouting']) }" @click="mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="7"/>
+              <path d="m21 21-4.3-4.3"/>
+            </svg>
+            Scouting
+          </router-link>
           <router-link v-if="canInfermeria" to="/infermeria" class="mobile-menu-item" :class="{ active: isActive(['/infermeria']) }" @click="mobileMenuOpen = false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
@@ -441,6 +452,7 @@ const isAdminUtente = computed(() => !!utenteAttivo.value?.is_admin)
 const isAdminSocieta = computed(() => isAdminUtente.value && !isSuperAdmin.value)
 const canSegreteria = computed(() => utenteAttivo.value?.ruolo === 'segreteria' || isAdminUtente.value || isSuperAdmin.value)
 const canInfermeria = computed(() => ['infermeria', 'admin', 'super_admin'].includes(utenteAttivo.value?.ruolo))
+const canScouting = computed(() => ['scouting', 'admin', 'super_admin'].includes(utenteAttivo.value?.ruolo) || isAdminUtente.value || isSuperAdmin.value)
 const infortuniCount = ref(0)
 
 function vaiPaginaCategoria(base) {

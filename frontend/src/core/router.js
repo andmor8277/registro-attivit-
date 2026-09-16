@@ -7,6 +7,7 @@ const store = useStore()
 const RUOLI = {
   segreteria: ['segreteria', 'admin', 'super_admin'],
   infermeria: ['infermeria', 'admin', 'super_admin'],
+  scouting: ['scouting', 'admin', 'super_admin'],
   responsabili: ['admin', 'super_admin'],
   gestioneSquadre: ['admin', 'super_admin', 'segreteria', 'infermeria'],
   admin: ['admin', 'super_admin'],
@@ -69,6 +70,7 @@ export const router = createRouter({
     { path: '/infermeria', component: () => import('../features/infermeria/Infermeria.vue'), name: 'infermeria', meta: { requiresAuth: true, roles: RUOLI.infermeria } },
     { path: '/infermeria/certificati', component: () => import('../features/infermeria/CertificatoMedico.vue'), name: 'certificati', meta: { requiresAuth: true, roles: RUOLI.infermeria } },
     { path: '/infermeria/infortunati', component: () => import('../features/infermeria/Infortunati.vue'), name: 'infortunati', meta: { requiresAuth: true, roles: RUOLI.infermeria } },
+    { path: '/scouting', component: () => import('../features/scouting/Scouting.vue'), name: 'scouting', meta: { requiresAuth: true, roles: RUOLI.scouting } },
     { path: '/segreteria/openday', component: () => import('../features/segreteria/Openday.vue'), name: 'openday', meta: { requiresAuth: true, roles: RUOLI.segreteria } },
     { path: '/segreteria/presenze', component: () => import('../features/segreteria/PresenzeSegreteria.vue'), name: 'presenze-segreteria', meta: { requiresAuth: true, roles: RUOLI.segreteria } },
     { path: '/form-iscrizione', component: () => import('../features/auth/FormOnlineIscrizione.vue'), name: 'form-iscrizione' },
@@ -98,6 +100,7 @@ router.beforeEach(async (to, from, next) => {
   if (to.path === '/') {
     if (user?.ruolo === 'segreteria') return next('/segreteria')
     if (user?.ruolo === 'infermeria') return next('/infermeria')
+    if (user?.ruolo === 'scouting') return next('/scouting')
   }
 
   next()

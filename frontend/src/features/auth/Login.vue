@@ -368,6 +368,9 @@ async function doLogin() {
     if (ruolo === 'infermeria') {
       return router.push('/infermeria')
     }
+    if (ruolo === 'scouting') {
+      return router.push('/scouting')
+    }
 
     // Mister e Dirigente: imposta la categoria assegnata e va in Panoramica
     if (ruolo === 'mister' || ruolo === 'dirigente') {

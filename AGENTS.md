@@ -34,7 +34,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - `backend/app/services/` — `email.py`, `invitations.py`, `oauth_google.py`
 - `backend/app/routers/` — router flat, prefix API invariati
 
-## Backend Routers (20)
+## Backend Routers (21)
 | Router | Prefix | Auth |
 |--------|--------|------|
 | `auth.py` | `/auth` | vari (login pubblico, resto JWT) |
@@ -57,10 +57,11 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 | `openday.py` | `/openday` | login |
 | `planning_eventi.py` | `/planning-eventi` | login |
 | `schede_allenamento.py` | `/schede-allenamento` | login |
+| `scouting.py` | `/scouting` | login (creazione: mister/admin; valutazione/stato: scouting/admin) |
 
 ## Frontend Structure
 - `frontend/src/core/router.js` — route e guard
-- `frontend/src/core/api/` — `client.js`, `auth.js`, `admin.js`, `anagrafica.js`, `presenze.js`, `allenamenti.js`, `partite.js`, `segreteria.js`, `infermeria.js`, `inviti.js`, `public.js`
+- `frontend/src/core/api/` — `client.js`, `auth.js`, `admin.js`, `anagrafica.js`, `presenze.js`, `allenamenti.js`, `partite.js`, `segreteria.js`, `infermeria.js`, `scouting.js`, `inviti.js`, `public.js`
 - `frontend/src/features/auth/` — Login, Registrazione, FormOnlineIscrizione
 - `frontend/src/features/home/` — Home, Scelta
 - `frontend/src/features/presenze/` — Registro
@@ -69,11 +70,12 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - `frontend/src/features/allenamenti/` — Allenamenti, SchedaAllenamento
 - `frontend/src/features/segreteria/` — Segreteria, SegreteriaCategoria, SchedaGiocatore, Openday, PresenzeSegreteria, Valutazioni, DatiMatricole
 - `frontend/src/features/infermeria/` — Infermeria, CertificatoMedico, Infortunati
+- `frontend/src/features/scouting/` — Scouting
 - `frontend/src/features/reportistica/` — Reportistica
 - `frontend/src/features/admin/` — Admin, Societa
 
-## DB Models (25)
-`Societa`, `Categoria` (+`parent_id` self-referencing FK), `Gruppo`, `Persona`, `CodicePresenza`, `Registro`, `Utente`, `UtenteCategoria`, `Convocazione`, `ConvocazioneGara`, `ConvocazioneGiocatore`, `Allenatore`, `Allenamento`, `AllenamentoMese`, `AllenamentoSettimana`, `AllenamentoGiorno`, `AllenamentoEsercizio`, `AllenamentoElemento`, `PresenzaAllenatore`, `CatalogoEsercizio`, `Valutazione`, `Infortunio`, `Openday`, `PlanningEvento`, `SchedaAllenamento`
+## DB Models (27)
+`Societa`, `Categoria` (+`parent_id` self-referencing FK), `Gruppo`, `Persona`, `CodicePresenza`, `Registro`, `Utente`, `UtenteCategoria`, `Convocazione`, `ConvocazioneGara`, `ConvocazioneGiocatore`, `Allenatore`, `Allenamento`, `AllenamentoMese`, `AllenamentoSettimana`, `AllenamentoGiorno`, `AllenamentoEsercizio`, `AllenamentoElemento`, `PresenzaAllenatore`, `CatalogoEsercizio`, `Valutazione`, `Infortunio`, `Openday`, `PlanningEvento`, `SchedaAllenamento`, `ScoutingSegnalazione`, `ScoutingGiocatore`
 
 ## Route Map
 ```
@@ -100,6 +102,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 /infermeria                       → Infermeria.vue (hub)
 /infermeria/certificati           → CertificatoMedico.vue
 /infermeria/infortunati           → Infortunati.vue
+/scouting                         → Scouting.vue
 /admin                            → Admin.vue
 /admin/societa                    → Societa.vue
 /form-iscrizione                  → FormOnlineIscrizione.vue (public, no auth)
@@ -153,7 +156,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 
 ## Conventions
 - Italian language in UI and code.
-- Roles: `super_admin` (all societies), `admin` (own society), `mister` (assigned categories), `dirigente` (read-only), `segreteria`, `infermeria`.
+- Roles: `super_admin` (all societies), `admin` (own society), `mister` (assigned categories), `dirigente` (read-only), `segreteria`, `infermeria`, `scouting`.
 - No linting or type-checking configured.
 - Tactical board logic: `components/TacticalBoard.vue`.
 

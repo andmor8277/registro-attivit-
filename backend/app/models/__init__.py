@@ -22,6 +22,7 @@ from .partite import (
 )
 from .segreteria import Openday, Valutazione
 from .infermeria import Infortunio, PlanningEvento
+from .scouting import ScoutingSegnalazione, ScoutingGiocatore
 
 __all__ = [
     "Base",
@@ -53,4 +54,6 @@ __all__ = [
     "Valutazione",
     "Infortunio",
     "PlanningEvento",
+    "ScoutingSegnalazione",
+    "ScoutingGiocatore",
 ]
