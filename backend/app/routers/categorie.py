@@ -168,7 +168,7 @@ def get_categorie_by_stagione(stagione: int, db: Session = Depends(get_db), curr
     return categorie
 
 @router.post("/")
-def create_categoria(c: CategoriaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def create_categoria(c: CategoriaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
     # Super admin deve specificare società, admin locale usa la sua
     if current_user.is_super_admin:
         if not c.societa_id:
@@ -198,7 +198,7 @@ def create_categoria(c: CategoriaCreate, db: Session = Depends(get_db), current_
     return cat
 
 @router.put("/{categoria_id}")
-def update_categoria(categoria_id: int, c: CategoriaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def update_categoria(categoria_id: int, c: CategoriaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
     cat = db.query(models.Categoria).filter(models.Categoria.id == categoria_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="Categoria non trovata")

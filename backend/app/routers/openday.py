@@ -5,6 +5,7 @@ from datetime import datetime
 from .. import models, schemas
 from ..database import get_db
 from ..routers.auth import get_current_user
+from ..core.security import get_segreteria
 from ..models import Utente
 from ..schemas import OpendayCreate, OpendayUpdate
 from typing import Optional
@@ -17,7 +18,7 @@ def get_societa_filter(user: Utente):
     return user.societa_id
 
 @router.get("/")
-def get_openday(current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_openday(current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     query = """
         SELECT o.id, o.nome, o.cognome, o.data_nascita, o.iscritto, o.persona_id, o.creato_il,
@@ -46,7 +47,7 @@ def format_nome(val):
     return ' '.join(w[:1].upper() + w[1:].lower() for w in val.split())
 
 @router.post("/")
-def create_openday(entry: OpendayCreate, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_openday(entry: OpendayCreate, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     o = models.Openday(
         societa_id=societa_id,
@@ -76,7 +77,7 @@ def create_openday(entry: OpendayCreate, current_user: Utente = Depends(get_curr
     }
 
 @router.put("/{entry_id}")
-def update_openday(entry_id: int, entry: OpendayUpdate, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_openday(entry_id: int, entry: OpendayUpdate, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
     o = db.query(models.Openday).filter(models.Openday.id == entry_id).first()
     if not o:
         raise HTTPException(status_code=404, detail="Non trovato")
@@ -100,7 +101,7 @@ def update_openday(entry_id: int, entry: OpendayUpdate, current_user: Utente = D
     }
 
 @router.delete("/{entry_id}")
-def delete_openday(entry_id: int, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
+def delete_openday(entry_id: int, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
     o = db.query(models.Openday).filter(models.Openday.id == entry_id).first()
     if not o:
         raise HTTPException(status_code=404, detail="Non trovato")
@@ -118,7 +119,7 @@ def delete_openday(entry_id: int, current_user: Utente = Depends(get_current_use
     return {"ok": True}
 
 @router.post("/{entry_id}/iscrivi")
-def iscrivi_openday(entry_id: int, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
+def iscrivi_openday(entry_id: int, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
     o = db.query(models.Openday).filter(models.Openday.id == entry_id).first()
     if not o:
         raise HTTPException(status_code=404, detail="Non trovato")
@@ -154,7 +155,7 @@ def iscrivi_openday(entry_id: int, current_user: Utente = Depends(get_current_us
     return {"ok": True, "persona_id": p.id, "categoria_id": cat.id, "categoria_anno": cat.anno}
 
 @router.post("/{entry_id}/disiscrivi")
-def disiscrivi_openday(entry_id: int, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
+def disiscrivi_openday(entry_id: int, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
     o = db.query(models.Openday).filter(models.Openday.id == entry_id).first()
     if not o:
         raise HTTPException(status_code=404, detail="Non trovato")

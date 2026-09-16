@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from ..database import get_db
 from ..models import PresenzaAllenatore, Utente, UtenteCategoria, Categoria
 from .auth import get_current_user
+from ..core.security import get_staff_admin
 
 router = APIRouter(prefix="/presenze-allenatori", tags=["presenze-allenatori"])
 
@@ -31,7 +32,7 @@ class PresenzaAllenatoreOut(BaseModel):
         from_attributes = True
 
 @router.get("/mese/{anno}/{mese}")
-def get_mese(anno: int, mese: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def get_mese(anno: int, mese: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_staff_admin)):
     societa_id = get_societa_filter(current_user)
     query = db.query(PresenzaAllenatore).filter(
         extract("year", PresenzaAllenatore.data) == anno,
@@ -42,7 +43,7 @@ def get_mese(anno: int, mese: int, db: Session = Depends(get_db), current_user: 
     return query.all()
 
 @router.post("/", response_model=PresenzaAllenatoreOut)
-def upsert_presenza(entry: PresenzaAllenatoreIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def upsert_presenza(entry: PresenzaAllenatoreIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_staff_admin)):
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     data = entry.model_dump()
     data["societa_id"] = societa_id
@@ -64,7 +65,7 @@ def upsert_presenza(entry: PresenzaAllenatoreIn, db: Session = Depends(get_db), 
     return r
 
 @router.get("/mister")
-def get_mister(db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def get_mister(db: Session = Depends(get_db), current_user: Utente = Depends(get_staff_admin)):
     societa_id = get_societa_filter(current_user)
     query = db.query(Utente).filter(Utente.ruolo == "mister")
     if societa_id:

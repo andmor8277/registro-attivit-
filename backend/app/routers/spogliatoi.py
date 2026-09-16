@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from ..database import get_db
 from ..routers.auth import get_current_user, check_societa
+from ..core.security import get_staff_admin
 from ..schemas import SpogliatoioCreate, SpogliatoioUpdate, SpogliatoioAssegnazioneCreate, SpogliatoioAssegnazioneUpdate
 
 router = APIRouter(prefix="/spogliatoi", tags=["spogliatoi"])
@@ -103,7 +104,7 @@ def assegnazioni_weekend(weekend_id: int, db=Depends(get_db), user=Depends(get_c
     return [dict(r._mapping) for r in rows]
 
 @router.post("/")
-def crea_spogliatoio(data: SpogliatoioCreate, db=Depends(get_db), user=Depends(get_current_user)):
+def crea_spogliatoio(data: SpogliatoioCreate, db=Depends(get_db), user=Depends(get_staff_admin)):
     societa_id = data.societa_id
     if not societa_id and not user.is_super_admin:
         societa_id = user.societa_id
@@ -125,7 +126,7 @@ def crea_spogliatoio(data: SpogliatoioCreate, db=Depends(get_db), user=Depends(g
     return dict(row._mapping)
 
 @router.put("/{spogliatoio_id}")
-def aggiorna_spogliatoio(spogliatoio_id: int, data: SpogliatoioUpdate, db=Depends(get_db), user=Depends(get_current_user)):
+def aggiorna_spogliatoio(spogliatoio_id: int, data: SpogliatoioUpdate, db=Depends(get_db), user=Depends(get_staff_admin)):
     check_spogliatoio_access(db, spogliatoio_id, user)
     res = db.execute(
         text("""
@@ -148,7 +149,7 @@ def aggiorna_spogliatoio(spogliatoio_id: int, data: SpogliatoioUpdate, db=Depend
     return dict(row._mapping)
 
 @router.delete("/{spogliatoio_id}")
-def elimina_spogliatoio(spogliatoio_id: int, db=Depends(get_db), user=Depends(get_current_user)):
+def elimina_spogliatoio(spogliatoio_id: int, db=Depends(get_db), user=Depends(get_staff_admin)):
     check_spogliatoio_access(db, spogliatoio_id, user)
     db.execute(text("DELETE FROM spogliatoi_assegnazioni WHERE spogliatoio_id = :id"), {"id": spogliatoio_id})
     db.execute(text("DELETE FROM spogliatoi WHERE id = :id"), {"id": spogliatoio_id})
@@ -158,7 +159,7 @@ def elimina_spogliatoio(spogliatoio_id: int, db=Depends(get_db), user=Depends(ge
 # ── Assegnazioni CRUD ──
 
 @router.post("/assegnazioni")
-def crea_assegnazione(data: SpogliatoioAssegnazioneCreate, db=Depends(get_db), user=Depends(get_current_user)):
+def crea_assegnazione(data: SpogliatoioAssegnazioneCreate, db=Depends(get_db), user=Depends(get_staff_admin)):
     societa_id = data.societa_id
     if not societa_id and not user.is_super_admin:
         societa_id = user.societa_id
@@ -192,7 +193,7 @@ def crea_assegnazione(data: SpogliatoioAssegnazioneCreate, db=Depends(get_db), u
     return dict(row._mapping)
 
 @router.put("/assegnazioni/{assegnazione_id}")
-def aggiorna_assegnazione(assegnazione_id: int, data: SpogliatoioAssegnazioneUpdate, db=Depends(get_db), user=Depends(get_current_user)):
+def aggiorna_assegnazione(assegnazione_id: int, data: SpogliatoioAssegnazioneUpdate, db=Depends(get_db), user=Depends(get_staff_admin)):
     if not user.is_super_admin:
         res = db.execute(text("SELECT societa_id FROM spogliatoi_assegnazioni WHERE id = :id"), {"id": assegnazione_id})
         row = res.fetchone()
@@ -230,7 +231,7 @@ def aggiorna_assegnazione(assegnazione_id: int, data: SpogliatoioAssegnazioneUpd
     return dict(row._mapping)
 
 @router.delete("/assegnazioni/{assegnazione_id}")
-def elimina_assegnazione(assegnazione_id: int, db=Depends(get_db), user=Depends(get_current_user)):
+def elimina_assegnazione(assegnazione_id: int, db=Depends(get_db), user=Depends(get_staff_admin)):
     if not user.is_super_admin:
         res = db.execute(text("SELECT societa_id FROM spogliatoi_assegnazioni WHERE id = :id"), {"id": assegnazione_id})
         row = res.fetchone()
@@ -267,7 +268,7 @@ def assegnazioni_default(db=Depends(get_db), user=Depends(get_current_user)):
     return [dict(r._mapping) for r in rows]
 
 @router.post("/assegnazioni/default/apply")
-def apply_default_week(data_inizio: str, db=Depends(get_db), user=Depends(get_current_user)):
+def apply_default_week(data_inizio: str, db=Depends(get_db), user=Depends(get_staff_admin)):
     from datetime import timedelta
     data_date = data_inizio.replace('-', '')
     data_int = int(data_date)

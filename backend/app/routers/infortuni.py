@@ -6,6 +6,7 @@ from typing import Optional
 from pydantic import BaseModel
 from ..database import get_db
 from ..routers.auth import get_current_user
+from ..core.security import get_infermeria
 from ..models import Utente
 
 router = APIRouter(prefix="/infortuni", tags=["infortuni"])
@@ -86,7 +87,7 @@ def lista_infortuni(
 def crea_infortunio(
     data: InfortunioCreate,
     db: Session = Depends(get_db),
-    current_user: Utente = Depends(get_current_user)
+    current_user: Utente = Depends(get_infermeria)
 ):
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     data_inizio = date.fromisoformat(data.data_inizio)
@@ -123,7 +124,7 @@ def aggiorna_infortunio(
     infortunio_id: int,
     data: InfortunioUpdate,
     db: Session = Depends(get_db),
-    current_user: Utente = Depends(get_current_user)
+    current_user: Utente = Depends(get_infermeria)
 ):
     societa_id = get_societa_filter(current_user)
     if societa_id:
@@ -183,7 +184,7 @@ def aggiorna_infortunio(
 def elimina_infortunio(
     infortunio_id: int,
     db: Session = Depends(get_db),
-    current_user: Utente = Depends(get_current_user)
+    current_user: Utente = Depends(get_infermeria)
 ):
     societa_id = get_societa_filter(current_user)
     if societa_id:
@@ -199,7 +200,7 @@ def elimina_infortunio(
 def chiudi_infortunio(
     infortunio_id: int,
     db: Session = Depends(get_db),
-    current_user: Utente = Depends(get_current_user)
+    current_user: Utente = Depends(get_infermeria)
 ):
     societa_id = get_societa_filter(current_user)
     if societa_id:

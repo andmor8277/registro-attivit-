@@ -423,7 +423,8 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStore } from './store.js'
 import { useRouter, useRoute } from 'vue-router'
-import { getMe, getStagioni, changePassword, getInfortuni } from './api/index.js'
+import { getStagioni, changePassword, getInfortuni } from './api/index.js'
+import { caricaUtente } from './core/router.js'
 
 const { token, utenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva, hideTopbar, categoriaAttiva } = useStore()
 const router = useRouter()
@@ -525,8 +526,7 @@ async function loadStagione() {
 onMounted(async () => {
   if (token.value) {
     try {
-      const res = await getMe()
-      utenteAttivo.value = res.data
+      if (!utenteAttivo.value) await caricaUtente()
       await loadStagione()
     } catch {
       clearToken()

@@ -6,6 +6,7 @@ from typing import Optional
 from app.models import Utente, Gruppo
 from app.database import get_db
 from app.routers.auth import get_current_user
+from app.core.security import get_persona_staff
 
 router = APIRouter(prefix="/gruppi", tags=["gruppi"])
 
@@ -47,7 +48,7 @@ def get_gruppi(categoria_id: Optional[int] = None, db: Session = Depends(get_db)
     return query.order_by(Gruppo.nome).all()
 
 @router.post("/", response_model=GruppoOut)
-def create_gruppo(data: GruppoIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def create_gruppo(data: GruppoIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_persona_staff)):
     societa_id = get_societa_filter(current_user) or current_user.societa_id
     # Auto-generate nome if not provided
     if not data.nome:
@@ -77,7 +78,7 @@ def create_gruppo(data: GruppoIn, db: Session = Depends(get_db), current_user: U
     return gruppo
 
 @router.put("/{gruppo_id}", response_model=GruppoOut)
-def update_gruppo(gruppo_id: int, data: GruppoUpdate, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def update_gruppo(gruppo_id: int, data: GruppoUpdate, db: Session = Depends(get_db), current_user: Utente = Depends(get_persona_staff)):
     gruppo = db.query(Gruppo).filter(Gruppo.id == gruppo_id).first()
     if not gruppo:
         raise HTTPException(status_code=404, detail="Gruppo non trovato")
@@ -93,7 +94,7 @@ def update_gruppo(gruppo_id: int, data: GruppoUpdate, db: Session = Depends(get_
     return gruppo
 
 @router.delete("/{gruppo_id}")
-def delete_gruppo(gruppo_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def delete_gruppo(gruppo_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_persona_staff)):
     gruppo = db.query(Gruppo).filter(Gruppo.id == gruppo_id).first()
     if not gruppo:
         return {"success": True}
