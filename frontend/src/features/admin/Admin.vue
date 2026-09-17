@@ -86,6 +86,16 @@
             <option value="">Seleziona società...</option>
             <option v-for="s in listaSocieta" :key="s.id" :value="s.id">{{ s.nome }}</option>
           </select>
+          <select
+            v-if="!isSuperAdmin && (nuovoInvito.ruolo === 'mister' || nuovoInvito.ruolo === 'dirigente')"
+            v-model="nuovoInvito.categoria_id"
+            class="ruolo-select"
+          >
+            <option value="">Categoria di appartenenza (opzionale)...</option>
+            <option v-for="cat in categorieAssegnabili" :key="cat.id" :value="cat.id">
+              {{ cat.anno }} {{ cat.nome }}
+            </option>
+          </select>
           <button @click="creaInvitoUtente" class="btn-primary" :disabled="!nuovoInvito.email || !nuovoInvito.ruolo">
             Invia Invito
           </button>
@@ -100,6 +110,7 @@
             <span class="invito-email">{{ inv.email }}</span>
             <span class="invito-ruolo">{{ inv.ruolo }}</span>
             <span v-if="inv.societa_nome" class="invito-societa">{{ inv.societa_nome }}</span>
+            <span v-if="inv.categoria_nome" class="invito-societa">{{ inv.categoria_nome }}</span>
             <span class="invito-date">{{ new Date(inv.scade).toLocaleDateString('it-IT') }}</span>
           </div>
           <div class="invito-actions">
@@ -234,7 +245,7 @@ async function salvaChiave() {
   }
 }
 const inviti = ref([])
-const nuovoInvito = ref({ email: '', ruolo: '', societa_id: '' })
+const nuovoInvito = ref({ email: '', ruolo: '', societa_id: '', categoria_id: '' })
 const invitoMsg = ref('')
 const invitoError = ref(false)
 
@@ -260,13 +271,16 @@ async function creaInvitoUtente() {
     if (isSuperAdmin.value) {
       data.societa_id = nuovoInvito.value.societa_id || societaIdSelezionata.value
     }
+    if (nuovoInvito.value.categoria_id) {
+      data.categoria_id = Number(nuovoInvito.value.categoria_id)
+    }
     const res = await creaInvito(data)
     if (res.data?.email_inviata === false) {
       invitoError.value = true
       invitoMsg.value = res.data.avviso || "Invito creato ma invio email fallito. Usa 'Rinvia' per riprovare."
     } else {
       invitoMsg.value = 'Invito inviato a ' + nuovoInvito.value.email
-      nuovoInvito.value = { email: '', ruolo: '', societa_id: '' }
+      nuovoInvito.value = { email: '', ruolo: '', societa_id: '', categoria_id: '' }
     }
     caricaInviti()
   } catch (e) {

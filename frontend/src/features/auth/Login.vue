@@ -212,6 +212,7 @@
           <div v-if="invitoInfo" class="invito-info">
             <p>Invito per <strong>{{ invitoInfo.email }}</strong></p>
             <p>Società: <strong>{{ invitoInfo.societa_nome }}</strong> · Ruolo: <strong>{{ invitoInfo.ruolo }}</strong></p>
+            <p v-if="invitoInfo.categoria_nome">Categoria: <strong>{{ invitoInfo.categoria_nome }}</strong></p>
           </div>
           <button @click="loginGoogle" class="btn-google">
             <svg viewBox="0 0 24 24" width="20" height="20">

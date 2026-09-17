@@ -6,7 +6,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 from uuid import uuid4
 from ..database import get_db
-from ..models import Invito, Utente, Societa
+from ..models import Invito, Utente, Societa, Categoria
 from ..routers.auth import get_admin, get_super_admin
 from ..services.invitations import (
     FRONTEND_URL,
@@ -26,6 +26,7 @@ class InvitoCreate(BaseModel):
     email: str
     ruolo: str
     societa_id: Optional[int] = None
+    categoria_id: Optional[int] = None
 
 
 @router.post("/")
@@ -78,10 +79,27 @@ def crea_invito(
     if not societa:
         raise HTTPException(status_code=404, detail="Società non trovata")
 
+    categoria_id = None
+    categoria_nome = None
+    if data.categoria_id:
+        if data.ruolo not in {"mister", "dirigente"}:
+            raise HTTPException(status_code=400, detail="La categoria può essere assegnata solo a mister o dirigente")
+        categoria = db.query(Categoria).filter(
+            Categoria.id == data.categoria_id,
+            Categoria.societa_id == societa_id
+        ).first()
+        if not categoria:
+            raise HTTPException(status_code=404, detail="Categoria non trovata")
+        if categoria.parent_id is None:
+            raise HTTPException(status_code=400, detail="Seleziona una categoria effettiva, non un gruppo")
+        categoria_id = categoria.id
+        categoria_nome = f"{categoria.anno} {categoria.nome}"
+
     invito = Invito(
         email=data.email,
         societa_id=societa_id,
         ruolo=data.ruolo,
+        categoria_id=categoria_id,
         token=token,
         scade=scade
     )
@@ -94,7 +112,7 @@ def crea_invito(
 
     # Invia email
     societa_nome = societa.nome
-    body_html = costruisci_email_invito(societa_nome, data.ruolo, invite_link)
+    body_html = costruisci_email_invito(societa_nome, data.ruolo, invite_link, categoria_nome)
     email_ok = send_email(data.email, f"Invito a {societa_nome}", body_html)
 
     result = {
@@ -102,6 +120,8 @@ def crea_invito(
         "id": invito.id,
         "email": invito.email,
         "ruolo": invito.ruolo,
+        "categoria_id": invito.categoria_id,
+        "categoria_nome": categoria_nome,
         "scade": invito.scade.isoformat(),
         "link": invite_link,
         "email_inviata": email_ok
@@ -132,12 +152,15 @@ def lista_inviti(
     result = []
     for inv in inviti:
         societa = db.query(Societa).filter(Societa.id == inv.societa_id).first()
+        categoria = db.query(Categoria).filter(Categoria.id == inv.categoria_id).first() if inv.categoria_id else None
         result.append({
             "id": inv.id,
             "email": inv.email,
             "ruolo": inv.ruolo,
             "societa_id": inv.societa_id,
             "societa_nome": societa.nome if societa else "N/A",
+            "categoria_id": inv.categoria_id,
+            "categoria_nome": f"{categoria.anno} {categoria.nome}" if categoria else None,
             "creato_il": inv.creato_il.isoformat() if inv.creato_il else None,
             "scade": inv.scade.isoformat(),
             "usato": inv.usato,
@@ -189,7 +212,9 @@ def rinvia_invito(
         raise HTTPException(status_code=404, detail="Società non trovata")
 
     invite_link = build_invite_link(invito.token)
-    body_html = costruisci_email_invito(societa.nome, invito.ruolo, invite_link)
+    categoria = db.query(Categoria).filter(Categoria.id == invito.categoria_id).first() if invito.categoria_id else None
+    categoria_nome = f"{categoria.anno} {categoria.nome}" if categoria else None
+    body_html = costruisci_email_invito(societa.nome, invito.ruolo, invite_link, categoria_nome)
     email_ok = send_email(invito.email, f"Invito a {societa.nome}", body_html)
     if not email_ok:
         raise HTTPException(status_code=502, detail="Invio email fallito. Riprova tra qualche istante.")
@@ -209,9 +234,12 @@ def verifica_invito(token: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invito scaduto")
 
     societa = db.query(Societa).filter(Societa.id == invito.societa_id).first()
+    categoria = db.query(Categoria).filter(Categoria.id == invito.categoria_id).first() if invito.categoria_id else None
     return {
         "valido": True,
         "email": invito.email,
         "ruolo": invito.ruolo,
-        "societa_nome": societa.nome if societa else "Società"
+        "societa_nome": societa.nome if societa else "Società",
+        "categoria_id": invito.categoria_id,
+        "categoria_nome": f"{categoria.anno} {categoria.nome}" if categoria else None
     }

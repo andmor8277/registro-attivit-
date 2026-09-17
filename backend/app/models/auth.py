@@ -34,6 +34,7 @@ class Invito(Base):
     email = Column(String(200), nullable=False)
     societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
     ruolo = Column(String(20), nullable=False)
+    categoria_id = Column(Integer, ForeignKey("categorie.id", ondelete="SET NULL"), nullable=True)
     token = Column(String(100), unique=True, nullable=False)
     creato_il = Column(DateTime, server_default=text("NOW()"))
     scade = Column(DateTime, nullable=False)
