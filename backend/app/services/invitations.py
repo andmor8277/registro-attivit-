@@ -11,12 +11,14 @@ def build_invite_link(token: str) -> str:
     return f"{FRONTEND_URL}/login?invito={token}"
 
 
-def costruisci_email_invito(societa_nome: str, ruolo: str, invite_link: str) -> str:
+def costruisci_email_invito(societa_nome: str, ruolo: str, invite_link: str, categoria_nome: str = None) -> str:
+    categoria_riga = f"<p>Categoria di appartenenza: <strong>{categoria_nome}</strong>.</p>" if categoria_nome else ""
     return f"""
     <html>
     <body style="font-family: Arial, sans-serif; padding: 20px;">
         <h2>Invito a {societa_nome}</h2>
         <p>Sei stato invitato a unirti a <strong>{societa_nome}</strong> come <strong>{ruolo}</strong>.</p>
+        {categoria_riga}
         <p>Clicca sul link sottostante per accedere:</p>
         <p>
             <a href="{invite_link}" style="background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">

@@ -9,7 +9,7 @@ export const getSegnalazioniScouting = (params = {}) => {
 }
 
 export const getSegnalazioneScouting = (id) => api.get(`/scouting/segnalazioni/${id}`)
-export const creaSegnalazioneScouting = (data) => api.post('/scouting/segnalazioni/', data)
+export const creaSegnalazioneScouting = (data) => api.post('/scouting/segnalazioni', data)
 export const aggiornaSegnalazioneScouting = (id, data) => api.put(`/scouting/segnalazioni/${id}`, data)
 export const eliminaSegnalazioneScouting = (id) => api.delete(`/scouting/segnalazioni/${id}`)
 export const cambiaStatoScouting = (id, stato) => api.put(`/scouting/segnalazioni/${id}/stato`, { stato })

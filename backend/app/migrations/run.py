@@ -1176,5 +1176,13 @@ def run_migrations():
                 print(f"Migration warning (scouting_giocatori): {e}")
                 conn.rollback()
 
+            try:
+                conn.execute(text("ALTER TABLE inviti ADD COLUMN IF NOT EXISTS categoria_id INTEGER REFERENCES categorie(id) ON DELETE SET NULL"))
+                conn.commit()
+                print("Migration: Added categoria_id to inviti")
+            except Exception as e:
+                print(f"Migration warning (inviti categoria_id): {e}")
+                conn.rollback()
+
         finally:
             conn.close()

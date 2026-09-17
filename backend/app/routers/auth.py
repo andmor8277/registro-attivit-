@@ -467,6 +467,8 @@ async def google_callback(
         print("Google OAuth: callback società non trovata")
         raise HTTPException(status_code=404, detail="Società non trovata")
 
+    categoria_invito = db.query(Categoria).filter(Categoria.id == invito.categoria_id).first() if invito.categoria_id else None
+
     print("Google OAuth: callback ok, emissione reg_token")
     # Emi un reg_token temporaneo firmato: prova che questo utente ha
     # completato la callback OAuth. Serve a POST /google/registra.
@@ -487,7 +489,9 @@ async def google_callback(
         "google_cognome": name_parts[1] if len(name_parts) > 1 else "",
         "ruolo": invito.ruolo,
         "societa_id": invito.societa_id,
-        "societa_nome": societa.nome
+        "societa_nome": societa.nome,
+        "categoria_id": invito.categoria_id,
+        "categoria_nome": f"{categoria_invito.anno} {categoria_invito.nome}" if categoria_invito else None
     })
     return _clear_oauth_cookies(resp)
 
@@ -564,6 +568,14 @@ def registra_utente_google(
     db.add(utente)
     db.commit()
     db.refresh(utente)
+
+    if invito.categoria_id and invito.ruolo in {"mister", "dirigente"}:
+        db.add(UtenteCategoria(
+            utente_id=utente.id,
+            categoria_id=invito.categoria_id,
+            ruolo=invito.ruolo
+        ))
+        db.commit()
 
     # Mark invitation as used
     invito.usato = True

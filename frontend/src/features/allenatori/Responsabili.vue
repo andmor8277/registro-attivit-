@@ -252,6 +252,15 @@
                 <option value="infermeria">Infermeria</option>
               </select>
             </div>
+            <div v-if="invitoModal.ruolo === 'mister' || invitoModal.ruolo === 'dirigente'" class="form-group">
+              <label>Categoria di appartenenza</label>
+              <select v-model="invitoModal.categoria_id">
+                <option value="">Nessuna (da assegnare dopo)</option>
+                <option v-for="cat in categorieAssegnabili" :key="cat.id" :value="cat.id">
+                  {{ cat.anno }} {{ cat.nome }}
+                </option>
+              </select>
+            </div>
           </div>
           <div class="modal-footer">
             <button class="btn-secondary" @click="invitoModal.show = false">Annulla</button>
@@ -271,6 +280,7 @@
                 <span class="invito-pendente-email">{{ inv.email }}</span>
                 <span class="invito-pendente-meta">
                   <span class="invito-pendente-ruolo">{{ inv.ruolo }}</span>
+                  <span v-if="inv.categoria_nome" class="invito-pendente-ruolo">{{ inv.categoria_nome }}</span>
                   <span class="invito-pendente-scadenza">Scade {{ new Date(inv.scade).toLocaleDateString('it-IT') }}</span>
                 </span>
               </div>
@@ -311,6 +321,7 @@ const { utenteAttivo, societaAttiva } = useStore()
 const isSuperAdmin = computed(() => utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'super_admin')
 
 const categorie = ref([])
+const categorieAssegnabili = computed(() => categorie.value.filter(c => c.parent_id != null))
 
 const stagioniDisponibili = computed(() => {
   const stagioniSet = new Set()
@@ -333,7 +344,7 @@ const gestioneStagioneModal = ref({ show: false })
 const stagioneModal = ref({ show: false, stagione: new Date().getFullYear(), data_inizio_stagione: '', data_fine_stagione: '', loading: false, errore: '' })
 const archiviaModal = ref({ show: false, loading: false, stagione: null })
 
-const invitoModal = ref({ show: false, email: '', ruolo: '', loading: false, errore: '', msg: '' })
+const invitoModal = ref({ show: false, email: '', ruolo: '', categoria_id: '', loading: false, errore: '', msg: '' })
 const invitiAttivi = ref([])
 const invitiMsg = ref('')
 const invitiError = ref(false)
@@ -352,7 +363,7 @@ async function caricaInviti() {
 }
 
 function apriInvito() {
-  invitoModal.value = { show: true, email: '', ruolo: '', loading: false, errore: '', msg: '' }
+  invitoModal.value = { show: true, email: '', ruolo: '', categoria_id: '', loading: false, errore: '', msg: '' }
   invitiMsg.value = ''
   invitiError.value = false
   caricaInviti()
@@ -373,17 +384,22 @@ async function creaInvito() {
   m.errore = ''
   m.msg = ''
   try {
-    const res = await apiCreaInvito({
+    const payload = {
       email: m.email,
       ruolo: m.ruolo,
       societa_id: targetSocieta
-    })
+    }
+    if (m.categoria_id) {
+      payload.categoria_id = Number(m.categoria_id)
+    }
+    const res = await apiCreaInvito(payload)
     if (res.data?.email_inviata === false) {
       m.errore = res.data.avviso || "Invito creato ma invio email fallito. Usa 'Rinvia' per riprovare."
     } else {
       m.msg = 'Invito inviato con successo!'
       m.email = ''
       m.ruolo = ''
+      m.categoria_id = ''
       setTimeout(() => { m.show = false }, 2000)
     }
     caricaInviti()
