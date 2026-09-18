@@ -168,9 +168,13 @@
                   <li><span class="k">Inizio gara</span><span class="v"><input v-model="garaAttiva.inizio_gara" placeholder="15:00" /></span></li>
                   <li><span class="k">Mister</span>
                     <span class="v">
-                      <select multiple class="mister-multi" v-model="garaAttiva.allenatori">
-                        <option v-for="r in responsabili" :key="r.id" :value="r.id">{{ r.cognome }} &middot; {{ r.cellulare }}</option>
-                      </select>
+                      <div class="mister-checkboxes">
+                        <label class="mister-option" v-for="r in responsabili" :key="r.id">
+                          <input type="checkbox" :checked="garaAttiva.allenatori.includes(r.id)" @change="toggleAllenatore(garaAttiva, r.id)" />
+                          <span>{{ r.cognome }} &middot; {{ r.cellulare }}</span>
+                        </label>
+                        <span v-if="responsabili.length === 0" class="mister-empty">&mdash;</span>
+                      </div>
                     </span>
                   </li>
                 </ul>
@@ -576,6 +580,13 @@ function switchNonPresente(garaIdx, personaId) {
   if (!gara.nonPresenti) gara.nonPresenti = new Set()
   if (gara.nonPresenti.has(personaId)) gara.nonPresenti.delete(personaId)
   else gara.nonPresenti.add(personaId)
+}
+
+function toggleAllenatore(gara, personaId) {
+  if (!Array.isArray(gara.allenatori)) gara.allenatori = []
+  const idx = gara.allenatori.indexOf(personaId)
+  if (idx >= 0) gara.allenatori.splice(idx, 1)
+  else gara.allenatori.push(personaId)
 }
 
 async function openPicker(garaIdx, pos) {
@@ -1885,24 +1896,34 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
 .info-dl .v input::placeholder { color: var(--color-text-muted); font-weight: 400; }
 .info-dl .v input:focus,
 .info-dl .v select:focus { border-bottom: 1px dashed #dc2626; background: var(--color-bg); }
-.info-dl .v select.mister-multi {
-  min-height: 72px;
+.info-dl .v .mister-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 132px;
+  overflow-y: auto;
   border: 1px solid var(--color-border);
   border-radius: 6px;
   background: var(--color-surface);
-  text-align: left;
-  padding: 6px;
+  padding: 8px;
 }
-.info-dl .v select.mister-multi option {
-  text-align: left;
+.info-dl .v .mister-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 500;
-  padding: 6px 8px;
-  margin-bottom: 2px;
-  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
 }
-.info-dl .v select.mister-multi option:checked {
-  background: #dc2626 linear-gradient(0deg, #dc2626, #dc2626);
-  color: #fff;
+.info-dl .v .mister-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #dc2626;
+  cursor: pointer;
+}
+.info-dl .v .mister-empty {
+  color: var(--color-text-muted);
 }
 
 .note-card { margin-top: 0; }
