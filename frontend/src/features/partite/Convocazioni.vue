@@ -86,8 +86,8 @@
             <span class="alert-icon">&#9888;&#65039;</span>
             <span class="alert-label">NON CONVOCABILI</span>
             <span class="alert-period" v-if="convocazione.data_inizio">(Lun-Ven {{ getSettimanaLabel(convocazione.data_inizio) }})</span>
-            <span v-for="p in getAllEsclusi()" :key="p.id" class="alert-tag">{{ p.cognome }} {{ p.nome }}</span>
-            <span v-if="getAllEsclusi().length === 0" class="alert-none">Nessuno</span>
+            <span v-for="p in nonConvocabili" :key="p.id" class="alert-tag" :class="{ 'tag-cert': p.motivi.includes('cert_scaduto') || p.motivi.includes('senza_cert') }" :title="labelMotivi(p.motivi)">{{ p.cognome }} {{ p.nome }}<small v-if="p.motivi.includes('cert_scaduto')">cert. scaduto</small><small v-else-if="p.motivi.includes('senza_cert')">senza cert.</small></span>
+            <span v-if="nonConvocabili.length === 0" class="alert-none">Nessuno</span>
           </div>
 
           <!-- ESCLUSIONI MANUALI -->
@@ -465,6 +465,56 @@ function getAllEsclusi() {
   })
   return persone.value.filter(p => assenzeCount[p.id] >= 2).sort((a, b) => a.cognome.localeCompare(b.cognome))
 }
+
+function dateRiferimentoCertificato() {
+  if (!convocazione.value) return []
+  const dateGare = (convocazione.value.gare || [])
+    .map(g => g.data)
+    .filter(Boolean)
+    .map(d => String(d).slice(0, 10))
+  if (dateGare.length > 0) return [...new Set(dateGare)]
+  return [convocazione.value.data_inizio, convocazione.value.data_fine]
+    .filter(Boolean)
+    .map(d => String(d).slice(0, 10))
+}
+
+function statoCertificato(p) {
+  const dates = dateRiferimentoCertificato()
+  if (dates.length === 0) return null
+  const scadenza = p.scadenza_certificato ? String(p.scadenza_certificato).slice(0, 10) : null
+  if (!scadenza) return 'senza_cert'
+  if (dates.some(d => scadenza < d)) return 'cert_scaduto'
+  return null
+}
+
+function labelMotivi(motivi) {
+  return (motivi || [])
+    .map(m => {
+      if (m === 'assenze') return 'Almeno 2 assenze Lun-Ven'
+      if (m === 'cert_scaduto') return 'Certificato medico scaduto per la data gara/convocazione'
+      if (m === 'senza_cert') return 'Certificato medico non presente'
+      return m
+    })
+    .join(' · ')
+}
+
+const nonConvocabili = computed(() => {
+  const map = new Map()
+  for (const p of getAllEsclusi()) {
+    map.set(p.id, { ...p, motivi: ['assenze'] })
+  }
+  for (const p of persone.value) {
+    const stato = statoCertificato(p)
+    if (!stato) continue
+    const existing = map.get(p.id)
+    if (existing) {
+      if (!existing.motivi.includes(stato)) existing.motivi.push(stato)
+    } else {
+      map.set(p.id, { ...p, motivi: [stato] })
+    }
+  }
+  return [...map.values()].sort((a, b) => a.cognome.localeCompare(b.cognome))
+})
 
 function getEsclusiPerTipo(tipo) {
   if (!convocazione.value) return []
@@ -1471,6 +1521,16 @@ onMounted(async () => {
   border-radius: 12px;
   font-size: 0.7rem;
   font-weight: 600;
+}
+.alert-tag small {
+  margin-left: 4px;
+  font-size: 0.6rem;
+  font-style: normal;
+  font-weight: 700;
+  opacity: 0.75;
+}
+.alert-tag.tag-cert {
+  background: rgba(220, 38, 38, 0.16);
 }
 .alert-none { font-size: 0.75rem; color: var(--color-text-muted); }
 
