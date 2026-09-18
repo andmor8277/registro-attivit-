@@ -120,3 +120,15 @@ class CampoAssegnazioneUpdate(BaseModel):
     weekend_id: Optional[int] = None
     metacampo: Optional[str] = None
     is_default: Optional[bool] = None
+
+
+class SpogliatoioAssegnazioneSettimanaSave(BaseModel):
+    data_inizio: str
+    societa_id: Optional[int] = None
+    assegnazioni: list[SpogliatoioAssegnazioneCreate] = []
+
+
+class CampoAssegnazioneSettimanaSave(BaseModel):
+    data_inizio: str
+    societa_id: Optional[int] = None
+    assegnazioni: list[CampoAssegnazioneCreate] = []

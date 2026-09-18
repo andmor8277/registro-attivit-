@@ -375,6 +375,8 @@ const spogliatoi = ref([])
 const campi = ref([])
 const assegSpogliatoioSettimanali = ref({})
 const assegCampoSettimanali = ref({})
+const assegSpogliatoioWeekly = ref({})
+const assegCampoWeekly = ref({})
 const assegnazioniCaricate = ref(false)
 
 function getSettimanaInizio() {
@@ -407,19 +409,29 @@ async function loadAssegnazioniSettimana() {
       getCampiAssegnazioniSettimana(dataInizio)
     ])
     const spDict = {}
+    const spWeeklyDict = {}
     ;(spRes.data || []).forEach(a => {
-      const dataKey = a.data || dataInizio
-      const key = `${a.categoria_id}_${a.spogliatoio_id}_${dataKey}`
+      if (!a.data) {
+        spWeeklyDict[`${a.categoria_id}_${a.spogliatoio_id}`] = a
+        return
+      }
+      const key = `${a.categoria_id}_${a.spogliatoio_id}_${a.data}`
       spDict[key] = a
     })
     assegSpogliatoioSettimanali.value = spDict
+    assegSpogliatoioWeekly.value = spWeeklyDict
     const caDict = {}
+    const caWeeklyDict = {}
     ;(caRes.data || []).forEach(a => {
-      const dataKey = a.data || dataInizio
-      const key = `${a.categoria_id}_${a.campo_id}_${dataKey}`
+      if (!a.data) {
+        caWeeklyDict[`${a.categoria_id}_${a.campo_id}`] = a
+        return
+      }
+      const key = `${a.categoria_id}_${a.campo_id}_${a.data}`
       caDict[key] = a
     })
     assegCampoSettimanali.value = caDict
+    assegCampoWeekly.value = caWeeklyDict
     assegnazioniCaricate.value = true
   } catch (e) {
     console.error('Errore caricamento assegnazioni:', e)
@@ -428,14 +440,14 @@ async function loadAssegnazioniSettimana() {
 
 function getSpogliatoioGiorno(catId, spId, dataStr) {
   const key = `${catId}_${spId}_${dataStr}`
-  const keyWeekly = `${catId}_${spId}_${getSettimanaInizio()}`
-  return !!(assegSpogliatoioSettimanali.value[key] || assegSpogliatoioSettimanali.value[keyWeekly])
+  const keyWeekly = `${catId}_${spId}`
+  return !!(assegSpogliatoioSettimanali.value[key] || assegSpogliatoioWeekly.value[keyWeekly])
 }
 
 function getCampoGiorno(catId, campoId, dataStr) {
   const key = `${catId}_${campoId}_${dataStr}`
-  const keyWeekly = `${catId}_${campoId}_${getSettimanaInizio()}`
-  return assegCampoSettimanali.value[key] || assegCampoSettimanali.value[keyWeekly] || null
+  const keyWeekly = `${catId}_${campoId}`
+  return assegCampoSettimanali.value[key] || assegCampoWeekly.value[keyWeekly] || null
 }
 
 function getSpogliatoiAssegnati(catId, dataStr) {

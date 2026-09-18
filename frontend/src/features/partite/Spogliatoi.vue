@@ -699,8 +699,10 @@ import {
   getWeekendPartite,
   getAssegnazioniDefault,
   applyDefaultWeekSpogliatoi,
+  salvaAssegnazioniSettimanaSpogliatoi,
   getCampiAssegnazioniDefault,
-  applyDefaultWeekCampi
+  applyDefaultWeekCampi,
+  salvaAssegnazioniSettimanaCampi
 } from "../../api/index.js"
 
 const router = useRouter()
@@ -1945,36 +1947,71 @@ async function caricaWeekendData() {
 // ── Save ──
 
 async function salvaAssegnazioniSettimana() {
-  // Save spogliatoi
-  for (const [, val] of Object.entries(assegSpogliatoioSettimanali.value)) {
-    const payload = {
-      ...val,
-      data_inizio: settimanaInizio.value,
-      societa_id: societaAttiva.value?.id || null
+  const societaId = societaAttiva.value?.id || null
+
+  const spAssignments = Object.entries(assegSpogliatoioSettimanali.value).map(([key, val]) => {
+    const parts = key.split('_')
+    const data = (val && val.data) || parts[parts.length - 1]
+    if (key.startsWith('noncensita_')) {
+      return {
+        spogliatoio_id: Number(parts[1]),
+        categoria_id: null,
+        nome_squadra_esterna: typeof val === 'string' ? val : (val?.nome_squadra_esterna || null),
+        tipo: 'casa',
+        data,
+        weekend_id: null,
+        societa_id: societaId
+      }
     }
-    if (val.id) {
-      await aggiornaAssegnazione(val.id, payload)
-    } else {
-      const res = await creaAssegnazione(payload)
-      const key = Object.keys(assegSpogliatoioSettimanali.value).find(k => assegSpogliatoioSettimanali.value[k] === val)
-      if (key) assegSpogliatoioSettimanali.value[key] = res.data
+    return {
+      spogliatoio_id: Number(parts[1]),
+      categoria_id: Number(parts[0]),
+      nome_squadra_esterna: val?.nome_squadra_esterna || null,
+      tipo: val?.tipo || 'casa',
+      data,
+      weekend_id: null,
+      societa_id: val?.societa_id || societaId
     }
-  }
-  // Save campi
-  for (const [, val] of Object.entries(assegCampoSettimanali.value)) {
-    const payload = {
-      ...val,
-      data_inizio: settimanaInizio.value,
-      societa_id: societaAttiva.value?.id || null
+  })
+
+  const caAssignments = Object.entries(assegCampoSettimanali.value).map(([key, val]) => {
+    const parts = key.split('_')
+    const data = (val && val.data) || parts[parts.length - 1]
+    if (key.startsWith('noncensita_campo_')) {
+      return {
+        campo_id: Number(parts[2]),
+        categoria_id: null,
+        nome_squadra_esterna: val?.nome_squadra_esterna || null,
+        tipo: 'casa',
+        data,
+        weekend_id: null,
+        metacampo: val?.metacampo || null,
+        societa_id: societaId
+      }
     }
-    if (val.id) {
-      await aggiornaCampoAssegnazione(val.id, payload)
-    } else {
-      const res = await creaCampoAssegnazione(payload)
-      const key = Object.keys(assegCampoSettimanali.value).find(k => assegCampoSettimanali.value[k] === val)
-      if (key) assegCampoSettimanali.value[key] = res.data
+    return {
+      campo_id: Number(parts[1]),
+      categoria_id: Number(parts[0]),
+      nome_squadra_esterna: val?.nome_squadra_esterna || null,
+      tipo: val?.tipo || 'casa',
+      data,
+      weekend_id: null,
+      metacampo: val?.metacampo || null,
+      societa_id: val?.societa_id || societaId
     }
-  }
+  })
+
+  await salvaAssegnazioniSettimanaSpogliatoi({
+    data_inizio: settimanaInizio.value,
+    societa_id: societaId,
+    assegnazioni: spAssignments
+  })
+  await salvaAssegnazioniSettimanaCampi({
+    data_inizio: settimanaInizio.value,
+    societa_id: societaId,
+    assegnazioni: caAssignments
+  })
+  await caricaAssegnazioniSettimana()
   alert('Assegnazioni settimanali salvate!')
 }
 

@@ -3,7 +3,7 @@ from sqlalchemy import text
 from ..database import get_db
 from ..routers.auth import get_current_user, check_societa
 from ..core.security import get_staff_admin
-from ..schemas import CampoCreate, CampoUpdate, CampoAssegnazioneCreate, CampoAssegnazioneUpdate
+from ..schemas import CampoCreate, CampoUpdate, CampoAssegnazioneCreate, CampoAssegnazioneUpdate, CampoAssegnazioneSettimanaSave
 
 router = APIRouter(prefix="/campi", tags=["campi"])
 
@@ -32,12 +32,11 @@ def lista_campi(societa_id: int = None, db=Depends(get_db), user=Depends(get_cur
 
 @router.get("/assegnazioni/settimana/{data_inizio}")
 def assegnazioni_settimana(data_inizio: str, db=Depends(get_db), user=Depends(get_current_user)):
-    from datetime import timedelta
-    data_date = data_inizio.replace('-', '')
-    data_int = int(data_date)
-    data_fine = data_int + 4
+    from datetime import datetime, timedelta
+    data_inizio_date = datetime.strptime(data_inizio, "%Y-%m-%d").date()
+    data_fine_date = data_inizio_date + timedelta(days=4)
     societa_filter = ""
-    params = {"data_inizio": data_inizio, "data_inizio_int": data_int, "data_fine_int": data_fine}
+    params = {"data_inizio_date": data_inizio_date, "data_fine_date": data_fine_date}
     if not user.is_super_admin:
         societa_filter = " AND sa.societa_id = :sid"
         params["sid"] = user.societa_id
@@ -49,8 +48,11 @@ def assegnazioni_settimana(data_inizio: str, db=Depends(get_db), user=Depends(ge
             FROM campi_assegnazioni sa
             LEFT JOIN campi_da_gioco c ON sa.campo_id = c.id
             LEFT JOIN categorie cat ON sa.categoria_id = cat.id
-            WHERE (sa.data IS NULL AND sa.data_inizio = :data_inizio)
-               OR (sa.data IS NOT NULL AND CAST(REPLACE(sa.data::TEXT, '-', '') AS INTEGER) BETWEEN :data_inizio_int AND :data_fine_int){societa_filter}
+            WHERE COALESCE(sa.is_default, FALSE) = FALSE
+              AND (
+                (sa.data IS NULL AND sa.data_inizio = :data_inizio_date)
+                OR (sa.data IS NOT NULL AND sa.data BETWEEN :data_inizio_date AND :data_fine_date)
+              ){societa_filter}
             ORDER BY cat.ora_allenamento ASC, cat.anno ASC, c.ordine ASC
         """),
         params
@@ -248,6 +250,52 @@ def elimina_assegnazione(assegnazione_id: int, db=Depends(get_db), user=Depends(
     db.commit()
     return {"ok": True}
 
+@router.post("/assegnazioni/settimana")
+def salva_assegnazioni_settimana(data: CampoAssegnazioneSettimanaSave, db=Depends(get_db), user=Depends(get_staff_admin)):
+    from datetime import datetime, timedelta
+    societa_id = data.societa_id
+    if not societa_id and not user.is_super_admin:
+        societa_id = user.societa_id
+    check_societa(user, societa_id)
+    data_inizio_date = datetime.strptime(data.data_inizio, "%Y-%m-%d").date()
+    data_fine_date = data_inizio_date + timedelta(days=4)
+    db.execute(
+        text("""
+            DELETE FROM campi_assegnazioni
+            WHERE weekend_id IS NULL
+              AND COALESCE(is_default, FALSE) = FALSE
+              AND (data_inizio = :data_inizio_date OR data BETWEEN :data_inizio_date AND :data_fine_date)
+              AND (:sid IS NULL OR societa_id = :sid)
+        """),
+        {"data_inizio_date": data_inizio_date, "data_fine_date": data_fine_date, "sid": societa_id}
+    )
+    for a in data.assegnazioni:
+        db.execute(
+            text("""
+                INSERT INTO campi_assegnazioni (
+                    campo_id, categoria_id, nome_squadra_esterna,
+                    tipo, data_inizio, data, weekend_id, societa_id, metacampo, is_default
+                )
+                VALUES (
+                    :campo_id, :categoria_id, :nome_squadra_esterna,
+                    :tipo, :data_inizio, :data, :weekend_id, :societa_id, :metacampo, FALSE
+                )
+            """),
+            {
+                "campo_id": a.campo_id,
+                "categoria_id": a.categoria_id,
+                "nome_squadra_esterna": a.nome_squadra_esterna,
+                "tipo": a.tipo or "casa",
+                "data_inizio": data.data_inizio,
+                "data": a.data,
+                "weekend_id": a.weekend_id,
+                "societa_id": a.societa_id or societa_id,
+                "metacampo": a.metacampo,
+            }
+        )
+    db.commit()
+    return {"ok": True, "count": len(data.assegnazioni)}
+
 # ── Settimana Tipo (Default Week) ──
 
 @router.get("/assegnazioni/default")
@@ -275,11 +323,20 @@ def assegnazioni_default(db=Depends(get_db), user=Depends(get_current_user)):
 
 @router.post("/assegnazioni/default/apply")
 def apply_default_week(data_inizio: str, db=Depends(get_db), user=Depends(get_staff_admin)):
+    from datetime import datetime, timedelta
+    data_inizio_date = datetime.strptime(data_inizio, "%Y-%m-%d").date()
+    data_fine_date = data_inizio_date + timedelta(days=4)
     societa_id = user.societa_id if not user.is_super_admin else None
-    if societa_id:
-        db.execute(text("DELETE FROM campi_assegnazioni WHERE data_inizio = :di AND is_default = FALSE AND societa_id = :sid"), {"di": data_inizio, "sid": societa_id})
-    else:
-        db.execute(text("DELETE FROM campi_assegnazioni WHERE data_inizio = :di AND is_default = FALSE"), {"di": data_inizio})
+    db.execute(
+        text("""
+            DELETE FROM campi_assegnazioni
+            WHERE weekend_id IS NULL
+              AND COALESCE(is_default, FALSE) = FALSE
+              AND (data_inizio = :data_inizio_date OR data BETWEEN :data_inizio_date AND :data_fine_date)
+              AND (:sid IS NULL OR societa_id = :sid)
+        """),
+        {"data_inizio_date": data_inizio_date, "data_fine_date": data_fine_date, "sid": societa_id}
+    )
     db.execute(
         text("""
             INSERT INTO campi_assegnazioni (campo_id, categoria_id, nome_squadra_esterna, tipo, data_inizio, data, weekend_id, societa_id, metacampo)
