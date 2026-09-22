@@ -215,6 +215,7 @@
                     <div class="picker-name-row">
                       <span class="picker-name">{{ p.cognome }}</span>
                       <span v-if="getPlayerWarning(p)" class="picker-warning" :title="getPlayerWarningTitle(p)">{{ getPlayerWarning(p) }}</span>
+                      <span v-if="getConvocatoBadge(p)" class="picker-warning picker-convocato" :title="getConvocatoBadge(p).title">{{ getConvocatoBadge(p).label }}</span>
                     </div>
                     <span class="picker-surname">{{ p.nome }}</span>
                   </div>
@@ -404,6 +405,23 @@ function getPlayerWarning(player) {
 function getPlayerWarningTitle(player) {
   const stats = pickerStats.value[player.id] || { presenze: 0, assenze: 0 }
   return `Settimana precedente: ${stats.presenze} presenze, ${stats.assenze} assenze`
+}
+
+function getOtherGareForPlayer(playerId) {
+  if (pickerGara.value == null || !convocazione.value?.gare) return []
+  return convocazione.value.gare
+    .map((g, idx) => ({ g, idx }))
+    .filter(({ g, idx }) => idx !== pickerGara.value && (g.giocatori || []).includes(playerId))
+    .map(({ idx }) => idx + 1)
+}
+
+function getConvocatoBadge(player) {
+  const gare = getOtherGareForPlayer(player.id)
+  if (!gare.length) return null
+  return {
+    label: `G${gare.join('·G')}`,
+    title: `Già convocato in: ${gare.map(n => 'Gara ' + n).join(', ')}`
+  }
 }
 
 async function caricaRegistroMese(anno, mese) {
@@ -2166,6 +2184,11 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
   font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
+}
+.picker-warning.picker-convocato {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.25);
+  color: #1d4ed8;
 }
 .picker-surname { font-size: 0.7rem; color: var(--color-text-muted); }
 .picker-check { color: #dc2626; flex-shrink: 0; }
