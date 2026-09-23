@@ -297,7 +297,8 @@ import {
   aggiornaSegnalazioneScouting,
   eliminaSegnalazioneScouting,
   cambiaStatoScouting,
-  valutaGiocatoreScouting
+  valutaGiocatoreScouting,
+  getLocalDateStr
 } from '../../api/index.js'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
@@ -752,7 +753,7 @@ async function esportaPDF() {
       pageBreak: 'auto'
     })
 
-    const nomeFile = `scouting-${(seg.squadra_avversaria || 'relazione').toLowerCase().replace(/\s+/g, '-')}-${seg.data_osservazione || new Date().toISOString().split('T')[0]}.pdf`
+    const nomeFile = `scouting-${(seg.squadra_avversaria || 'relazione').toLowerCase().replace(/\s+/g, '-')}-${seg.data_osservazione || getLocalDateStr()}.pdf`
     doc.save(nomeFile)
   } catch (e) {
     console.error(e)

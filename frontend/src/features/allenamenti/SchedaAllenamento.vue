@@ -333,7 +333,8 @@ import Chart from 'chart.js/auto'
 import {
   getPersone, getCategorie,
   getSchedeAllenamento, creaSchedaAllenamento, aggiornaSchedaAllenamento, eliminaSchedaAllenamento,
-  getSchedeTrend, getSchedeSummary, getSchedeTeam, getSchedePlayerTrend
+  getSchedeTrend, getSchedeSummary, getSchedeTeam, getSchedePlayerTrend,
+  getLocalDateStr
 } from "../../api/index.js"
 
 const route = useRoute()
@@ -392,8 +393,7 @@ const formatSummaryValue = (key, val) => {
   return formatValue(key, avg)
 }
 
-const oggi = new Date()
-const dataSelezionata = ref(oggi.toISOString().split('T')[0])
+const dataSelezionata = ref(getLocalDateStr())
 const persone = ref([])
 const schede = ref([])
 

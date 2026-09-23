@@ -143,11 +143,10 @@ onMounted(async () => {
     const activeCat = categorie.value.find(c => c.stagione)
     currentSeason.value = activeCat ? `${activeCat.stagione}/${activeCat.stagione + 1}` : currentSeason.value
 
-    for (const cat of categorie.value) {
-      const pRes = await getPersone(cat.id)
-      const players = Array.isArray(pRes) ? pRes : (pRes?.data || [])
-      tuttiGiocatori.value.push(...players)
-    }
+    const validCatIds = new Set(categorie.value.map(c => c.id))
+    const pRes = await getPersone()
+    const players = Array.isArray(pRes) ? pRes : (pRes?.data || [])
+    tuttiGiocatori.value = players.filter(p => validCatIds.has(p.categoria_id))
 
     const infRes = await getInfortuni({ attivi: true })
     const infData = Array.isArray(infRes) ? infRes : (infRes?.data || [])

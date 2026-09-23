@@ -180,21 +180,33 @@ def get_summary(
     if persona_id:
         base_q = base_q.filter(models.SchedaAllenamento.persona_id == persona_id)
 
-    result = {}
+    entities = []
     for m in METRICS:
         col = getattr(models.SchedaAllenamento, m)
-        avg_val = base_q.with_entities(func.avg(col)).scalar()
-        max_val = base_q.with_entities(func.max(col)).scalar()
-        sum_val = base_q.with_entities(func.sum(col)).scalar()
-        count_val = base_q.with_entities(func.count(col)).scalar()
+        entities.extend([
+            func.avg(col).label(f"{m}_avg"),
+            func.max(col).label(f"{m}_max"),
+            func.sum(col).label(f"{m}_sum"),
+            func.count(col).label(f"{m}_count"),
+        ])
+    entities.append(func.count(models.SchedaAllenamento.id).label("_total_sessions"))
+
+    agg_row = base_q.with_entities(*entities).first()
+    row_map = dict(agg_row._mapping) if agg_row and hasattr(agg_row, '_mapping') else {}
+
+    result = {}
+    for m in METRICS:
+        avg_val = row_map.get(f"{m}_avg")
+        max_val = row_map.get(f"{m}_max")
+        sum_val = row_map.get(f"{m}_sum")
+        count_val = row_map.get(f"{m}_count")
         result[m] = {
-            'avg': round(float(avg_val), 1) if avg_val else 0,
-            'max': round(float(max_val), 1) if max_val else 0,
-            'sum': round(float(sum_val), 1) if sum_val else 0,
-            'sessions': int(count_val) if count_val else 0
+            'avg': round(float(avg_val), 1) if avg_val is not None else 0,
+            'max': round(float(max_val), 1) if max_val is not None else 0,
+            'sum': round(float(sum_val), 1) if sum_val is not None else 0,
+            'sessions': int(count_val) if count_val is not None else 0
         }
-    total_sessions = base_q.with_entities(func.count(models.SchedaAllenamento.id)).scalar() or 0
-    result['_total_sessions'] = int(total_sessions)
+    result['_total_sessions'] = int(row_map.get('_total_sessions') or 0)
     return result
 
 @router.get("/stats/team")

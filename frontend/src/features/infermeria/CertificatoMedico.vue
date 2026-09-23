@@ -125,12 +125,11 @@ async function loadDati() {
     const res = await getCategorie()
     let cats = Array.isArray(res) ? res : (res?.data || [])
     categorie.value = cats.filter(c => c.societa_id === societaId.value && !c.is_archiviata && c.parent_id !== null)
+    const validCatIds = new Set(categorie.value.map(c => c.id))
 
-    for (const cat of categorie.value) {
-      const pRes = await getPersone(cat.id)
-      const players = Array.isArray(pRes) ? pRes : (pRes?.data || [])
-      persone.value.push(...players.map(p => ({ ...p, categoria_id: cat.id })))
-    }
+    const pRes = await getPersone()
+    const players = Array.isArray(pRes) ? pRes : (pRes?.data || [])
+    persone.value = players.filter(p => validCatIds.has(p.categoria_id))
   } catch (e) {
     console.error('Errore caricamento:', e)
   }

@@ -366,7 +366,7 @@ async function load() {
   const utentiRes = await getUtenti(societaId)
   tuttiUtenti.value = (utentiRes.data || []).filter(u => ['admin', 'mister', 'dirigente', 'segreteria', 'infermeria'].includes(u.ruolo))
 
-  for (const cat of categorie.value) {
+  await Promise.all(categorie.value.map(async (cat) => {
     await refreshResponsabili(cat.id)
     try {
       const utentiCatRes = await getCategoriaUtenti(cat.id)
@@ -374,7 +374,7 @@ async function load() {
     } catch (e) {
       assegnazioneMap.value[cat.id] = []
     }
-  }
+  }))
 }
 
 onMounted(load)

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from .. import models
 from ..database import get_db
 from ..routers.auth import get_current_user, get_admin
@@ -28,11 +29,9 @@ class CategoriaCreate(BaseModel):
     data_fine_stagione: Optional[date] = None
 
 def get_societa_filter(current_user: Utente):
-    """Restituisce il filter per societa_id - super_admin e segreteria vedono tutto"""
+    """Restituisce il filter per societa_id - super_admin vede tutto, gli altri solo la propria societa"""
     if current_user.is_super_admin:
-        return None  # Nessun filtro
-    if current_user.ruolo == 'segreteria':
-        return None  # Segreteria vede tutte le categorie della sua società
+        return None
     return current_user.societa_id
 
 @router.get("/")
@@ -225,11 +224,27 @@ def delete_categoria(categoria_id: int, db: Session = Depends(get_db), current_u
     if not current_user.is_super_admin:
         if cat.societa_id != current_user.societa_id:
             raise HTTPException(status_code=403, detail="Non autorizzato")
-    db.query(models.Registro).filter(models.Registro.categoria_id == categoria_id).delete()
-    db.query(models.Persona).filter(models.Persona.categoria_id == categoria_id).delete()
-    db.query(UtenteCategoria).filter(UtenteCategoria.categoria_id == categoria_id).delete()
-    db.delete(cat)
-    db.commit()
+
+    # Controlla se ha sottocategorie
+    has_children = db.query(models.Categoria).filter(models.Categoria.parent_id == categoria_id).count() > 0
+    if has_children:
+        raise HTTPException(
+            status_code=400,
+            detail="Impossibile eliminare: la categoria contiene sottocategorie. Elimina prima le sottocategorie."
+        )
+
+    try:
+        db.query(models.Registro).filter(models.Registro.categoria_id == categoria_id).delete(synchronize_session=False)
+        db.query(models.Persona).filter(models.Persona.categoria_id == categoria_id).delete(synchronize_session=False)
+        db.query(UtenteCategoria).filter(UtenteCategoria.categoria_id == categoria_id).delete(synchronize_session=False)
+        db.delete(cat)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Impossibile eliminare la categoria: sono presenti dati collegati (partite, schede allenamento, infortuni, valutazioni o convocazioni)."
+        )
     return {"ok": True}
 
 class AssegnaUtenti(BaseModel):

@@ -17,7 +17,7 @@ def send_email(to: str, subject: str, body_html: str):
     msg.attach(MIMEText(body_html, "html"))
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
             server.sendmail(SMTP_FROM, [to], msg.as_string())
         return True
     except Exception as e:

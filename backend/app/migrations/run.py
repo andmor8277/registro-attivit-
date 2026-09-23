@@ -5,6 +5,13 @@ ALLOWED_TABLES = frozenset({'utenti', 'categorie', 'persone', 'registro', 'convo
 
 def run_migrations():
     with engine.connect() as conn:
+        has_lock = False
+        try:
+            conn.execute(text("SELECT pg_advisory_lock(84729103)"))
+            conn.commit()
+            has_lock = True
+        except Exception as e:
+            print(f"Migration: Could not acquire advisory lock: {e}")
         try:
             result = conn.execute(text(
                 "SELECT table_name FROM information_schema.tables WHERE table_name = :tn"
@@ -947,22 +954,33 @@ def run_migrations():
                 conn.rollback()
 
             try:
-                conn.execute(text("""
-                    ALTER TABLE allenamenti_esercizio ALTER COLUMN campo_con_righe TYPE VARCHAR(10)
-                        USING CASE WHEN campo_con_righe IS TRUE THEN 'full' ELSE 'blank' END
-                """))
-                conn.execute(text("""
-                    ALTER TABLE allenamenti_esercizio ALTER COLUMN campo_con_righe SET DEFAULT 'full'
-                """))
-                conn.execute(text("""
-                    ALTER TABLE catalogo_esercizi ALTER COLUMN campo_con_righe TYPE VARCHAR(10)
-                        USING CASE WHEN campo_con_righe IS TRUE THEN 'full' ELSE 'blank' END
-                """))
-                conn.execute(text("""
-                    ALTER TABLE catalogo_esercizi ALTER COLUMN campo_con_righe SET DEFAULT 'full'
-                """))
-                conn.commit()
-                print("Migration: campo_con_righe converted to VARCHAR(10)")
+                dt1 = conn.execute(text(
+                    "SELECT data_type FROM information_schema.columns "
+                    "WHERE table_name = 'allenamenti_esercizio' AND column_name = 'campo_con_righe'"
+                )).scalar()
+                if dt1 == 'boolean':
+                    conn.execute(text("""
+                        ALTER TABLE allenamenti_esercizio ALTER COLUMN campo_con_righe TYPE VARCHAR(10)
+                            USING CASE WHEN campo_con_righe IS TRUE THEN 'full' ELSE 'blank' END
+                    """))
+                    conn.execute(text("""
+                        ALTER TABLE allenamenti_esercizio ALTER COLUMN campo_con_righe SET DEFAULT 'full'
+                    """))
+                    conn.commit()
+
+                dt2 = conn.execute(text(
+                    "SELECT data_type FROM information_schema.columns "
+                    "WHERE table_name = 'catalogo_esercizi' AND column_name = 'campo_con_righe'"
+                )).scalar()
+                if dt2 == 'boolean':
+                    conn.execute(text("""
+                        ALTER TABLE catalogo_esercizi ALTER COLUMN campo_con_righe TYPE VARCHAR(10)
+                            USING CASE WHEN campo_con_righe IS TRUE THEN 'full' ELSE 'blank' END
+                    """))
+                    conn.execute(text("""
+                        ALTER TABLE catalogo_esercizi ALTER COLUMN campo_con_righe SET DEFAULT 'full'
+                    """))
+                    conn.commit()
             except Exception as e:
                 print(f"Migration warning (campo_con_righe): {e}")
                 conn.rollback()
@@ -1184,5 +1202,30 @@ def run_migrations():
                 print(f"Migration warning (inviti categoria_id): {e}")
                 conn.rollback()
 
+            # Performance indexes on core tables
+            try:
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_persone_categoria_soc ON persone(categoria_id, societa_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_registro_cat_data ON registro(categoria_id, data)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_partite_cat_soc_data ON partite(categoria_id, societa_id, data_partite)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_schede_cat_soc_data ON schede_allenamento(categoria_id, societa_id, data)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_infortuni_soc_attivi ON infortuni(societa_id, data_fine)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_convocazioni_cat_soc ON convocazioni(categoria_id, societa_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_convocazione_gare_cid ON convocazione_gare(convocazione_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_convocazione_giocatori_gid ON convocazione_giocatori(gara_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_utente_categorie_uid_cid ON utente_categorie(utente_id, categoria_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_campi_assegnazioni_soc_data ON campi_assegnazioni(societa_id, data)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_spogliatoi_assegnazioni_soc_data ON spogliatoi_assegnazioni(societa_id, data)"))
+                conn.commit()
+                print("Migration: Created performance indexes on core tables")
+            except Exception as e:
+                print(f"Migration warning (performance indexes): {e}")
+                conn.rollback()
+
         finally:
+            if has_lock:
+                try:
+                    conn.execute(text("SELECT pg_advisory_unlock(84729103)"))
+                    conn.commit()
+                except Exception:
+                    pass
             conn.close()

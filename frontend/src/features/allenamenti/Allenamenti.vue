@@ -1468,15 +1468,15 @@ onMounted(async () => {
     const cat = cats.find(c => c.id === categoriaId)
     if (cat) setCategoria(cat)
   }
-  
-  const checkRotate = () => {
-    const isMobile = window.innerWidth <= 768
-    const isPortrait = window.innerHeight > window.innerWidth
-    showRotateMessage.value = isMobile && isPortrait
-  }
   checkRotate()
   window.addEventListener('resize', checkRotate)
 })
+
+const checkRotate = () => {
+  const isMobile = window.innerWidth <= 768
+  const isPortrait = window.innerHeight > window.innerWidth
+  showRotateMessage.value = isMobile && isPortrait
+}
 
 onBeforeRouteLeave(async () => {
   if (hasChanges.value) {
@@ -1502,6 +1502,7 @@ onBeforeRouteLeave(async () => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('resize', checkRotate)
   hideTopbar.value = false
 })
 </script>

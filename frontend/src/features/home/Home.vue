@@ -192,7 +192,7 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useStore } from "../../store.js"
-import { getSocieta, getCategorie, getInfortuni, getPartite, getPersone, getConvocazioni, getConvocazione } from "../../api/index.js"
+import { getSocieta, getCategorie, getInfortuni, getPartite, getPersone, getConvocazioni, getConvocazione, getLocalDateStr } from "../../api/index.js"
 
 const router = useRouter()
 const { utenteAttivo, societaAttiva, setSocietaAttiva } = useStore()
@@ -272,7 +272,7 @@ function vaiSelezioneSocieta() {
 }
 
 // ── Prossima gara ──
-function todayStr() { return new Date().toISOString().split('T')[0] }
+function todayStr() { return getLocalDateStr() }
 
 function catNome(catId) {
   const cat = allCategories.value.find(c => c.id === catId)
@@ -334,8 +334,8 @@ const prossimeGare = computed(() => {
     sab.setDate(sab.getDate() - ((dow + 1) % 7))
     const dom = new Date(sab)
     dom.setDate(sab.getDate() + 1)
-    winStart = sab.toISOString().split('T')[0]
-    winEnd = dom.toISOString().split('T')[0]
+    winStart = getLocalDateStr(sab)
+    winEnd = getLocalDateStr(dom)
   }
   if (!winStart) return []
 

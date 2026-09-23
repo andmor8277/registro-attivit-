@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
+from sqlalchemy.exc import IntegrityError
 from jose import JWTError, jwt
 from datetime import datetime, timedelta, date, timezone
 from pydantic import BaseModel
@@ -250,9 +251,16 @@ def elimina_utente(uid: int, current_user: Utente = Depends(get_admin), db: Sess
     # Non super_admin non può eliminare super_admin
     if utente.is_super_admin and not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="Non autorizzato a eliminare super admin")
-    db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == uid).delete()
-    db.query(Utente).filter(Utente.id == uid).delete()
-    db.commit()
+    try:
+        db.query(UtenteCategoria).filter(UtenteCategoria.utente_id == uid).delete(synchronize_session=False)
+        db.query(Utente).filter(Utente.id == uid).delete(synchronize_session=False)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Impossibile eliminare l'utente: sono presenti dati collegati (presenze allenatore, segnalazioni o inviti)."
+        )
     return {"ok": True}
 
 @limiter.limit("5/minute")

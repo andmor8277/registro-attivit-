@@ -702,7 +702,8 @@ import {
   salvaAssegnazioniSettimanaSpogliatoi,
   getCampiAssegnazioniDefault,
   applyDefaultWeekCampi,
-  salvaAssegnazioniSettimanaCampi
+  salvaAssegnazioniSettimanaCampi,
+  getLocalDateStr
 } from "../../api/index.js"
 
 const router = useRouter()
@@ -749,7 +750,7 @@ const giorniSettimana = computed(() => {
   const nomiLunghi = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì']
   const d = new Date(settimanaInizio.value)
   for (let i = 0; i < 5; i++) {
-    const dataStr = d.toISOString().split('T')[0]
+    const dataStr = getLocalDateStr(d)
     const dow = d.getDay()
     const cats = getCategoriePerGiornoSettimana(dow)
     giorni.push({
@@ -779,7 +780,7 @@ const giorniDefault = computed(() => {
   const diff = giorno === 0 ? -6 : 1 - giorno
   d.setDate(d.getDate() + diff)
   for (let i = 0; i < 5; i++) {
-    const dataStr = d.toISOString().split('T')[0]
+    const dataStr = getLocalDateStr(d)
     const dow = d.getDay()
     const cats = getCategoriePerGiornoSettimana(dow)
     giorni.push({
@@ -823,7 +824,7 @@ function selezionaGiorno(data) {
 const settimanaFine = computed(() => {
   const d = new Date(settimanaInizio.value)
   d.setDate(d.getDate() + 4)
-  return d.toISOString().split('T')[0]
+  return getLocalDateStr(d)
 })
 
 const weekendPartiteCasa = computed(() =>
@@ -840,7 +841,7 @@ function getLunesdiCorrente() {
   const diff = giorno === 0 ? -6 : 1 - giorno
   const lunedi = new Date(oggi)
   lunedi.setDate(oggi.getDate() + diff)
-  return lunedi.toISOString().split('T')[0]
+  return getLocalDateStr(lunedi)
 }
 
 function getWeekendLabel() {
@@ -862,10 +863,10 @@ function getCatLabel(catId) {
 function cambiaSettimana(delta) {
   const d = new Date(settimanaInizio.value)
   d.setDate(d.getDate() + delta * 7)
-  settimanaInizio.value = d.toISOString().split('T')[0]
+  settimanaInizio.value = getLocalDateStr(d)
   caricaAssegnazioniSettimana()
   // Auto-select today's day if in current week
-  const oggi = new Date().toISOString().split('T')[0]
+  const oggi = getLocalDateStr()
   if (giorniSettimana.value.length > 0) {
     const todayMatch = giorniSettimana.value.find(g => g.data === oggi)
     giornoAttivo.value = todayMatch ? todayMatch.data : giorniSettimana.value[0].data
@@ -2103,7 +2104,7 @@ async function caricaAssegnazioniDefault() {
       assegCampoDefault.value[key] = a
     })
     if (giorniDefault.value.length > 0 && !giornoDefaultAttivo.value) {
-      const oggi = new Date().toISOString().split('T')[0]
+      const oggi = getLocalDateStr()
       const todayMatch = giorniDefault.value.find(g => g.data === oggi)
       giornoDefaultAttivo.value = todayMatch ? todayMatch.data : giorniDefault.value[0].data
     }
@@ -2258,7 +2259,7 @@ onMounted(() => {
   caricaAssegnazioniSettimana()
   caricaAssegnazioniDefault()
   // Auto-select today's day
-  const oggi = new Date().toISOString().split('T')[0]
+  const oggi = getLocalDateStr()
   if (giorniSettimana.value.length > 0) {
     const todayMatch = giorniSettimana.value.find(g => g.data === oggi)
     giornoAttivo.value = todayMatch ? todayMatch.data : giorniSettimana.value[0].data

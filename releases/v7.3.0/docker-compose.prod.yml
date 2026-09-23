@@ -1,0 +1,2 @@
+# Override per ambiente di produzione
+# Usa automaticamente le variabili da .env.prod

@@ -294,7 +294,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../../store.js'
-import { getPersone, getRegistroMese, getPartite, getCategoriaResponsabili, getWeekend, getWeekendPartite, creaSegnalazioneScouting } from '../../api/index.js'
+import { getPersone, getRegistroMese, getPartite, getCategoriaResponsabili, getWeekend, getWeekendPartite, creaSegnalazioneScouting, getLocalDateStr } from '../../api/index.js'
 import axios from 'axios'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
@@ -328,7 +328,7 @@ const scoutingModal = ref({ open: false, loading: false, titolo: '', data_osserv
 const garaAttiva = computed(() => convocazione.value?.gare?.[activeGaraIdx.value] || null)
 const puoScouting = computed(() => ['mister', 'admin', 'super_admin'].includes(utenteAttivo.value?.ruolo))
 
-function todayStr() { return new Date().toISOString().split('T')[0] }
+function todayStr() { return getLocalDateStr() }
 
 const convocazioniAttive = computed(() =>
   storico.value
@@ -744,10 +744,10 @@ function getAllenatoriLabelCompatta(gara) {
 
 function nuovaConvocazione() {
   convocazioneId.value = null
-  const oggi = new Date().toISOString().split('T')[0]
+  const oggi = getLocalDateStr()
   const domani = new Date()
   domani.setDate(domani.getDate() + 1)
-  const domenica = domani.toISOString().split('T')[0]
+  const domenica = getLocalDateStr(domani)
   popolaConvocazione(oggi, domenica)
 }
 
@@ -1448,15 +1448,20 @@ async function inviaScouting() {
 }
 
 onMounted(async () => {
-  const res = await getPersone(categoriaId)
-  persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))
-  const regRes = await getRegistroMese(categoriaId, annoCorrente, meseCorrente)
-  registro.value = regRes.data
-  registroMesiCaricate.add(`${annoCorrente}-${String(meseCorrente).padStart(2, '0')}`)
-  await loadStorico()
-  await loadMisters()
-  await loadWeekendDisponibili()
-  if (convocazioniAttive.value.length > 0) await caricaConvocazione(convocazioniAttive.value[0].id)
+  try {
+    const res = await getPersone(categoriaId)
+    const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : [])
+    persone.value = list.sort((a, b) => (a.cognome || '').localeCompare(b.cognome || ''))
+    const regRes = await getRegistroMese(categoriaId, annoCorrente, meseCorrente)
+    registro.value = regRes?.data || []
+    registroMesiCaricate.add(`${annoCorrente}-${String(meseCorrente).padStart(2, '0')}`)
+    await loadStorico()
+    await loadMisters()
+    await loadWeekendDisponibili()
+    if (convocazioniAttive.value.length > 0) await caricaConvocazione(convocazioniAttive.value[0].id)
+  } catch (err) {
+    console.error('Errore inizializzazione convocazioni:', err)
+  }
 })
 </script>
 

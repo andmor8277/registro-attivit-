@@ -244,7 +244,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '../../store.js'
-import { getCategorie, getPersone } from '../../api/index.js'
+import { getCategorie, getPersone, getLocalDateStr } from '../../api/index.js'
 import { getInfortuni, creaInfortunio, aggiornaInfortunio, eliminaInfortunio, chiudiInfortunio } from '../../api/index.js'
 
 const router = useRouter()
@@ -275,12 +275,11 @@ async function loadDati() {
     const res = await getCategorie()
     let cats = Array.isArray(res) ? res : (res?.data || [])
     categorie.value = cats.filter(c => c.societa_id === societaId.value && !c.is_archiviata && !c.is_portieri && c.parent_id !== null)
+    const validCatIds = new Set(categorie.value.map(c => c.id))
 
-    for (const cat of categorie.value) {
-      const pRes = await getPersone(cat.id)
-      const players = Array.isArray(pRes) ? pRes : (pRes?.data || [])
-      persone.value.push(...players.map(p => ({ ...p, categoria_id: cat.id })))
-    }
+    const pRes = await getPersone()
+    const allPlayers = Array.isArray(pRes) ? pRes : (pRes?.data || [])
+    persone.value = allPlayers.filter(p => validCatIds.has(p.categoria_id))
   } catch (e) {
     console.error('Errore caricamento:', e)
   }
@@ -341,14 +340,14 @@ const dataRecuperoPreview = computed(() => {
   if (!newForm.value || !newForm.value.data_inizio || !newForm.value.giorni_assenza || newForm.value.giorni_assenza === 0) return ''
   const d = new Date(newForm.value.data_inizio)
   d.setDate(d.getDate() + newForm.value.giorni_assenza)
-  return d.toISOString().split('T')[0]
+  return getLocalDateStr(d)
 })
 
 const editDataRecuperoPreview = computed(() => {
   if (!editForm.value || !editForm.value.data_inizio || !editForm.value.giorni_assenza || editForm.value.giorni_assenza === 0) return ''
   const d = new Date(editForm.value.data_inizio)
   d.setDate(d.getDate() + editForm.value.giorni_assenza)
-  return d.toISOString().split('T')[0]
+  return getLocalDateStr(d)
 })
 
 function onPlayerSelect() {
@@ -362,7 +361,7 @@ function onPlayerSelect() {
     nome: p.nome,
     cognome: p.cognome,
     categoria_id: p.categoria_id,
-    data_inizio: new Date().toISOString().split('T')[0],
+    data_inizio: getLocalDateStr(),
     giorni_assenza: 0,
     tipo_infortunio: '',
     note: ''

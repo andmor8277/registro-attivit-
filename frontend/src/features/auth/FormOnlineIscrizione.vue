@@ -15,11 +15,11 @@
           <div class="form-row">
             <div class="form-field">
               <label>COGNOME</label>
-              <input v-model="form.cognome" required disabled />
+              <input v-model="form.cognome" required :disabled="!isNew" />
             </div>
             <div class="form-field">
               <label>NOME</label>
-              <input v-model="form.nome" required disabled />
+              <input v-model="form.nome" required :disabled="!isNew" />
             </div>
           </div>
           <div class="form-row">

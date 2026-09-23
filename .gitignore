@@ -58,3 +58,7 @@ scripts/git-hooks/secrets.lst
 SESSION_SUMMARY.md
 session-ses_*.md
 SECURITY_TODO.json
+
+# Database backups
+backups/
+*.sql.gz

@@ -214,13 +214,10 @@ async function loadDati() {
     cats = cats.filter(c => c.societa_id === societaId.value && !c.is_portieri && c.parent_id !== null)
     categorie.value = cats
 
-    let all = []
-    for (const cat of categorie.value) {
-      const pRes = await getPersone(cat.id)
-      const players = Array.isArray(pRes) ? pRes.map(p => ({...p, categoria_id: cat.id})) : ((pRes?.data || []).map(p => ({...p, categoria_id: cat.id})))
-      all.push(...players)
-    }
-    persone.value = all
+    const validCatIds = new Set(cats.map(c => c.id))
+    const pRes = await getPersone()
+    const players = Array.isArray(pRes) ? pRes : (pRes?.data || [])
+    persone.value = players.filter(p => validCatIds.has(p.categoria_id))
 
     try {
       const oRes = await getOpenday()

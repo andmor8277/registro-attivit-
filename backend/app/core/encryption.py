@@ -40,14 +40,13 @@ def safe_decrypt(db: Session, value: str) -> str:
     if not isinstance(value, str) or len(value) < 32 or not all(c in '0123456789abcdef' for c in value):
         return value
     try:
-        db.rollback()
-        decrypted = db.execute(
-            text("SELECT convert_from(decrypt(decode(:val, 'hex'), :enc_key, 'aes'), 'UTF8')"),
-            {"val": value, "enc_key": ENCRYPTION_KEY}
-        ).scalar()
-        return decrypted if decrypted else value
+        with db.begin_nested():
+            decrypted = db.execute(
+                text("SELECT convert_from(decrypt(decode(:val, 'hex'), :enc_key, 'aes'), 'UTF8')"),
+                {"val": value, "enc_key": ENCRYPTION_KEY}
+            ).scalar()
+            return decrypted if decrypted else value
     except Exception as e:
-        db.rollback()
         logger.warning(f"Could not decrypt: {e}")
         return value
 
@@ -58,14 +57,13 @@ def safe_decrypt_with_key(db: Session, value: str, key: str) -> str:
     if not isinstance(value, str) or len(value) < 32 or not all(c in '0123456789abcdef' for c in value):
         return None
     try:
-        db.rollback()
-        decrypted = db.execute(
-            text("SELECT convert_from(decrypt(decode(:val, 'hex'), :enc_key, 'aes'), 'UTF8')"),
-            {"val": value, "enc_key": key}
-        ).scalar()
-        return decrypted
+        with db.begin_nested():
+            decrypted = db.execute(
+                text("SELECT convert_from(decrypt(decode(:val, 'hex'), :enc_key, 'aes'), 'UTF8')"),
+                {"val": value, "enc_key": key}
+            ).scalar()
+            return decrypted
     except Exception:
-        db.rollback()
         return None
 
 

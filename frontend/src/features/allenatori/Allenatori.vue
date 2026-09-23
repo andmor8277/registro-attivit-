@@ -545,7 +545,7 @@ async function loadCategorie() {
     const activeCat = categorie.value.find(c => c.parent_id !== null && c.stagione)
     currentSeason.value = activeCat ? `${activeCat.stagione}/${activeCat.stagione + 1}` : currentSeason.value
 
-    for (const cat of categorie.value) {
+    await Promise.all(categorie.value.map(async (cat) => {
       try {
         const respRes = await getCategoriaResponsabili(cat.id)
         if (respRes.data && respRes.data.length > 0) {
@@ -554,7 +554,7 @@ async function loadCategorie() {
       } catch (e) {
         console.warn('Errore caricamento responsabili per categoria', cat.id)
       }
-    }
+    }))
 
     if (me?.is_admin) {
       const utentiRes = await getUtenti(societaAttiva.value?.id)

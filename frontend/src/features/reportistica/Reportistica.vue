@@ -467,8 +467,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useStore } from '../../store.js'
-import { getPersone, getRegistroMese, getConvocazioni, getConvocazione, getAllCategorie } from '../../api/index.js'
+import { getPersone, getRegistroMese, getConvocazioni, getConvocazione, getAllCategorie, getLocalDateStr } from '../../api/index.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -749,7 +748,7 @@ async function indivOnPlayerChange() {
 async function indivCalcolaStatsStagionali() {
   const cat = categoria.value
   const dataInizio = stagioneInizio(cat)
-  const dataFine = cat?.data_fine_stagione || new Date().toISOString().split('T')[0]
+  const dataFine = cat?.data_fine_stagione || getLocalDateStr()
   const pid = indivSelectedPlayerId.value
   const mesiArr = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
 
@@ -877,7 +876,7 @@ onMounted(async () => {
     if (categoria.value) {
       setCategoria(categoria.value)
       dataInizio.value = stagioneInizio(categoria.value)
-      dataFine.value = categoria.value.data_fine_stagione || new Date().toISOString().split('T')[0]
+      dataFine.value = categoria.value.data_fine_stagione || getLocalDateStr()
       const datastart = new Date(dataInizio.value)
       meseSelezionato.value = datastart.getMonth() + 1
       annoSelezionato.value = datastart.getFullYear()

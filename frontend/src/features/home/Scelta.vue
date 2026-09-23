@@ -348,7 +348,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../../store.js'
-import { getCategorie, getCategorieByStagione, getPlanningEventi, creaPlanningEvento, aggiornaPlanningEvento, eliminaPlanningEvento, getSpogliatoi, getAssegnazioniSettimana, getCampi, getCampiAssegnazioniSettimana, getInfortuni } from '../../api/index.js'
+import { getCategorie, getCategorieByStagione, getPlanningEventi, creaPlanningEvento, aggiornaPlanningEvento, eliminaPlanningEvento, getSpogliatoi, getAssegnazioniSettimana, getCampi, getCampiAssegnazioniSettimana, getInfortuni, getLocalDateStr } from '../../api/index.js'
 const router = useRouter()
 const route = useRoute()
 const { categoriaAttiva, setCategoria, utenteAttivo } = useStore()
@@ -385,7 +385,7 @@ function getSettimanaInizio() {
   const diff = dow === 0 ? -6 : 1 - dow
   const lunedi = new Date(oggi)
   lunedi.setDate(lunedi.getDate() + diff)
-  return lunedi.toISOString().split('T')[0]
+  return getLocalDateStr(lunedi)
 }
 
 async function loadSpogliatoiCampi() {

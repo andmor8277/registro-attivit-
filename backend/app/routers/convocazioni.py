@@ -129,6 +129,9 @@ def elimina(cid: int, db: Session = Depends(get_db), current_user=Depends(get_cu
     c = db.query(Convocazione).filter(Convocazione.id == cid).first()
     if not c:
         raise HTTPException(status_code=404, detail="Non trovata")
+    societa_id = get_societa_filter(current_user)
+    if societa_id and c.societa_id != societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     gare = db.query(ConvocazioneGara).filter(ConvocazioneGara.convocazione_id == cid).all()
     for g in gare:
         db.query(ConvocazioneGiocatore).filter(ConvocazioneGiocatore.gara_id == g.id).delete()

@@ -6,6 +6,7 @@ from typing import Optional, List
 from app.models import Utente, ListaTorneo, ListaTorneoGiocatore
 from app.database import get_db
 from app.routers.auth import get_current_user
+from app.core.encryption import safe_decrypt
 
 router = APIRouter(prefix="/liste-torneo", tags=["liste-torneo"])
 
@@ -81,12 +82,12 @@ def get_giocatori_lista(lista_id: int, db: Session = Depends(get_db), current_us
         "comune_nato": r.comune_nato,
         "residenza": r.residenza,
         "indirizzo": r.indirizzo,
-        "codice_fiscale": r.codice_fiscale,
+        "codice_fiscale": safe_decrypt(db, r.codice_fiscale),
         "matricola": r.matricola,
         "numero_maglia": r.numero_maglia,
         "scadenza_certificato": str(r.scadenza_certificato) if r.scadenza_certificato else None,
-        "tel_papa": r.tel_papa,
-        "tel_mamma": r.tel_mamma,
+        "tel_papa": safe_decrypt(db, r.tel_papa),
+        "tel_mamma": safe_decrypt(db, r.tel_mamma),
         "email1": r.email1,
         "gruppo_nome": r.gruppo_nome,
         "gruppo_is_misto": r.gruppo_is_misto,

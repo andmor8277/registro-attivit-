@@ -114,8 +114,11 @@ def delete_openday(entry_id: int, current_user: Utente = Depends(get_segreteria)
     if persona_id:
         p = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
         if p:
-            db.delete(p)
-            db.commit()
+            try:
+                db.delete(p)
+                db.commit()
+            except Exception:
+                db.rollback()
     return {"ok": True}
 
 @router.post("/{entry_id}/iscrivi")
@@ -142,7 +145,12 @@ def iscrivi_openday(entry_id: int, current_user: Utente = Depends(get_segreteria
         nome=o.nome,
         cognome=o.cognome,
         data_nascita=o.data_nascita,
-        categoria_id=cat.id
+        categoria_id=cat.id,
+        tel_papa=safe_encrypt(db, o.tel_papa) if o.tel_papa else None,
+        tel_mamma=safe_encrypt(db, o.tel_mamma) if o.tel_mamma else None,
+        email1=o.email_papa,
+        email2=o.email_mamma,
+        scadenza_certificato=o.scadenza_certificato
     )
     db.add(p)
     db.commit()
