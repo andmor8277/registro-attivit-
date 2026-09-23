@@ -69,7 +69,8 @@ rm -rf releases/v$NEW_VERSION/*
 mkdir -p releases/v$NEW_VERSION/backend
 cp -r backend/app releases/v$NEW_VERSION/backend/
 cp backend/requirements.txt releases/v$NEW_VERSION/backend/
-cp backend/migrations releases/v$NEW_VERSION/backend/ -rf
+cp backend/Dockerfile releases/v$NEW_VERSION/backend/ 2>/dev/null || true
+cp -r backend/migrations releases/v$NEW_VERSION/backend/ 2>/dev/null || true
 
 # Frontend
 mkdir -p releases/v$NEW_VERSION/frontend
@@ -78,27 +79,36 @@ cp -r frontend/public releases/v$NEW_VERSION/frontend/ 2>/dev/null || true
 cp frontend/index.html releases/v$NEW_VERSION/frontend/
 cp frontend/vite.config.js releases/v$NEW_VERSION/frontend/
 cp frontend/package.json releases/v$NEW_VERSION/frontend/
+cp frontend/Dockerfile releases/v$NEW_VERSION/frontend/ 2>/dev/null || true
 cp frontend/nginx.conf releases/v$NEW_VERSION/frontend/ 2>/dev/null || true
 
 # Root files
-cp docker-compose.yml releases/v$NEW_VERSION/
+cp docker-compose*.yml releases/v$NEW_VERSION/ 2>/dev/null || true
 cp start_dev.sh releases/v$NEW_VERSION/ 2>/dev/null || true
-cp deploy.sh releases/v$NEW_VERSION/
-cp README.md releases/v$NEW_VERSION/
+cp deploy*.sh releases/v$NEW_VERSION/ 2>/dev/null || true
+cp -r scripts releases/v$NEW_VERSION/ 2>/dev/null || true
+cp README.md releases/v$NEW_VERSION/ 2>/dev/null || true
+
+# Pulizia file non desiderati dalla release
+find releases/v$NEW_VERSION -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+find releases/v$NEW_VERSION -name "*.pyc" -delete 2>/dev/null || true
+rm -rf releases/v$NEW_VERSION/scripts/git-hooks 2>/dev/null || true
+
+# Aggiorna il CHANGELOG con la nuova versione (se non già presente)
+if ! grep -q "## \[$NEW_VERSION\]" CHANGELOG.md; then
+    echo "" >> CHANGELOG.md
+    echo "## [$NEW_VERSION] - $DATE" >> CHANGELOG.md
+    echo "" >> CHANGELOG.md
+    echo "### Added" >> CHANGELOG.md
+    echo "- $MESSAGE" >> CHANGELOG.md
+fi
 
 # Copia il CHANGELOG nella release
-cp CHANGELOG.md releases/v$NEW_VERSION/
+cp CHANGELOG.md releases/v$NEW_VERSION/ 2>/dev/null || true
 
 # GitHub Actions (per automazione)
 mkdir -p releases/v$NEW_VERSION/.github
 cp -r .github/workflows releases/v$NEW_VERSION/.github/ 2>/dev/null || true
-
-# Aggiorna il CHANGELOG con la nuova versione
-echo "" >> CHANGELOG.md
-echo "## [$NEW_VERSION] - $DATE" >> CHANGELOG.md
-echo "" >> CHANGELOG.md
-echo "### Added" >> CHANGELOG.md
-echo "- $MESSAGE" >> CHANGELOG.md
 
 # Commit della release
 git add -f releases/v$NEW_VERSION
