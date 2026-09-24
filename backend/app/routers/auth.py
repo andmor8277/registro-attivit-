@@ -384,118 +384,7 @@ def _clear_oauth_cookies(resp):
     return resp
 
 
-def _mobile_redirect_response(deep_link: str, title: str = "Accesso completato", message: str = "Reindirizzamento all'app THOF in corso..."):
-    if deep_link.startswith("it.thof.app://"):
-        path_query = deep_link[len("it.thof.app://"):]
-    elif deep_link.startswith("it.thof.app:/"):
-        path_query = deep_link[len("it.thof.app:/"):]
-    else:
-        path_query = deep_link
 
-    custom_scheme_url = f"it.thof.app://{path_query}"
-    intent_url = f"intent://{path_query}#Intent;scheme=it.thof.app;package=it.thof.app;end"
-
-    html_content = f"""<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title}</title>
-  <style>
-    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-    body {{
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background-color: #0b0f19;
-      color: #f8fafc;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 24px 16px;
-      text-align: center;
-    }}
-    .card {{
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 20px;
-      padding: 36px 24px;
-      max-width: 420px;
-      width: 100%;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-    }}
-    .badge {{
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background: rgba(220, 38, 38, 0.15);
-      border: 2px solid #dc2626;
-      margin-bottom: 20px;
-      font-size: 32px;
-    }}
-    h2 {{ font-size: 1.5rem; font-weight: 700; color: #ffffff; margin-bottom: 12px; }}
-    p {{ color: #94a3b8; font-size: 1rem; line-height: 1.5; margin-bottom: 28px; }}
-    .btn {{
-      display: block;
-      width: 100%;
-      padding: 16px 20px;
-      background-color: #dc2626;
-      color: #ffffff;
-      text-decoration: none;
-      font-weight: 700;
-      border-radius: 12px;
-      font-size: 1.1rem;
-      border: none;
-      cursor: pointer;
-      box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45);
-      transition: background-color 0.2s;
-    }}
-    .btn:active {{ background-color: #b91c1c; }}
-    .subtext {{
-      display: block;
-      margin-top: 18px;
-      color: #64748b;
-      font-size: 0.85rem;
-      text-decoration: underline;
-    }}
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="badge">⚽</div>
-    <h2>{title}</h2>
-    <p>{message}</p>
-    <a id="btnIntent" href="{intent_url}" class="btn">Tocca qui per aprire l'App THOF</a>
-    <a href="{custom_scheme_url}" class="subtext">Non si apre? Tocca qui per il link diretto</a>
-  </div>
-  <script>
-    // 1. Prova immediata via Intent URL
-    try {{
-      window.location.href = "{intent_url}";
-    }} catch (e) {{}}
-
-    // 2. Click simulato sul pulsante Intent
-    setTimeout(function() {{
-      try {{
-        var btn = document.getElementById('btnIntent');
-        if (btn) btn.click();
-      }} catch (e) {{}}
-    }}, 250);
-
-    // 3. Fallback con schema custom se non si è ancora aperto
-    setTimeout(function() {{
-      try {{
-        window.location.href = "{custom_scheme_url}";
-      }} catch (e) {{}}
-    }}, 1200);
-  </script>
-</body>
-</html>"""
-    resp = HTMLResponse(content=html_content, status_code=200)
-    return _clear_oauth_cookies(resp)
 
 
 @router.get("/google/callback")
@@ -512,23 +401,11 @@ async def google_callback(
     # Verifica CSRF: il parametro state deve corrispondere al cookie
     if not cookie_state or not state or cookie_state != state:
         print("Google OAuth: callback state mismatch")
-        if is_mobile:
-            return _mobile_redirect_response(
-                "it.thof.app://auth?error=Sessione+non+valida+o+scaduta.+Riprova.",
-                title="Errore di autenticazione",
-                message="Sessione non valida o scaduta. Riprova ad accedere dall'app."
-            )
-        raise HTTPException(status_code=400, detail="Richiesta non valida (state mismatch)")
+        raise HTTPException(status_code=400, detail="Richiesta non valida (sessione scaduta o non valida)")
 
     config = get_google_config()
     if not config:
-        if is_mobile:
-            return _mobile_redirect_response(
-                "it.thof.app://auth?error=Google+OAuth+non+configurato.",
-                title="Errore configurazione",
-                message="Google OAuth non configurato sul server."
-            )
-        raise HTTPException(status_code=500, detail="Google OAuth non configurato")
+        raise HTTPException(status_code=500, detail="Google OAuth non configurato sul server")
 
     google_user = await exchange_google_code(code, config)
 
@@ -539,23 +416,11 @@ async def google_callback(
 
     if not google_email:
         print("Google OAuth: callback email non trovata")
-        if is_mobile:
-            return _mobile_redirect_response(
-                "it.thof.app://auth?error=Email+non+trovata.",
-                title="Errore",
-                message="Email non trovata nell'account Google."
-            )
-        raise HTTPException(status_code=400, detail="Email non trovata")
+        raise HTTPException(status_code=400, detail="Email non trovata nell'account Google")
 
     # Verifica email confirmata da Google
     if not email_verified:
         print("Google OAuth: callback email Google non verificata")
-        if is_mobile:
-            return _mobile_redirect_response(
-                "it.thof.app://auth?error=Email+Google+non+verificata.",
-                title="Errore",
-                message="L'indirizzo email Google non risulta verificato."
-            )
         raise HTTPException(status_code=400, detail="Email Google non verificata")
 
     email_domain = google_email.split("@")[-1] if "@" in google_email else "none"
@@ -568,39 +433,15 @@ async def google_callback(
         invito = get_invitation(db, invito_token)
         if not invito:
             print("Google OAuth: callback invito non trovato")
-            if is_mobile:
-                return _mobile_redirect_response(
-                    "it.thof.app://auth?error=Invito+non+trovato.",
-                    title="Errore",
-                    message="Invito non trovato o non valido."
-                )
-            raise HTTPException(status_code=404, detail="Invito non trovato")
+            raise HTTPException(status_code=404, detail="Invito non trovato o non valido")
         if is_invitation_used(invito):
             print("Google OAuth: callback invito già utilizzato")
-            if is_mobile:
-                return _mobile_redirect_response(
-                    "it.thof.app://auth?error=Invito+gi%C3%A0+utilizzato.",
-                    title="Errore",
-                    message="Questo invito è già stato utilizzato."
-                )
-            raise HTTPException(status_code=400, detail="Invito già utilizzato")
+            raise HTTPException(status_code=400, detail="Questo invito è già stato utilizzato")
         if is_invitation_expired(invito):
             print("Google OAuth: callback invito scaduto")
-            if is_mobile:
-                return _mobile_redirect_response(
-                    "it.thof.app://auth?error=Invito+scaduto.",
-                    title="Errore",
-                    message="Questo invito è scaduto."
-                )
-            raise HTTPException(status_code=400, detail="Invito scaduto")
+            raise HTTPException(status_code=400, detail="Questo invito è scaduto")
         if invito.email.lower() != google_email:
             print("Google OAuth: callback email Google non corrispondente all'invito")
-            if is_mobile:
-                return _mobile_redirect_response(
-                    "it.thof.app://auth?error=L%27email+Google+non+corrisponde+a+quella+dell%27invito.",
-                    title="Errore",
-                    message="L'email Google non corrisponde a quella dell'invito."
-                )
             raise HTTPException(status_code=400, detail="L'email Google non corrisponde a quella dell'invito")
 
     # Match utente per google_sub prima, poi per email (backward compat)
@@ -614,12 +455,6 @@ async def google_callback(
         if invito:
             match_tipo = "google_sub" if google_sub and existing_user.google_sub == google_sub else "email"
             print(f"Google OAuth: callback utente già registrato (match={match_tipo}) con invito attivo")
-            if is_mobile:
-                return _mobile_redirect_response(
-                    "it.thof.app://auth?error=Utente+gi%C3%A0+registrato.+Contatta+un+amministratore.",
-                    title="Utente già registrato",
-                    message="Risulti già registrato nel sistema. Contatta un amministratore."
-                )
             raise HTTPException(status_code=400, detail="Utente già registrato. Contatta un amministratore.")
 
         if google_sub:
@@ -632,12 +467,6 @@ async def google_callback(
             "societa_id": existing_user.societa_id,
             "is_super_admin": existing_user.is_super_admin
         })
-        if is_mobile:
-            return _mobile_redirect_response(
-                f"it.thof.app://auth?token={token}",
-                title="Accesso completato",
-                message="Bentornato! Reindirizzamento all'applicazione THOF..."
-            )
 
         resp = JSONResponse({
             "access_token": token,
@@ -652,31 +481,20 @@ async def google_callback(
                 "cognome": existing_user.cognome,
                 "ruolo": existing_user.ruolo
             },
-            "requires_registration": False
+            "requires_registration": False,
+            "is_mobile": is_mobile
         })
         return _clear_oauth_cookies(resp)
 
     if not invito:
         print("Google OAuth: callback senza invito")
-        if is_mobile:
-            return _mobile_redirect_response(
-                "it.thof.app://auth?error=Nessun+account+THOF+trovato+per+questa+email+Google.+Contatta+l%27amministratore.",
-                title="Account non trovato",
-                message="Nessun account THOF trovato per questa email Google. Contatta un amministratore per ricevere un invito."
-            )
-        raise HTTPException(status_code=400, detail="Nessun invito trovato. Contatta un amministratore.")
+        raise HTTPException(status_code=400, detail="Nessun account THOF trovato per questa email Google. Contatta un amministratore.")
 
     # Verify society exists
     societa = db.query(Societa).filter(Societa.id == invito.societa_id).first()
     if not societa:
         print("Google OAuth: callback società non trovata")
-        if is_mobile:
-            return _mobile_redirect_response(
-                "it.thof.app://auth?error=Societ%C3%A0+non+trovata.",
-                title="Errore",
-                message="Società associata all'invito non trovata."
-            )
-        raise HTTPException(status_code=404, detail="Società non trovata")
+        raise HTTPException(status_code=404, detail="Società associata all'invito non trovata")
 
     categoria_invito = db.query(Categoria).filter(Categoria.id == invito.categoria_id).first() if invito.categoria_id else None
 
@@ -688,14 +506,6 @@ async def google_callback(
         "google_sub": google_sub,
         "exp": datetime.now(timezone.utc) + timedelta(minutes=10)
     }, SECRET_KEY, algorithm=ALGORITHM)
-
-    # Return info for registration form
-    if is_mobile:
-        return _mobile_redirect_response(
-            f"it.thof.app://auth?reg_token={reg_token}",
-            title="Completa Registrazione",
-            message="Invito verificato! Reindirizzamento all'app per completare la registrazione..."
-        )
 
     name_parts = google_name.split(" ", 1)
     resp = JSONResponse({
@@ -709,7 +519,8 @@ async def google_callback(
         "societa_id": invito.societa_id,
         "societa_nome": societa.nome,
         "categoria_id": invito.categoria_id,
-        "categoria_nome": f"{categoria_invito.anno} {categoria_invito.nome}" if categoria_invito else None
+        "categoria_nome": f"{categoria_invito.anno} {categoria_invito.nome}" if categoria_invito else None,
+        "is_mobile": is_mobile
     })
     return _clear_oauth_cookies(resp)
 

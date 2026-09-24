@@ -6,6 +6,20 @@
     </div>
   </div>
 
+  <div v-else-if="isMobileSuccess" class="registrazione-wrapper">
+    <div class="registrazione-card checking-card" style="text-align: center; padding: 40px 24px;">
+      <div style="font-size: 56px; margin-bottom: 16px;">⚽</div>
+      <h1 style="font-size: 1.6rem; margin-bottom: 8px; font-weight: 700;">Accesso completato!</h1>
+      <p style="color: #94a3b8; font-size: 1rem; margin-bottom: 28px;">Reindirizzamento all'applicazione THOF in corso...</p>
+      <a id="btnMobileLaunch" :href="mobileIntentUrl" class="btn-primary submit-btn" style="display: block; text-decoration: none; padding: 16px 20px; border-radius: 12px; font-weight: 700; font-size: 1.1rem; text-align: center; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45);">
+        Tocca qui per aprire l'App THOF
+      </a>
+      <a :href="`it.thof.app://auth?token=${mobileToken}`" style="display: block; margin-top: 18px; color: #64748b; font-size: 0.85rem; text-decoration: underline;">
+        Non si apre? Tocca qui per il link alternativo
+      </a>
+    </div>
+  </div>
+
   <div v-else-if="oauthErrore" class="registrazione-wrapper">
     <div class="registrazione-card error-card">
       <div class="error-icon">!</div>
@@ -116,6 +130,10 @@ const completed = ref(false)
 const checking = ref(true)
 const invitationData = ref(null)
 
+const isMobileSuccess = ref(false)
+const mobileToken = ref('')
+const mobileIntentUrl = ref('')
+
 const form = ref({
   nome: '',
   cognome: '',
@@ -165,8 +183,12 @@ onMounted(async () => {
     try {
       const res = await googleCallback(code, state || '')
       const data = res.data
+      const isMobile = (state && state.startsWith('mob_')) || data.is_mobile
 
       if (data.requires_registration) {
+        if (isMobile) {
+          sessionStorage.setItem('is_mobile_oauth', '1')
+        }
         applyInvitationData(data)
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(data))
         window.history.replaceState(null, '', '/registrazione')
@@ -175,6 +197,33 @@ onMounted(async () => {
         clearSession()
         setToken(data.access_token)
         utenteAttivo.value = data.user
+
+        if (isMobile) {
+          checking.value = false
+          isMobileSuccess.value = true
+          mobileToken.value = data.access_token
+          mobileIntentUrl.value = `intent://auth?token=${data.access_token}#Intent;scheme=it.thof.app;package=it.thof.app;end`
+
+          try {
+            window.location.href = mobileIntentUrl.value
+          } catch (e) {}
+
+          setTimeout(() => {
+            try {
+              const btn = document.getElementById('btnMobileLaunch')
+              if (btn) btn.click()
+            } catch (e) {}
+          }, 300)
+
+          setTimeout(() => {
+            try {
+              window.location.href = `it.thof.app://auth?token=${data.access_token}`
+            } catch (e) {}
+          }, 1200)
+
+          return
+        }
+
         goHomeByRole(data.user)
       }
     } catch (e) {
@@ -220,6 +269,25 @@ async function submitRegistration() {
     clearSession()
     setToken(res.data.access_token)
     utenteAttivo.value = res.data.user
+
+    const wasMobile = sessionStorage.getItem('is_mobile_oauth') === '1'
+    if (wasMobile) {
+      sessionStorage.removeItem('is_mobile_oauth')
+      checking.value = false
+      isMobileSuccess.value = true
+      mobileToken.value = res.data.access_token
+      mobileIntentUrl.value = `intent://auth?token=${res.data.access_token}#Intent;scheme=it.thof.app;package=it.thof.app;end`
+      try {
+        window.location.href = mobileIntentUrl.value
+      } catch (e) {}
+      setTimeout(() => {
+        try {
+          const btn = document.getElementById('btnMobileLaunch')
+          if (btn) btn.click()
+        } catch (e) {}
+      }, 250)
+      return
+    }
 
     // Load society info
     const { getSocietaById } = await import('../../api/index.js')
