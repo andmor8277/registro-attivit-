@@ -1064,7 +1064,7 @@ async function esportaPDF() {
             ['Allenatore', (ultra ? getAllenatoriLabelCompatta(gara) : getAllenatoriLabel(gara)) || '—']
           ],
           theme: 'grid',
-          styles: { font: 'helvetica', fontSize: ultra ? 6 : 6.5, cellPadding: ultra ? 0.7 : 0.8, lineColor: line, lineWidth: 0.15, textColor: dark },
+          styles: { font: 'helvetica', fontSize: ultra ? 6 : 6.3, cellPadding: ultra ? 0.5 : 0.6, lineColor: line, lineWidth: 0.15, textColor: dark },
           columnStyles: {
             0: { cellWidth: ultra ? 16 : 18, fontStyle: 'bold', fillColor: light, textColor: gray },
             1: { cellWidth: 'auto' }
@@ -1098,13 +1098,14 @@ async function esportaPDF() {
     function chooseSinglePlayerLayout(rowsCount, startY) {
       const available = Math.max(20, pageHeight - bottomMargin - startY)
       const presets = [
-        { fontSize: 8.5, cellPadding: 1.5, rowHeight: 6.5 },
-        { fontSize: 8, cellPadding: 1.2, rowHeight: 5.8 },
-        { fontSize: 7.5, cellPadding: 1.0, rowHeight: 5.2 },
-        { fontSize: 7, cellPadding: 0.7, rowHeight: 4.6 },
-        { fontSize: 6.5, cellPadding: 0.5, rowHeight: 4.2 }
+        { maxRows: 10, fontSize: 8.0, cellPadding: 0.8, rowHeight: 4.8 },
+        { maxRows: 15, fontSize: 7.5, cellPadding: 0.6, rowHeight: 4.1 },
+        { maxRows: 18, fontSize: 7.0, cellPadding: 0.5, rowHeight: 3.6 },
+        { maxRows: 22, fontSize: 6.5, cellPadding: 0.45, rowHeight: 3.3 }
       ]
-      return presets.find(p => (rowsCount + 1) * p.rowHeight <= available) || presets[presets.length - 1]
+      return presets.find(p => rowsCount <= p.maxRows && (rowsCount + 1) * p.rowHeight <= available)
+        || presets.find(p => (rowsCount + 1) * p.rowHeight <= available)
+        || presets[presets.length - 1]
     }
 
     function chooseMultiPlayerLayout(rowsCount, width, startY) {
@@ -1131,12 +1132,15 @@ async function esportaPDF() {
 
     function renderPlayerTable(gara, x, width, startY, forceSingle = false) {
       const rows = buildRows(gara)
+      const available = Math.max(20, pageHeight - bottomMargin - startY)
+      const fitsSingle = (rows.length + 1) * 3.3 <= available
+      const preferSingle = rows.length <= 20 && fitsSingle
 
-      if (forceSingle || rows.length <= 7 || width < 50) {
+      if (forceSingle || preferSingle || width < 50) {
         const layout = chooseSinglePlayerLayout(rows.length, startY)
-        const fontSize = width < 75 ? Math.min(layout.fontSize, 7.5) : layout.fontSize
-        const cellPadding = width < 75 ? Math.min(layout.cellPadding, 1.0) : layout.cellPadding
-        const numWidth = width < 75 ? 4.0 : 4.5
+        const fontSize = width < 75 ? Math.min(layout.fontSize, 7.2) : layout.fontSize
+        const cellPadding = width < 75 ? Math.min(layout.cellPadding, 0.55) : layout.cellPadding
+        const numWidth = width < 75 ? 4.5 : 5.0
 
         doc.autoTable({
           startY,
@@ -1149,7 +1153,7 @@ async function esportaPDF() {
           styles: { font: 'helvetica', fontSize, cellPadding, lineColor: line, lineWidth: 0.15, textColor: dark },
           columnStyles: {
             0: { cellWidth: numWidth, halign: 'center', fontStyle: 'bold', textColor: gray, cellPadding: { top: cellPadding, bottom: cellPadding, left: 0.2, right: 0.2 } },
-            1: { cellWidth: 'auto', cellPadding: { top: cellPadding, bottom: cellPadding, left: 0.8, right: 0.8 } }
+            1: { cellWidth: 'auto', cellPadding: { top: cellPadding, bottom: cellPadding, left: 1.0, right: 1.0 } }
           },
           pageBreak: 'avoid'
         })
@@ -1318,11 +1322,11 @@ async function esportaPDF() {
     }
 
     if (noteText) {
-      const targetY = Math.max(margin, pageHeight - noteHeight - 18)
-      if (multiGare && y + 6 > targetY) {
+      const targetY = Math.max(margin, pageHeight - noteHeight - 16)
+      if (multiGare && y + 4 > targetY) {
         doc.addPage()
       }
-      y = targetY
+      y = Math.max(y + 3, targetY)
       doc.setFillColor(...light)
       doc.setDrawColor(...line)
       doc.setLineWidth(0.15)
