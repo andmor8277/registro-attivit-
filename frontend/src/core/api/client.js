@@ -40,7 +40,11 @@ export const apiPublic = axios.create({ baseURL: getApiBaseUrl(), timeout: 15000
 
 export function getUploadUrl(path) {
   if (!path) return ''
-  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  let cleanPath = path.startsWith('/') ? path : `/${path}`
+  if (!cleanPath.startsWith('/uploads/')) {
+    cleanPath = `/uploads${cleanPath}`
+  }
   if (Capacitor.isNativePlatform()) {
     return `https://thof.crickethouse.mywire.org${cleanPath}`
   }

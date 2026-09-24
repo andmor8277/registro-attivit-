@@ -68,7 +68,7 @@
     <!-- Print-only header -->
     <div v-if="activeReport" class="print-header-only">
       <div class="print-societa-row">
-        <img v-if="societaAttiva?.logo" :src="`/uploads/${societaAttiva.logo}`" alt="Logo" class="print-logo" />
+        <img v-if="societaAttiva?.logo" :src="getUploadUrl(societaAttiva.logo)" alt="Logo" class="print-logo" />
         <div class="print-societa-info">
           <div class="print-societa-name">{{ societaAttiva?.nome || '' }}</div>
           <div class="print-report-type">{{ reportMeta[activeReport].title }}</div>
@@ -467,7 +467,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getPersone, getRegistroMese, getConvocazioni, getConvocazione, getAllCategorie, getLocalDateStr } from '../../api/index.js'
+import { getPersone, getRegistroMese, getConvocazioni, getConvocazione, getAllCategorie, getLocalDateStr, getUploadUrl } from '../../api/index.js'
 
 const router = useRouter()
 const route = useRoute()

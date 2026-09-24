@@ -294,8 +294,22 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../../store.js'
-import { getPersone, getRegistroMese, getPartite, getCategoriaResponsabili, getWeekend, getWeekendPartite, creaSegnalazioneScouting, getLocalDateStr } from '../../api/index.js'
-import axios from 'axios'
+import {
+  getPersone,
+  getRegistroMese,
+  getPartite,
+  getCategoriaResponsabili,
+  getWeekend,
+  getWeekendPartite,
+  creaSegnalazioneScouting,
+  getLocalDateStr,
+  getConvocazioni,
+  getConvocazione,
+  createConvocazione,
+  updateConvocazione,
+  deleteConvocazione,
+  getUploadUrl
+} from '../../api/index.js'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 
@@ -305,10 +319,6 @@ const { categoriaAttiva, societaAttiva, stagioneCorrente, utenteAttivo } = useSt
 const categoriaId = parseInt(route.params.id)
 
 const nomeSocieta = computed(() => societaAttiva.value?.nome_breve || societaAttiva.value?.nome || 'Noi')
-
-const base = '/api'
-const token = () => localStorage.getItem('token')
-const headers = () => ({ Authorization: 'Bearer ' + token() })
 
 const storico = ref([])
 const convocazioneId = ref(null)
@@ -788,7 +798,7 @@ async function caricaPartiteEsistenti() {
 
 async function caricaConvocazione(id) {
   convocazioneId.value = id
-  const res = await axios.get(base + '/convocazioni/' + id, { headers: headers() })
+  const res = await getConvocazione(id)
   const d = res.data
   convocazione.value = {
     data_inizio: d.data_inizio, data_fine: d.data_fine || '', esclusioni: d.esclusioni || [],
@@ -812,13 +822,13 @@ async function caricaConvocazione(id) {
 }
 
 async function loadStorico() {
-  const res = await axios.get(base + '/convocazioni/?categoria_id=' + categoriaId, { headers: headers() })
+  const res = await getConvocazioni(categoriaId)
   storico.value = res.data
 }
 
 async function loadMisters() {
   try {
-    const res = await axios.get(base + '/categorie/' + categoriaId + '/responsabili', { headers: headers() })
+    const res = await getCategoriaResponsabili(categoriaId)
     responsabili.value = res.data.filter(r => r.ruolo !== 'dirigente')
   } catch (e) { responsabili.value = [] }
 }
@@ -886,8 +896,8 @@ async function salva() {
       }
     })
   }
-  if (convocazioneId.value) await axios.put(base + '/convocazioni/' + convocazioneId.value, payload, { headers: headers() })
-  else { const res = await axios.post(base + '/convocazioni/', payload, { headers: headers() }); convocazioneId.value = res.data.id }
+  if (convocazioneId.value) await updateConvocazione(convocazioneId.value, payload)
+  else { const res = await createConvocazione(payload); convocazioneId.value = res.data.id }
   await loadStorico()
   await loadWeekendDisponibili()
   alert('Salvato!')
@@ -995,8 +1005,8 @@ async function esportaPDF() {
       } catch {}
     }
 
-    const logoData = await loadImageData(societaAttiva.value?.logo ? `/uploads/${societaAttiva.value.logo}` : null)
-    const sponsorData = await loadImageData(societaAttiva.value?.logosponsor ? `/uploads/${societaAttiva.value.logosponsor}` : null)
+    const logoData = await loadImageData(societaAttiva.value?.logo ? getUploadUrl(societaAttiva.value.logo) : null)
+    const sponsorData = await loadImageData(societaAttiva.value?.logosponsor ? getUploadUrl(societaAttiva.value.logosponsor) : null)
 
     let y = margin
     const logoBox = multiGare ? 14 : 18
@@ -1374,7 +1384,7 @@ async function esportaPDF() {
 async function elimina() {
   if (!convocazioneId.value) return
   if (!confirm('Eliminare questa convocazione?')) return
-  await axios.delete(base + '/convocazioni/' + convocazioneId.value, { headers: headers() })
+  await deleteConvocazione(convocazioneId.value)
   convocazione.value = null
   convocazioneId.value = null
   await loadStorico()
@@ -1458,7 +1468,11 @@ onMounted(async () => {
     await loadStorico()
     await loadMisters()
     await loadWeekendDisponibili()
-    if (convocazioniAttive.value.length > 0) await caricaConvocazione(convocazioniAttive.value[0].id)
+    if (convocazioniAttive.value.length > 0) {
+      await caricaConvocazione(convocazioniAttive.value[0].id)
+    } else if (convocazioniStorico.value.length > 0) {
+      await caricaConvocazione(convocazioniStorico.value[0].id)
+    }
   } catch (err) {
     console.error('Errore inizializzazione convocazioni:', err)
   }

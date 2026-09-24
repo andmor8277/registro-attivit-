@@ -181,7 +181,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '../../store.js'
-import { getPersone, getCategorie, getOpenday } from '../../api/index.js'
+import { getPersone, getCategorie, getOpenday, verifyGdpr } from '../../api/index.js'
 
 const router = useRouter()
 const { utenteAttivo } = useStore()
@@ -275,20 +275,13 @@ async function sbloccaGdpr() {
     return
   }
   try {
-    const res = await fetch(`/api/auth/verify-gdpr?codice_fiscale=${encodeURIComponent(gdprModal.value.password)}`, {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-    })
-    if (res.ok) {
-      gdprSbloccato.value = true
-      gdprModal.value.show = false
-      gdprModal.value.password = ''
-      sessionStorage.setItem('gdpr_sbloccato', 'true')
-    } else {
-      gdprModal.value.error = 'Codice fiscale non valido'
-    }
+    await verifyGdpr(gdprModal.value.password)
+    gdprSbloccato.value = true
+    gdprModal.value.show = false
+    gdprModal.value.password = ''
+    sessionStorage.setItem('gdpr_sbloccato', 'true')
   } catch(e) {
-    gdprModal.value.error = 'Errore di verifica'
+    gdprModal.value.error = e.response?.data?.detail || 'Codice fiscale non valido'
   }
 }
 </script>
