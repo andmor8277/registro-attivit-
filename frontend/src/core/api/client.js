@@ -1,6 +1,19 @@
 import axios from 'axios'
+import { Capacitor } from '@capacitor/core'
 
-export const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api', timeout: 15000 })
+const DEFAULT_PROD_API = 'https://thof.crickethouse.mywire.org/api'
+
+export function getApiBaseUrl() {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+  if (Capacitor.isNativePlatform()) {
+    return DEFAULT_PROD_API
+  }
+  return '/api'
+}
+
+export const api = axios.create({ baseURL: getApiBaseUrl(), timeout: 15000 })
 
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token')
@@ -23,4 +36,4 @@ api.interceptors.response.use(
   }
 )
 
-export const apiPublic = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api', timeout: 15000 })
+export const apiPublic = axios.create({ baseURL: getApiBaseUrl(), timeout: 15000 })
