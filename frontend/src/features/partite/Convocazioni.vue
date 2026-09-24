@@ -211,6 +211,129 @@
             </div>
           </div>
 
+          <!-- GIOCATORI NON CONVOCATI -->
+          <div class="card non-conv-card" v-if="garaAttiva">
+            <div class="non-conv-header">
+              <div class="non-conv-title-group">
+                <div class="non-conv-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="non-conv-icon"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <span>Giocatori Non Convocati</span>
+                </div>
+                <span class="non-conv-count-badge">{{ giocatoriNonConvocati.length }} non convocati</span>
+              </div>
+
+              <div class="non-conv-controls">
+                <div class="non-conv-mode-toggle">
+                  <button
+                    type="button"
+                    class="mode-btn"
+                    :class="{ active: nonConvocatiMode === 'weekend' }"
+                    @click="nonConvocatiMode = 'weekend'"
+                    title="Mostra chi non è convocato in nessuna gara del weekend"
+                  >
+                    Tutto il weekend ({{ countNonConvocatiTotali('weekend') }})
+                  </button>
+                  <button
+                    type="button"
+                    class="mode-btn"
+                    :class="{ active: nonConvocatiMode === 'gara' }"
+                    @click="nonConvocatiMode = 'gara'"
+                    :title="'Mostra chi non è convocato in Gara ' + (activeGaraIdx + 1)"
+                  >
+                    Gara {{ activeGaraIdx + 1 }} ({{ countNonConvocatiTotali('gara') }})
+                  </button>
+                </div>
+
+                <div class="non-conv-search">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input v-model="nonConvocatiSearch" placeholder="Cerca non convocato..." />
+                  <button v-if="nonConvocatiSearch" class="non-conv-clear-btn" @click="nonConvocatiSearch = ''" title="Cancella">&times;</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- GROUP FILTER PILLS -->
+            <div class="non-conv-groups" v-if="gruppiDisponibili.length > 0">
+              <button
+                type="button"
+                class="pill-btn"
+                :class="{ active: nonConvocatiGruppoFilter === '' }"
+                @click="nonConvocatiGruppoFilter = ''"
+              >
+                Tutti ({{ countNonConvocatiPerGruppo('') }})
+              </button>
+              <button
+                v-for="g in gruppiDisponibili"
+                :key="'ncg-' + g"
+                type="button"
+                class="pill-btn"
+                :class="{ active: nonConvocatiGruppoFilter === g }"
+                @click="nonConvocatiGruppoFilter = g"
+              >
+                {{ g }} ({{ countNonConvocatiPerGruppo(g) }})
+              </button>
+            </div>
+
+            <!-- PLAYERS LIST -->
+            <div class="non-conv-body">
+              <div v-if="giocatoriNonConvocati.length === 0" class="non-conv-empty">
+                <span v-if="nonConvocatiSearch || nonConvocatiGruppoFilter">Nessun giocatore non convocato corrisponde ai filtri selezionati.</span>
+                <span v-else-if="nonConvocatiMode === 'weekend'">Tutti i giocatori della categoria sono stati convocati nel weekend! &#127881;</span>
+                <span v-else>Tutti i giocatori della categoria sono convocati per Gara {{ activeGaraIdx + 1 }}! &#127881;</span>
+              </div>
+
+              <div v-else class="non-conv-grid">
+                <div
+                  v-for="p in giocatoriNonConvocati"
+                  :key="'nc-' + p.id"
+                  class="non-conv-item"
+                >
+                  <div class="non-conv-avatar">
+                    {{ (p.cognome || '').charAt(0) }}{{ (p.nome || '').charAt(0) }}
+                  </div>
+
+                  <div class="non-conv-info">
+                    <div class="non-conv-name-row">
+                      <span class="non-conv-name">{{ p.cognome }} {{ p.nome }}</span>
+                      <span v-if="p.ruolo" class="slot-badge badge-role">{{ p.ruolo.toUpperCase() }}</span>
+                      <span v-if="p.gruppo_nome" class="slot-badge badge-group">{{ p.gruppo_nome }}</span>
+                    </div>
+
+                    <div class="non-conv-badges-row">
+                      <span
+                        class="slot-badge badge-presenze"
+                        :class="'presenze-' + getPlayerWarningSeverity(p, activeGaraIdx)"
+                        :title="getPlayerWarningTitle(p, activeGaraIdx)"
+                      >
+                        {{ getPlayerWarning(p, activeGaraIdx) }}
+                      </span>
+
+                      <span
+                        v-for="(tag, ti) in getPlayerStatusTags(p)"
+                        :key="'nctag-' + ti"
+                        class="slot-badge"
+                        :class="'status-' + tag.type"
+                        :title="tag.title"
+                      >
+                        {{ tag.text }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="btn-convoca-quick"
+                    @click="convocaInGaraAttiva(p.id)"
+                    :title="'Aggiungi ' + p.cognome + ' a Gara ' + (activeGaraIdx + 1)"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span>Convoca</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- PLAYER PICKER MODAL -->
           <div v-if="pickerOpen && pickerPos !== null && garaAttiva" class="picker-overlay" @click.self="closePicker">
             <div class="picker-modal">
@@ -390,6 +513,9 @@ const pickerGara = ref(null)
 const pickerPos = ref(null)
 const pickerSearch = ref('')
 const pickerGruppoFilter = ref('')
+const nonConvocatiMode = ref('weekend')
+const nonConvocatiGruppoFilter = ref('')
+const nonConvocatiSearch = ref('')
 const activeGaraIdx = ref(0)
 const scoutingModal = ref({ open: false, loading: false, titolo: '', data_osservazione: '', squadra_avversaria: '', note: '', giocatori: [] })
 
@@ -756,6 +882,139 @@ function getPlayerLabel(id) {
 function getPlayerRuolo(id) {
   const p = persone.value.find(x => x.id === id)
   return (p && p.ruolo) ? p.ruolo.toUpperCase() : ''
+}
+
+const allConvocatiIds = computed(() => {
+  const set = new Set()
+  if (!convocazione.value?.gare) return set
+  convocazione.value.gare.forEach(g => {
+    (g.giocatori || []).forEach(pid => {
+      if (pid != null && pid !== '') {
+        set.add(pid)
+        set.add(Number(pid))
+        set.add(String(pid))
+      }
+    })
+  })
+  return set
+})
+
+const activeGaraConvocatiIds = computed(() => {
+  const set = new Set()
+  if (!garaAttiva.value?.giocatori) return set
+  garaAttiva.value.giocatori.forEach(pid => {
+    if (pid != null && pid !== '') {
+      set.add(pid)
+      set.add(Number(pid))
+      set.add(String(pid))
+    }
+  })
+  return set
+})
+
+function countNonConvocatiTotali(mode) {
+  const convocati = mode === 'weekend' ? allConvocatiIds.value : activeGaraConvocatiIds.value
+  return persone.value.filter(p => !convocati.has(p.id)).length
+}
+
+const unconvocatedPool = computed(() => {
+  const convocati = nonConvocatiMode.value === 'weekend' ? allConvocatiIds.value : activeGaraConvocatiIds.value
+  return persone.value.filter(p => !convocati.has(p.id))
+})
+
+function countNonConvocatiPerGruppo(gruppo) {
+  if (!gruppo) return unconvocatedPool.value.length
+  if (gruppo === 'Senza gruppo') {
+    return unconvocatedPool.value.filter(p => !p.gruppo_nome || p.gruppo_nome === 'Senza gruppo').length
+  }
+  return unconvocatedPool.value.filter(p => p.gruppo_nome === gruppo).length
+}
+
+const giocatoriNonConvocati = computed(() => {
+  let list = unconvocatedPool.value
+  if (nonConvocatiGruppoFilter.value) {
+    if (nonConvocatiGruppoFilter.value === 'Senza gruppo') {
+      list = list.filter(p => !p.gruppo_nome || p.gruppo_nome === 'Senza gruppo')
+    } else {
+      list = list.filter(p => p.gruppo_nome === nonConvocatiGruppoFilter.value)
+    }
+  }
+  if (nonConvocatiSearch.value) {
+    const s = nonConvocatiSearch.value.toLowerCase().trim()
+    list = list.filter(p =>
+      (p.cognome && p.cognome.toLowerCase().includes(s)) ||
+      (p.nome && p.nome.toLowerCase().includes(s)) ||
+      (p.ruolo && p.ruolo.toLowerCase().includes(s)) ||
+      (p.gruppo_nome && p.gruppo_nome.toLowerCase().includes(s))
+    )
+  }
+  return [...list].sort((a, b) => (a.cognome || '').localeCompare(b.cognome || ''))
+})
+
+function getPlayerStatusTags(player) {
+  const p = typeof player === 'object' ? player : persone.value.find(x => x.id === player)
+  if (!p) return []
+  const tags = []
+
+  // Certificato medico
+  const certBadge = getPlayerCertificatoBadge(p)
+  if (certBadge) {
+    tags.push({ text: certBadge.label, type: 'cert', title: certBadge.title })
+  }
+
+  // Assenze >= 2 nella settimana
+  const stats = getPlayerStatsForGara(p.id, activeGaraIdx.value)
+  if (stats.assenze >= 2) {
+    tags.push({ text: `${stats.assenze} Assenze`, type: 'danger', title: 'Almeno 2 assenze negli allenamenti settimanali' })
+  }
+
+  // Esclusioni manuali per la convocazione
+  if (convocazione.value?.esclusioni) {
+    const escl = convocazione.value.esclusioni.filter(e => e.persona_id === p.id)
+    escl.forEach(e => {
+      let label = e.tipo
+      if (e.tipo === 'no_sabato_mattina') label = 'No Sab. Matt.'
+      else if (e.tipo === 'no_sabato_pomeriggio') label = 'No Sab. Pom.'
+      else if (e.tipo === 'no_domenica') label = 'No Domenica'
+      else label = e.tipo.replace(/_/g, ' ')
+      tags.push({ text: label, type: 'esclusione', title: `Esclusione manuale: ${e.tipo.replace(/_/g, ' ')}` })
+    })
+  }
+
+  // Pagamenti non in regola
+  if (p.pagamenti_in_regola === false) {
+    tags.push({ text: 'Pagamenti sospesi', type: 'warning', title: 'Quota di iscrizione o pagamenti non in regola' })
+  }
+
+  // Se in modalità gara ed è già convocato in un'altra gara
+  if (nonConvocatiMode.value === 'gara') {
+    const convBadge = getConvocatoBadge(p, activeGaraIdx.value)
+    if (convBadge) {
+      tags.push({ text: `In ${convBadge.label}`, type: 'convocato', title: convBadge.title })
+    }
+  }
+
+  // Se nessun vincolo e disponibile
+  if (tags.length === 0) {
+    tags.push({ text: 'Disponibile', type: 'disponibile', title: 'Disponibile e idoneo alla convocazione' })
+  }
+
+  return tags
+}
+
+function convocaInGaraAttiva(personaId) {
+  if (!garaAttiva.value) return
+  const gara = garaAttiva.value
+  if (!gara.giocatori) gara.giocatori = []
+  const alreadyInGara = gara.giocatori.some(id => id === personaId || (id != null && Number(id) === Number(personaId)))
+  if (alreadyInGara) return
+
+  const emptyIdx = gara.giocatori.findIndex(id => id === null || id === undefined || id === '')
+  if (emptyIdx !== -1) {
+    gara.giocatori[emptyIdx] = personaId
+  } else {
+    gara.giocatori.push(personaId)
+  }
 }
 
 function switchNonPresente(garaIdx, personaId) {
@@ -2635,6 +2894,271 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
   font-size: 0.8rem;
 }
 
+/* ---- GIOCATORI NON CONVOCATI BOX ---- */
+.non-conv-card {
+  margin-top: 18px;
+}
+.non-conv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+}
+.non-conv-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.non-conv-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+.non-conv-icon {
+  width: 18px;
+  height: 18px;
+  color: #64748b;
+}
+.non-conv-count-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(100, 116, 139, 0.12);
+  color: var(--color-text-secondary);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.non-conv-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.non-conv-mode-toggle {
+  display: flex;
+  background: var(--color-bg);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--color-border-light);
+}
+.mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.mode-btn:hover {
+  color: var(--color-text);
+}
+.mode-btn.active {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.non-conv-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+.non-conv-search svg {
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+.non-conv-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.78rem;
+  color: var(--color-text);
+  font-family: inherit;
+  width: 140px;
+  transition: width 0.2s ease;
+}
+.non-conv-search input:focus {
+  width: 180px;
+}
+.non-conv-search input::placeholder {
+  color: var(--color-text-muted);
+}
+.non-conv-clear-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.non-conv-clear-btn:hover {
+  color: var(--color-text);
+}
+.non-conv-groups {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+.non-conv-groups::-webkit-scrollbar {
+  height: 3px;
+}
+.non-conv-groups::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+.non-conv-body {
+  padding: 14px 18px;
+}
+.non-conv-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.non-conv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 10px;
+}
+.non-conv-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.non-conv-item:hover {
+  border-color: var(--color-border);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+.non-conv-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+.non-conv-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.non-conv-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.non-conv-name {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.non-conv-badges-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.slot-badge.status-disponibile {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #047857;
+}
+.slot-badge.status-danger {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  color: #b91c1c;
+}
+.slot-badge.status-cert {
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  color: #dc2626;
+}
+.slot-badge.status-esclusione {
+  background: rgba(139, 92, 246, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.28);
+  color: #6d28d9;
+}
+.slot-badge.status-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  color: #b45309;
+}
+.slot-badge.status-convocato {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: #1d4ed8;
+}
+.btn-convoca-quick {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.btn-convoca-quick svg {
+  width: 13px;
+  height: 13px;
+}
+.btn-convoca-quick:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
 /* ---- RESPONSIVE ---- */
 @media (max-width: 1024px) {
   .conv-grid { grid-template-columns: 1fr; }
@@ -2654,6 +3178,15 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
   .slot-x { opacity: 1; }
   .picker-modal { width: 95vw; max-width: 440px; }
   .info-dl li { padding: 8px 12px; }
+  .non-conv-header { flex-direction: column; align-items: stretch; gap: 10px; }
+  .non-conv-controls { flex-direction: column; align-items: stretch; }
+  .non-conv-mode-toggle { width: 100%; }
+  .mode-btn { flex: 1; text-align: center; }
+  .non-conv-search { width: 100%; }
+  .non-conv-search input { width: 100% !important; }
+  .non-conv-grid { grid-template-columns: 1fr; }
+  .non-conv-groups { padding: 8px 12px; }
+  .non-conv-body { padding: 12px; }
   .scout-row { grid-template-columns: 1fr; }
   .scout-player-row { grid-template-columns: 1fr 1fr; }
   .scout-actions { flex-direction: column; }
