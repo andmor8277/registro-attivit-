@@ -19,9 +19,20 @@ export const resetPassword = (id) => api.put(`/auth/utenti/${id}/reset-password`
 export const changePassword = (id, vecchia, nuova) => api.put(`/auth/utenti/${id}/password`, { vecchia, nuova })
 export const assegnaCategorie = (uid, categoria_ids) => api.put(`/auth/utenti/${uid}/categorie`, { categoria_ids })
 
-export const googleAuthorize = (invitoToken) => {
-  const params = invitoToken ? `?invito=${invitoToken}` : ''
-  window.location.href = getApiBaseUrl() + '/auth/google/authorize' + params
+import { Browser } from '@capacitor/browser'
+import { Capacitor } from '@capacitor/core'
+
+export const googleAuthorize = async (invitoToken) => {
+  const params = new URLSearchParams()
+  if (invitoToken) params.append('invito', invitoToken)
+  if (Capacitor.isNativePlatform()) {
+    params.append('mobile', 'true')
+    const authUrl = `${getApiBaseUrl()}/auth/google/authorize?${params.toString()}`
+    await Browser.open({ url: authUrl, windowName: '_system' })
+    return
+  }
+  const queryStr = params.toString() ? `?${params.toString()}` : ''
+  window.location.href = getApiBaseUrl() + '/auth/google/authorize' + queryStr
 }
 export const googleCallback = (code, state) => {
   return axios.get(`${getApiBaseUrl()}/auth/google/callback`, { params: { code, state } })
