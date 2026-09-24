@@ -40,7 +40,7 @@
           <label>Logo</label>
           <div class="logo-preview" v-if="nuovo.logo || logoPreview">
             <img v-if="logoPreview" :src="logoPreview" alt="Logo" />
-            <img v-else-if="nuovo.logo" :src="`/uploads/${nuovo.logo}`" alt="Logo" />
+            <img v-else-if="nuovo.logo" :src="getUploadUrl(nuovo.logo)" alt="Logo" />
           </div>
           <input type="file" @change="handleLogoUpload" accept="image/*" />
           <button v-if="nuovo.logo" type="button" class="btn-remove" @click="rimuoviLogo">Rimuovi logo</button>
@@ -50,7 +50,7 @@
           <label>Logo Sponsor</label>
           <div class="logo-preview" v-if="nuovo.logosponsor || logosponsorPreview">
             <img v-if="logosponsorPreview" :src="logosponsorPreview" alt="Logo Sponsor" />
-            <img v-else-if="nuovo.logosponsor" :src="`/uploads/${nuovo.logosponsor}`" alt="Logo Sponsor" />
+            <img v-else-if="nuovo.logosponsor" :src="getUploadUrl(nuovo.logosponsor)" alt="Logo Sponsor" />
           </div>
           <input type="file" @change="handleLogosponsorUpload" accept="image/*" />
           <button v-if="nuovo.logosponsor" type="button" class="btn-remove" @click="rimuoviLogosponsor">Rimuovi logo sponsor</button>
@@ -87,7 +87,7 @@
           <tr v-for="s in societa" :key="s.id">
             <td>
               <div class="logo-badge" :style="{ background: s.colore_primario }">
-                <img v-if="s.logo" :src="`/uploads/${s.logo}`" :alt="s.nome" />
+                <img v-if="s.logo" :src="getUploadUrl(s.logo)" :alt="s.nome" />
                 <span v-else>{{ s.nome?.charAt(0) || 'S' }}</span>
               </div>
             </td>
@@ -122,7 +122,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getSocieta, createSocieta, updateSocieta, deleteSocieta, uploadSocietaFile, getMe } from '../../api/index.js'
+import { getSocieta, createSocieta, updateSocieta, deleteSocieta, uploadSocietaFile, getMe, getUploadUrl } from '../../api/index.js'
 import { useStore } from '../../store.js'
 
 const { setSocietaAttiva, societaAttiva } = useStore()

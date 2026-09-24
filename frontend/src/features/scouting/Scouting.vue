@@ -298,7 +298,8 @@ import {
   eliminaSegnalazioneScouting,
   cambiaStatoScouting,
   valutaGiocatoreScouting,
-  getLocalDateStr
+  getLocalDateStr,
+  getUploadUrl
 } from '../../api/index.js'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
@@ -633,8 +634,8 @@ async function esportaPDF() {
       } catch {}
     }
 
-    const logoData = await loadImageData(societaAttiva.value?.logo ? `/uploads/${societaAttiva.value.logo}` : null)
-    const sponsorData = await loadImageData(societaAttiva.value?.logosponsor ? `/uploads/${societaAttiva.value.logosponsor}` : null)
+    const logoData = await loadImageData(societaAttiva.value?.logo ? getUploadUrl(societaAttiva.value.logo) : null)
+    const sponsorData = await loadImageData(societaAttiva.value?.logosponsor ? getUploadUrl(societaAttiva.value.logosponsor) : null)
 
     let y = margin
     const logoBox = 18

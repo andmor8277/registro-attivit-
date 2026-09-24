@@ -158,7 +158,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPersone, getCategorie, getListeTorneo, creaListaTorneo, eliminaListaTorneo, getGiocatoriLista, aggiungiGiocatoreLista, rimuoviGiocatoreLista } from '../../api/index.js'
+import { getPersone, getCategorie, getListeTorneo, creaListaTorneo, eliminaListaTorneo, getGiocatoriLista, aggiungiGiocatoreLista, rimuoviGiocatoreLista, verifyGdpr } from '../../api/index.js'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import { useStore } from '../../store.js'
@@ -222,18 +222,13 @@ async function sbloccaGdpr() {
     return
   }
   try {
-    const res = await fetch(`/api/auth/verify-gdpr?categoria_id=${categoriaId}&codice_fiscale=${encodeURIComponent(gdprModal.value.password)}`, {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-    })
-    if (res.ok) {
-      gdprSbloccato.value = true
-      sessionStorage.setItem('gdpr_sbloccato', 'true')
-      gdprModal.value = { show: false, password: '', errore: '' }
-    } else {
-      gdprModal.value.errore = 'Codice fiscale non valido'
-    }
-  } catch(e) { gdprModal.value.errore = 'Errore di verifica' }
+    await verifyGdpr(gdprModal.value.password, categoriaId)
+    gdprSbloccato.value = true
+    sessionStorage.setItem('gdpr_sbloccato', 'true')
+    gdprModal.value = { show: false, password: '', errore: '' }
+  } catch(e) {
+    gdprModal.value.errore = e.response?.data?.detail || 'Codice fiscale non valido'
+  }
 }
 
 function formattaData(d) {

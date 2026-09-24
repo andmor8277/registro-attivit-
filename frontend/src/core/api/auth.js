@@ -38,3 +38,8 @@ export const googleCallback = (code, state) => {
   return axios.get(`${getApiBaseUrl()}/auth/google/callback`, { params: { code, state } })
 }
 export const registraUtenteGoogle = (data) => api.post('/auth/google/registra', data)
+export const verifyGdpr = (codiceFiscale, categoriaId = null) => {
+  const params = { codice_fiscale: codiceFiscale }
+  if (categoriaId) params.categoria_id = categoriaId
+  return api.post('/auth/verify-gdpr', null, { params })
+}

@@ -2,7 +2,7 @@
   <div class="print-sheet" :style="{ zoom: scale }">
     <header class="sheet-header">
       <div class="sheet-brand">
-        <img v-if="societa?.logo" :src="`/uploads/${societa.logo}`" alt="Logo" class="sheet-logo" />
+        <img v-if="societa?.logo" :src="getUploadUrl(societa.logo)" alt="Logo" class="sheet-logo" />
         <div v-else class="sheet-logo sheet-logo-placeholder"></div>
         <div>
           <div class="sheet-societa">{{ societa?.nome || 'Società' }}</div>
@@ -73,6 +73,8 @@
 </template>
 
 <script setup>
+import { getUploadUrl } from '../../api/index.js'
+
 defineProps({
   societa: { type: Object, default: null },
   categoria: { type: Object, default: null },
