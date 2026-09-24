@@ -1036,14 +1036,15 @@ async function esportaPDF() {
     doc.line(margin, y, pageWidth - margin, y)
     y += multiGare ? 4 : 6
 
-    function buildRows(gara, combined = false) {
-      return gara.giocatori
+    function buildRows(gara) {
+      return (gara.giocatori || [])
         .map((pid, i) => {
           if (!pid) return null
           const p = getPersona(pid)
-          const cognome = p?.cognome || '—'
-          const nome = p?.nome || ''
-          return combined ? [String(i + 1), `${cognome} ${nome}`.trim()] : [String(i + 1), cognome, nome]
+          const cognome = (p?.cognome || '—').trim()
+          const nome = (p?.nome || '').trim()
+          const full = nome ? `${cognome} ${nome}` : cognome
+          return [String(i + 1), full]
         })
         .filter(Boolean)
     }
@@ -1097,73 +1098,62 @@ async function esportaPDF() {
     function chooseSinglePlayerLayout(rowsCount, startY) {
       const available = Math.max(20, pageHeight - bottomMargin - startY)
       const presets = [
-        { fontSize: 9.5, cellPadding: 2.8, rowHeight: 8.8 },
-        { fontSize: 9, cellPadding: 2.2, rowHeight: 8 },
-        { fontSize: 8.5, cellPadding: 1.8, rowHeight: 7.2 },
-        { fontSize: 8, cellPadding: 1.4, rowHeight: 6.6 },
-        { fontSize: 7.5, cellPadding: 1, rowHeight: 6.2 },
-        { fontSize: 7, cellPadding: 0.8, rowHeight: 5.8 }
+        { fontSize: 9, cellPadding: 2.0, rowHeight: 7.5 },
+        { fontSize: 8.5, cellPadding: 1.6, rowHeight: 6.8 },
+        { fontSize: 8, cellPadding: 1.3, rowHeight: 6.2 },
+        { fontSize: 7.5, cellPadding: 1.0, rowHeight: 5.6 },
+        { fontSize: 7, cellPadding: 0.7, rowHeight: 5.0 },
+        { fontSize: 6.5, cellPadding: 0.5, rowHeight: 4.5 }
       ]
       return presets.find(p => (rowsCount + 1) * p.rowHeight <= available) || presets[presets.length - 1]
     }
 
-    function chooseMultiPlayerLayout(rowsCount, width, startY, groupColumns = 3) {
+    function chooseMultiPlayerLayout(rowsCount, width, startY) {
       const available = Math.max(20, pageHeight - bottomMargin - startY)
-      const presets = groupColumns === 2 ? [
-        { columns: 2, fontSize: 6.5, cellPadding: 0.6, rowHeight: 5.2, minSubWidth: 28 },
-        { columns: 3, fontSize: 6, cellPadding: 0.5, rowHeight: 5, minSubWidth: 20 },
-        { columns: 4, fontSize: 5.5, cellPadding: 0.4, rowHeight: 4.8, minSubWidth: 15 }
-      ] : [
-        { columns: 2, fontSize: 8.5, cellPadding: 1.5, rowHeight: 6.6, minSubWidth: 42 },
-        { columns: 3, fontSize: 8.5, cellPadding: 1.5, rowHeight: 6.6, minSubWidth: 36 },
-        { columns: 4, fontSize: 8, cellPadding: 1.2, rowHeight: 6.8, minSubWidth: 32 },
-        { columns: 5, fontSize: 7.5, cellPadding: 1, rowHeight: 8, minSubWidth: 28 },
-        { columns: 6, fontSize: 7, cellPadding: 0.8, rowHeight: 7.5, minSubWidth: 24 },
-        { columns: 8, fontSize: 6.5, cellPadding: 0.6, rowHeight: 8, minSubWidth: 18 },
-        { columns: 10, fontSize: 6, cellPadding: 0.5, rowHeight: 8.5, minSubWidth: 16 },
-        { columns: 12, fontSize: 5.5, cellPadding: 0.4, rowHeight: 9.5, minSubWidth: 14 }
+      const maxCols = width >= 120 ? 3 : 2
+      const presets = [
+        { columns: 2, fontSize: 8, cellPadding: 1.0, rowHeight: 5.8 },
+        { columns: 2, fontSize: 7.5, cellPadding: 0.8, rowHeight: 5.2 },
+        { columns: 2, fontSize: 7, cellPadding: 0.6, rowHeight: 4.8 },
+        { columns: maxCols, fontSize: 6.5, cellPadding: 0.5, rowHeight: 4.5 }
       ]
       for (const preset of presets) {
         const rowsPerCol = Math.ceil(rowsCount / preset.columns)
-        const subWidth = width / preset.columns
-        if ((rowsPerCol + 1) * preset.rowHeight <= available && subWidth >= preset.minSubWidth) return preset
+        if ((rowsPerCol + 1) * preset.rowHeight <= available) return preset
       }
       return presets[presets.length - 1]
     }
 
-    function renderPlayerTable(gara, x, width, startY, columns = 'auto', groupColumns = 3) {
-      const combined = groupColumns === 2
-      const rows = buildRows(gara, combined)
-      const forceSingle = columns === 1
-      const multiLayout = forceSingle ? null : chooseMultiPlayerLayout(rows.length, width, startY, groupColumns)
-      if (forceSingle || rows.length <= 10 || !multiLayout) {
-        const singleLayout = chooseSinglePlayerLayout(rows.length, startY)
-        const singleFontSize = width < 75 ? Math.min(singleLayout.fontSize, 7) : singleLayout.fontSize
-        const singleCellPadding = width < 75 ? Math.min(singleLayout.cellPadding, 1) : singleLayout.cellPadding
+    function renderPlayerTable(gara, x, width, startY, forceSingle = false) {
+      const rows = buildRows(gara)
+      const available = Math.max(20, pageHeight - bottomMargin - startY)
+      const fitsSingle = (rows.length + 1) * 4.5 <= available
+
+      if (forceSingle || fitsSingle || width < 80) {
+        const layout = chooseSinglePlayerLayout(rows.length, startY)
+        const fontSize = width < 75 ? Math.min(layout.fontSize, 8) : layout.fontSize
+        const cellPadding = width < 75 ? Math.min(layout.cellPadding, 1.2) : layout.cellPadding
+        const numWidth = 5.5
+
         doc.autoTable({
           startY,
           margin: { left: x, right: pageWidth - (x + width), bottom: bottomMargin },
           tableWidth: width,
-          head: combined ? [['#', 'Cognome Nome']] : [['#', 'Cognome', 'Nome']],
-          body: rows.length ? rows : (combined ? [['—', 'Nessun giocatore selezionato']] : [['—', 'Nessun giocatore selezionato', '']]),
+          head: [['N°', 'Cognome Nome']],
+          body: rows.length ? rows : [['—', 'Nessun giocatore selezionato']],
           theme: 'grid',
-          headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize: singleFontSize, cellPadding: singleCellPadding },
-          styles: { font: 'helvetica', fontSize: singleFontSize, cellPadding: singleCellPadding, lineColor: line, lineWidth: 0.15, textColor: dark },
-          columnStyles: combined
-            ? {
-                0: { cellWidth: 8, halign: 'center', fontStyle: 'bold' },
-                1: { cellWidth: 'auto' }
-              }
-            : {
-                0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
-                1: { cellWidth: Math.max(20, width * 0.42), fontStyle: 'bold' },
-                2: { cellWidth: 'auto' }
-              },
+          headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize, cellPadding },
+          styles: { font: 'helvetica', fontSize, cellPadding, lineColor: line, lineWidth: 0.15, textColor: dark },
+          columnStyles: {
+            0: { cellWidth: numWidth, halign: 'center', fontStyle: 'bold', textColor: gray, cellPadding: { top: cellPadding, bottom: cellPadding, left: 0.3, right: 0.3 } },
+            1: { cellWidth: 'auto' }
+          },
           pageBreak: 'avoid'
         })
         return doc.lastAutoTable.finalY
       }
 
+      const multiLayout = chooseMultiPlayerLayout(rows.length, width, startY)
       const colCount = multiLayout.columns
       const per = Math.ceil(rows.length / colCount)
       const chunks = Array.from({ length: colCount }, (_, i) => rows.slice(i * per, (i + 1) * per))
@@ -1171,31 +1161,21 @@ async function esportaPDF() {
       const body = Array.from({ length: maxRows }, (_, r) => {
         const line = []
         chunks.forEach(chunk => {
-          const row = chunk[r] || (combined ? ['', ''] : ['', '', ''])
+          const row = chunk[r] || ['', '']
           line.push(...row)
         })
         return line
       })
-      const head = Array.from({ length: colCount }, () => (combined ? ['#', 'Cognome Nome'] : ['#', 'Cognome', 'Nome'])).flat()
+      const head = Array.from({ length: colCount }, () => ['N°', 'Cognome Nome']).flat()
       const groupWidth = width / colCount
+      const numWidth = 5
+      const nameWidth = groupWidth - numWidth
       const columnStyles = {}
-      if (combined) {
-        const numWidth = colCount > 3 ? 3.5 : 4.5
-        const nameWidth = Math.max(4, groupWidth - numWidth)
-        for (let c = 0; c < colCount; c++) {
-          columnStyles[c * 2] = { cellWidth: numWidth, halign: 'center', fontStyle: 'bold' }
-          columnStyles[c * 2 + 1] = { cellWidth: nameWidth }
-        }
-      } else {
-        const numWidth = colCount > 8 ? 4 : colCount > 6 ? 5 : colCount > 4 ? 6 : colCount > 2 ? 7 : 8
-        const cognomeWidth = groupWidth * (colCount > 8 ? 0.5 : colCount > 4 ? 0.55 : colCount > 2 ? 0.5 : 0.55)
-        const nomeWidth = Math.max(1.5, groupWidth - numWidth - cognomeWidth)
-        for (let c = 0; c < colCount; c++) {
-          columnStyles[c * 3] = { cellWidth: numWidth, halign: 'center', fontStyle: 'bold' }
-          columnStyles[c * 3 + 1] = { cellWidth: cognomeWidth, fontStyle: 'bold' }
-          columnStyles[c * 3 + 2] = { cellWidth: nomeWidth }
-        }
+      for (let c = 0; c < colCount; c++) {
+        columnStyles[c * 2] = { cellWidth: numWidth, halign: 'center', fontStyle: 'bold', textColor: gray, cellPadding: { top: multiLayout.cellPadding, bottom: multiLayout.cellPadding, left: 0.3, right: 0.3 } }
+        columnStyles[c * 2 + 1] = { cellWidth: nameWidth }
       }
+
       doc.autoTable({
         startY,
         margin: { left: x, right: pageWidth - (x + width), bottom: bottomMargin },
@@ -1226,9 +1206,7 @@ async function esportaPDF() {
       }
       let colY = startY + (compact ? 6.5 : 8)
       colY = renderInfoAbove(gara, x, width, colY, compact)
-      const groupColumns = width < 75 ? 2 : 3
-      const playerColumns = width >= 55 ? 'auto' : 1
-      colY = renderPlayerTable(gara, x, width, colY, playerColumns, groupColumns)
+      colY = renderPlayerTable(gara, x, width, colY)
       return colY
     }
 
@@ -1278,7 +1256,7 @@ async function esportaPDF() {
             pageBreak: 'avoid'
           })
           const infoFinalY = doc.lastAutoTable.finalY
-          const playerFinalY = renderPlayerTable(gara, playerX, playerWidth, startY, 'auto')
+          const playerFinalY = renderPlayerTable(gara, playerX, playerWidth, startY, false)
           y = Math.max(infoFinalY, playerFinalY) + 6
         } else {
           const leftWidth = 105
@@ -1286,7 +1264,7 @@ async function esportaPDF() {
           const rightX = margin + leftWidth + gap
           const rightWidth = pageWidth - margin - rightX
 
-          const leftFinalY = renderPlayerTable(gara, margin, leftWidth, startY, 1)
+          const leftFinalY = renderPlayerTable(gara, margin, leftWidth, startY, true)
 
           doc.autoTable({
             startY,
