@@ -37,3 +37,12 @@ api.interceptors.response.use(
 )
 
 export const apiPublic = axios.create({ baseURL: getApiBaseUrl(), timeout: 15000 })
+
+export function getUploadUrl(path) {
+  if (!path) return ''
+  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  if (Capacitor.isNativePlatform()) {
+    return `https://thof.crickethouse.mywire.org${cleanPath}`
+  }
+  return cleanPath
+}

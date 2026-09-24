@@ -12,7 +12,7 @@
 
           <!-- Società selezionata -->
           <div v-if="societaSelezionata" class="soc-preview">
-            <img v-if="societaSelezionataObj?.logo" :src="`/uploads/${societaSelezionataObj.logo}`" :alt="societaSelezionataObj.nome" class="soc-preview-logo" />
+            <img v-if="societaSelezionataObj?.logo" :src="getUploadUrl('/uploads/' + societaSelezionataObj.logo)" :alt="societaSelezionataObj.nome" class="soc-preview-logo" />
             <div v-else class="soc-preview-logo" :style="{ background: societaSelezionataObj?.colore_primario }">
               {{ societaSelezionataObj?.nome?.charAt(0) || 'S' }}
             </div>
@@ -31,7 +31,7 @@
               @click="societaSelezionata = s.id"
             >
               <div class="soc-logo" :style="{ background: s.colore_primario }">
-                <img v-if="s.logo" :src="`/uploads/${s.logo}`" :alt="s.nome" />
+                <img v-if="s.logo" :src="getUploadUrl('/uploads/' + s.logo)" :alt="s.nome" />
                 <span v-else>{{ s.nome?.charAt(0) || 'S' }}</span>
               </div>
               <div class="soc-card-info">
@@ -233,7 +233,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { login, getMe, getSocieta, getSocietaById, createSocieta, updateSocieta, uploadSocietaFile, createUtente, createCategoria, getCategorie, verificaInvito, googleAuthorize, creaInvito, api } from '../../api/index.js'
+import { login, getMe, getSocieta, getSocietaById, createSocieta, updateSocieta, uploadSocietaFile, createUtente, createCategoria, getCategorie, verificaInvito, googleAuthorize, creaInvito, api, getUploadUrl } from '../../api/index.js'
 import { useStore } from '../../store.js'
 
 const username = ref('')
@@ -386,8 +386,14 @@ async function doLogin() {
     }
 
     router.push('/')
-  } catch {
-    errore.value = 'Credenziali non valide. Riprova.'
+  } catch (err) {
+    if (err.response?.data?.detail) {
+      errore.value = err.response.data.detail
+    } else if (err.message && !err.response) {
+      errore.value = `Errore di connessione: ${err.message}`
+    } else {
+      errore.value = 'Credenziali non valide. Riprova.'
+    }
   } finally {
     loading.value = false
   }
