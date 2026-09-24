@@ -13,11 +13,20 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 ## Commands
 ```bash
 ./start_dev.sh                # Local dev: PG (5433) + uvicorn (8000) + vite (5173) via tmux
-./deploy.sh                   # Prod (192.168.178.132): git fetch → build --no-cache → up
-./deploy_dev.sh               # Dev (192.168.178.133): tar+ssh sync → VITE_API_URL=/api build → up
+./deploy_dev.sh               # Dev (192.168.178.133): sync + build + test su DEV prima di prod
+./deploy.sh                   # Prod (192.168.178.132): SOLO dopo aver testato su dev: git fetch → build --no-cache → up
 ./release.sh minor "desc"     # Tag + commit + copy to releases/vX.X.X/
 ./scripts/build_android_apk.sh # Compila l'APK Android (Capacitor + Docker) in releases/apk/
 ```
+
+## Flusso di Lavoro Obbligatorio (Dev-First)
+1. **Modifiche al codice**: implementazione locale.
+2. **Deploy su DEV** (`./deploy_dev.sh`): build e riavvio container su DEV (192.168.178.133).
+3. **Test e Validazione su DEV**: test di funzionamento su `http://192.168.178.133:3000` e verifica log / endpoint.
+4. **Commit & Push su Git**: dopo esito positivo dei test.
+5. **Deploy su PROD** (`./deploy.sh`): promozione in produzione su `https://thof.crickethouse.mywire.org`.
+⚠️ **REGOLA ASSOLUTA**: MAI rilasciare modifiche direttamente su Prod senza averle prima caricate e verificate su Dev!
+
 
 ## Entry Points
 - `backend/app/main.py` — FastAPI entry, middleware, router mounts; calls `run_migrations()`
