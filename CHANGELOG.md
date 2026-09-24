@@ -195,3 +195,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Robustezza, isolamento multi-tenant, indici DB e ottimizzazioni performance
+
+## [7.4.0] - 2026-09-24
+
+### Added
+- App Android nativa (APK), Convocazioni avanzate (box non convocati, filtri gruppo, PDF 1 pagina) e workflow Dev-First
