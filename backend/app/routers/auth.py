@@ -384,7 +384,17 @@ def _clear_oauth_cookies(resp):
     return resp
 
 
-def _mobile_redirect_response(deep_link: str, title: str = "Accesso in corso...", message: str = "Reindirizzamento all'app THOF..."):
+def _mobile_redirect_response(deep_link: str, title: str = "Accesso completato", message: str = "Reindirizzamento all'app THOF in corso..."):
+    if deep_link.startswith("it.thof.app://"):
+        path_query = deep_link[len("it.thof.app://"):]
+    elif deep_link.startswith("it.thof.app:/"):
+        path_query = deep_link[len("it.thof.app:/"):]
+    else:
+        path_query = deep_link
+
+    custom_scheme_url = f"it.thof.app://{path_query}"
+    intent_url = f"intent://{path_query}#Intent;scheme=it.thof.app;package=it.thof.app;end"
+
     html_content = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -392,71 +402,95 @@ def _mobile_redirect_response(deep_link: str, title: str = "Accesso in corso..."
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{title}</title>
   <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background-color: #0f172a;
+      background-color: #0b0f19;
       color: #f8fafc;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      margin: 0;
-      padding: 24px;
-      box-sizing: border-box;
+      padding: 24px 16px;
       text-align: center;
     }}
     .card {{
       background: #1e293b;
       border: 1px solid #334155;
-      border-radius: 16px;
-      padding: 32px 24px;
-      max-width: 400px;
+      border-radius: 20px;
+      padding: 36px 24px;
+      max-width: 420px;
       width: 100%;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
     }}
-    h2 {{ margin-top: 0; font-size: 1.4rem; color: #ffffff; }}
-    p {{ color: #94a3b8; font-size: 0.95rem; line-height: 1.5; }}
+    .badge {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(220, 38, 38, 0.15);
+      border: 2px solid #dc2626;
+      margin-bottom: 20px;
+      font-size: 32px;
+    }}
+    h2 {{ font-size: 1.5rem; font-weight: 700; color: #ffffff; margin-bottom: 12px; }}
+    p {{ color: #94a3b8; font-size: 1rem; line-height: 1.5; margin-bottom: 28px; }}
     .btn {{
-      display: inline-block;
-      margin-top: 24px;
-      padding: 14px 28px;
+      display: block;
+      width: 100%;
+      padding: 16px 20px;
       background-color: #dc2626;
       color: #ffffff;
       text-decoration: none;
-      font-weight: 600;
-      border-radius: 10px;
-      font-size: 1rem;
+      font-weight: 700;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45);
       transition: background-color 0.2s;
     }}
     .btn:active {{ background-color: #b91c1c; }}
-    .spinner {{
-      margin: 20px auto;
-      width: 36px;
-      height: 36px;
-      border: 3px solid rgba(220, 38, 38, 0.3);
-      border-top-color: #dc2626;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+    .subtext {{
+      display: block;
+      margin-top: 18px;
+      color: #64748b;
+      font-size: 0.85rem;
+      text-decoration: underline;
     }}
-    @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="spinner"></div>
+    <div class="badge">⚽</div>
     <h2>{title}</h2>
     <p>{message}</p>
-    <a id="btnApp" href="{deep_link}" class="btn">Apri l'app THOF</a>
+    <a id="btnIntent" href="{intent_url}" class="btn">Tocca qui per aprire l'App THOF</a>
+    <a href="{custom_scheme_url}" class="subtext">Non si apre? Tocca qui per il link diretto</a>
   </div>
   <script>
-    (function() {{
-      var deepLink = "{deep_link}";
-      window.location.href = deepLink;
-      setTimeout(function() {{
-        window.location.href = deepLink;
-      }}, 500);
-    }})();
+    // 1. Prova immediata via Intent URL
+    try {{
+      window.location.href = "{intent_url}";
+    }} catch (e) {{}}
+
+    // 2. Click simulato sul pulsante Intent
+    setTimeout(function() {{
+      try {{
+        var btn = document.getElementById('btnIntent');
+        if (btn) btn.click();
+      }} catch (e) {{}}
+    }}, 250);
+
+    // 3. Fallback con schema custom se non si è ancora aperto
+    setTimeout(function() {{
+      try {{
+        window.location.href = "{custom_scheme_url}";
+      }} catch (e) {{}}
+    }}, 1200);
   </script>
 </body>
 </html>"""

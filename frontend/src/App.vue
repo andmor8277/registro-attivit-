@@ -539,15 +539,20 @@ async function loadStagione() {
 }
 
 async function handleDeepUrl(urlStr) {
-  if (!urlStr || !urlStr.includes('it.thof.app://')) return
+  if (!urlStr) return
+  if (!urlStr.includes('it.thof.app') && !urlStr.includes('intent://') && !urlStr.includes('token=')) return
   try {
     await Browser.close()
   } catch (e) {}
   try {
-    const fakeUrl = new URL(urlStr.replace('it.thof.app://', 'https://localhost/'))
-    const authToken = fakeUrl.searchParams.get('token')
-    const authError = fakeUrl.searchParams.get('error')
-    const regToken = fakeUrl.searchParams.get('reg_token')
+    let search = ''
+    if (urlStr.includes('?')) {
+      search = urlStr.split('?')[1].split('#')[0]
+    }
+    const params = new URLSearchParams(search)
+    const authToken = params.get('token')
+    const authError = params.get('error')
+    const regToken = params.get('reg_token')
 
     if (authToken) {
       setToken(authToken)
