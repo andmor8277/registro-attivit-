@@ -37,6 +37,8 @@ mock-data.json
 
 # Release archives (do not commit these)
 releases/
+*.apk
+*.aab
 
 # Environment files with secrets
 .env

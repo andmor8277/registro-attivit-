@@ -1,0 +1,9 @@
+{
+  "appId": "it.thof.app",
+  "appName": "The Home of Football",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  }
+}
