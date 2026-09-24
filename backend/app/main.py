@@ -39,10 +39,21 @@ async def security_headers(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://thof.crickethouse.mywire.org", "https://dev-thof.crickethouse.mywire.org", "http://localhost:5173", "http://localhost:3000", "http://192.168.178.133:3000"],
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
-    expose_headers=["Content-Disposition"]
+    allow_origins=[
+        "https://thof.crickethouse.mywire.org",
+        "https://dev-thof.crickethouse.mywire.org",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://192.168.178.133:3000",
+        "https://localhost",
+        "http://localhost",
+        "capacitor://localhost",
+        "ionic://localhost",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 
