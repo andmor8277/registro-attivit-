@@ -25,7 +25,7 @@ docker run --rm \
 
 OUTPUT_APK="$ROOT_DIR/frontend/android/app/build/outputs/apk/debug/app-debug.apk"
 DEST_DIR="$ROOT_DIR/releases/apk"
-DEST_APK="$DEST_DIR/thof-debug.apk"
+DEST_APK="$DEST_DIR/thof.apk"
 
 if [ -f "$OUTPUT_APK" ]; then
     mkdir -p "$DEST_DIR"
