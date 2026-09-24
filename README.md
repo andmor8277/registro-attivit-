@@ -13,71 +13,84 @@ Sistema di gestione multi-società per società sportive dilettantistiche (calci
 
 ```
 registro_presenze/
-├── frontend/           # Frontend Vue 3
+├── frontend/                     # Frontend Vue 3 + Vite + Capacitor
 │   ├── src/
-│   │   ├── views/     # Pagine dell'applicazione
-│   │   ├── api/       # Chiamate API
-│   │   └── store.js   # State management
-│   └── public/        # Asset statici
-├── backend/           # Backend FastAPI
+│   │   ├── features/            # Feature modules (partite, presenze, auth, ecc.)
+│   │   ├── core/                # Router, API client, auth guards
+│   │   ├── components/          # Componenti condivisi (es. TacticalBoard)
+│   │   └── store.js             # State management reattivo Vue
+│   ├── android/                 # Progetto nativo Android (Capacitor)
+│   └── public/                  # Asset statici
+├── backend/                     # Backend FastAPI + SQLAlchemy
 │   └── app/
-│       ├── routers/   # API routes
-│       ├── models.py  # Modelli database
-│       └── main.py    # Entry point
-├── migrations/        # Script migrazione database
-├── db_backup/         # Dump database per ambiente dev
+│       ├── routers/             # Endpoint modulari (21 router)
+│       ├── models/              # Modelli SQLAlchemy per dominio
+│       ├── schemas/             # Schemi Pydantic v2
+│       ├── core/                # Sicurezza, crittografia pgcrypto, naming
+│       ├── services/            # OAuth Google, email SMTP, inviti
+│       └── main.py              # Entry point FastAPI e migrazioni
+├── scripts/
+│   ├── build_android_apk.sh     # Compilazione APK Android (Docker + Gradle)
+│   └── backup_db.sh             # Backup automatico PostgreSQL
 ├── docker-compose.yml
-├── start_dev.sh       # Script avvio ambiente dev
-└── deploy.sh          # Script deploy produzione
+├── start_dev.sh                 # Avvio ambiente dev locale
+├── deploy_dev.sh                # Deploy su server DEV (192.168.178.133)
+└── deploy.sh                    # Deploy su server PROD (192.168.178.132)
 ```
 
-## Setup Locale
-
-### Requisiti
-
-- Node.js 18+
-- Python 3.14+ (per backend locale)
-- Docker (per il server)
+## Setup & Comandi
 
 ### Sviluppo Locale
-
 ```bash
-# Avvia l'ambiente dev (PostgreSQL + Backend + Frontend)
-./start_dev.sh
+./start_dev.sh                # Avvia PG (5433) + uvicorn (8000) + vite (5173) via tmux
 ```
-
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:8000
 
-### Deploy in Produzione
+### Deploy & Flusso Dev-First
+1. **Deploy su DEV** (`192.168.178.133`):
+   ```bash
+   ./deploy_dev.sh
+   ```
+   Verifica e test su: `http://192.168.178.133:3000`
+2. **Promozione su PROD** (`192.168.178.132`):
+   ```bash
+   ./deploy.sh
+   ```
+   Disponibile su: `https://thof.crickethouse.mywire.org`
 
+### Compilazione App Android (APK)
 ```bash
-./deploy.sh
+./scripts/build_android_apk.sh
 ```
+Compila l'APK nativo in `releases/apk/thof.apk` pronto per l'installazione su dispositivi mobili.
 
 ## Accesso
 
 - **Produzione**: https://thof.crickethouse.mywire.org
+- **Sviluppo (DEV)**: http://192.168.178.133:3000
 - **Locale**: http://localhost:5173
 
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v7.2.0**.
+La versione attuale è **v7.4.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
 
-### 🎉 Novità v7.1.0
+### 🎉 Novità v7.4.0
 
-- **Generazione Automatica Codice Fiscale**: nuovo pulsante "Genera CF" nella Scheda Giocatore che calcola il CF completo (16 caratteri) da nome, cognome, data di nascita, sesso e comune di nascita (lookup CUP su 8170 comuni), con nuovo campo "Sesso" (M/F) e migrazione DB
-- **Endpoint `POST /persone/genera-cf`**: calcolo lato server con algoritmo ufficiale (carattere di controllo modulo 26, giorno +40 per le femmine)
-- **Home - Certificati da Verificare**: la Panoramica mostra ora anche i giocatori senza certificato medico, non solo quelli scaduti
+- **App Mobile Android Nativa (`thof.apk`)**: Compilazione nativa con Capacitor 8 in ambiente containerizzato Docker, gestione transizione fluida con Google OAuth e intent URI, generazione file APK pronto per il download e l'installazione.
+- **Convocazioni - Box Giocatori Non Convocati**: Nuovo pannello interattivo per visualizzare in tempo reale tutti i ragazzi non convocati, con modalità a scelta tra "Tutto il weekend" e "Gara attiva", filtri per gruppo, ricerca rapida, indicatori di disponibilità/assenze/esclusioni e pulsante rapido `+ Convoca` per l'inserimento istantaneo in distinta.
+- **Convocazioni - Filtri per Gruppo e Dettagli Slot**: Selettore convocati con filtri a pillola per gruppo con conteggio dinamico; slot di gara arricchiti con badge ruolo, gruppo, presenze/assenze settimanali, convocazione in altre gare e stato del certificato medico.
+- **Convocazioni - PDF Compatto a 1 Singola Pagina**: Impaginazione ottimizzata per mantenere fino a 3 o 4 gare su una sola pagina A4 orizzontale, visualizzazione a colonna singola fino a 20 convocati per gara, colonna `#` ridotta a 4.5mm e nomi a larghezza piena senza a capo.
+- **Flusso di Lavoro Obbligatorio Dev-First**: Codifica del ciclo di sviluppo con passaggio e validazione preventiva obbligatoria su server DEV (`192.168.178.133`) prima di qualsiasi rilascio in produzione.
 
-### 🎉 Novità v7.2.0
+### 🎉 Novità v7.3.0
 
-- **Dati & Matricole - Campi Anagrafici Completi**: nuovi campi Sesso (M/F), Comune di Nascita, Residenza (comune) e Via (indirizzo) nel modale giocatore, con pulsante "Genera" per calcolare il CF direttamente dalla pagina dati
-- **Liste Tornei - Colonne Anagrafiche**: nuove colonne selezionabili (Sesso, Comune Nascita, Residenza, Via) nella tabella e nell'export PDF della lista torneo, per creare le liste con tutti i dati anagrafici
-- **GDPR affinato**: i dati sensibili invariati (mascherati) non bloccano più il salvataggio dei campi non sensibili; il CF generato può essere salvato senza sblocco
+- **Robustezza e Isolamento Multi-tenant**: Rafforzamento della sicurezza con verifica rigorosa di `societa_id` su tutte le tabelle ed endpoint backend.
+- **Indici DB e Ottimizzazioni Performance**: Creazione di indici mirati su PostgreSQL per accelerare il caricamento del registro presenze, anagrafiche e gare.
+- **Controlli Automatici Convocazioni**: Rilevamento automatico di certificati medici scaduti o assenti con alert visivi; rilevamento e avviso se un atleta è già convocato in un'altra gara dello stesso weekend; selezione multipla dei mister per gara con checkbox.
 
 ### Novità v7.0.0 (Major Release)
 
