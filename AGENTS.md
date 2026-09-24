@@ -12,10 +12,11 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 
 ## Commands
 ```bash
-./start_dev.sh        # Local dev: PG (5433) + uvicorn (8000) + vite (5173) via tmux
-./deploy.sh           # Prod (192.168.178.132): git fetch → build --no-cache → up
-./deploy_dev.sh       # Dev (192.168.178.133): tar+ssh sync → VITE_API_URL=/api build → up
-./release.sh minor "desc"   # Tag + commit + copy to releases/vX.X.X/
+./start_dev.sh                # Local dev: PG (5433) + uvicorn (8000) + vite (5173) via tmux
+./deploy.sh                   # Prod (192.168.178.132): git fetch → build --no-cache → up
+./deploy_dev.sh               # Dev (192.168.178.133): tar+ssh sync → VITE_API_URL=/api build → up
+./release.sh minor "desc"     # Tag + commit + copy to releases/vX.X.X/
+./scripts/build_android_apk.sh # Compila l'APK Android (Capacitor + Docker) in releases/apk/
 ```
 
 ## Entry Points
