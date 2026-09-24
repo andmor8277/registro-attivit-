@@ -157,7 +157,7 @@ onMounted(async () => {
 
   if (directToken && !code) {
     sessionStorage.setItem(INVITO_KEY, directToken)
-    window.location.href = '/auth/google/authorize?invito=' + directToken
+    googleAuthorize(directToken)
     return
   }
 

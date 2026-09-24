@@ -8,4 +8,4 @@ export const listaInviti = (societaId) => {
 }
 export const eliminaInvito = (id) => api.delete(`/inviti/${id}`)
 export const rinviaInvito = (id) => api.post(`/inviti/${id}/rinvia`)
-export const verificaInvito = (token) => axios.get((import.meta.env.VITE_API_URL || '/api') + '/inviti/verifica/' + token)
+export const verificaInvito = (token) => api.get('/inviti/verifica/' + token)
