@@ -2,7 +2,7 @@
   <div class="app-layout">
     <aside v-if="token && !hideTopbar" class="sidebar">
       <div class="brand">
-        <img v-if="societaAttiva?.logo" :src="`/uploads/${societaAttiva.logo}`" :alt="societaAttiva.nome" class="logo-img" />
+        <img v-if="societaAttiva?.logo" :src="getUploadUrl('/uploads/' + societaAttiva.logo)" :alt="societaAttiva.nome" class="logo-img" />
         <span v-else class="mark">{{ (societaAttiva?.nome_breve || societaAttiva?.nome || 'TH').slice(0, 2).toUpperCase() }}</span>
         <div class="brand-txt">
           <b>{{ societaAttiva?.nome_breve || societaAttiva?.nome || 'THOF' }}</b>
@@ -107,7 +107,7 @@
         </svg>
       </button>
       <div class="topbar-brand">
-        <img v-if="societaAttiva?.logo" :src="`/uploads/${societaAttiva.logo}`" :alt="societaAttiva.nome" class="logo-img" />
+        <img v-if="societaAttiva?.logo" :src="getUploadUrl('/uploads/' + societaAttiva.logo)" :alt="societaAttiva.nome" class="logo-img" />
         <span class="brand-text">{{ societaAttiva?.nome_breve || societaAttiva?.nome || 'Società' }}</span>
       </div>
       <div class="topbar-season" :class="{ empty: !stagioneCorrente }">
@@ -434,10 +434,13 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStore } from './store.js'
 import { useRouter, useRoute } from 'vue-router'
-import { getStagioni, changePassword, getInfortuni } from './api/index.js'
+import { getStagioni, changePassword, getInfortuni, getMe, getSocietaById, getUploadUrl } from './api/index.js'
 import { caricaUtente } from './core/router.js'
+import { App as CapApp } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
+import { Capacitor } from '@capacitor/core'
 
-const { token, utenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva, hideTopbar, categoriaAttiva } = useStore()
+const { token, setToken, utenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva, hideTopbar, categoriaAttiva } = useStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -535,7 +538,50 @@ async function loadStagione() {
   }
 }
 
+async function handleDeepUrl(urlStr) {
+  if (!urlStr || !urlStr.includes('it.thof.app://')) return
+  try {
+    await Browser.close()
+  } catch (e) {}
+  try {
+    const fakeUrl = new URL(urlStr.replace('it.thof.app://', 'https://localhost/'))
+    const authToken = fakeUrl.searchParams.get('token')
+    const authError = fakeUrl.searchParams.get('error')
+    const regToken = fakeUrl.searchParams.get('reg_token')
+
+    if (authToken) {
+      setToken(authToken)
+      const me = await getMe()
+      utenteAttivo.value = me.data
+      if (me.data.societa_id) {
+        try {
+          const sRes = await getSocietaById(me.data.societa_id)
+          setSocietaAttiva(sRes.data)
+        } catch (e) {
+          console.error('Errore caricamento società:', e)
+        }
+      }
+      router.push('/')
+    } else if (regToken) {
+      router.push({ path: '/registrazione', query: { reg_token: regToken } })
+    } else if (authError) {
+      alert(decodeURIComponent(authError))
+    }
+  } catch (e) {
+    console.error('Errore gestione deep link:', e)
+  }
+}
+
 onMounted(async () => {
+  if (Capacitor.isNativePlatform()) {
+    CapApp.addListener('appUrlOpen', (event) => {
+      if (event?.url) handleDeepUrl(event.url)
+    })
+    CapApp.getLaunchUrl().then((launchUrl) => {
+      if (launchUrl?.url) handleDeepUrl(launchUrl.url)
+    }).catch(() => {})
+  }
+
   if (token.value) {
     try {
       if (!utenteAttivo.value) await caricaUtente()

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
 from sqlalchemy.exc import IntegrityError
@@ -319,10 +319,10 @@ def verify_gdpr(codice_fiscale: Optional[str] = Query(None), categoria_id: Optio
 # ── Google OAuth ──
 
 @router.get("/google/authorize")
-def google_authorize(request: Request, invito: Optional[str] = Query(None), db: Session = Depends(get_db)):
+def google_authorize(request: Request, invito: Optional[str] = Query(None), mobile: Optional[bool] = Query(False), db: Session = Depends(get_db)):
     """Redirect to Google OAuth. Pass ?invito=token to link invitation."""
     # CSRF state: random, salvato in cookie httpOnly, verificato in callback
-    state = secrets.token_urlsafe(32)
+    state = ("mob_" + secrets.token_urlsafe(32)) if mobile else secrets.token_urlsafe(32)
     login_hint = None
     if invito:
         invito_row = get_invitation(db, invito)
@@ -349,6 +349,19 @@ def google_authorize(request: Request, invito: Optional[str] = Query(None), db: 
         path="/",
         max_age=600,
     )
+    if mobile:
+        resp.set_cookie(
+            key="oauth_mobile",
+            value="1",
+            httponly=True,
+            samesite="lax",
+            secure=secure,
+            path="/",
+            max_age=600,
+        )
+    else:
+        resp.delete_cookie("oauth_mobile", path="/")
+
     if invito:
         resp.set_cookie(
             key="oauth_invito",
@@ -367,7 +380,88 @@ def google_authorize(request: Request, invito: Optional[str] = Query(None), db: 
 def _clear_oauth_cookies(resp):
     resp.delete_cookie("oauth_state", path="/")
     resp.delete_cookie("oauth_invito", path="/")
+    resp.delete_cookie("oauth_mobile", path="/")
     return resp
+
+
+def _mobile_redirect_response(deep_link: str, title: str = "Accesso in corso...", message: str = "Reindirizzamento all'app THOF..."):
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+  <style>
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      box-sizing: border-box;
+      text-align: center;
+    }}
+    .card {{
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 32px 24px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }}
+    h2 {{ margin-top: 0; font-size: 1.4rem; color: #ffffff; }}
+    p {{ color: #94a3b8; font-size: 0.95rem; line-height: 1.5; }}
+    .btn {{
+      display: inline-block;
+      margin-top: 24px;
+      padding: 14px 28px;
+      background-color: #dc2626;
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 600;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: background-color 0.2s;
+    }}
+    .btn:active {{ background-color: #b91c1c; }}
+    .spinner {{
+      margin: 20px auto;
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(220, 38, 38, 0.3);
+      border-top-color: #dc2626;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }}
+    @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="spinner"></div>
+    <h2>{title}</h2>
+    <p>{message}</p>
+    <a id="btnApp" href="{deep_link}" class="btn">Apri l'app THOF</a>
+  </div>
+  <script>
+    (function() {{
+      var deepLink = "{deep_link}";
+      window.location.href = deepLink;
+      setTimeout(function() {{
+        window.location.href = deepLink;
+      }}, 500);
+    }})();
+  </script>
+</body>
+</html>"""
+    resp = HTMLResponse(content=html_content, status_code=200)
+    return _clear_oauth_cookies(resp)
 
 
 @router.get("/google/callback")
@@ -378,14 +472,28 @@ async def google_callback(
     db: Session = Depends(get_db)
 ):
     """Google OAuth callback. Exchanges code for user info."""
-    # Verifica CSRF: il parametro state deve corrispondere al cookie
     cookie_state = request.cookies.get("oauth_state")
+    is_mobile = (state and state.startswith("mob_")) or request.cookies.get("oauth_mobile") == "1"
+
+    # Verifica CSRF: il parametro state deve corrispondere al cookie
     if not cookie_state or not state or cookie_state != state:
         print("Google OAuth: callback state mismatch")
+        if is_mobile:
+            return _mobile_redirect_response(
+                "it.thof.app://auth?error=Sessione+non+valida+o+scaduta.+Riprova.",
+                title="Errore di autenticazione",
+                message="Sessione non valida o scaduta. Riprova ad accedere dall'app."
+            )
         raise HTTPException(status_code=400, detail="Richiesta non valida (state mismatch)")
 
     config = get_google_config()
     if not config:
+        if is_mobile:
+            return _mobile_redirect_response(
+                "it.thof.app://auth?error=Google+OAuth+non+configurato.",
+                title="Errore configurazione",
+                message="Google OAuth non configurato sul server."
+            )
         raise HTTPException(status_code=500, detail="Google OAuth non configurato")
 
     google_user = await exchange_google_code(code, config)
@@ -397,11 +505,23 @@ async def google_callback(
 
     if not google_email:
         print("Google OAuth: callback email non trovata")
+        if is_mobile:
+            return _mobile_redirect_response(
+                "it.thof.app://auth?error=Email+non+trovata.",
+                title="Errore",
+                message="Email non trovata nell'account Google."
+            )
         raise HTTPException(status_code=400, detail="Email non trovata")
 
     # Verifica email confirmata da Google
     if not email_verified:
         print("Google OAuth: callback email Google non verificata")
+        if is_mobile:
+            return _mobile_redirect_response(
+                "it.thof.app://auth?error=Email+Google+non+verificata.",
+                title="Errore",
+                message="L'indirizzo email Google non risulta verificato."
+            )
         raise HTTPException(status_code=400, detail="Email Google non verificata")
 
     email_domain = google_email.split("@")[-1] if "@" in google_email else "none"
@@ -414,15 +534,39 @@ async def google_callback(
         invito = get_invitation(db, invito_token)
         if not invito:
             print("Google OAuth: callback invito non trovato")
+            if is_mobile:
+                return _mobile_redirect_response(
+                    "it.thof.app://auth?error=Invito+non+trovato.",
+                    title="Errore",
+                    message="Invito non trovato o non valido."
+                )
             raise HTTPException(status_code=404, detail="Invito non trovato")
         if is_invitation_used(invito):
             print("Google OAuth: callback invito già utilizzato")
+            if is_mobile:
+                return _mobile_redirect_response(
+                    "it.thof.app://auth?error=Invito+gi%C3%A0+utilizzato.",
+                    title="Errore",
+                    message="Questo invito è già stato utilizzato."
+                )
             raise HTTPException(status_code=400, detail="Invito già utilizzato")
         if is_invitation_expired(invito):
             print("Google OAuth: callback invito scaduto")
+            if is_mobile:
+                return _mobile_redirect_response(
+                    "it.thof.app://auth?error=Invito+scaduto.",
+                    title="Errore",
+                    message="Questo invito è scaduto."
+                )
             raise HTTPException(status_code=400, detail="Invito scaduto")
         if invito.email.lower() != google_email:
             print("Google OAuth: callback email Google non corrispondente all'invito")
+            if is_mobile:
+                return _mobile_redirect_response(
+                    "it.thof.app://auth?error=L%27email+Google+non+corrisponde+a+quella+dell%27invito.",
+                    title="Errore",
+                    message="L'email Google non corrisponde a quella dell'invito."
+                )
             raise HTTPException(status_code=400, detail="L'email Google non corrisponde a quella dell'invito")
 
     # Match utente per google_sub prima, poi per email (backward compat)
@@ -436,6 +580,12 @@ async def google_callback(
         if invito:
             match_tipo = "google_sub" if google_sub and existing_user.google_sub == google_sub else "email"
             print(f"Google OAuth: callback utente già registrato (match={match_tipo}) con invito attivo")
+            if is_mobile:
+                return _mobile_redirect_response(
+                    "it.thof.app://auth?error=Utente+gi%C3%A0+registrato.+Contatta+un+amministratore.",
+                    title="Utente già registrato",
+                    message="Risulti già registrato nel sistema. Contatta un amministratore."
+                )
             raise HTTPException(status_code=400, detail="Utente già registrato. Contatta un amministratore.")
 
         if google_sub:
@@ -448,6 +598,13 @@ async def google_callback(
             "societa_id": existing_user.societa_id,
             "is_super_admin": existing_user.is_super_admin
         })
+        if is_mobile:
+            return _mobile_redirect_response(
+                f"it.thof.app://auth?token={token}",
+                title="Accesso completato",
+                message="Bentornato! Reindirizzamento all'applicazione THOF..."
+            )
+
         resp = JSONResponse({
             "access_token": token,
             "token_type": "bearer",
@@ -467,12 +624,24 @@ async def google_callback(
 
     if not invito:
         print("Google OAuth: callback senza invito")
+        if is_mobile:
+            return _mobile_redirect_response(
+                "it.thof.app://auth?error=Nessun+account+THOF+trovato+per+questa+email+Google.+Contatta+l%27amministratore.",
+                title="Account non trovato",
+                message="Nessun account THOF trovato per questa email Google. Contatta un amministratore per ricevere un invito."
+            )
         raise HTTPException(status_code=400, detail="Nessun invito trovato. Contatta un amministratore.")
 
     # Verify society exists
     societa = db.query(Societa).filter(Societa.id == invito.societa_id).first()
     if not societa:
         print("Google OAuth: callback società non trovata")
+        if is_mobile:
+            return _mobile_redirect_response(
+                "it.thof.app://auth?error=Societ%C3%A0+non+trovata.",
+                title="Errore",
+                message="Società associata all'invito non trovata."
+            )
         raise HTTPException(status_code=404, detail="Società non trovata")
 
     categoria_invito = db.query(Categoria).filter(Categoria.id == invito.categoria_id).first() if invito.categoria_id else None
@@ -487,6 +656,13 @@ async def google_callback(
     }, SECRET_KEY, algorithm=ALGORITHM)
 
     # Return info for registration form
+    if is_mobile:
+        return _mobile_redirect_response(
+            f"it.thof.app://auth?reg_token={reg_token}",
+            title="Completa Registrazione",
+            message="Invito verificato! Reindirizzamento all'app per completare la registrazione..."
+        )
+
     name_parts = google_name.split(" ", 1)
     resp = JSONResponse({
         "requires_registration": True,

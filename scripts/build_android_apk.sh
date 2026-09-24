@@ -7,7 +7,7 @@ cd "$ROOT_DIR"
 
 echo "=== 1. Compilazione Web App & Sync Capacitor ==="
 cd frontend
-npm run cap:sync
+VITE_API_URL=https://thof.crickethouse.mywire.org/api npm run cap:sync
 cd "$ROOT_DIR"
 
 echo "=== 2. Verifica Docker Builder ==="
