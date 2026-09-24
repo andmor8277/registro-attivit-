@@ -141,9 +141,29 @@
                 <li v-for="(pid, pos) in garaAttiva.giocatori" :key="'r-' + pos" :class="[pid ? (garaAttiva.nonPresenti && garaAttiva.nonPresenti.has(pid) ? 'off' : 'on') : 'empty']">
                   <template v-if="pid">
                     <span class="pnum">{{ pos + 1 }}</span>
-                    <span class="pname" @click="openPicker(activeGaraIdx, pos)" title="Cambia giocatore">{{ getPlayerLabel(pid) }}</span>
-                    <span class="prole">{{ getPlayerRuolo(pid) }}</span>
-                    <button class="toggle" aria-label="attiva/disattiva" @click="switchNonPresente(activeGaraIdx, pid)"></button>
+                    <div class="slot-info" @click="openPicker(activeGaraIdx, pos)" title="Clicca per cambiare giocatore">
+                      <div class="slot-name-row">
+                        <span class="pname">{{ getPlayerFullName(pid) }}</span>
+                        <span v-if="getPlayerRuolo(pid)" class="slot-badge badge-role">{{ getPlayerRuolo(pid) }}</span>
+                        <span v-if="getPlayerGruppo(pid)" class="slot-badge badge-group">{{ getPlayerGruppo(pid) }}</span>
+                        <span
+                          class="slot-badge badge-presenze"
+                          :class="'presenze-' + getPlayerWarningSeverity(pid, activeGaraIdx)"
+                          :title="getPlayerWarningTitle(pid, activeGaraIdx)"
+                        >{{ getPlayerWarning(pid, activeGaraIdx) }}</span>
+                        <span
+                          v-if="getConvocatoBadge(pid, activeGaraIdx)"
+                          class="slot-badge badge-convocato"
+                          :title="getConvocatoBadge(pid, activeGaraIdx).title"
+                        >{{ getConvocatoBadge(pid, activeGaraIdx).label }}</span>
+                        <span
+                          v-if="getPlayerCertificatoBadge(pid)"
+                          class="slot-badge badge-cert"
+                          :title="getPlayerCertificatoBadge(pid).title"
+                        >{{ getPlayerCertificatoBadge(pid).label }}</span>
+                      </div>
+                    </div>
+                    <button class="toggle" aria-label="attiva/disattiva" @click="switchNonPresente(activeGaraIdx, pid)" title="Segna presente o assente in gara"></button>
                     <button class="slot-x" title="Rimuovi" @click.stop="rimuoviGiocatore(activeGaraIdx, pos)">&times;</button>
                   </template>
                   <template v-else>
@@ -205,19 +225,54 @@
               </div>
               <div class="picker-search">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input v-model="pickerSearch" placeholder="Cerca giocatore..." autofocus />
+                <input v-model="pickerSearch" placeholder="Cerca giocatore per nome, ruolo o gruppo..." autofocus />
+                <button v-if="pickerSearch" class="picker-clear-btn" @click="pickerSearch = ''" title="Cancella ricerca">&times;</button>
+              </div>
+              <div class="picker-group-pills" v-if="gruppiDisponibili.length > 0">
+                <button
+                  type="button"
+                  class="pill-btn"
+                  :class="{ active: pickerGruppoFilter === '' }"
+                  @click="pickerGruppoFilter = ''"
+                >
+                  Tutti ({{ countPerGruppo('') }})
+                </button>
+                <button
+                  v-for="g in gruppiDisponibili"
+                  :key="g"
+                  type="button"
+                  class="pill-btn"
+                  :class="{ active: pickerGruppoFilter === g }"
+                  @click="pickerGruppoFilter = g"
+                >
+                  {{ g }} ({{ countPerGruppo(g) }})
+                </button>
               </div>
               <div class="picker-list">
                 <div class="picker-empty" v-if="filteredPickerPlayers.length === 0">Nessun giocatore trovato</div>
                 <div v-for="p in filteredPickerPlayers" :key="p.id" class="picker-item" :class="{ selected: p.id === garaAttiva.giocatori[pickerPos] }" @click="selectPlayer(activeGaraIdx, pickerPos, p.id)">
-                  <div class="picker-avatar">{{ p.cognome.charAt(0) }}{{ p.nome.charAt(0) }}</div>
+                  <div class="picker-avatar">{{ (p.cognome || '').charAt(0) }}{{ (p.nome || '').charAt(0) }}</div>
                   <div class="picker-info">
                     <div class="picker-name-row">
-                      <span class="picker-name">{{ p.cognome }}</span>
-                      <span v-if="getPlayerWarning(p)" class="picker-warning" :title="getPlayerWarningTitle(p)">{{ getPlayerWarning(p) }}</span>
-                      <span v-if="getConvocatoBadge(p)" class="picker-warning picker-convocato" :title="getConvocatoBadge(p).title">{{ getConvocatoBadge(p).label }}</span>
+                      <span class="picker-name">{{ p.cognome }} {{ p.nome }}</span>
+                      <span v-if="p.ruolo" class="slot-badge badge-role">{{ p.ruolo.toUpperCase() }}</span>
+                      <span v-if="p.gruppo_nome" class="slot-badge badge-group">{{ p.gruppo_nome }}</span>
+                      <span
+                        class="slot-badge badge-presenze"
+                        :class="'presenze-' + getPlayerWarningSeverity(p, pickerGara)"
+                        :title="getPlayerWarningTitle(p, pickerGara)"
+                      >{{ getPlayerWarning(p, pickerGara) }}</span>
+                      <span
+                        v-if="getConvocatoBadge(p, pickerGara)"
+                        class="slot-badge badge-convocato"
+                        :title="getConvocatoBadge(p, pickerGara).title"
+                      >{{ getConvocatoBadge(p, pickerGara).label }}</span>
+                      <span
+                        v-if="getPlayerCertificatoBadge(p)"
+                        class="slot-badge badge-cert"
+                        :title="getPlayerCertificatoBadge(p).title"
+                      >{{ getPlayerCertificatoBadge(p).label }}</span>
                     </div>
-                    <span class="picker-surname">{{ p.nome }}</span>
                   </div>
                   <div class="picker-check" v-if="p.id === garaAttiva.giocatori[pickerPos]">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
@@ -296,6 +351,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../../store.js'
 import {
   getPersone,
+  getGruppi,
   getRegistroMese,
   getPartite,
   getCategoriaResponsabili,
@@ -324,6 +380,7 @@ const storico = ref([])
 const convocazioneId = ref(null)
 const convocazione = ref(null)
 const persone = ref([])
+const gruppiList = ref([])
 const responsabili = ref([])
 const numPartite = ref(1)
 const registro = ref([])
@@ -332,6 +389,7 @@ const pickerOpen = ref(false)
 const pickerGara = ref(null)
 const pickerPos = ref(null)
 const pickerSearch = ref('')
+const pickerGruppoFilter = ref('')
 const activeGaraIdx = ref(0)
 const scoutingModal = ref({ open: false, loading: false, titolo: '', data_osservazione: '', squadra_avversaria: '', note: '', giocatori: [] })
 
@@ -352,16 +410,73 @@ const convocazioniStorico = computed(() =>
     .sort((a, b) => b.data_inizio.localeCompare(a.data_inizio))
 )
 
+async function loadGruppi() {
+  try {
+    const res = await getGruppi(categoriaId)
+    gruppiList.value = res.data || []
+    const idToGruppo = {}
+    gruppiList.value.forEach(g => { idToGruppo[g.id] = g })
+    persone.value.forEach(p => {
+      const g = idToGruppo[p.gruppo_id]
+      p.gruppo_nome = g ? g.nome : (p.gruppo_id ? `Gruppo ${p.gruppo_id}` : '')
+      p.gruppo_is_misto = g ? (g.is_misto || false) : false
+    })
+  } catch (e) {
+    console.warn('Errore caricamento gruppi per convocazioni', e)
+    gruppiList.value = []
+  }
+}
+
+const gruppiDisponibili = computed(() => {
+  const nomi = new Set()
+  persone.value.forEach(p => {
+    if (p.gruppo_nome) nomi.add(p.gruppo_nome)
+  })
+  gruppiList.value.forEach(g => {
+    if (g.nome) nomi.add(g.nome)
+  })
+  const list = Array.from(nomi).filter(Boolean).sort()
+  const hasSenzaGruppo = persone.value.some(p => !p.gruppo_nome)
+  if (hasSenzaGruppo && list.length > 0) {
+    list.push('Senza gruppo')
+  }
+  return list
+})
+
+function countPerGruppo(gruppo) {
+  const gara = pickerGara.value !== null ? convocazione.value?.gare?.[pickerGara.value] : null
+  const currentId = gara && pickerPos.value !== null ? gara.giocatori[pickerPos.value] : null
+  const assignedInGara = new Set((gara?.giocatori || []).filter(Boolean))
+  const pool = persone.value.filter(p => p.id === currentId || !assignedInGara.has(p.id))
+  if (!gruppo) return pool.length
+  if (gruppo === 'Senza gruppo') return pool.filter(p => !p.gruppo_nome || p.gruppo_nome === 'Senza gruppo').length
+  return pool.filter(p => p.gruppo_nome === gruppo).length
+}
+
 const filteredPickerPlayers = computed(() => {
   const gara = pickerGara.value !== null ? convocazione.value?.gare?.[pickerGara.value] : null
   const currentId = gara && pickerPos.value !== null ? gara.giocatori[pickerPos.value] : null
   const assignedInGara = new Set((gara?.giocatori || []).filter(Boolean))
-  const available = persone.value
+  let available = persone.value
     .filter(p => p.id === currentId || !assignedInGara.has(p.id))
-    .sort((a, b) => a.cognome.localeCompare(b.cognome))
+    .sort((a, b) => (a.cognome || '').localeCompare(b.cognome || ''))
+
+  if (pickerGruppoFilter.value) {
+    if (pickerGruppoFilter.value === 'Senza gruppo') {
+      available = available.filter(p => !p.gruppo_nome || p.gruppo_nome === 'Senza gruppo')
+    } else {
+      available = available.filter(p => p.gruppo_nome === pickerGruppoFilter.value)
+    }
+  }
+
   if (!pickerSearch.value) return available
-  const s = pickerSearch.value.toLowerCase()
-  return available.filter(p => p.cognome.toLowerCase().includes(s) || p.nome.toLowerCase().includes(s))
+  const s = pickerSearch.value.toLowerCase().trim()
+  return available.filter(p =>
+    (p.cognome && p.cognome.toLowerCase().includes(s)) ||
+    (p.nome && p.nome.toLowerCase().includes(s)) ||
+    (p.ruolo && p.ruolo.toLowerCase().includes(s)) ||
+    (p.gruppo_nome && p.gruppo_nome.toLowerCase().includes(s))
+  )
 })
 
 const giocatoriNonInRegola = computed(() =>
@@ -384,54 +499,94 @@ function formatLocalDate(date) {
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
 }
 
-function getPickerReferenceDate() {
-  const gara = pickerGara.value !== null ? convocazione.value?.gare?.[pickerGara.value] : null
+function getGaraReferenceDate(garaIdx = null) {
+  const idx = garaIdx !== null ? garaIdx : (pickerGara.value !== null ? pickerGara.value : activeGaraIdx.value)
+  const gara = convocazione.value?.gare?.[idx]
   return gara?.data || convocazione.value?.data_inizio || null
 }
 
-const pickerStats = computed(() => {
-  const referenceDate = getPickerReferenceDate()
-  const range = getWeekDateRange(referenceDate)
-  if (!range) return {}
-  const stats = {}
+function getPlayerStatsForGara(playerId, garaIdx = null) {
+  const refDate = getGaraReferenceDate(garaIdx)
+  const range = getWeekDateRange(refDate)
+  if (!range) return { presenze: 0, assenze: 0, hasData: false }
+  let presenze = 0
+  let assenze = 0
+  let hasData = false
   registro.value
-    .filter(r => r.data >= range.monday && r.data <= range.friday)
+    .filter(r => r.persona_id === playerId && r.data >= range.monday && r.data <= range.friday)
     .forEach(r => {
-      if (!stats[r.persona_id]) stats[r.persona_id] = { presenze: 0, assenze: 0 }
-      if (['X', 'P', 'R'].includes(r.codice)) stats[r.persona_id].presenze += 1
-      if (['I', 'AI', 'AG'].includes(r.codice)) stats[r.persona_id].assenze += 1
+      hasData = true
+      if (['X', 'P', 'R'].includes(r.codice)) presenze += 1
+      if (['I', 'AI', 'AG'].includes(r.codice)) assenze += 1
     })
-  return stats
-})
+  return { presenze, assenze, hasData }
+}
 
-function getPlayerWarning(player) {
-  const referenceDate = getPickerReferenceDate()
-  if (!referenceDate) return ''
-  const stats = pickerStats.value[player.id] || { presenze: 0, assenze: 0 }
-  if (stats.presenze >= 2 && stats.assenze < 2) return ''
+function getPlayerWarning(player, garaIdx = null) {
+  const pId = typeof player === 'object' ? player?.id : player
+  if (!pId) return ''
+  const stats = getPlayerStatsForGara(pId, garaIdx)
   return `${stats.presenze}P · ${stats.assenze}A`
 }
 
-function getPlayerWarningTitle(player) {
-  const stats = pickerStats.value[player.id] || { presenze: 0, assenze: 0 }
+function getPlayerWarningTitle(player, garaIdx = null) {
+  const pId = typeof player === 'object' ? player?.id : player
+  if (!pId) return ''
+  const stats = getPlayerStatsForGara(pId, garaIdx)
   return `Settimana precedente: ${stats.presenze} presenze, ${stats.assenze} assenze`
 }
 
-function getOtherGareForPlayer(playerId) {
-  if (pickerGara.value == null || !convocazione.value?.gare) return []
+function getPlayerWarningSeverity(player, garaIdx = null) {
+  const pId = typeof player === 'object' ? player?.id : player
+  if (!pId) return 'normal'
+  const stats = getPlayerStatsForGara(pId, garaIdx)
+  if (stats.assenze >= 2) return 'danger'
+  if (stats.presenze >= 2) return 'good'
+  return 'warning'
+}
+
+function getOtherGareForPlayer(playerId, currentGaraIdx = null) {
+  const curIdx = currentGaraIdx !== null ? currentGaraIdx : (pickerGara.value !== null ? pickerGara.value : activeGaraIdx.value)
+  if (!convocazione.value?.gare) return []
   return convocazione.value.gare
     .map((g, idx) => ({ g, idx }))
-    .filter(({ g, idx }) => idx !== pickerGara.value && (g.giocatori || []).includes(playerId))
+    .filter(({ g, idx }) => idx !== curIdx && (g.giocatori || []).includes(playerId))
     .map(({ idx }) => idx + 1)
 }
 
-function getConvocatoBadge(player) {
-  const gare = getOtherGareForPlayer(player.id)
+function getConvocatoBadge(player, currentGaraIdx = null) {
+  const pId = typeof player === 'object' ? player?.id : player
+  if (!pId) return null
+  const gare = getOtherGareForPlayer(pId, currentGaraIdx)
   if (!gare.length) return null
   return {
     label: `G${gare.join('·G')}`,
     title: `Già convocato in: ${gare.map(n => 'Gara ' + n).join(', ')}`
   }
+}
+
+function getPlayerFullName(playerId) {
+  const p = typeof playerId === 'object' ? playerId : persone.value.find(x => x.id === playerId)
+  if (!p) return ''
+  return `${p.cognome} ${p.nome}`.trim()
+}
+
+function getPlayerGruppo(playerId) {
+  const p = typeof playerId === 'object' ? playerId : persone.value.find(x => x.id === playerId)
+  return p?.gruppo_nome || ''
+}
+
+function getPlayerCertificatoBadge(player) {
+  const p = typeof player === 'object' ? player : persone.value.find(x => x.id === player)
+  if (!p) return null
+  const stato = statoCertificato(p)
+  if (stato === 'cert_scaduto') {
+    return { label: 'Cert. Scaduto', title: 'Certificato medico scaduto per la data gara' }
+  }
+  if (stato === 'senza_cert') {
+    return { label: 'Senza Cert.', title: 'Certificato medico non presente' }
+  }
+  return null
 }
 
 async function caricaRegistroMese(anno, mese) {
@@ -1447,6 +1602,7 @@ onMounted(async () => {
     const res = await getPersone(categoriaId)
     const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : [])
     persone.value = list.sort((a, b) => (a.cognome || '').localeCompare(b.cognome || ''))
+    await loadGruppi()
     const regRes = await getRegistroMese(categoriaId, annoCorrente, meseCorrente)
     registro.value = regRes?.data || []
     registroMesiCaricate.add(`${annoCorrente}-${String(meseCorrente).padStart(2, '0')}`)
@@ -1882,8 +2038,68 @@ onMounted(async () => {
 }
 li.on .pnum { background: #dc2626; color: #fff; }
 
-.pname { font-weight: 600; font-size: 0.89rem; cursor: pointer; }
-.pname:hover { text-decoration: underline; text-decoration-color: var(--color-text-muted); }
+.pname { font-weight: 700; font-size: 0.88rem; color: var(--color-text); cursor: pointer; }
+.slot-info { flex: 1; min-width: 0; cursor: pointer; }
+.slot-info:hover .pname { text-decoration: underline; text-decoration-color: var(--color-text-muted); color: #dc2626; }
+.slot-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  min-width: 0;
+}
+
+.slot-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+.slot-badge.badge-role {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.58rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.slot-badge.badge-group {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: #047857;
+}
+.slot-badge.badge-presenze.presenze-good {
+  background: rgba(107, 114, 128, 0.1);
+  border: 1px solid rgba(107, 114, 128, 0.25);
+  color: var(--color-text-secondary);
+}
+.slot-badge.badge-presenze.presenze-warning {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  color: #b45309;
+}
+.slot-badge.badge-presenze.presenze-danger {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  color: #b91c1c;
+}
+.slot-badge.badge-convocato {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: #1d4ed8;
+}
+.slot-badge.badge-cert {
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  color: #dc2626;
+}
+
 .prole {
   font-family: var(--font-mono, monospace);
   font-size: 0.6rem;
@@ -2080,8 +2296,9 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
   backdrop-filter: blur(6px);
 }
 .picker-modal {
-  width: 340px;
-  max-height: 80vh;
+  width: 92vw;
+  max-width: 500px;
+  max-height: 85vh;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 16px;
@@ -2146,6 +2363,57 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
   font-family: inherit;
 }
 .picker-search input::placeholder { color: var(--color-text-muted); }
+.picker-clear-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.picker-clear-btn:hover { color: var(--color-text); }
+
+.picker-group-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+.picker-group-pills::-webkit-scrollbar {
+  height: 3px;
+}
+.picker-group-pills::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+.pill-btn {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.pill-btn:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+.pill-btn.active {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
 .picker-list { flex: 1; overflow-y: auto; padding: 0.5rem; }
 .picker-empty { text-align: center; padding: 2rem 1rem; color: var(--color-text-muted); font-size: 0.8rem; }
 .picker-item {
@@ -2175,8 +2443,14 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
 }
 .picker-item.selected .picker-avatar { background: #dc2626; color: #fff; }
 .picker-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.picker-name-row { display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
-.picker-name { font-size: 0.82rem; font-weight: 700; color: var(--color-text); }
+.picker-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  min-width: 0;
+}
+.picker-name { font-size: 0.84rem; font-weight: 700; color: var(--color-text); }
 .picker-warning {
   flex-shrink: 0;
   padding: 0.05rem 0.3rem;
@@ -2378,7 +2652,7 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
   .roster li { padding: 8px 10px; gap: 8px; }
   .pname { font-size: 0.8rem; }
   .slot-x { opacity: 1; }
-  .picker-modal { width: 95vw; max-width: 340px; }
+  .picker-modal { width: 95vw; max-width: 440px; }
   .info-dl li { padding: 8px 12px; }
   .scout-row { grid-template-columns: 1fr; }
   .scout-player-row { grid-template-columns: 1fr 1fr; }
