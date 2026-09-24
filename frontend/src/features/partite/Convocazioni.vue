@@ -1098,25 +1098,30 @@ async function esportaPDF() {
     function chooseSinglePlayerLayout(rowsCount, startY) {
       const available = Math.max(20, pageHeight - bottomMargin - startY)
       const presets = [
-        { fontSize: 9, cellPadding: 2.0, rowHeight: 7.5 },
-        { fontSize: 8.5, cellPadding: 1.6, rowHeight: 6.8 },
-        { fontSize: 8, cellPadding: 1.3, rowHeight: 6.2 },
-        { fontSize: 7.5, cellPadding: 1.0, rowHeight: 5.6 },
-        { fontSize: 7, cellPadding: 0.7, rowHeight: 5.0 },
-        { fontSize: 6.5, cellPadding: 0.5, rowHeight: 4.5 }
+        { fontSize: 8.5, cellPadding: 1.5, rowHeight: 6.5 },
+        { fontSize: 8, cellPadding: 1.2, rowHeight: 5.8 },
+        { fontSize: 7.5, cellPadding: 1.0, rowHeight: 5.2 },
+        { fontSize: 7, cellPadding: 0.7, rowHeight: 4.6 },
+        { fontSize: 6.5, cellPadding: 0.5, rowHeight: 4.2 }
       ]
       return presets.find(p => (rowsCount + 1) * p.rowHeight <= available) || presets[presets.length - 1]
     }
 
     function chooseMultiPlayerLayout(rowsCount, width, startY) {
       const available = Math.max(20, pageHeight - bottomMargin - startY)
-      const maxCols = width >= 120 ? 3 : 2
+      const maxCols = width >= 140 ? 3 : 2
       const presets = [
-        { columns: 2, fontSize: 8, cellPadding: 1.0, rowHeight: 5.8 },
-        { columns: 2, fontSize: 7.5, cellPadding: 0.8, rowHeight: 5.2 },
-        { columns: 2, fontSize: 7, cellPadding: 0.6, rowHeight: 4.8 },
-        { columns: maxCols, fontSize: 6.5, cellPadding: 0.5, rowHeight: 4.5 }
+        { columns: 2, fontSize: 7.5, cellPadding: 0.8, rowHeight: 4.8 },
+        { columns: 2, fontSize: 7, cellPadding: 0.6, rowHeight: 4.5 },
+        { columns: 2, fontSize: 6.5, cellPadding: 0.5, rowHeight: 4.2 },
+        { columns: maxCols, fontSize: 6.5, cellPadding: 0.5, rowHeight: 4.2 }
       ]
+      if (width < 75) {
+        presets.forEach(p => {
+          p.fontSize = Math.min(p.fontSize, 6.8)
+          p.cellPadding = Math.min(p.cellPadding, 0.5)
+        })
+      }
       for (const preset of presets) {
         const rowsPerCol = Math.ceil(rowsCount / preset.columns)
         if ((rowsPerCol + 1) * preset.rowHeight <= available) return preset
@@ -1126,27 +1131,25 @@ async function esportaPDF() {
 
     function renderPlayerTable(gara, x, width, startY, forceSingle = false) {
       const rows = buildRows(gara)
-      const available = Math.max(20, pageHeight - bottomMargin - startY)
-      const fitsSingle = (rows.length + 1) * 4.5 <= available
 
-      if (forceSingle || fitsSingle || width < 80) {
+      if (forceSingle || rows.length <= 7 || width < 50) {
         const layout = chooseSinglePlayerLayout(rows.length, startY)
-        const fontSize = width < 75 ? Math.min(layout.fontSize, 8) : layout.fontSize
-        const cellPadding = width < 75 ? Math.min(layout.cellPadding, 1.2) : layout.cellPadding
-        const numWidth = 5.5
+        const fontSize = width < 75 ? Math.min(layout.fontSize, 7.5) : layout.fontSize
+        const cellPadding = width < 75 ? Math.min(layout.cellPadding, 1.0) : layout.cellPadding
+        const numWidth = width < 75 ? 4.0 : 4.5
 
         doc.autoTable({
           startY,
           margin: { left: x, right: pageWidth - (x + width), bottom: bottomMargin },
           tableWidth: width,
-          head: [['N°', 'Cognome Nome']],
+          head: [['#', 'Cognome Nome']],
           body: rows.length ? rows : [['—', 'Nessun giocatore selezionato']],
           theme: 'grid',
           headStyles: { fillColor: dark, textColor: [255, 255, 255], font: 'helvetica', fontSize, cellPadding },
           styles: { font: 'helvetica', fontSize, cellPadding, lineColor: line, lineWidth: 0.15, textColor: dark },
           columnStyles: {
-            0: { cellWidth: numWidth, halign: 'center', fontStyle: 'bold', textColor: gray, cellPadding: { top: cellPadding, bottom: cellPadding, left: 0.3, right: 0.3 } },
-            1: { cellWidth: 'auto' }
+            0: { cellWidth: numWidth, halign: 'center', fontStyle: 'bold', textColor: gray, cellPadding: { top: cellPadding, bottom: cellPadding, left: 0.2, right: 0.2 } },
+            1: { cellWidth: 'auto', cellPadding: { top: cellPadding, bottom: cellPadding, left: 0.8, right: 0.8 } }
           },
           pageBreak: 'avoid'
         })
@@ -1166,14 +1169,14 @@ async function esportaPDF() {
         })
         return line
       })
-      const head = Array.from({ length: colCount }, () => ['N°', 'Cognome Nome']).flat()
+      const head = Array.from({ length: colCount }, () => ['#', 'Cognome Nome']).flat()
       const groupWidth = width / colCount
-      const numWidth = 5
+      const numWidth = width < 75 ? 4.0 : 4.5
       const nameWidth = groupWidth - numWidth
       const columnStyles = {}
       for (let c = 0; c < colCount; c++) {
-        columnStyles[c * 2] = { cellWidth: numWidth, halign: 'center', fontStyle: 'bold', textColor: gray, cellPadding: { top: multiLayout.cellPadding, bottom: multiLayout.cellPadding, left: 0.3, right: 0.3 } }
-        columnStyles[c * 2 + 1] = { cellWidth: nameWidth }
+        columnStyles[c * 2] = { cellWidth: numWidth, halign: 'center', fontStyle: 'bold', textColor: gray, cellPadding: { top: multiLayout.cellPadding, bottom: multiLayout.cellPadding, left: 0.2, right: 0.2 } }
+        columnStyles[c * 2 + 1] = { cellWidth: nameWidth, cellPadding: { top: multiLayout.cellPadding, bottom: multiLayout.cellPadding, left: 0.8, right: 0.8 } }
       }
 
       doc.autoTable({
