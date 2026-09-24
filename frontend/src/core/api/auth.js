@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { api } from './client'
+import { api, getApiBaseUrl } from './client'
 
 export const login = (username, password) => {
   const form = new URLSearchParams()
@@ -21,10 +21,9 @@ export const assegnaCategorie = (uid, categoria_ids) => api.put(`/auth/utenti/${
 
 export const googleAuthorize = (invitoToken) => {
   const params = invitoToken ? `?invito=${invitoToken}` : ''
-  window.location.href = (import.meta.env.VITE_API_URL || '/api') + '/auth/google/authorize' + params
+  window.location.href = getApiBaseUrl() + '/auth/google/authorize' + params
 }
 export const googleCallback = (code, state) => {
-  const base = import.meta.env.VITE_API_URL || '/api'
-  return axios.get(`${base}/auth/google/callback`, { params: { code, state } })
+  return axios.get(`${getApiBaseUrl()}/auth/google/callback`, { params: { code, state } })
 }
 export const registraUtenteGoogle = (data) => api.post('/auth/google/registra', data)
