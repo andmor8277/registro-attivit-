@@ -65,6 +65,23 @@ registro_presenze/
 ```
 Compila l'APK nativo in `releases/apk/thof.apk` pronto per l'installazione su dispositivi mobili.
 
+### Backup & Disaster Recovery Offsite (GitHub Privato)
+Il sistema include una procedura automatizzata di backup remoto cifrato su repository privato GitHub:
+- **Esecuzione backup immediato**:
+  ```bash
+  ./scripts/backup_offsite_github.sh
+  ```
+  Esegue il dump PostgreSQL, archivia la cartella `/app/uploads` (loghi, sponsor, allegati), cifra entrambi i file con **OpenSSL AES-256-CBC** (usando la chiave del server) e carica gli archivi cifrati su GitHub (`andmor8277/thof-backups`), applicando la rotazione automatica (ultimi 14 giorni).
+- **Disaster Recovery / Ripristino**:
+  ```bash
+  ./scripts/restore_offsite_github.sh               # Ripristina l'ultimo backup disponibile
+  ./scripts/restore_offsite_github.sh backup-TAG    # Ripristina un backup specifico
+  ```
+- **Attivazione Backup Automatico Notturno (ore 03:00)**:
+  ```bash
+  ./scripts/setup_backup_cron.sh
+  ```
+
 ## Accesso
 
 - **Produzione**: https://thof.crickethouse.mywire.org

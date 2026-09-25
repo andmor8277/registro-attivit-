@@ -12,11 +12,14 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 
 ## Commands
 ```bash
-./start_dev.sh                # Local dev: PG (5433) + uvicorn (8000) + vite (5173) via tmux
-./deploy_dev.sh               # Dev (192.168.178.133): sync + build + test su DEV prima di prod
-./deploy.sh                   # Prod (192.168.178.132): SOLO dopo aver testato su dev: git fetch → build --no-cache → up
-./release.sh minor "desc"     # Tag + commit + copy to releases/vX.X.X/
-./scripts/build_android_apk.sh # Compila l'APK Android (Capacitor + Docker) in releases/apk/
+./start_dev.sh                     # Local dev: PG (5433) + uvicorn (8000) + vite (5173) via tmux
+./deploy_dev.sh                    # Dev (192.168.178.133): sync + build + test su DEV prima di prod
+./deploy.sh                        # Prod (192.168.178.132): SOLO dopo aver testato su dev: git fetch → build --no-cache → up
+./release.sh minor "desc"          # Tag + commit + copy to releases/vX.X.X/
+./scripts/build_android_apk.sh      # Compila l'APK Android (Capacitor + Docker) in releases/apk/
+./scripts/backup_offsite_github.sh  # Backup offsite cifrato AES-256 (DB + uploads) su GitHub privato
+./scripts/restore_offsite_github.sh # Disaster Recovery / ripristino da backup GitHub
+./scripts/setup_backup_cron.sh      # Installa cron job automatico notturno (ore 03:00)
 ```
 
 ## Flusso di Lavoro Obbligatorio (Dev-First)
