@@ -467,6 +467,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useStore } from '../../store.js'
 import { getPersone, getRegistroMese, getConvocazioni, getConvocazione, getAllCategorie, getLocalDateStr, getUploadUrl } from '../../api/index.js'
 
 const router = useRouter()
