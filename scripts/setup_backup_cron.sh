@@ -20,8 +20,8 @@ chmod +x "${BACKUP_SCRIPT}"
 
 CRON_CMD="${CRON_SCHEDULE} ${BACKUP_SCRIPT} >> ${LOG_FILE} 2>&1"
 
-# Verifica se il cron job è già presente
-CURRENT_CRON=$(crontab -l 2>/dev/null || true)
+# Rimuove il vecchio backup_db.sh non cifrato se presente
+CURRENT_CRON=$(crontab -l 2>/dev/null | grep -v 'backup_db.sh' || true)
 
 if echo "${CURRENT_CRON}" | grep -F "${BACKUP_SCRIPT}" >/dev/null 2>&1; then
     echo "ℹ️ Il cron job di backup è già presente nel crontab:"
