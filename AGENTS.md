@@ -29,6 +29,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 4. **Commit & Push su Git**: dopo esito positivo dei test.
 5. **Deploy su PROD** (`./deploy.sh`): promozione in produzione su `https://thof.crickethouse.mywire.org`.
 ⚠️ **REGOLA ASSOLUTA**: MAI rilasciare modifiche direttamente su Prod senza averle prima caricate e verificate su Dev!
+⚠️ **REGOLA DATABASE DEV**: NON sincronizzare o sovrascrivere MAI il database di DEV con i dati di PROD. L'ambiente DEV deve mantenere il proprio database indipendente. Il deploy su DEV (`./deploy_dev.sh`) aggiorna solo il codice sorgente ed esegue le migrazioni DDL senza toccare i dati.
 
 
 ## Entry Points
