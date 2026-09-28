@@ -22,7 +22,7 @@ from typing import Optional
 
 router = APIRouter(prefix="/persone", tags=["persone"])
 
-SENSITIVE_FIELDS = frozenset(['codice_fiscale', 'tel_papa', 'tel_mamma', 'anamnesi',
+SENSITIVE_FIELDS = frozenset(['codice_fiscale', 'tel_papa', 'tel_mamma', 'tel_ragazzo', 'tel_nonni', 'anamnesi',
                                'prof_papa', 'prof_mamma', 'nome_papa', 'nome_mamma', 'comune_nato',
                                'totale_da_pagare', 'rata_iscrizione', 'rata1', 'rata2', 'rata3', 'rata4', 'rata_saldo'])
 
@@ -49,7 +49,10 @@ def get_persone(request: Request, categoria_id: Optional[int] = None, db: Sessio
                     p.email1, p.email2, p.prof_papa, p.prof_mamma, p.nome_papa, p.nome_mamma, p.comune_nato,
                     p.anamnesi, p.taglia, p.note,
                     p.totale_da_pagare, p.rata_iscrizione, p.rata1, p.rata2, p.rata3, p.rata4, p.rata_saldo,
-                    p.pagamenti_in_regola
+                    p.pagamenti_in_regola,
+                    p.tel_ragazzo, p.tel_nonni, p.societa_provenienza, p.scadenza_certificato_2,
+                    p.ricevuta_preiscrizione, p.ricevuta_iscrizione, p.ricevuta_saldo,
+                    p.safeguarding_accettato, p.regole_accettate, p.dotazione_materiale
                     {cat_label}
             FROM persone p
             LEFT JOIN categorie pc ON p.categoria_id = pc.id
@@ -116,6 +119,10 @@ def create_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db), curr
         data["tel_papa"] = safe_encrypt(db, data["tel_papa"])
     if data.get("tel_mamma"):
         data["tel_mamma"] = safe_encrypt(db, data["tel_mamma"])
+    if data.get("tel_ragazzo"):
+        data["tel_ragazzo"] = safe_encrypt(db, data["tel_ragazzo"])
+    if data.get("tel_nonni"):
+        data["tel_nonni"] = safe_encrypt(db, data["tel_nonni"])
 
     persona = models.Persona(**data)
     db.add(persona); db.commit(); db.refresh(persona)
@@ -139,6 +146,10 @@ def update_persona(persona_id: int, p: schemas.PersonaCreate, db: Session = Depe
         data["tel_papa"] = safe_encrypt(db, data["tel_papa"])
     if data.get("tel_mamma"):
         data["tel_mamma"] = safe_encrypt(db, data["tel_mamma"])
+    if data.get("tel_ragazzo"):
+        data["tel_ragazzo"] = safe_encrypt(db, data["tel_ragazzo"])
+    if data.get("tel_nonni"):
+        data["tel_nonni"] = safe_encrypt(db, data["tel_nonni"])
 
     for key, value in data.items():
         setattr(persona, key, value)
@@ -209,8 +220,9 @@ def genera_cf(data: dict, db: Session = Depends(get_db), current_user: Utente = 
 
 def decrypt_row(db: Session, row) -> dict:
     r = dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
-    for field in ['codice_fiscale', 'tel_papa', 'tel_mamma']:
-        r[field] = safe_decrypt(db, r.get(field))
+    for field in ['codice_fiscale', 'tel_papa', 'tel_mamma', 'tel_ragazzo', 'tel_nonni']:
+        if field in r and r[field]:
+            r[field] = safe_decrypt(db, r.get(field))
     return r
 
 @router.get("/public/categoria/{categoria_id}")
