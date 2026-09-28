@@ -262,7 +262,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useStore } from '../../store.js'
-import { getAllCategorie, getAllenamentiGiornoByData, saveAllenamenti, getCatalogoEsercizi, getCatalogoEserciziNew, saveEsercizioToCatalogo, deleteEsercizioFromCatalogo, getFocusList } from '../../api/index.js'
+import { getAllCategorie, getAllenamentiGiornoByData, saveAllenamenti, getCatalogoEsercizi, getCatalogoEserciziNew, saveEsercizioToCatalogo, deleteEsercizioFromCatalogo, getFocusList, saveOrSharePdf } from '../../api/index.js'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import TacticalBoard from '../../components/TacticalBoard.vue'
@@ -1261,7 +1261,8 @@ async function exportPdf() {
   const categoriaNome = categoriaAttiva.value?.nome || 'Categoria'
   const dataSelezionata = selectedDay.value?.data || 'data'
   const dataFormattata = dataSelezionata.split('-').reverse().join('/')
-  doc.save('Scheda ' + categoriaNome + ' del ' + dataFormattata + '.pdf')
+  const filename = 'Scheda ' + categoriaNome + ' del ' + dataFormattata + '.pdf'
+  await saveOrSharePdf(doc, filename, `Scheda Allenamento ${categoriaNome}`)
 }
 
 function saveEsercizio(ex) {

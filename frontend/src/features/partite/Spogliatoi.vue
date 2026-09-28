@@ -2185,10 +2185,19 @@ function stampaGiornoSingolo(dataGiorno) {
   if (!dataGiorno) return
   const g = giorniSettimana.value.find(d => d.data === dataGiorno)
   if (!g) return
-  const w = window.open('', '_blank')
+  let w = window.open('', '_blank')
+  let isIframe = false
   if (!w) {
-    alert('Popup bloccato dal browser. Consenti i popup per stampare.')
-    return
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    document.body.appendChild(iframe)
+    w = iframe.contentWindow
+    isIframe = true
   }
   const slots = categoriePerOrario(dataGiorno)
   let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(g.nomeLungo)} ${esc(g.giorno)}</title>
@@ -2246,9 +2255,17 @@ function stampaGiornoSingolo(dataGiorno) {
     html += `</table></div>`
   }
   html += `</body></html>`
+  w.document.open()
   w.document.write(html)
   w.document.close()
-  w.print()
+  setTimeout(() => {
+    w.print()
+    if (isIframe) {
+      setTimeout(() => {
+        try { document.body.removeChild(w.frameElement) } catch (e) {}
+      }, 2000)
+    }
+  }, 250)
 }
 
 onMounted(() => {

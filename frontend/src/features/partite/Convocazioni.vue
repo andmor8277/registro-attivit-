@@ -487,7 +487,8 @@ import {
   createConvocazione,
   updateConvocazione,
   deleteConvocazione,
-  getUploadUrl
+  getUploadUrl,
+  exportPdf
 } from '../../api/index.js'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
@@ -1773,7 +1774,8 @@ async function esportaPDF() {
     const dataFine = convocazione.value.data_fine || ''
     const dataFormattata = dataInizio ? dataInizio.split('-').reverse().join('/') : 'data'
     const dataFinale = dataFine ? dataFormattata + '-' + dataFine.split('-').reverse().join('/') : dataFormattata
-    doc.save(`Convocazioni ${categoriaNome} ${dataFinale}.pdf`)
+    const filename = `Convocazioni ${categoriaNome} ${dataFinale}.pdf`
+    await exportPdf(doc, filename, `Convocazioni ${categoriaNome}`)
   } catch (e) {
     console.error('Errore PDF:', e)
     alert('Errore nella generazione del PDF')

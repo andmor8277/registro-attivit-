@@ -299,7 +299,8 @@ import {
   cambiaStatoScouting,
   valutaGiocatoreScouting,
   getLocalDateStr,
-  getUploadUrl
+  getUploadUrl,
+  exportPdf
 } from '../../api/index.js'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
@@ -755,7 +756,7 @@ async function esportaPDF() {
     })
 
     const nomeFile = `scouting-${(seg.squadra_avversaria || 'relazione').toLowerCase().replace(/\s+/g, '-')}-${seg.data_osservazione || getLocalDateStr()}.pdf`
-    doc.save(nomeFile)
+    await exportPdf(doc, nomeFile, `Scouting ${seg.squadra_avversaria || ''}`)
   } catch (e) {
     console.error(e)
     dettaglioErrore.value = 'Errore nell\'esportazione PDF'

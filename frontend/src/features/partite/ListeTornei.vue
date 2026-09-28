@@ -158,7 +158,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPersone, getCategorie, getListeTorneo, creaListaTorneo, eliminaListaTorneo, getGiocatoriLista, aggiungiGiocatoreLista, rimuoviGiocatoreLista, verifyGdpr } from '../../api/index.js'
+import { getPersone, getCategorie, getListeTorneo, creaListaTorneo, eliminaListaTorneo, getGiocatoriLista, aggiungiGiocatoreLista, rimuoviGiocatoreLista, verifyGdpr, saveOrSharePdf } from '../../api/index.js'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 import { useStore } from '../../store.js'
@@ -327,7 +327,7 @@ function goBack() {
   router.push(`/dati/${categoriaId}`)
 }
 
-function exportPdf() {
+async function exportPdf() {
   const lista = listeList.value.find(l => l.id === selectedListaId.value)
   if (!lista || giocatoriLista.value.length === 0) {
     alert('Nessun giocatore da esportare')
@@ -374,7 +374,8 @@ function exportPdf() {
   doc.setFontSize(8)
   doc.text(`Esportato il ${new Date().toLocaleDateString('it-IT')}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' })
 
-  doc.save(`lista_torneo_${lista.nome.replace(/\s+/g, '_')}.pdf`)
+  const filename = `lista_torneo_${lista.nome.replace(/\s+/g, '_')}.pdf`
+  await saveOrSharePdf(doc, filename, `Lista Torneo ${lista.nome}`)
 }
 
 onMounted(async () => {
