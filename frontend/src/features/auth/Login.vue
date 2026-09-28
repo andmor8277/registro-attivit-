@@ -152,6 +152,9 @@
             type="text" 
             placeholder="Inserisci il tuo username"
             autocomplete="username"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
             required
           />
         </div>
@@ -281,14 +284,15 @@ onMounted(async () => {
     } catch (e) {
       invitoErrore.value = e.response?.data?.detail || 'Invito non valido'
     }
+    return
   }
 
-  // Se utente già loggato e super_admin, mostra selezione società
+  // Se utente già loggato
   const storedToken = localStorage.getItem('token')
   if (!storedToken) return
   try {
     const me = await getMe()
-    utenteAttivo.value = me.data
+    setUtenteAttivo(me.data)
     const isSuper = me.data.is_super_admin || me.data.ruolo === 'super_admin'
     if (isSuper) {
       const res = await getSocieta()
@@ -296,10 +300,25 @@ onMounted(async () => {
       setListaSocieta(res.data)
       showSocietaSelection.value = true
       setSocietaAttiva(null)
+    } else {
+      // Reindirizza utente già autenticato
+      if (me.data.societa_id && !societaAttiva.value?.id) {
+        try {
+          const societaRes = await getSocietaById(me.data.societa_id)
+          setSocietaAttiva(societaRes.data)
+        } catch {}
+      }
+      const ruolo = me.data.ruolo
+      if (ruolo === 'segreteria') return router.push('/segreteria')
+      if (ruolo === 'infermeria') return router.push('/infermeria')
+      if (ruolo === 'scouting') return router.push('/scouting')
+      return router.push('/')
     }
   } catch (e) {
-    if (e.response?.status !== 401) {
-      console.error('Errore caricamento sessione:', e)
+    if (e.response?.status === 401) {
+      clearToken()
+    } else {
+      console.warn('Verifica sessione iniziale:', e)
     }
   }
 })
@@ -320,7 +339,7 @@ function handleLogosponsorUpload(event) {
   }
 }
 const router = useRouter()
-const { setToken, clearToken, utenteAttivo, setSocietaAttiva, setListaSocieta, societaAttiva, setCategoria } = useStore()
+const { setToken, clearToken, utenteAttivo, setUtenteAttivo, setSocietaAttiva, setListaSocieta, societaAttiva, setCategoria } = useStore()
 
 function loginGoogle() {
   if (invitoToken.value) {
@@ -334,21 +353,52 @@ async function doLogin() {
   loading.value = true
   errore.value = ''
   
+  // Legge sia da ref Vue che direttamente dal DOM per gestire Android Autofill
+  const userVal = (username.value || document.getElementById('username')?.value || '').trim()
+  const passVal = password.value || document.getElementById('password')?.value || ''
+  
+  if (!userVal || !passVal) {
+    errore.value = 'Inserisci username e password.'
+    loading.value = false
+    return
+  }
+
+  username.value = userVal
+  password.value = passVal
+
   try {
-    const res = await login(username.value, password.value)
+    let res
+    try {
+      res = await login(userVal, passVal)
+    } catch (firstErr) {
+      // Se errore di rete / cold start su APK, riprova automaticamente una volta prima di fallire
+      if (!firstErr.response || firstErr.code === 'ECONNABORTED') {
+        await new Promise(r => setTimeout(r, 600))
+        res = await login(userVal, passVal)
+      } else {
+        throw firstErr
+      }
+    }
+
     setToken(res.data.access_token)
-    const me = await getMe()
-    utenteAttivo.value = me.data
     
-    const isSuper = me.data.is_super_admin || me.data.ruolo === 'super_admin'
+    let meData = null
+    try {
+      const me = await getMe()
+      meData = me.data
+      setUtenteAttivo(meData)
+    } catch (meErr) {
+      console.warn('Errore getMe post login:', meErr)
+    }
+
+    const isSuper = meData?.is_super_admin || meData?.ruolo === 'super_admin'
     
     // Se è super_admin (ruolo o flag), mostra selezione società
     if (isSuper) {
-      // Ricarica lista società ora che abbiamo il token
       try {
-        const res = await getSocieta()
-        societaOptions.value = res.data
-        setListaSocieta(res.data)
+        const resSoc = await getSocieta()
+        societaOptions.value = resSoc.data
+        setListaSocieta(resSoc.data)
       } catch {}
       showSocietaSelection.value = true
       loading.value = false
@@ -356,13 +406,18 @@ async function doLogin() {
     }
     
     // Admin locale: carica la società dell'utente
-    if (me.data.societa_id) {
-      const societaRes = await getSocietaById(me.data.societa_id)
-      setSocietaAttiva(societaRes.data)
+    if (meData?.societa_id) {
+      try {
+        const societaRes = await getSocietaById(meData.societa_id)
+        setSocietaAttiva(societaRes.data)
+      } catch (e) {
+        console.warn('Errore caricamento dettagli società:', e)
+        setSocietaAttiva({ id: meData.societa_id })
+      }
     }
 
     // Redirect diretto per ruoli specifici
-    const ruolo = me.data.ruolo
+    const ruolo = meData?.ruolo
     if (ruolo === 'segreteria') {
       return router.push('/segreteria')
     }
@@ -381,8 +436,8 @@ async function doLogin() {
         if (cats.length) {
           setCategoria(cats[0])
         }
-        return router.push('/')
       } catch {}
+      return router.push('/')
     }
 
     router.push('/')

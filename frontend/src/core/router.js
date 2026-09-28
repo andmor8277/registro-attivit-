@@ -16,18 +16,31 @@ const RUOLI = {
 
 let userPromise = null
 
-export function caricaUtente() {
-  if (store.utenteAttivo.value) return Promise.resolve(store.utenteAttivo.value)
-  if (!localStorage.getItem('token')) return Promise.resolve(null)
+export async function caricaUtente(force = false) {
+  if (!force && store.utenteAttivo.value) return store.utenteAttivo.value
+  if (!localStorage.getItem('token')) return null
   if (!userPromise) {
-    userPromise = getMe()
-      .then((res) => {
-        store.utenteAttivo.value = res.data
-        return res.data
-      })
-      .finally(() => {
-        userPromise = null
-      })
+    userPromise = (async () => {
+      let lastErr = null
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const res = await getMe()
+          store.setUtenteAttivo(res.data)
+          return res.data
+        } catch (err) {
+          lastErr = err
+          if (err.response?.status === 401) {
+            throw err
+          }
+          if (attempt === 0) {
+            await new Promise(r => setTimeout(r, 600))
+          }
+        }
+      }
+      throw lastErr
+    })().finally(() => {
+      userPromise = null
+    })
   }
   return userPromise
 }
@@ -89,9 +102,17 @@ router.beforeEach(async (to, from, next) => {
   if (to.meta.requiresAuth && token && !user) {
     try {
       user = await caricaUtente()
-    } catch {
-      store.clearToken()
-      return next('/login')
+    } catch (err) {
+      if (err?.response?.status === 401) {
+        store.clearToken()
+        return next('/login')
+      }
+      // Se è un errore di rete o temporaneo e abbiamo utente in cache, usalo
+      if (store.utenteAttivo.value) {
+        user = store.utenteAttivo.value
+      } else {
+        return next('/login')
+      }
     }
   }
 

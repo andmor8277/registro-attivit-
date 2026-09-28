@@ -476,7 +476,7 @@ import { App as CapApp } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { Capacitor } from '@capacitor/core'
 
-const { token, setToken, utenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva, hideTopbar, categoriaAttiva } = useStore()
+const { token, setToken, utenteAttivo, setUtenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva, hideTopbar, categoriaAttiva } = useStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -594,7 +594,7 @@ async function handleDeepUrl(urlStr) {
     if (authToken) {
       setToken(authToken)
       const me = await getMe()
-      utenteAttivo.value = me.data
+      setUtenteAttivo(me.data)
       if (me.data.societa_id) {
         try {
           const sRes = await getSocietaById(me.data.societa_id)
@@ -626,11 +626,23 @@ onMounted(async () => {
 
   if (token.value) {
     try {
-      if (!utenteAttivo.value) await caricaUtente()
+      if (!utenteAttivo.value) {
+        await caricaUtente()
+      } else {
+        // Se abbiamo già l'utente da cache, sincronizza in background senza bloccare
+        caricaUtente(true).catch(e => {
+          if (e?.response?.status === 401) {
+            clearToken()
+            router.push('/login')
+          }
+        })
+      }
       await loadStagione()
-    } catch {
-      clearToken()
-      router.push('/login')
+    } catch (e) {
+      if (e?.response?.status === 401) {
+        clearToken()
+        router.push('/login')
+      }
     }
   }
 
