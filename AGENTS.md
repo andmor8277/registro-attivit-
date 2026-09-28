@@ -27,8 +27,9 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 2. **Deploy su DEV** (`./deploy_dev.sh`): build e riavvio container su DEV (192.168.178.133).
 3. **Test e Validazione su DEV**: test di funzionamento su `http://192.168.178.133:3000` e verifica log / endpoint.
 4. **Commit & Push su Git**: dopo esito positivo dei test.
-5. **Deploy su PROD** (`./deploy.sh`): promozione in produzione su `https://thof.crickethouse.mywire.org`.
+5. **Autorizzazione Utente & Deploy su PROD** (`./deploy.sh`): promozione in produzione su `https://thof.crickethouse.mywire.org` SOLO dopo autorizzazione esplicita.
 ⚠️ **REGOLA ASSOLUTA**: MAI rilasciare modifiche direttamente su Prod senza averle prima caricate e verificate su Dev!
+⚠️ **REGOLA AUTORIZZAZIONE PROD**: MAI eseguire il deploy su PROD (`./deploy.sh`) in automatico o di propria iniziativa. Chiedere SEMPRE prima l'esplicita autorizzazione all'utente!
 ⚠️ **REGOLA DATABASE DEV**: NON sincronizzare o sovrascrivere MAI il database di DEV con i dati di PROD. L'ambiente DEV deve mantenere il proprio database indipendente. Il deploy su DEV (`./deploy_dev.sh`) aggiorna solo il codice sorgente ed esegue le migrazioni DDL senza toccare i dati.
 
 
