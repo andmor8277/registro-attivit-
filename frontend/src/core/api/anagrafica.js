@@ -41,3 +41,4 @@ export const getGruppi = (categoriaId) => categoriaId ? api.get('/gruppi/?catego
 export const createGruppo = (data) => api.post('/gruppi/', data)
 export const deleteGruppo = (id) => api.delete('/gruppi/' + id)
 export const updateGruppo = (id, data) => api.put('/gruppi/' + id, data)
+export const updateScadenzaCertificato = (personaId, data) => api.patch('/persone/' + personaId + '/certificato', data)

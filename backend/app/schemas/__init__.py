@@ -1,4 +1,4 @@
-from .anagrafica import PersonaCreate, PersonaOut
+from .anagrafica import PersonaCreate, PersonaOut, PersonaCertificatoUpdate
 from .presenze import CodiceOut, RegistroEntry, RegistroOut
 from .partite import (
     PartitaCreate,
@@ -21,6 +21,7 @@ from .segreteria import OpendayCreate, OpendayUpdate
 __all__ = [
     "PersonaCreate",
     "PersonaOut",
+    "PersonaCertificatoUpdate",
     "CodiceOut",
     "RegistroEntry",
     "RegistroOut",

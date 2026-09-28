@@ -145,6 +145,29 @@ def update_persona(persona_id: int, p: schemas.PersonaCreate, db: Session = Depe
     db.commit(); db.refresh(persona)
     return persona
 
+@router.patch("/{persona_id}/certificato")
+def update_scadenza_certificato(
+    persona_id: int,
+    p: schemas.PersonaCertificatoUpdate,
+    db: Session = Depends(get_db),
+    current_user: Utente = Depends(get_current_user),
+):
+    persona = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona non trovata")
+    societa_id = get_societa_filter(current_user)
+    if societa_id and persona.societa_id != societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+
+    persona.scadenza_certificato = p.scadenza_certificato
+    db.commit()
+    db.refresh(persona)
+    return {
+        "ok": True,
+        "id": persona.id,
+        "scadenza_certificato": str(persona.scadenza_certificato) if persona.scadenza_certificato else None,
+    }
+
 @router.delete("/{persona_id}")
 def delete_persona(persona_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_persona_admin)):
     persona = db.query(models.Persona).filter(models.Persona.id == persona_id).first()

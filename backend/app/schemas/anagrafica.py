@@ -72,3 +72,7 @@ class PersonaOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class PersonaCertificatoUpdate(BaseModel):
+    scadenza_certificato: Optional[date] = None
