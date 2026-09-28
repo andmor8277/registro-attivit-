@@ -157,6 +157,52 @@
       </div>
 
       <div class="cat-grid">
+        <div class="cat-card cert-card" @click="router.push('/infermeria/certificati')">
+          <div class="cat-card-header cert-header">
+            <span class="cat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                <path d="M9 12l2 2 4-4"/>
+                <path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/>
+                <path d="M12 6v6"/>
+              </svg>
+            </span>
+            <span class="cat-nome">Certificati Medici</span>
+          </div>
+          <div class="cat-card-body">
+            <div class="cat-stat">
+              <span class="cat-stat-value" :class="{ 'stat-danger': scadutiTotali > 0 }">{{ scadutiTotali }}</span>
+              <span class="cat-stat-label">scaduti</span>
+            </div>
+            <div class="cat-stat">
+              <span class="cat-stat-value" :class="{ 'stat-warning': inScadenzaTotali > 0 }">{{ inScadenzaTotali }}</span>
+              <span class="cat-stat-label">in scadenza</span>
+            </div>
+          </div>
+          <div class="cat-card-footer">
+            <span class="cat-arrow">→</span>
+          </div>
+        </div>
+
+        <div class="cat-card infortuni-card" @click="router.push('/infermeria/infortunati')">
+          <div class="cat-card-header infortuni-header">
+            <span class="cat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                <path d="M12 21C7 17 3 13.5 3 9.5A5.5 5.5 0 0113.6 6H12a5.5 5.5 0 018 3.5c0 4-4 7.5-8 11.5z"/>
+              </svg>
+            </span>
+            <span class="cat-nome">Infortunati</span>
+          </div>
+          <div class="cat-card-body">
+            <div class="cat-stat">
+              <span class="cat-stat-value" :class="{ 'stat-danger': infortunatiAttivi > 0 }">{{ infortunatiAttivi }}</span>
+              <span class="cat-stat-label">infortunati</span>
+            </div>
+          </div>
+          <div class="cat-card-footer">
+            <span class="cat-arrow">→</span>
+          </div>
+        </div>
+
         <div class="cat-card presenze-card" @click="router.push('/segreteria/presenze')">
           <div class="cat-card-header presenze-header">
             <span class="cat-icon">
@@ -181,7 +227,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '../../store.js'
-import { getPersone, getCategorie, getOpenday, verifyGdpr } from '../../api/index.js'
+import { getPersone, getCategorie, getOpenday, verifyGdpr, getInfortuni } from '../../api/index.js'
 
 const router = useRouter()
 const { utenteAttivo } = useStore()
@@ -192,6 +238,28 @@ const gdprSbloccato = ref(false)
 const gdprModal = ref({ show: false, password: '', error: '' })
 const mostraFinanze = ref(false)
 const opendayStats = ref({ pending: 0, enrolled: 0 })
+const infortunatiAttivi = ref(0)
+
+function isScaduta(data) {
+  if (!data) return false
+  return new Date(data) < new Date()
+}
+
+function isInScadenza(data) {
+  if (!data) return false
+  const oggi = new Date()
+  const scad = new Date(data)
+  const diff = (scad - oggi) / (1000 * 60 * 60 * 24)
+  return diff >= 0 && diff <= 30
+}
+
+const scadutiTotali = computed(() => {
+  return persone.value.filter(p => p.scadenza_certificato && isScaduta(p.scadenza_certificato)).length
+})
+
+const inScadenzaTotali = computed(() => {
+  return persone.value.filter(p => p.scadenza_certificato && isInScadenza(p.scadenza_certificato)).length
+})
 
 function toggleFinanze() {
   mostraFinanze.value = !mostraFinanze.value
@@ -226,6 +294,12 @@ async function loadDati() {
         pending: entries.filter(e => !e.iscritto).length,
         enrolled: entries.filter(e => e.iscritto).length
       }
+    } catch(e) { /* silent */ }
+
+    try {
+      const infRes = await getInfortuni({ attivi: true })
+      const infData = Array.isArray(infRes) ? infRes : (infRes?.data || [])
+      infortunatiAttivi.value = infData.length
     } catch(e) { /* silent */ }
   } catch(e) { console.error('Error loading:', e) }
 }
@@ -551,6 +625,30 @@ async function sbloccaGdpr() {
   display: flex;
   align-items: center;
   opacity: 0.9;
+}
+
+.cert-card .cat-card-header.cert-header {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.cert-card:hover {
+  border-color: #f59e0b;
+}
+
+.infortuni-card .cat-card-header.infortuni-header {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+}
+
+.infortuni-card:hover {
+  border-color: #ef4444;
+}
+
+.cat-stat-value.stat-danger {
+  color: #ef4444;
+}
+
+.cat-stat-value.stat-warning {
+  color: #f59e0b;
 }
 
 .openday-body .cat-stat-value.enrolled {

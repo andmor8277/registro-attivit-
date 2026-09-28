@@ -6,10 +6,10 @@ const store = useStore()
 
 const RUOLI = {
   segreteria: ['segreteria', 'admin', 'super_admin'],
-  infermeria: ['infermeria', 'admin', 'super_admin'],
+  infermeria: ['infermeria', 'segreteria', 'admin', 'super_admin'],
   scouting: ['scouting', 'admin', 'super_admin'],
   responsabili: ['admin', 'super_admin'],
-  gestioneSquadre: ['admin', 'super_admin', 'segreteria', 'infermeria'],
+  gestioneSquadre: ['admin', 'super_admin'],
   admin: ['admin', 'super_admin'],
   superAdmin: ['super_admin']
 }
