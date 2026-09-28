@@ -1048,76 +1048,140 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       ctx.strokeStyle = color
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
-      ctx.lineWidth = Math.max(1, 2 * sb)
-      if (Array.isArray(el.points) && el.points.length >= 4) {
+      ctx.lineWidth = Math.max(1.5, 2 * sb)
+      const pts = (Array.isArray(el.points) && el.points.length >= 4)
+        ? el.points
+        : (el.x1 != null && el.x2 != null && el.y1 != null && el.y2 != null)
+          ? [el.x1, el.y1, el.x2, el.y2]
+          : null
+      if (pts && pts.length >= 4) {
         ctx.beginPath()
-        ctx.moveTo(toX(el.points[0]), toY(el.points[1]))
-        for (let i = 2; i < el.points.length; i += 2) {
-          ctx.lineTo(toX(el.points[i]), toY(el.points[i + 1]))
+        ctx.moveTo(toX(pts[0]), toY(pts[1]))
+        for (let i = 2; i < pts.length; i += 2) {
+          ctx.lineTo(toX(pts[i]), toY(pts[i + 1]))
         }
-        ctx.stroke()
-      } else if (el.x1 != null && el.y1 != null && el.x2 != null && el.y2 != null) {
-        ctx.beginPath()
-        ctx.moveTo(ex1, ey1)
-        ctx.lineTo(ex2, ey2)
         ctx.stroke()
       }
       ctx.restore()
     } else if (['pass', 'dribble', 'wallpass', 'shot', 'movement'].includes(tipo)) {
       ctx.save()
-      const dx = ex2 - ex1
-      const dy = ey2 - ey1
+      let x1 = el.x1, y1 = el.y1, x2 = el.x2, y2 = el.y2
+      if (x1 == null || x2 == null || y1 == null || y2 == null) {
+        const cx = el.x != null ? el.x : 50, cy = el.y != null ? el.y : 50
+        const rLen = el.length || 15
+        const rad = (el.rotazione || 0) * Math.PI / 180
+        x1 = cx - (rLen / 2) * Math.cos(rad)
+        y1 = cy - (rLen / 2) * Math.sin(rad)
+        x2 = cx + (rLen / 2) * Math.cos(rad)
+        y2 = cy + (rLen / 2) * Math.sin(rad)
+      }
+      const p1x = toX(x1), p1y = toY(y1)
+      const p2x = toX(x2), p2y = toY(y2)
+      const dx = p2x - p1x, dy = p2y - p1y
       const len = Math.sqrt(dx * dx + dy * dy)
       if (len > 0) {
-        const angle = Math.atan2(dy, dx)
-        // Centro la freccia sul punto medio (da x1,y1 a x2,y2), non sul punto di partenza
-        ctx.translate((ex1 + ex2) / 2, (ey1 + ey2) / 2)
-        ctx.rotate(angle)
-        ctx.scale(sb, sb)
-
+        const ux = dx / len, uy = dy / len
+        const px = -uy, py = ux
+        const aLen = Math.min(18 * sb, len * 0.4)
+        const aWidth = aLen * 0.5
+        const lw = Math.max(1.8, 2.5 * sb)
         ctx.strokeStyle = color
-        ctx.lineWidth = Math.max(2.5, (el.w || 2) * 0.7)
-        if (tipo === 'dribble' || tipo === 'movement') {
-          ctx.setLineDash([6 / sb, 4 / sb])
-        } else {
-          ctx.setLineDash([])
-        }
-
-        // Linea
-        ctx.beginPath()
-        ctx.moveTo(-len / 2 / sb, 0)
-        ctx.lineTo(len / 2 / sb, 0)
-        ctx.stroke()
-        ctx.setLineDash([])
-
-        // Freccia
-        const aLen = 18
-        const halfLen = len / 2 / sb
         ctx.fillStyle = color
-        ctx.beginPath()
-        ctx.moveTo(halfLen, 0)
-        ctx.lineTo(halfLen - aLen, -aLen / 2)
-        ctx.lineTo(halfLen - aLen, aLen / 2)
-        ctx.closePath()
-        ctx.fill()
+        ctx.lineWidth = lw
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
 
-        // Wallpass: seconda freccia
-        if (tipo === 'wallpass') {
+        if (tipo === 'pass') {
           ctx.beginPath()
-          ctx.moveTo(-halfLen, 0)
-          ctx.lineTo(-halfLen + aLen, -aLen / 2)
-          ctx.lineTo(-halfLen + aLen, aLen / 2)
+          ctx.moveTo(p1x, p1y)
+          ctx.lineTo(p2x, p2y)
+          ctx.stroke()
+          // Arrowhead
+          ctx.beginPath()
+          ctx.moveTo(p2x, p2y)
+          ctx.lineTo(p2x - ux * aLen + px * aWidth, p2y - uy * aLen + py * aWidth)
+          ctx.lineTo(p2x - ux * aLen - px * aWidth, p2y - uy * aLen - py * aWidth)
           ctx.closePath()
-          ctx.fill()
-        }
-
-        // Shot: linea verticale alla fine
-        if (tipo === 'shot') {
-          ctx.strokeStyle = color
-          ctx.lineWidth = 2.5
+          ctx.stroke()
+        } else if (tipo === 'dribble') {
+          ctx.setLineDash([6 * sb, 4 * sb])
           ctx.beginPath()
-          ctx.moveTo(halfLen + 8, -13)
-          ctx.lineTo(halfLen + 8, 13)
+          ctx.moveTo(p1x, p1y)
+          ctx.lineTo(p2x, p2y)
+          ctx.stroke()
+          ctx.setLineDash([])
+          // Arrowhead
+          ctx.beginPath()
+          ctx.moveTo(p2x, p2y)
+          ctx.lineTo(p2x - ux * aLen + px * aWidth, p2y - uy * aLen + py * aWidth)
+          ctx.lineTo(p2x - ux * aLen - px * aWidth, p2y - uy * aLen - py * aWidth)
+          ctx.closePath()
+          ctx.stroke()
+        } else if (tipo === 'wallpass') {
+          ctx.beginPath()
+          ctx.moveTo(p1x, p1y)
+          ctx.lineTo(p2x, p2y)
+          ctx.stroke()
+          // Forward Arrowhead
+          ctx.beginPath()
+          ctx.moveTo(p2x, p2y)
+          ctx.lineTo(p2x - ux * aLen + px * aWidth, p2y - uy * aLen + py * aWidth)
+          ctx.lineTo(p2x - ux * aLen - px * aWidth, p2y - uy * aLen - py * aWidth)
+          ctx.closePath()
+          ctx.stroke()
+          // Backward Arrowhead
+          ctx.beginPath()
+          ctx.moveTo(p1x, p1y)
+          ctx.lineTo(p1x + ux * aLen + px * aWidth, p1y + uy * aLen + py * aWidth)
+          ctx.lineTo(p1x + ux * aLen - px * aWidth, p1y + uy * aLen - py * aWidth)
+          ctx.closePath()
+          ctx.stroke()
+        } else if (tipo === 'shot') {
+          // Due linee parallele
+          const off = 3.5 * sb
+          ctx.beginPath()
+          ctx.moveTo(p1x + px * off, p1y + py * off)
+          ctx.lineTo(p2x + px * off, p2y + py * off)
+          ctx.stroke()
+          ctx.beginPath()
+          ctx.moveTo(p1x - px * off, p1y - py * off)
+          ctx.lineTo(p2x - px * off, p2y - py * off)
+          ctx.stroke()
+          // Arrowhead
+          ctx.beginPath()
+          ctx.moveTo(p2x, p2y)
+          ctx.lineTo(p2x - ux * aLen + px * aWidth, p2y - uy * aLen + py * aWidth)
+          ctx.lineTo(p2x - ux * aLen - px * aWidth, p2y - uy * aLen - py * aWidth)
+          ctx.closePath()
+          ctx.stroke()
+          // Barretta perpendicolare alla fine
+          const barOff = 6 * sb
+          const barHalf = 10 * sb
+          const barCenterX = p2x + ux * barOff
+          const barCenterY = p2y + uy * barOff
+          ctx.beginPath()
+          ctx.moveTo(barCenterX + px * barHalf, barCenterY + py * barHalf)
+          ctx.lineTo(barCenterX - px * barHalf, barCenterY - py * barHalf)
+          ctx.stroke()
+        } else if (tipo === 'movement') {
+          // Onda sinusoidale
+          const amp = 5 * sb
+          const nWaves = Math.max(1, Math.round(len / (24 * sb)))
+          const steps = nWaves * 12
+          ctx.beginPath()
+          ctx.moveTo(p1x, p1y)
+          for (let i = 0; i <= steps; i++) {
+            const t = len * i / steps
+            const waveOff = amp * Math.sin(2 * Math.PI * nWaves * t / len)
+            ctx.lineTo(p1x + ux * t + px * waveOff, p1y + uy * t + py * waveOff)
+          }
+          ctx.stroke()
+          // Arrowhead
+          ctx.beginPath()
+          ctx.moveTo(p2x, p2y)
+          ctx.lineTo(p2x - ux * aLen + px * aWidth, p2y - uy * aLen + py * aWidth)
+          ctx.lineTo(p2x - ux * aLen - px * aWidth, p2y - uy * aLen - py * aWidth)
+          ctx.closePath()
           ctx.stroke()
         }
       }
@@ -1165,6 +1229,21 @@ async function exportPdf() {
   doc.setFontSize(12)
   doc.setTextColor(100, 100, 100)
   doc.text(categoriaAttiva.value?.nome + ' ' + (categoriaAttiva.value?.anno || ''), pageWidth / 2, 37, { align: 'center' })
+
+  // Sincronizza elementi aggiornati dalle lavagne visibili
+  if (tacticalBoardRefs.value) {
+    for (let i = 0; i < tacticalBoardRefs.value.length; i++) {
+      const tb = tacticalBoardRefs.value[i]
+      if (tb && typeof tb.requestElements === 'function') {
+        try {
+          const freshEl = await tb.requestElements()
+          if (freshEl && esercizi.value[i]) {
+            esercizi.value[i].elementi = freshEl
+          }
+        } catch (e) {}
+      }
+    }
+  }
 
   for (let idx = 0; idx < esercizi.value.length; idx++) {
     const ex = esercizi.value[idx]
