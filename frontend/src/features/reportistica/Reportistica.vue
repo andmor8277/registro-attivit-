@@ -468,7 +468,7 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../../store.js'
-import { getPersone, getRegistroMese, getConvocazioni, getConvocazione, getAllCategorie, getLocalDateStr, getUploadUrl } from '../../api/index.js'
+import { getPersone, getRegistroMese, getConvocazioni, getConvocazione, getAllCategorie, getLocalDateStr, getUploadUrl, exportTextFile } from '../../api/index.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -706,16 +706,11 @@ function getReportData() {
   return { header: [], rows: [] }
 }
 
-function downloadCSV() {
+async function downloadCSV() {
   const { header, rows } = getReportData()
-  const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\n')
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `report_${activeReport.value}_${categoriaAttiva.value?.nome || ''}_${new Date().toISOString().slice(0,10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  const csv = '\uFEFF' + [header.join(','), ...rows.map(r => r.join(','))].join('\n')
+  const filename = `report_${activeReport.value}_${categoriaAttiva.value?.nome || ''}_${new Date().toISOString().slice(0,10)}.csv`
+  await exportTextFile(csv, filename, 'text/csv;charset=utf-8;', `Report ${activeReport.value}`)
 }
 
 function printReport() {

@@ -320,7 +320,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue"
 import { useRouter } from "vue-router"
-import { getAllCategorie, getCategoriaResponsabili, creaPartita, aggiornaPartita, eliminaPartita as eliminaPartitaApi, getWeekend, getWeekendPartite, creaWeekend, aggiornaWeekend, eliminaWeekend as eliminaWeekendApi } from "../../api/index.js"
+import { getAllCategorie, getCategoriaResponsabili, creaPartita, aggiornaPartita, eliminaPartita as eliminaPartitaApi, getWeekend, getWeekendPartite, creaWeekend, aggiornaWeekend, eliminaWeekend as eliminaWeekendApi, exportPdf } from "../../api/index.js"
 import { useStore } from "../../store.js"
 import { jsPDF } from "jspdf"
 import "jspdf-autotable"
@@ -578,8 +578,7 @@ async function stampaWeekend() {
   if (!weekendSelezionato.value) return
   const win = window.open('', '_blank')
   if (!win) {
-    alert('Popup bloccato dal browser. Consenti i popup per stampare.')
-    return
+    return esportaPDFWeekend()
   }
   const sorted = weekendPartiteGrouped.value.map(g => ({
     cat: g.cat,
@@ -680,7 +679,8 @@ async function esportaPDFWeekend() {
       }
     }
   })
-  doc.save(`${weekendSelezionato.value.nome.replace(/\s+/g, '_').toLowerCase()}_${nome.replace(/\s+/g, '_').toLowerCase()}.pdf`)
+  const filename = `${weekendSelezionato.value.nome.replace(/\s+/g, '_').toLowerCase()}_${nome.replace(/\s+/g, '_').toLowerCase()}.pdf`
+  await exportPdf(doc, filename, `Partite ${weekendSelezionato.value.nome}`)
 }
 
 onMounted(() => {
