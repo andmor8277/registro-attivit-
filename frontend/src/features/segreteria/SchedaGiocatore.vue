@@ -216,29 +216,28 @@
         </div>
       </div>
 
-      <!-- 4. Taglia Materiale Sportivo -->
-      <div class="section-taglia">
-        <div class="section-header-bar">
-          <span>TAGLIA MATERIALE SPORTIVO</span>
-        </div>
-        <div class="taglia-grid">
-          <div
-            v-for="t in taglie"
-            :key="t"
-            class="taglia-box"
-            :class="{ active: scheda.taglia === t, clickable: editMode }"
-            @click="selezionaTaglia(t)"
-          >
-            <span class="taglia-name">{{ t }}</span>
-            <span v-if="scheda.taglia === t" class="taglia-check">✓</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 5. Materiale Individuale in Dotazione & Email -->
+      <!-- 4. Tabella Materiale (Taglia + Dotazione) & Email -->
       <div class="section-dotazione-email">
         <div class="col-dotazione">
-          <div class="section-header-bar">
+          <!-- Blocco Taglia Materiale Sportivo -->
+          <div class="section-header-bar header-taglia">
+            <span>TAGLIA MATERIALE SPORTIVO</span>
+          </div>
+          <div class="taglia-grid">
+            <div
+              v-for="t in taglie"
+              :key="t"
+              class="taglia-box"
+              :class="{ active: scheda.taglia === t, clickable: editMode }"
+              @click="selezionaTaglia(t)"
+            >
+              <span class="taglia-name">{{ t }}</span>
+              <span v-if="scheda.taglia === t" class="taglia-check">✓</span>
+            </div>
+          </div>
+
+          <!-- Blocco Materiale Individuale in Dotazione -->
+          <div class="section-header-bar header-dotazione">
             <span>MATERIALE INDIVIDUALE IN DOTAZIONE</span>
           </div>
           <div class="dotazione-grid">
@@ -1168,12 +1167,6 @@ async function salvaDati() {
   white-space: nowrap;
 }
 
-/* 4. Taglia Materiale Sportivo */
-.section-taglia {
-  margin-top: 5px;
-  border: 1.5px solid #000000;
-}
-
 .section-header-bar {
   background: #ffffff;
   border-bottom: 1px solid #000000;
@@ -1185,9 +1178,28 @@ async function salvaDati() {
   text-transform: uppercase;
 }
 
+/* 4. Tabella Materiale (Taglia + Dotazione) & Email */
+.section-dotazione-email {
+  margin-top: 5px;
+  display: grid;
+  grid-template-columns: 66% 34%;
+  border: 1.5px solid #000000;
+}
+
+.col-dotazione {
+  border-right: 1.5px solid #000000;
+  display: flex;
+  flex-direction: column;
+}
+
+.header-taglia {
+  border-bottom: 1px solid #000000;
+}
+
 .taglia-grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
+  border-bottom: 1px solid #000000;
 }
 
 .taglia-box {
@@ -1195,7 +1207,7 @@ async function salvaDati() {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 4px 2px;
+  padding: 3.5px 2px;
   font-size: 10px;
   font-weight: 700;
   border-right: 1px solid #000000;
@@ -1225,21 +1237,14 @@ async function salvaDati() {
   font-weight: 900;
 }
 
-/* 5. Materiale in Dotazione & Email */
-.section-dotazione-email {
-  margin-top: 5px;
-  display: grid;
-  grid-template-columns: 66% 34%;
-  border: 1.5px solid #000000;
-}
-
-.col-dotazione {
-  border-right: 1.5px solid #000000;
+.header-dotazione {
+  border-bottom: 1px solid #000000;
 }
 
 .dotazione-grid {
   display: grid;
   grid-template-columns: 50% 50%;
+  flex: 1;
 }
 
 .dotazione-col {
@@ -1257,7 +1262,7 @@ async function salvaDati() {
   gap: 5px;
   padding: 2px 6px;
   border-bottom: 1px solid #000000;
-  min-height: 22px;
+  min-height: 21px;
   font-size: 9.5px;
   font-weight: 700;
   flex: 1;
@@ -1649,11 +1654,13 @@ async function salvaDati() {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
-    height: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    overflow: hidden !important;
   }
 
   .scheda-page {
@@ -1661,8 +1668,12 @@ async function salvaDati() {
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
-    height: 100% !important;
+    height: auto !important;
     display: block !important;
+    overflow: hidden !important;
+    page-break-after: avoid !important;
+    break-after: avoid-page !important;
+    break-after: avoid !important;
   }
 
   .no-print {
@@ -1672,11 +1683,11 @@ async function salvaDati() {
   .foglio-iscrizione {
     max-width: 100% !important;
     width: 100% !important;
-    height: calc(297mm - 16mm) !important; /* 281mm: riempie esattamente l'altezza utile A4 */
-    min-height: calc(297mm - 16mm) !important;
-    max-height: calc(297mm - 16mm) !important;
+    height: 264mm !important; /* 264mm + 16mm margini = 280mm < 297mm: GARANTISCE 1 SOLA PAGINA SENZA SECONDA PAGINA BIANCA */
+    max-height: 266mm !important;
+    min-height: 0 !important;
     margin: 0 !important;
-    padding: 3mm !important; /* Margine interno regolare su tutti e 4 i lati */
+    padding: 2.5mm !important; /* Margine interno regolare su tutti e 4 i lati */
     border: 1.5px solid #000000 !important;
     box-shadow: none !important;
     box-sizing: border-box !important;
@@ -1684,21 +1695,23 @@ async function salvaDati() {
     flex-direction: column !important;
     justify-content: space-between !important;
     page-break-inside: avoid !important;
+    break-inside: avoid !important;
     page-break-after: avoid !important;
+    break-after: avoid !important;
     overflow: hidden !important;
   }
 
   .stemma-societa {
-    height: 48px !important;
+    height: 46px !important;
   }
 
   .titolo-iscrizione {
-    font-size: 14px !important;
+    font-size: 13.5px !important;
     color: #0284c7 !important;
   }
 
   .divider-line {
-    margin-bottom: 2mm !important;
+    margin-bottom: 1.5mm !important;
   }
 
   .grid-anagrafica {
@@ -1714,39 +1727,48 @@ async function salvaDati() {
   }
 
   .field-row {
-    min-height: 22px !important;
-  }
-
-  .section-taglia {
-    margin-top: 2.5mm !important;
-  }
-
-  .taglia-box {
-    padding: 3.5px 2px !important;
-    font-size: 9.5px !important;
+    min-height: 21px !important;
   }
 
   .section-dotazione-email {
-    margin-top: 2.5mm !important;
+    margin-top: 2mm !important;
+    border: 1.5px solid #000000 !important;
   }
 
-  .dotazione-row {
-    min-height: 20px !important;
+  .header-taglia {
+    border-bottom: 1px solid #000000 !important;
+  }
+
+  .taglia-grid {
+    border-bottom: 1px solid #000000 !important;
+  }
+
+  .taglia-box {
+    padding: 2.5px 1px !important;
     font-size: 9px !important;
   }
 
+  .header-dotazione {
+    border-bottom: 1px solid #000000 !important;
+  }
+
+  .dotazione-row {
+    min-height: 19px !important;
+    font-size: 8.8px !important;
+  }
+
   .grid-bottom {
-    margin-top: 2.5mm !important;
+    margin-top: 2mm !important;
     flex: 1 !important;
   }
 
   .pagamento-row {
-    min-height: 20px !important;
+    min-height: 19px !important;
     font-size: 8.8px !important;
   }
 
   .privacy-p {
-    font-size: 7.8px !important;
+    font-size: 7.6px !important;
     line-height: 1.25 !important;
   }
 
@@ -1756,7 +1778,7 @@ async function salvaDati() {
   }
 
   .firma-container {
-    margin-top: 4px !important;
+    margin-top: 3px !important;
   }
 
   .firma-title {
@@ -1764,7 +1786,7 @@ async function salvaDati() {
   }
 
   .firma-line {
-    height: 14px !important;
+    height: 13px !important;
   }
 
   .box-check {
@@ -1774,7 +1796,7 @@ async function salvaDati() {
   }
 
   .safeguarding-box {
-    padding: 3.5px 6px !important;
+    padding: 3px 6px !important;
   }
 
   .safe-title {
