@@ -30,13 +30,27 @@
           </svg>
           <span class="btn-text">{{ editMode ? 'Fine Modifica' : 'Modifica' }}</span>
         </button>
-        <button class="btn-tool btn-print" @click="stampaPDF" title="Stampa o Salva PDF">
+        <button
+          class="btn-tool btn-export"
+          @click="esportaPDF"
+          :disabled="esportandoPdf"
+          title="Scarica Modulo PDF identico alla pagina web"
+        >
+          <span v-if="esportandoPdf" class="spinner-small"></span>
+          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span class="btn-text">{{ esportandoPdf ? 'Generazione...' : 'Esporta PDF' }}</span>
+        </button>
+        <button class="btn-tool btn-print" @click="stampaModulo" title="Stampa o Salva tramite browser">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="6 9 6 2 18 2 18 9"/>
             <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
             <rect x="6" y="14" width="12" height="8"/>
           </svg>
-          <span class="btn-text">Esporta PDF</span>
+          <span class="btn-text">Stampa</span>
         </button>
       </div>
     </header>
@@ -45,7 +59,7 @@
     <div class="foglio-iscrizione" ref="schedaContainer">
       <!-- 1. Stemma Società in alto al centro -->
       <div class="header-logo-row">
-        <img v-if="societaLogo" :src="societaLogo" :alt="societaNome" class="stemma-societa" />
+        <img v-if="societaLogo" :src="societaLogo" :alt="societaNome" class="stemma-societa" crossorigin="anonymous" />
         <div v-else class="stemma-placeholder">
           <span>{{ societaNome.charAt(0) }}</span>
         </div>
@@ -489,7 +503,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getPersone,
@@ -498,14 +512,19 @@ import {
   getCategorie,
   getSocietaById,
   getUploadUrl,
-  generaCf as generaCfApi
+  generaCf as generaCfApi,
+  saveOrSharePdf
 } from '../../api'
+import { jsPDF } from 'jspdf'
+import html2canvas from 'html2canvas'
 import { useStore } from '../../store'
 
 const route = useRoute()
 const router = useRouter()
 const { utenteAttivo, societaAttiva, hideTopbar } = useStore()
 
+const schedaContainer = ref(null)
+const esportandoPdf = ref(false)
 const editMode = ref(false)
 const saving = ref(false)
 const saveError = ref('')
@@ -790,7 +809,71 @@ function formatData(d) {
   return new Date(d).toLocaleDateString('it-IT')
 }
 
-function stampaPDF() {
+async function esportaPDF() {
+  if (!schedaContainer.value || esportandoPdf.value) return
+  esportandoPdf.value = true
+
+  const wasEditing = editMode.value
+  if (wasEditing) {
+    editMode.value = false
+    await nextTick()
+  }
+
+  try {
+    const el = schedaContainer.value
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    const canvas = await html2canvas(el, {
+      scale: 2.5,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff'
+    })
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.96)
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    })
+
+    const pageWidth = 210
+    const pageHeight = 297
+    const margin = 8
+    const maxW = pageWidth - (margin * 2)
+    const maxH = pageHeight - (margin * 2)
+
+    let imgW = maxW
+    let imgH = (canvas.height * imgW) / canvas.width
+
+    if (imgH > maxH) {
+      imgH = maxH
+      imgW = (canvas.width * imgH) / canvas.height
+    }
+
+    const posX = margin + (maxW - imgW) / 2
+    const posY = margin + (maxH - imgH) / 2
+
+    pdf.addImage(imgData, 'JPEG', posX, posY, imgW, imgH)
+
+    const cognome = (giocatoreEdit.cognome || 'ATLETA').toUpperCase()
+    const nome = (giocatoreEdit.nome || '').toUpperCase()
+    const filename = `ISCRIZIONE_${cognome}_${nome}.pdf`.replace(/\s+/g, '_')
+
+    await saveOrSharePdf(pdf, filename, `Iscrizione ${cognome} ${nome}`)
+  } catch (err) {
+    console.error('Errore durante esportazione PDF:', err)
+    alert('Errore durante la generazione del PDF. Riprova.')
+  } finally {
+    if (wasEditing) {
+      editMode.value = true
+      await nextTick()
+    }
+    esportandoPdf.value = false
+  }
+}
+
+function stampaModulo() {
   const originali = document.title
   const cognome = (giocatoreEdit.cognome || 'ATLETA').toUpperCase()
   const nome = (giocatoreEdit.nome || '').toUpperCase()
@@ -991,14 +1074,29 @@ async function salvaDati() {
   color: #fff;
 }
 
+.btn-export {
+  background: #0284c7;
+  border-color: #0369a1;
+  color: #fff;
+}
+
+.btn-export:hover:not(:disabled) {
+  background: #0369a1;
+}
+
+.btn-export:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .btn-print {
-  background: #2563eb;
-  border-color: #1d4ed8;
+  background: var(--color-surface-elevated, #334155);
+  border-color: var(--color-border, #475569);
   color: #fff;
 }
 
 .btn-print:hover {
-  background: #1d4ed8;
+  background: #475569;
 }
 
 /* =========================================================
@@ -1667,6 +1765,11 @@ async function salvaDati() {
     margin: 8mm; /* Margini regolari e uniformi su tutti e 4 i lati */
   }
 
+  *, *:before, *:after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   body, html {
     margin: 0 !important;
     padding: 0 !important;
@@ -1675,8 +1778,6 @@ async function salvaDati() {
     min-height: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
     overflow: hidden !important;
   }
 
