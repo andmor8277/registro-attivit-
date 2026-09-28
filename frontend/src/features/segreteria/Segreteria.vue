@@ -113,41 +113,177 @@
         </div>
       </div>
 
-      <div class="section-divider">
-        <span>Categorie Iscrizioni</span>
+      <!-- Filtro rapido categorie padre -->
+      <div class="cat-filter-bar">
+        <button
+          class="cat-filter-btn"
+          :class="{ active: filtroPadre === 'tutti' }"
+          @click="filtroPadre = 'tutti'"
+        >
+          Tutte ({{ categorieOrdinate.length }})
+        </button>
+        <button
+          class="cat-filter-btn btn-scuola"
+          :class="{ active: filtroPadre === 'scuola' }"
+          @click="filtroPadre = 'scuola'"
+        >
+          <span class="filter-dot dot-scuola"></span>
+          Scuola Calcio ({{ categorieScuolaCalcio.length }})
+        </button>
+        <button
+          class="cat-filter-btn btn-agonistica"
+          :class="{ active: filtroPadre === 'agonistica' }"
+          @click="filtroPadre = 'agonistica'"
+        >
+          <span class="filter-dot dot-agonistica"></span>
+          Agonistica ({{ categorieAgonistica.length }})
+        </button>
       </div>
 
-      <div class="cat-grid">
-        <div
-          v-for="cat in categorieOrdinate"
-          :key="cat.id"
-          class="cat-card"
-          @click="router.push('/segreteria/' + cat.id)"
-        >
-          <div class="cat-card-header">
-            <span class="cat-anno">{{ cat.anno }}</span>
-            <span class="cat-nome">{{ cat.nome }}</span>
+      <!-- SEZIONE 1: SCUOLA CALCIO -->
+      <div v-if="categorieScuolaCalcio.length && (filtroPadre === 'tutti' || filtroPadre === 'scuola')" class="group-section">
+        <div class="section-divider section-scuola">
+          <div class="section-title-wrap">
+            <span class="group-badge badge-scuola">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 6v6l4 2"/>
+              </svg>
+              Scuola Calcio
+            </span>
+            <span class="group-count">{{ categorieScuolaCalcio.length }} squadre</span>
           </div>
-          <div class="cat-card-body">
-            <div class="cat-stat">
-              <span class="cat-stat-value">{{ getGiocatoriCat(cat.id).length }}</span>
-              <span class="cat-stat-label">iscritti</span>
+        </div>
+
+        <div class="cat-grid">
+          <div
+            v-for="cat in categorieScuolaCalcio"
+            :key="cat.id"
+            class="cat-card card-scuola"
+            @click="router.push('/segreteria/' + cat.id)"
+          >
+            <div class="cat-card-header">
+              <span class="cat-anno">{{ cat.anno || '—' }}</span>
+              <span class="cat-nome">{{ cat.nome }}</span>
+              <span class="parent-tag tag-scuola">Scuola Calcio</span>
             </div>
-            <div class="cat-stat financial" @click.stop="toggleFinanze">
-              <span class="cat-stat-value">{{ mostraFinanze ? calcTotalePagato(cat.id) + ' €' : '***' }}</span>
-              <span class="cat-stat-label">incasso</span>
+            <div class="cat-card-body">
+              <div class="cat-stat">
+                <span class="cat-stat-value">{{ getGiocatoriCat(cat.id).length }}</span>
+                <span class="cat-stat-label">iscritti</span>
+              </div>
+              <div class="cat-stat financial" @click.stop="toggleFinanze">
+                <span class="cat-stat-value">{{ mostraFinanze ? calcTotalePagato(cat.id) + ' €' : '***' }}</span>
+                <span class="cat-stat-label">incasso</span>
+              </div>
+              <div class="cat-stat financial" @click.stop="toggleFinanze">
+                <span class="cat-stat-value" :class="{ 'debt': mostraFinanze && calcRimaneCat(cat.id) > 0 }">{{ mostraFinanze ? calcRimaneCat(cat.id) + ' €' : '***' }}</span>
+                <span class="cat-stat-label">da recuperare</span>
+              </div>
+              <div class="cat-stat">
+                <span class="cat-stat-value" :class="{ 'debt': nonInRegolaCat(cat.id) > 0 }">{{ nonInRegolaCat(cat.id) }}</span>
+                <span class="cat-stat-label">non in regola</span>
+              </div>
             </div>
-            <div class="cat-stat financial" @click.stop="toggleFinanze">
-              <span class="cat-stat-value" :class="{ 'debt': mostraFinanze && calcRimaneCat(cat.id) > 0 }">{{ mostraFinanze ? calcRimaneCat(cat.id) + ' €' : '***' }}</span>
-              <span class="cat-stat-label">da recuperare</span>
-            </div>
-            <div class="cat-stat">
-              <span class="cat-stat-value" :class="{ 'debt': nonInRegolaCat(cat.id) > 0 }">{{ nonInRegolaCat(cat.id) }}</span>
-              <span class="cat-stat-label">non in regola</span>
+            <div class="cat-card-footer">
+              <span class="cat-arrow">→</span>
             </div>
           </div>
-          <div class="cat-card-footer">
-            <span class="cat-arrow">→</span>
+        </div>
+      </div>
+
+      <!-- SEZIONE 2: AGONISTICA -->
+      <div v-if="categorieAgonistica.length && (filtroPadre === 'tutti' || filtroPadre === 'agonistica')" class="group-section">
+        <div class="section-divider section-agonistica">
+          <div class="section-title-wrap">
+            <span class="group-badge badge-agonistica">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+              Agonistica
+            </span>
+            <span class="group-count">{{ categorieAgonistica.length }} squadre</span>
+          </div>
+        </div>
+
+        <div class="cat-grid">
+          <div
+            v-for="cat in categorieAgonistica"
+            :key="cat.id"
+            class="cat-card card-agonistica"
+            @click="router.push('/segreteria/' + cat.id)"
+          >
+            <div class="cat-card-header">
+              <span class="cat-anno">{{ cat.anno || '—' }}</span>
+              <span class="cat-nome">{{ cat.nome }}</span>
+              <span class="parent-tag tag-agonistica">Agonistica</span>
+            </div>
+            <div class="cat-card-body">
+              <div class="cat-stat">
+                <span class="cat-stat-value">{{ getGiocatoriCat(cat.id).length }}</span>
+                <span class="cat-stat-label">iscritti</span>
+              </div>
+              <div class="cat-stat financial" @click.stop="toggleFinanze">
+                <span class="cat-stat-value">{{ mostraFinanze ? calcTotalePagato(cat.id) + ' €' : '***' }}</span>
+                <span class="cat-stat-label">incasso</span>
+              </div>
+              <div class="cat-stat financial" @click.stop="toggleFinanze">
+                <span class="cat-stat-value" :class="{ 'debt': mostraFinanze && calcRimaneCat(cat.id) > 0 }">{{ mostraFinanze ? calcRimaneCat(cat.id) + ' €' : '***' }}</span>
+                <span class="cat-stat-label">da recuperare</span>
+              </div>
+              <div class="cat-stat">
+                <span class="cat-stat-value" :class="{ 'debt': nonInRegolaCat(cat.id) > 0 }">{{ nonInRegolaCat(cat.id) }}</span>
+                <span class="cat-stat-label">non in regola</span>
+              </div>
+            </div>
+            <div class="cat-card-footer">
+              <span class="cat-arrow">→</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEZIONE 3: ALTRE CATEGORIE (se presenti) -->
+      <div v-if="categorieAltre.length && filtroPadre === 'tutti'" class="group-section">
+        <div class="section-divider">
+          <div class="section-title-wrap">
+            <span class="group-badge">Altre Categorie</span>
+            <span class="group-count">{{ categorieAltre.length }} squadre</span>
+          </div>
+        </div>
+
+        <div class="cat-grid">
+          <div
+            v-for="cat in categorieAltre"
+            :key="cat.id"
+            class="cat-card card-default"
+            @click="router.push('/segreteria/' + cat.id)"
+          >
+            <div class="cat-card-header">
+              <span class="cat-anno">{{ cat.anno || '—' }}</span>
+              <span class="cat-nome">{{ cat.nome }}</span>
+            </div>
+            <div class="cat-card-body">
+              <div class="cat-stat">
+                <span class="cat-stat-value">{{ getGiocatoriCat(cat.id).length }}</span>
+                <span class="cat-stat-label">iscritti</span>
+              </div>
+              <div class="cat-stat financial" @click.stop="toggleFinanze">
+                <span class="cat-stat-value">{{ mostraFinanze ? calcTotalePagato(cat.id) + ' €' : '***' }}</span>
+                <span class="cat-stat-label">incasso</span>
+              </div>
+              <div class="cat-stat financial" @click.stop="toggleFinanze">
+                <span class="cat-stat-value" :class="{ 'debt': mostraFinanze && calcRimaneCat(cat.id) > 0 }">{{ mostraFinanze ? calcRimaneCat(cat.id) + ' €' : '***' }}</span>
+                <span class="cat-stat-label">da recuperare</span>
+              </div>
+              <div class="cat-stat">
+                <span class="cat-stat-value" :class="{ 'debt': nonInRegolaCat(cat.id) > 0 }">{{ nonInRegolaCat(cat.id) }}</span>
+                <span class="cat-stat-label">non in regola</span>
+              </div>
+            </div>
+            <div class="cat-card-footer">
+              <span class="cat-arrow">→</span>
+            </div>
           </div>
         </div>
       </div>
@@ -279,10 +415,22 @@ async function loadDati() {
   try {
     const response = await getCategorie()
     let cats = Array.isArray(response) ? response : (response?.data || [])
-    cats = cats.filter(c => c.societa_id === societaId.value && !c.is_portieri && c.parent_id !== null)
-    categorie.value = cats
+    const socCats = cats.filter(c => c.societa_id === societaId.value)
+    const parents = socCats.filter(c => c.parent_id === null || c.parent_id === undefined)
+    const children = socCats.filter(c => !c.is_portieri && c.parent_id !== null && c.parent_id !== undefined)
 
-    const validCatIds = new Set(cats.map(c => c.id))
+    categorie.value = children.map(c => {
+      const p = parents.find(parent => parent.id === c.parent_id)
+      const pNome = (p?.nome || '').toLowerCase()
+      return {
+        ...c,
+        parentNome: p?.nome || '',
+        is_scuola: pNome.includes('scuola'),
+        is_agonistica: pNome.includes('agonistica')
+      }
+    })
+
+    const validCatIds = new Set(children.map(c => c.id))
     const pRes = await getPersone()
     const players = Array.isArray(pRes) ? pRes : (pRes?.data || [])
     persone.value = players.filter(p => validCatIds.has(p.categoria_id))
@@ -304,8 +452,32 @@ async function loadDati() {
   } catch(e) { console.error('Error loading:', e) }
 }
 
+const filtroPadre = ref('tutti')
+
+const categorieScuolaCalcio = computed(() => {
+  return categorie.value
+    .filter(c => c.is_scuola)
+    .sort((a, b) => (a.anno || 0) - (b.anno || 0) || (a.nome || '').localeCompare(b.nome || ''))
+})
+
+const categorieAgonistica = computed(() => {
+  return categorie.value
+    .filter(c => c.is_agonistica)
+    .sort((a, b) => (a.anno || 0) - (b.anno || 0) || (a.nome || '').localeCompare(b.nome || ''))
+})
+
+const categorieAltre = computed(() => {
+  return categorie.value
+    .filter(c => !c.is_scuola && !c.is_agonistica)
+    .sort((a, b) => (a.anno || 0) - (b.anno || 0) || (a.nome || '').localeCompare(b.nome || ''))
+})
+
 const categorieOrdinate = computed(() => {
-  return [...categorie.value].sort((a, b) => (a.anno || 0) - (b.anno || 0))
+  return [
+    ...categorieScuolaCalcio.value,
+    ...categorieAgonistica.value,
+    ...categorieAltre.value
+  ]
 })
 
 function getGiocatoriCat(catId) {
@@ -476,11 +648,105 @@ async function sbloccaGdpr() {
   color: #dc2626;
 }
 
+.cat-filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1.5rem 0 1rem;
+  flex-wrap: wrap;
+}
+
+.cat-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cat-filter-btn:hover {
+  border-color: var(--color-text);
+  color: var(--color-text);
+}
+
+.cat-filter-btn.active {
+  background: var(--color-surface-elevated, #27272a);
+  border-color: var(--color-text);
+  color: #fff;
+}
+
+.cat-filter-btn.btn-scuola.active {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10b981;
+  color: #10b981;
+}
+
+.cat-filter-btn.btn-agonistica.active {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: #6366f1;
+  color: #818cf8;
+}
+
+.filter-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot-scuola {
+  background: #10b981;
+}
+
+.dot-agonistica {
+  background: #6366f1;
+}
+
+.group-section {
+  margin-bottom: 2rem;
+}
+
+.section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.group-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.badge-scuola {
+  color: #10b981;
+}
+
+.badge-agonistica {
+  color: #818cf8;
+}
+
+.group-count {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  text-transform: lowercase;
+}
+
 .section-divider {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin: 2rem 0 1.25rem;
+  margin: 1.5rem 0 1rem;
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -492,7 +758,15 @@ async function sbloccaGdpr() {
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--color-surface);
+  background: var(--color-border);
+}
+
+.section-scuola::after {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.5), var(--color-border));
+}
+
+.section-agonistica::after {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.5), var(--color-border));
 }
 
 .cat-grid {
@@ -522,20 +796,79 @@ async function sbloccaGdpr() {
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: #ffffff;
+}
+
+/* Card Scuola Calcio: Smeraldo */
+.card-scuola .cat-card-header {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.card-scuola:hover {
+  border-color: #10b981;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);
+}
+
+.card-scuola:hover .cat-arrow {
+  color: #10b981;
+}
+
+/* Card Agonistica: Indaco */
+.card-agonistica .cat-card-header {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+}
+
+.card-agonistica:hover {
+  border-color: #6366f1;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.15);
+}
+
+.card-agonistica:hover .cat-arrow {
+  color: #6366f1;
+}
+
+/* Card Default */
+.card-default .cat-card-header {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+}
+
+/* Parent Tag */
+.parent-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.tag-scuola {
+  background: rgba(0, 0, 0, 0.25);
+  color: #a7f3d0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.tag-agonistica {
+  background: rgba(0, 0, 0, 0.25);
+  color: #c7d2fe;
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .cat-anno {
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .cat-nome {
-  flex: 1;
   font-weight: 600;
   font-size: 0.9rem;
+  color: #ffffff;
 }
 
 .cat-card-body {
