@@ -249,10 +249,12 @@
                 :class="{ clickable: editMode }"
                 @click="toggleDotazione(item)"
               >
-                <div class="box-check" :class="{ checked: isDotazioneChecked(item) }">
-                  <span v-if="isDotazioneChecked(item)">✓</span>
-                </div>
                 <span class="dotazione-label">{{ item }}</span>
+                <div class="dot-check-cell">
+                  <div class="box-check" :class="{ checked: isDotazioneChecked(item) }">
+                    <span v-if="isDotazioneChecked(item)">✓</span>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="dotazione-col">
@@ -263,10 +265,12 @@
                 :class="{ clickable: editMode }"
                 @click="toggleDotazione(item)"
               >
-                <div class="box-check" :class="{ checked: isDotazioneChecked(item) }">
-                  <span v-if="isDotazioneChecked(item)">✓</span>
-                </div>
                 <span class="dotazione-label">{{ item }}</span>
+                <div class="dot-check-cell">
+                  <div class="box-check" :class="{ checked: isDotazioneChecked(item) }">
+                    <span v-if="isDotazioneChecked(item)">✓</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -287,20 +291,24 @@
               <span v-else class="sheet-text">{{ scheda.email2 }}</span>
             </div>
           </div>
-          <div class="email-extra-info">
-            <div class="extra-line">
-              <span class="extra-label">CATEGORIA:</span>
-              <span class="extra-val uppercase bold">{{ categoriaNome || '---' }}</span>
+          <div class="email-field-row">
+            <span class="email-label">CATEGORIA:</span>
+            <div class="email-val">
+              <span class="sheet-text uppercase bold">{{ categoriaNome || '---' }}</span>
             </div>
-            <div v-if="giocatoreEdit.numero_maglia || editMode" class="extra-line">
-              <span class="extra-label">NR. MAGLIA:</span>
+          </div>
+          <div class="email-field-row">
+            <span class="email-label">NR. MAGLIA:</span>
+            <div class="email-val">
               <input v-if="editMode" v-model="giocatoreEdit.numero_maglia" type="number" class="sheet-input-small" />
-              <span v-else class="extra-val bold">{{ giocatoreEdit.numero_maglia || '-' }}</span>
+              <span v-else class="sheet-text bold">{{ giocatoreEdit.numero_maglia || '-' }}</span>
             </div>
-            <div v-if="giocatoreEdit.matricola || editMode" class="extra-line">
-              <span class="extra-label">MATRICOLA:</span>
+          </div>
+          <div class="email-field-row">
+            <span class="email-label">MATRICOLA:</span>
+            <div class="email-val">
               <input v-if="editMode" v-model="giocatoreEdit.matricola" class="sheet-input-small uppercase" />
-              <span v-else class="extra-val uppercase">{{ giocatoreEdit.matricola || '-' }}</span>
+              <span v-else class="sheet-text uppercase bold">{{ giocatoreEdit.matricola || '-' }}</span>
             </div>
           </div>
         </div>
@@ -315,7 +323,7 @@
             <span class="sub">E PRIVACY DEL MINORE</span>
           </div>
 
-          <div class="privacy-block">
+          <div class="privacy-block priv-block-1">
             <p class="privacy-p">
               Con la presente, il succitato genitore <strong>AUTORIZZA</strong> il
               trattamento dei dati personali del proprio figlio/figlia
@@ -330,7 +338,7 @@
             </div>
           </div>
 
-          <div class="privacy-block block-obbligo">
+          <div class="privacy-block priv-block-2 block-obbligo">
             <p class="privacy-p">
               Con l'accettazione di quanto sopra il firmatario si impegna ad onorare tutte le scadenze dei pagamenti previste
             </p>
@@ -340,7 +348,7 @@
             </div>
           </div>
 
-          <div class="privacy-block">
+          <div class="privacy-block priv-block-3">
             <p class="privacy-p small-p">
               E' altresì previsto l'utilizzo di immagini del minore rappresentato ed iscritto. Le immagini saranno destinate alla realizzazione di progetti, pubblicazioni, interviste ed attività di divulgazione delle attività svolte dalla Scuola Calcio e potranno essere utilizzate per essere inserite su pubblicazioni, per riprese televisive, Dvd od altro supporto idoneo alla memorizzazione. Potranno altresì essere diffuse pubblicamente durante proiezioni, trasmissioni televisive o pubblicate su stampa o riviste in contesti riguardanti le attività didattiche/sportive svolte nel Centro sportivo. L'eventuale diniego non comporterà alcuna conseguenza.
             </p>
@@ -1001,15 +1009,12 @@ async function salvaDati() {
   max-width: 820px;
   background: #ffffff;
   color: #000000;
-  border: 2px solid #000000;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
   padding: 12px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 1080px;
 }
 
 /* 1. Header con Stemma */
@@ -1042,7 +1047,7 @@ async function salvaDati() {
 /* 2. Titolo Iscrizione */
 .header-title-box {
   text-align: center;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .titolo-iscrizione {
@@ -1050,7 +1055,7 @@ async function salvaDati() {
   font-weight: 800;
   color: #0284c7;
   letter-spacing: 0.04em;
-  margin: 0;
+  margin: 2px 0 3px 0;
   text-transform: uppercase;
 }
 
@@ -1065,6 +1070,7 @@ async function salvaDati() {
   display: grid;
   grid-template-columns: 50% 50%;
   border: 1.5px solid #000000;
+  margin-bottom: 5px;
 }
 
 .col-anagrafica {
@@ -1078,7 +1084,7 @@ async function salvaDati() {
 
 .field-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   border-bottom: 1px solid #000000;
   min-height: 25px;
   flex: 1;
@@ -1089,25 +1095,29 @@ async function salvaDati() {
 }
 
 .field-label {
-  width: 38%;
+  width: 42%;
   min-width: 120px;
-  padding: 2px 6px;
+  padding: 3px 6px;
   font-size: 9.5px;
   font-weight: 800;
   color: #000000;
   text-transform: uppercase;
   letter-spacing: -0.01em;
   white-space: nowrap;
+  border-right: 1px solid #000000;
+  display: flex;
+  align-items: center;
+  background: #ffffff;
 }
 
 .col-right .field-label {
-  width: 46%;
+  width: 52%;
   min-width: 140px;
 }
 
 .field-val {
   flex: 1;
-  padding: 2px 6px;
+  padding: 3px 6px;
   display: flex;
   align-items: center;
 }
@@ -1122,7 +1132,7 @@ async function salvaDati() {
 
 .sheet-input {
   width: 100%;
-  padding: 1px 4px;
+  padding: 2px 4px;
   font-size: 10px;
   color: #000000;
   background: #eff6ff;
@@ -1176,11 +1186,15 @@ async function salvaDati() {
   font-weight: 800;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* 4. Tabella Materiale (Taglia + Dotazione) & Email */
 .section-dotazione-email {
-  margin-top: 5px;
+  margin-bottom: 5px;
   display: grid;
   grid-template-columns: 66% 34%;
   border: 1.5px solid #000000;
@@ -1200,6 +1214,7 @@ async function salvaDati() {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   border-bottom: 1px solid #000000;
+  height: 24px;
 }
 
 .taglia-box {
@@ -1258,13 +1273,9 @@ async function salvaDati() {
 
 .dotazione-row {
   display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 6px;
+  align-items: stretch;
   border-bottom: 1px solid #000000;
-  min-height: 21px;
-  font-size: 9.5px;
-  font-weight: 700;
+  min-height: 22px;
   flex: 1;
 }
 
@@ -1278,6 +1289,26 @@ async function salvaDati() {
 
 .dotazione-row.clickable:hover {
   background: #f8fafc;
+}
+
+.dotazione-label {
+  flex: 1;
+  padding: 2px 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  border-right: 1px solid #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dot-check-cell {
+  width: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .box-check {
@@ -1299,54 +1330,40 @@ async function salvaDati() {
   color: #ffffff;
 }
 
-.dotazione-label {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
+/* Colonna Email */
 .col-email {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
 }
 
 .email-field-row {
   display: flex;
-  align-items: center;
-  padding: 3px 6px;
+  align-items: stretch;
   border-bottom: 1px solid #000000;
-  min-height: 26px;
+  flex: 1;
+  min-height: 28px;
+}
+
+.col-email .email-field-row:last-child {
+  border-bottom: none;
 }
 
 .email-label {
-  width: 32%;
+  width: 40%;
+  padding: 3px 6px;
   font-size: 9.5px;
   font-weight: 800;
+  border-right: 1px solid #000000;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
 }
 
 .email-val {
   flex: 1;
-}
-
-.email-extra-info {
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-  justify-content: space-around;
-}
-
-.extra-line {
+  padding: 3px 6px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 9.5px;
-}
-
-.extra-label {
-  font-weight: 800;
 }
 
 .sheet-input-small {
@@ -1360,11 +1377,10 @@ async function salvaDati() {
 
 /* 6. Grid Bottom: Privacy & Pagamenti */
 .grid-bottom {
-  margin-top: 5px;
   display: grid;
   grid-template-columns: 54% 46%;
   border: 1.5px solid #000000;
-  flex: 1;
+  margin-bottom: 0;
 }
 
 .col-privacy {
@@ -1377,52 +1393,53 @@ async function salvaDati() {
   display: flex;
   flex-direction: column;
   line-height: 1.15;
+  height: 26px;
 }
 
 .header-privacy .sub {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 800;
 }
 
 .privacy-block {
-  padding: 5px 8px;
-  border-bottom: 1px solid #000000;
+  padding: 6px 8px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  flex: 1;
 }
 
-.col-privacy .privacy-block:last-child {
+.priv-block-1 {
+  flex: 1.1;
+  border-bottom: 1px solid #000000;
+}
+
+.priv-block-2 {
+  border: 1.5px solid #000000;
+  margin: 4px;
+  background: #fafafa;
+}
+
+.priv-block-3 {
+  flex: 1.4;
   border-bottom: none;
 }
 
 .privacy-p {
   font-size: 8px;
-  line-height: 1.25;
-  margin: 0 0 5px 0;
+  line-height: 1.3;
+  margin: 0 0 6px 0;
   text-align: justify;
 }
 
 .small-p {
   font-size: 7.2px;
-  line-height: 1.2;
-}
-
-.block-obbligo {
-  background: #fafafa;
-}
-
-.block-obbligo .privacy-p {
-  font-weight: 600;
-  font-style: italic;
+  line-height: 1.25;
 }
 
 .firma-container {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
-  margin-top: 5px;
+  margin-top: 4px;
 }
 
 .firma-title {
@@ -1443,27 +1460,31 @@ async function salvaDati() {
 .col-pagamenti {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
 }
 
 .pagamento-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   border-bottom: 1px solid #000000;
-  padding: 2px 6px;
-  min-height: 22px;
+  min-height: 24px;
   flex: 1;
 }
 
 .pag-label {
-  width: 52%;
+  width: 55%;
+  padding: 2px 6px;
   font-size: 9px;
   font-weight: 800;
   letter-spacing: -0.02em;
+  border-right: 1px solid #000000;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
 }
 
 .pag-val {
   flex: 1;
+  padding: 2px 6px;
   display: flex;
   align-items: center;
 }
@@ -1509,10 +1530,6 @@ async function salvaDati() {
   border: 1px solid #cbd5e1;
 }
 
-.header-rate {
-  border-top: 1px solid #000000;
-}
-
 .safeguarding-box {
   padding: 4px 6px;
   border-top: 1px solid #000000;
@@ -1537,7 +1554,7 @@ async function salvaDati() {
 .safe-line {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .safe-text {
@@ -1641,8 +1658,8 @@ async function salvaDati() {
 
 /* =========================================================
    MEDIA QUERY PER LA STAMPA (@media print)
-   Garantisce che il documento riempia l'intera pagina A4
-   con margini regolari su tutti e 4 i lati ed esattamente 1 pagina!
+   Garantisce bordi interni ed esterni completi,
+   riempimento pagina e RIGOROSAMENTE 1 SOLA PAGINA!
    ========================================================= */
 @media print {
   @page {
@@ -1683,17 +1700,13 @@ async function salvaDati() {
   .foglio-iscrizione {
     max-width: 100% !important;
     width: 100% !important;
-    height: 264mm !important; /* 264mm + 16mm margini = 280mm < 297mm: GARANTISCE 1 SOLA PAGINA SENZA SECONDA PAGINA BIANCA */
-    max-height: 266mm !important;
-    min-height: 0 !important;
     margin: 0 !important;
-    padding: 2.5mm !important; /* Margine interno regolare su tutti e 4 i lati */
-    border: 1.5px solid #000000 !important;
+    padding: 0 !important;
+    border: none !important;
     box-shadow: none !important;
     box-sizing: border-box !important;
     display: flex !important;
     flex-direction: column !important;
-    justify-content: space-between !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     page-break-after: avoid !important;
@@ -1701,110 +1714,220 @@ async function salvaDati() {
     overflow: hidden !important;
   }
 
+  .header-logo-row {
+    margin-bottom: 2mm !important;
+  }
+
   .stemma-societa {
-    height: 46px !important;
+    height: 50px !important;
   }
 
   .titolo-iscrizione {
-    font-size: 13.5px !important;
+    font-size: 15px !important;
     color: #0284c7 !important;
+    margin: 2px 0 3px 0 !important;
   }
 
   .divider-line {
-    margin-bottom: 1.5mm !important;
+    margin-bottom: 3mm !important;
+    height: 2px !important;
   }
 
   .grid-anagrafica {
     border: 1.5px solid #000000 !important;
+    margin-bottom: 3.5mm !important;
   }
 
-  .field-label, .pag-label, .email-label, .safe-title {
-    font-size: 8.8px !important;
+  .col-anagrafica.col-left {
+    border-right: 1.5px solid #000000 !important;
+  }
+
+  .col-left .field-row {
+    height: 28px !important;
+  }
+
+  .col-right .field-row {
+    height: 22.4px !important;
+  }
+
+  .field-label {
+    border-right: 1px solid #000000 !important;
+    font-size: 9.5px !important;
+    padding: 3px 6px !important;
+  }
+
+  .col-left .field-label {
+    width: 42% !important;
+  }
+
+  .col-right .field-label {
+    width: 52% !important;
+  }
+
+  .field-val {
+    padding: 3px 6px !important;
   }
 
   .sheet-text {
     font-size: 9.5px !important;
   }
 
-  .field-row {
-    min-height: 21px !important;
+  .section-dotazione-email {
+    margin-bottom: 3.5mm !important;
+    border: 1.5px solid #000000 !important;
   }
 
-  .section-dotazione-email {
-    margin-top: 2mm !important;
-    border: 1.5px solid #000000 !important;
+  .col-dotazione {
+    border-right: 1.5px solid #000000 !important;
   }
 
   .header-taglia {
     border-bottom: 1px solid #000000 !important;
+    height: 22px !important;
+    font-size: 10px !important;
   }
 
   .taglia-grid {
     border-bottom: 1px solid #000000 !important;
+    height: 24px !important;
   }
 
   .taglia-box {
-    padding: 2.5px 1px !important;
-    font-size: 9px !important;
+    border-right: 1px solid #000000 !important;
+    font-size: 10px !important;
   }
 
   .header-dotazione {
     border-bottom: 1px solid #000000 !important;
+    height: 22px !important;
+    font-size: 10px !important;
+  }
+
+  .dotazione-col:first-child {
+    border-right: 1px solid #000000 !important;
   }
 
   .dotazione-row {
-    min-height: 19px !important;
-    font-size: 8.8px !important;
+    height: 22px !important;
+    border-bottom: 1px solid #000000 !important;
+  }
+
+  .dotazione-label {
+    border-right: 1px solid #000000 !important;
+    font-size: 9.5px !important;
+  }
+
+  .dot-check-cell {
+    width: 26px !important;
+  }
+
+  .col-email .email-field-row {
+    flex: 1 !important;
+    border-bottom: 1px solid #000000 !important;
+  }
+
+  .col-email .email-field-row:last-child {
+    border-bottom: none !important;
+  }
+
+  .email-label {
+    border-right: 1px solid #000000 !important;
+    width: 40% !important;
+    font-size: 9.5px !important;
+    padding: 3px 6px !important;
+  }
+
+  .email-val {
+    padding: 3px 6px !important;
   }
 
   .grid-bottom {
-    margin-top: 2mm !important;
-    flex: 1 !important;
+    border: 1.5px solid #000000 !important;
+    margin-bottom: 0 !important;
   }
 
-  .pagamento-row {
-    min-height: 19px !important;
-    font-size: 8.8px !important;
+  .col-privacy {
+    border-right: 1.5px solid #000000 !important;
+  }
+
+  .header-privacy {
+    border-bottom: 1px solid #000000 !important;
+    height: 26px !important;
+  }
+
+  .priv-block-1 {
+    flex: 1.1 !important;
+    border-bottom: 1px solid #000000 !important;
+    padding: 6px 8px !important;
+  }
+
+  .priv-block-2 {
+    border: 1.5px solid #000000 !important;
+    margin: 4px !important;
+    padding: 6px 8px !important;
+  }
+
+  .priv-block-3 {
+    flex: 1.4 !important;
+    padding: 6px 8px !important;
   }
 
   .privacy-p {
-    font-size: 7.6px !important;
-    line-height: 1.25 !important;
+    font-size: 8px !important;
+    line-height: 1.3 !important;
   }
 
   .small-p {
-    font-size: 7px !important;
-    line-height: 1.2 !important;
+    font-size: 7.2px !important;
+    line-height: 1.25 !important;
   }
 
   .firma-container {
-    margin-top: 3px !important;
+    margin-top: 4px !important;
   }
 
   .firma-title {
-    font-size: 8px !important;
+    font-size: 8.5px !important;
   }
 
   .firma-line {
-    height: 13px !important;
+    height: 14px !important;
+  }
+
+  .col-pagamenti .section-header-bar {
+    border-bottom: 1px solid #000000 !important;
+    height: 22px !important;
+    font-size: 10px !important;
+  }
+
+  .pagamento-row {
+    height: 24px !important;
+    border-bottom: 1px solid #000000 !important;
+  }
+
+  .pag-label {
+    width: 55% !important;
+    border-right: 1px solid #000000 !important;
+    font-size: 9px !important;
   }
 
   .box-check {
-    width: 11px !important;
-    height: 11px !important;
+    width: 12px !important;
+    height: 12px !important;
     border: 1px solid #000000 !important;
   }
 
   .safeguarding-box {
-    padding: 3px 6px !important;
+    padding: 4px 6px !important;
+    border-top: 1px solid #000000 !important;
   }
 
   .safe-title {
-    font-size: 8px !important;
+    font-size: 8.5px !important;
   }
 
   .safe-text {
-    font-size: 7.8px !important;
+    font-size: 8px !important;
   }
 }
 
