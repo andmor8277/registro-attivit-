@@ -837,24 +837,10 @@ async function esportaPDF() {
       format: 'a4'
     })
 
-    const pageWidth = 210
-    const pageHeight = 297
-    const margin = 8
-    const maxW = pageWidth - (margin * 2)
-    const maxH = pageHeight - (margin * 2)
-
-    let imgW = maxW
-    let imgH = (canvas.height * imgW) / canvas.width
-
-    if (imgH > maxH) {
-      imgH = maxH
-      imgW = (canvas.width * imgH) / canvas.height
-    }
-
-    const posX = margin + (maxW - imgW) / 2
-    const posY = margin + (maxH - imgH) / 2
-
-    pdf.addImage(imgData, 'JPEG', posX, posY, imgW, imgH)
+    // Il foglio ha esattamente le proporzioni A4 (794 x 1123 = 210 x 297 mm)
+    // Con il padding interno del foglio (22px 26px = ~8mm di margini regolari già integrati)
+    // pdf.addImage su 0, 0, 210, 297 copre perfettamente il foglio A4 con margini regolari sui 4 lati
+    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297)
 
     const cognome = (giocatoreEdit.cognome || 'ATLETA').toUpperCase()
     const nome = (giocatoreEdit.nome || '').toUpperCase()
@@ -1103,16 +1089,19 @@ async function salvaDati() {
    FOGLIO ISCRIZIONE — FORMATO A4 / REPLICA RED TIGERS
    ========================================================= */
 .foglio-iscrizione {
-  width: 100%;
-  max-width: 820px;
+  width: 794px;
+  max-width: 100%;
+  min-height: 1123px;
+  aspect-ratio: 210 / 297;
   background: #ffffff;
   color: #000000;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
-  padding: 12px;
+  padding: 22px 26px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  margin: 0 auto;
 }
 
 /* 1. Header con Stemma */
@@ -1160,7 +1149,7 @@ async function salvaDati() {
 .divider-line {
   height: 2px;
   background: #0284c7;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
 }
 
 /* 3. Grid Anagrafica (2 Colonne) */
@@ -1168,7 +1157,8 @@ async function salvaDati() {
   display: grid;
   grid-template-columns: 50% 50%;
   border: 1.5px solid #000000;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+  min-height: 280px;
 }
 
 .col-anagrafica {
@@ -1292,10 +1282,11 @@ async function salvaDati() {
 
 /* 4. Tabella Materiale (Taglia + Dotazione) & Email */
 .section-dotazione-email {
-  margin-bottom: 5px;
+  margin-bottom: 8px;
   display: grid;
   grid-template-columns: 66% 34%;
   border: 1.5px solid #000000;
+  min-height: 255px;
 }
 
 .col-dotazione {
@@ -1479,6 +1470,8 @@ async function salvaDati() {
   grid-template-columns: 54% 46%;
   border: 1.5px solid #000000;
   margin-bottom: 0;
+  flex: 1;
+  min-height: 430px;
 }
 
 .col-privacy {
@@ -2048,7 +2041,10 @@ async function salvaDati() {
   }
 
   .foglio-iscrizione {
-    padding: 6px;
+    width: 100%;
+    min-height: auto;
+    aspect-ratio: auto;
+    padding: 8px;
     font-size: 9px;
   }
 
