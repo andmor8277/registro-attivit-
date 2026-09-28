@@ -20,7 +20,7 @@ if not DEFAULT_PASSWORD:
     raise RuntimeError("DEFAULT_PASSWORD environment variable is required")
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", 60 * 24 * 30))  # Default 30 giorni per evitare logout frequenti su app mobile
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")

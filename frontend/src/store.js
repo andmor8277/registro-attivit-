@@ -59,6 +59,18 @@ export function useStore() {
     }
     applySocietaColors(s)
   }
+  function setUtenteAttivo(u) {
+    utenteAttivo.value = u
+    if (u) {
+      localStorage.setItem('utente_data', JSON.stringify(u))
+      if (u.is_super_admin) localStorage.setItem('is_super_admin', '1')
+      if (u.is_admin) localStorage.setItem('is_admin', '1')
+    } else {
+      localStorage.removeItem('utente_data')
+      localStorage.removeItem('is_super_admin')
+      localStorage.removeItem('is_admin')
+    }
+  }
   function setListaSocieta(list) { listaSocieta.value = list }
   function clearToken() { 
     token.value = null; 
@@ -74,8 +86,17 @@ export function useStore() {
     localStorage.removeItem('is_admin')
     localStorage.removeItem('categoria_id')
     localStorage.removeItem('categoria_data')
+    localStorage.removeItem('utente_data')
   }
   
+  // Carica utente salvato
+  const savedUtenteData = localStorage.getItem('utente_data')
+  if (savedUtenteData) {
+    try {
+      utenteAttivo.value = JSON.parse(savedUtenteData)
+    } catch {}
+  }
+
   // Carica società salvata
   const savedSocietaData = localStorage.getItem('societa_data')
   if (savedSocietaData) {
@@ -121,9 +142,10 @@ export function useStore() {
     hideTopbar,
     setCategoria, 
     setToken, 
+    setUtenteAttivo,
     setStagioneCorrente, 
     setSocietaAttiva,
-    setListaSocieta,
+    setListaSocieta, 
     clearToken 
   }
 }
