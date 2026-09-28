@@ -38,6 +38,16 @@ class PersonaCreate(BaseModel):
     rata4: Optional[float] = None
     rata_saldo: Optional[float] = None
     pagamenti_in_regola: Optional[bool] = None
+    tel_ragazzo: Optional[str] = None
+    tel_nonni: Optional[str] = None
+    societa_provenienza: Optional[str] = None
+    scadenza_certificato_2: Optional[date] = None
+    ricevuta_preiscrizione: Optional[str] = None
+    ricevuta_iscrizione: Optional[str] = None
+    ricevuta_saldo: Optional[str] = None
+    safeguarding_accettato: Optional[bool] = None
+    regole_accettate: Optional[bool] = None
+    dotazione_materiale: Optional[dict] = None
 
 
 class PersonaOut(BaseModel):
@@ -69,6 +79,16 @@ class PersonaOut(BaseModel):
     taglia: Optional[str] = None
     note: Optional[str] = None
     pagamenti_in_regola: Optional[bool] = True
+    tel_ragazzo: Optional[str] = None
+    tel_nonni: Optional[str] = None
+    societa_provenienza: Optional[str] = None
+    scadenza_certificato_2: Optional[date] = None
+    ricevuta_preiscrizione: Optional[str] = None
+    ricevuta_iscrizione: Optional[str] = None
+    ricevuta_saldo: Optional[str] = None
+    safeguarding_accettato: Optional[bool] = None
+    regole_accettate: Optional[bool] = None
+    dotazione_materiale: Optional[dict] = None
 
     class Config:
         from_attributes = True

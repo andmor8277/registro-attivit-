@@ -1221,6 +1221,23 @@ def run_migrations():
                 print(f"Migration warning (performance indexes): {e}")
                 conn.rollback()
 
+            try:
+                conn.execute(text("ALTER TABLE persone ADD COLUMN IF NOT EXISTS tel_ragazzo VARCHAR(255)"))
+                conn.execute(text("ALTER TABLE persone ADD COLUMN IF NOT EXISTS tel_nonni VARCHAR(255)"))
+                conn.execute(text("ALTER TABLE persone ADD COLUMN IF NOT EXISTS societa_provenienza VARCHAR(100)"))
+                conn.execute(text("ALTER TABLE persone ADD COLUMN IF NOT EXISTS scadenza_certificato_2 DATE"))
+                conn.execute(text("ALTER TABLE persone ADD COLUMN IF NOT EXISTS ricevuta_preiscrizione VARCHAR(50)"))
+                conn.execute(text("ALTER TABLE persone ADD COLUMN IF NOT EXISTS ricevuta_iscrizione VARCHAR(50)"))
+                conn.execute(text("ALTER TABLE persone ADD COLUMN IF NOT EXISTS ricevuta_saldo VARCHAR(50)"))
+                conn.execute(text("ALTER TABLE persone ADD COLUMN IF NOT EXISTS safeguarding_accettato BOOLEAN DEFAULT FALSE"))
+                conn.execute(text("ALTER TABLE persone ADD COLUMN IF NOT EXISTS regole_accettate BOOLEAN DEFAULT FALSE"))
+                conn.execute(text("ALTER TABLE persone ADD COLUMN IF NOT EXISTS dotazione_materiale JSONB DEFAULT '{}'::jsonb"))
+                conn.commit()
+                print("Migration: Added registration sheet columns to persone")
+            except Exception as e:
+                print(f"Migration warning (persone registration columns): {e}")
+                conn.rollback()
+
         finally:
             if has_lock:
                 try:
