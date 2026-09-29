@@ -209,7 +209,7 @@
                 </div>
               </div>
               <div class="catalogo-item-preview">
-                <canvas :id="'cat-canvas-' + idx" width="200" height="125" class="catalogo-canvas"></canvas>
+                <canvas :id="'cat-canvas-' + idx" width="400" height="250" class="catalogo-canvas"></canvas>
               </div>
             </div>
             <div class="catalogo-item-footer">
@@ -487,7 +487,8 @@ async function loadCatalogo() {
     currentUserId.value = res.data.current_user_id
     isSuperAdmin.value = res.data.is_super_admin
     await nextTick()
-    await drawCatalogoPreviews()
+    drawCatalogoPreviews()
+    setTimeout(drawCatalogoPreviews, 60)
   } catch (e) {
     console.error('Errore caricamento catalogo:', e)
     catalogoEsercizi.value = []
@@ -510,13 +511,14 @@ function drawCatalogoPreviews() {
     const canvas = document.getElementById('cat-canvas-' + idx)
     if (!canvas) return
     const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
     const fieldMode = ex.campo_con_righe === 'half' ? 'half' : (ex.campo_con_righe === 'blank' ? 'blank' : 'full')
-    // Stesso rendering del PDF, in miniatura (elementi leggermente ingranditi per leggibilità)
     const rect = drawFieldCanvas(ctx, canvas.width, canvas.height, fieldMode)
-    const boardW = getBoardWidth()
-    // baseScale costante (canvas.width/boardW): la lavagna NON ridimensiona gli
-    // elementi cambiando modalità campo (Metà/Vuoto), quindi non va scalato con rect.fw
-    drawElementsCanvas(ctx, ex.elementi, rect, canvas.width / boardW, 1.8)
+    // Riferimento standard della lavagna tattica (800px full-field):
+    // gli oggetti hanno una scala base costante e perfettamente proporzionata al campo
+    const REF_BOARD_W = 800
+    const baseScale = canvas.width / REF_BOARD_W
+    drawElementsCanvas(ctx, ex.elementi, rect, baseScale, 1.0)
   })
 }
 
@@ -1317,8 +1319,8 @@ async function exportPdf() {
     // Campo da calcio (stessa geometria della lavagna)
     const rect = drawFieldCanvas(ctx, canvasWidth, canvasHeight, fieldMode)
 
-    // Elementi proporzionati al campo: riferimento = larghezza reale della lavagna a schermo
-    const boardW = getBoardWidth()
+    // Elementi proporzionati al campo: riferimento standard 800px coerente con la lavagna
+    const boardW = 800
     // baseScale costante (canvasWidth/boardW): la lavagna NON ridimensiona gli
     // elementi cambiando modalità campo (Metà/Vuoto), quindi non va scalato con rect.fw
     drawElementsCanvas(ctx, ex.elementi, rect, canvasWidth / boardW)
@@ -2013,7 +2015,30 @@ onUnmounted(() => {
 .catalogo-item-details { display: flex; gap: 0.75rem; flex-wrap: wrap; }
 .catalogo-item-details .detail-item { color: var(--color-text-secondary); font-size: 0.8rem; }
 .catalogo-item-preview { flex-shrink: 0; }
-.catalogo-canvas { border-radius: 6px; border: 1px solid var(--color-border); }
+.catalogo-canvas {
+  width: 200px;
+  height: 125px;
+  display: block;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+
+@media (max-width: 640px) {
+  .catalogo-item-body {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .catalogo-item-preview {
+    display: flex;
+    justify-content: center;
+  }
+  .catalogo-canvas {
+    width: 100%;
+    max-width: 320px;
+    height: auto;
+    aspect-ratio: 400 / 250;
+  }
+}
 .catalogo-item-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; gap: 0.5rem; }
 .catalogo-item-count { color: var(--color-text-muted); font-size: 0.75rem; flex: 1; }
 .catalogo-item-already { color: #22c55e; font-size: 0.75rem; font-weight: 500; }
