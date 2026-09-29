@@ -505,7 +505,7 @@ const route = useRoute()
 const { categoriaAttiva, societaAttiva, stagioneCorrente, utenteAttivo } = useStore()
 const categoriaId = parseInt(route.params.id)
 
-const nomeSocieta = computed(() => societaAttiva.value?.nome_breve || societaAttiva.value?.nome || 'Noi')
+const nomeSocieta = computed(() => societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Noi')
 
 const storico = ref([])
 const convocazioneId = ref(null)
@@ -1185,7 +1185,7 @@ function nuovaConvocazione() {
 
 async function popolaConvocazione(dataInizio, dataFine) {
   const partite = await caricaPartiteWeekend(dataInizio, dataFine)
-  const nomeSocieta = societaAttiva.value?.nome_breve || societaAttiva.value?.nome || 'Noi'
+  const nomeSocieta = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Noi'
   const gare = partite.length > 0 ? partite.map((p, idx) => ({
     numero: idx + 1, gara: `${nomeSocieta} vs ${p.avversario || 'TBD'}`, data: p.data_partite, campo: p.campo || '',
     indirizzo: p.indirizzo || '', appuntamento: '', inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
@@ -1207,7 +1207,7 @@ async function caricaPartiteEsistenti() {
   if (!convocazione.value || !convocazione.value.data_inizio || !convocazione.value.data_fine) { alert('Seleziona prima il weekend (data inizio e fine)'); return }
   const partite = await caricaPartiteWeekend(convocazione.value.data_inizio, convocazione.value.data_fine)
   if (partite.length === 0) { alert('Nessuna partita trovata per questo weekend'); return }
-  const nomeSocieta = societaAttiva.value?.nome_breve || societaAttiva.value?.nome || 'Noi'
+  const nomeSocieta = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Noi'
   const gare = partite.map((p, idx) => ({
     numero: idx + 1, gara: `${nomeSocieta} vs ${p.avversario || 'TBD'}`, data: p.data_partite, campo: p.campo || '',
     indirizzo: p.indirizzo || '', appuntamento: '', inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
@@ -1277,7 +1277,7 @@ async function creaConvocazioneDaWeekend(weekend) {
   convocazioneId.value = null
   const dataInizio = weekend.data_inizio
   const dataFine = weekend.data_fine || dataInizio
-  const nomeSocieta = societaAttiva.value?.nome_breve || societaAttiva.value?.nome || 'Noi'
+  const nomeSocieta = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Noi'
   const gare = weekend.partite.map((p, idx) => ({
     numero: idx + 1,
     gara: p.casa_fuori === 'fuori' ? `${p.avversario || 'TBD'} vs ${nomeSocieta}` : `${nomeSocieta} vs ${p.avversario || 'TBD'}`,

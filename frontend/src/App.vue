@@ -3,9 +3,9 @@
     <aside v-if="token && !hideTopbar" class="sidebar">
       <div class="brand">
         <img v-if="societaAttiva?.logo" :src="getUploadUrl('/uploads/' + societaAttiva.logo)" :alt="societaAttiva.nome" class="logo-img" />
-        <span v-else class="mark">{{ (societaAttiva?.nome_breve || societaAttiva?.nome || 'TH').slice(0, 2).toUpperCase() }}</span>
+        <span v-else class="mark">{{ (societaAttiva?.nome || societaAttiva?.nome_breve || 'TH').slice(0, 2).toUpperCase() }}</span>
         <div class="brand-txt">
-          <b>{{ societaAttiva?.nome_breve || societaAttiva?.nome || 'THOF' }}</b>
+          <b>{{ societaAttiva?.nome || societaAttiva?.nome_breve || 'THOF' }}</b>
           <small>The Home of Football</small>
         </div>
       </div>
@@ -108,7 +108,7 @@
       </button>
       <div class="topbar-brand">
         <img v-if="societaAttiva?.logo" :src="getUploadUrl('/uploads/' + societaAttiva.logo)" :alt="societaAttiva.nome" class="logo-img" />
-        <span class="brand-text">{{ societaAttiva?.nome_breve || societaAttiva?.nome || 'Società' }}</span>
+        <span class="brand-text">{{ societaAttiva?.nome || societaAttiva?.nome_breve || 'Società' }}</span>
       </div>
       <div class="topbar-season" :class="{ empty: !stagioneCorrente }">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -184,7 +184,7 @@
     <div v-if="mobileMenuOpen" class="mobile-menu-overlay" @click="mobileMenuOpen = false">
       <div class="mobile-menu" @click.stop>
         <div class="mobile-menu-header">
-          <span>{{ societaAttiva?.nome_breve || societaAttiva?.nome || 'Menu' }}</span>
+          <span>{{ societaAttiva?.nome || societaAttiva?.nome_breve || 'Menu' }}</span>
           <button class="mobile-menu-close" @click="mobileMenuOpen = false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"/>

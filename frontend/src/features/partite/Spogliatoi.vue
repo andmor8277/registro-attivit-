@@ -385,9 +385,9 @@
       <div v-if="weekendSelezionatoId" class="weekend-info">
         <div class="info-section" v-if="weekendPartite.length > 0">
           <h3>Partite programmate</h3>
-          <div v-for="p in weekendPartite" :key="p.id" class="partita-info-chip">
+          <div v-for="p in weekendPartite" :key="p.id" class="partita-info-chip" :class="{ 'trasferta-chip': p.casa_fuori === 'fuori' }">
             <span class="chip-cat">{{ getCatLabel(p.categoria_id) }}</span>
-            <span class="chip-match">{{ p.avversario || 'TBD' }} {{ p.casa_fuori === 'fuori' ? '(in trasferta)' : '(in casa)' }}</span>
+            <span class="chip-match">{{ p.avversario || 'TBD' }} {{ p.casa_fuori === 'fuori' ? '(trasferta - no spogliatoio)' : '(in casa)' }}</span>
             <span class="chip-date">{{ formatDate(p.data_partite) }} {{ p.ora ? p.ora.slice(0,5) : '' }}</span>
           </div>
         </div>
@@ -400,169 +400,234 @@
         </div>
       </div>
 
-      <div v-if="weekendSelezionatoId" class="assegnazioni-table">
-        <div class="table-header">
-          <div class="col-cat">Squadra</div>
-          <div class="col-spo">Spogliatoio</div>
-          <div class="col-campo">Campo da gioco</div>
+      <!-- Nessuna partita in casa -->
+      <div v-if="weekendSelezionatoId && weekendPartiteCasaPerGiorno.length === 0" class="empty-matches-notice">
+        <div class="notice-icon">ℹ️</div>
+        <div class="notice-content">
+          <strong>Nessuna partita in casa programmata per questo weekend.</strong>
+          <p v-if="weekendPartiteFuoriCount > 0" class="notice-sub">
+            Sono presenti {{ weekendPartiteFuoriCount }} partite in trasferta (non richiedono assegnazione spogliatoi o campi).
+          </p>
         </div>
-        <div v-for="p in weekendPartiteCasa" :key="'wc-' + p.id" class="table-row">
-          <div class="col-cat casa-cell">
-            <span class="cat-anno">{{ getCatLabel(p.categoria_id) }}</span>
-            <span class="tipo-badge casa">Casa</span>
-          </div>
-          <div class="col-spo multi-select">
-            <div v-for="item in spogliatoi" :key="item.id"
-                 class="select-chip"
-                 :class="{
-                   active: getAssegnazioneSpogliatoio(p.categoria_id, item.id, 'casa', p.id),
-                   occupied: isSpogliatoioOccupatoWeekend(p.categoria_id, item.id, 'casa', p.id)
-                 }"
-                 @click="!isSpogliatoioOccupatoWeekend(p.categoria_id, item.id, 'casa', p.id) && toggleAssegnazioneSpogliatoio(p.categoria_id, item.id, 'casa', p.id)">
-              {{ item.etichetta }}
-            </div>
-            <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
-          </div>
-          <div class="col-campo multi-select">
-            <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
-              <div class="select-chip campo-chip-main"
-                   :class="{
-                     active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id),
-                     occupied: isCampoTuttoOccupatoWeekend(p.categoria_id, item.id, 'casa', p.id) && !getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id)
-                   }"
-                   @click.stop="toggleCampoMenuWeekend(p.categoria_id, item.id, 'casa', p.id)">
-                 {{ item.etichetta }}{{ getCampoLabelSuffissoWeekend(p.categoria_id, item.id, 'casa', p.id) }}
-                 <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
-                   <polyline points="6 9 12 15 18 9"/>
-                 </svg>
-               </div>
-               <div v-if="campoMenuAperto === `casa_${p.id || ''}_${item.id}`" class="campo-dropdown" @click.stop>
-                 <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
-                      class="campo-dropdown-item"
-                      :class="{
-                        active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) === (opt.metacampo || 'FULL'),
-                        disabled: isCampoOccupatoWeekend(p.categoria_id, item.id, 'casa', p.id, opt.metacampo) && getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) !== (opt.metacampo || 'FULL')
-                      }"
-                      @click="!isCampoOccupatoWeekend(p.categoria_id, item.id, 'casa', p.id, opt.metacampo) || getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'casa', p.id, opt.metacampo) : null">
-                   {{ opt.label }}
-                 </div>
-                 <div v-if="getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'casa', p.id, getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) === 'FULL' ? null : getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id))">
-                   Rimuovi
-                 </div>
-               </div>
-             </div>
-            <span v-if="campi.length === 0" class="no-items">Nessuno disponibile</span>
-          </div>
-        </div>
-        <div v-for="p in weekendPartiteFuori" :key="'wf-' + p.id" class="table-row">
-          <div class="col-cat fuori-cell">
-            <span class="cat-nome">{{ p.avversario || 'TBD' }}</span>
-            <span class="tipo-badge fuori">Ospite</span>
-          </div>
-          <div class="col-spo multi-select">
-            <div v-for="item in spogliatoi" :key="item.id"
-                 class="select-chip"
-                 :class="{
-                   active: getAssegnazioneSpogliatoio(p.categoria_id, item.id, 'ospite', p.id),
-                   occupied: isSpogliatoioOccupatoWeekend(p.categoria_id, item.id, 'ospite', p.id)
-                 }"
-                 @click="!isSpogliatoioOccupatoWeekend(p.categoria_id, item.id, 'ospite', p.id) && toggleAssegnazioneSpogliatoio(p.categoria_id, item.id, 'ospite', p.id)">
-              {{ item.etichetta }}
-            </div>
-            <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
-          </div>
-          <div class="col-campo multi-select">
-            <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
-              <div class="select-chip campo-chip-main"
-                   :class="{
-                     active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id),
-                     occupied: isCampoTuttoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p.id) && !getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id)
-                   }"
-                   @click.stop="toggleCampoMenuWeekend(p.categoria_id, item.id, 'ospite', p.id)">
-                 {{ item.etichetta }}{{ getCampoLabelSuffissoWeekend(p.categoria_id, item.id, 'ospite', p.id) }}
-                 <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
-                   <polyline points="6 9 12 15 18 9"/>
-                 </svg>
-               </div>
-               <div v-if="campoMenuAperto === `ospite_${p.id || ''}_${item.id}`" class="campo-dropdown" @click.stop>
-                 <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
-                      class="campo-dropdown-item"
-                      :class="{
-                        active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) === (opt.metacampo || 'FULL'),
-                        disabled: isCampoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p.id, opt.metacampo) && getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) !== (opt.metacampo || 'FULL')
-                      }"
-                      @click="!isCampoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p.id, opt.metacampo) || getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'ospite', p.id, opt.metacampo) : null">
-                   {{ opt.label }}
-                 </div>
-                 <div v-if="getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'ospite', p.id, getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) === 'FULL' ? null : getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id))">
-                   Rimuovi
-                 </div>
-               </div>
-             </div>
-            <span v-if="campi.length === 0" class="no-items">Nessuno disponibile</span>
-          </div>
-        </div>
-        <!-- Non censite rows -->
-        <div v-for="(squadra, idx) in squadreNonCensiteWeekend" :key="'nc-w-' + idx" class="table-row non-censite-row">
-          <div class="col-cat non-censita-cell">
-            <span class="print-team-name">{{ squadra.nome || 'Squadra non censita' }}</span>
-            <input type="text" v-model="squadreNonCensiteWeekend[idx].nome" placeholder="Nome squadra" class="non-censita-input" />
-            <button class="btn-rimuovi-squadra" @click.stop="rimuoviSquadraNonCensita(idx, 'weekend')" title="Rimuovi">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
+      </div>
+
+      <!-- Partite in casa raggruppate per giorno -->
+      <div v-if="weekendSelezionatoId && weekendPartiteCasaPerGiorno.length > 0" class="weekend-giorni-container">
+        <div v-for="giornoGroup in weekendPartiteCasaPerGiorno" :key="giornoGroup.data" class="weekend-giorno-card">
+          <div class="weekend-giorno-header">
+            <div class="giorno-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
               </svg>
-            </button>
-          </div>
-          <div class="col-spo multi-select">
-            <div v-for="item in spogliatoi" :key="item.id"
-                 class="select-chip"
-                 :class="{
-                   active: getAssegnazioneSpogliatoioNonCensita(idx, item.id, 'weekend'),
-                   occupied: isSpogliatoioOccupatoNonCensitaWeekend(idx, item.id)
-                 }"
-                 @click="!isSpogliatoioOccupatoNonCensitaWeekend(idx, item.id) && toggleAssegnazioneSpogliatoioNonCensita(idx, item.id, 'weekend')">
-              {{ item.etichetta }}
+              <span>{{ giornoGroup.dataLabel }}</span>
             </div>
-            <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
+            <span class="giorno-badge">
+              {{ giornoGroup.partite.length }} {{ giornoGroup.partite.length === 1 ? 'partita in casa' : 'partite in casa' }}
+            </span>
           </div>
-          <div class="col-campo multi-select">
-            <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
-              <div class="select-chip campo-chip-main"
-                   :class="{
-                     active: getCampoAssegnatoNCWeekend(idx, item.id),
-                     occupied: isCampoTuttoOccupatoNonCensitaWeekend(idx, item.id) && !getCampoAssegnatoNCWeekend(idx, item.id)
-                   }"
-                   @click.stop="toggleCampoMenuNCWeekend(idx, item.id)">
-                 {{ item.etichetta }}{{ getCampoLabelSuffissoNCWeekend(idx, item.id) }}
-                 <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
-                   <polyline points="6 9 12 15 18 9"/>
-                 </svg>
-               </div>
-               <div v-if="campoMenuAperto === `nc_weekend_${idx}_${item.id}`" class="campo-dropdown" @click.stop>
-                 <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
-                      class="campo-dropdown-item"
-                      :class="{
-                        active: getCampoAssegnatoNCWeekend(idx, item.id) === (opt.metacampo || 'FULL'),
-                        disabled: isCampoOccupatoNonCensitaWeekend(idx, item.id, opt.metacampo) && getCampoAssegnatoNCWeekend(idx, item.id) !== (opt.metacampo || 'FULL')
-                      }"
-                      @click="!isCampoOccupatoNonCensitaWeekend(idx, item.id, opt.metacampo) || getCampoAssegnatoNCWeekend(idx, item.id) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuNCWeekend(idx, item.id, opt.metacampo) : null">
-                   {{ opt.label }}
-                 </div>
-                 <div v-if="getCampoAssegnatoNCWeekend(idx, item.id)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuNCWeekend(idx, item.id, getCampoAssegnatoNCWeekend(idx, item.id) === 'FULL' ? null : getCampoAssegnatoNCWeekend(idx, item.id))">
-                   Rimuovi
-                 </div>
-               </div>
-             </div>
-            <span v-if="campi.length === 0" class="no-items">Nessuno disponibile</span>
+
+          <div class="assegnazioni-table">
+            <div class="table-header">
+              <div class="col-cat">Squadra / Partita</div>
+              <div class="col-spo">Spogliatoio</div>
+              <div class="col-campo">Campo da gioco</div>
+            </div>
+
+            <!-- Loop partite in questa giornata -->
+            <div v-for="p in giornoGroup.partite" :key="'partita-' + p.id" class="match-assignment-block">
+              <!-- Banner intestazione partita -->
+              <div class="match-banner">
+                <span class="match-time-badge" v-if="p.ora">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  Ore {{ p.ora.slice(0, 5) }}
+                </span>
+                <span class="match-title">{{ getCatLabel(p.categoria_id) }} <span class="vs">vs</span> {{ p.avversario || 'Ospite' }}</span>
+                <span v-if="p.campo" class="match-campo-hint">Campo schedulato: <strong>{{ p.campo }}</strong></span>
+                <span v-if="p.livello" class="match-livello-hint">Livello: {{ p.livello }}</span>
+              </div>
+
+              <!-- Riga Squadra Casa -->
+              <div class="table-row casa-row">
+                <div class="col-cat casa-cell">
+                  <span class="cat-anno">{{ getCatLabel(p.categoria_id) }}</span>
+                  <span class="tipo-badge casa">Casa</span>
+                </div>
+                <div class="col-spo multi-select">
+                  <div v-for="item in spogliatoi" :key="item.id"
+                       class="select-chip"
+                       :class="{
+                         active: getAssegnazioneSpogliatoio(p.categoria_id, item.id, 'casa', p.id),
+                         occupied: isSpogliatoioOccupatoWeekend(p.categoria_id, item.id, 'casa', p)
+                       }"
+                       @click="!isSpogliatoioOccupatoWeekend(p.categoria_id, item.id, 'casa', p) && toggleAssegnazioneSpogliatoio(p.categoria_id, item.id, 'casa', p)">
+                    {{ item.etichetta }}
+                  </div>
+                  <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
+                </div>
+                <div class="col-campo multi-select">
+                  <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
+                    <div class="select-chip campo-chip-main"
+                         :class="{
+                           active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id),
+                           occupied: isCampoTuttoOccupatoWeekend(p.categoria_id, item.id, 'casa', p) && !getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id)
+                         }"
+                         @click.stop="toggleCampoMenuWeekend(p.categoria_id, item.id, 'casa', p.id)">
+                      {{ item.etichetta }}{{ getCampoLabelSuffissoWeekend(p.categoria_id, item.id, 'casa', p.id) }}
+                      <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
+                        <polyline points="6 9 12 15 18 9"/>
+                      </svg>
+                    </div>
+                    <div v-if="campoMenuAperto === `casa_${p.id || ''}_${item.id}`" class="campo-dropdown" @click.stop>
+                      <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
+                           class="campo-dropdown-item"
+                           :class="{
+                             active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) === (opt.metacampo || 'FULL'),
+                             disabled: isCampoOccupatoWeekend(p.categoria_id, item.id, 'casa', p, opt.metacampo) && getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) !== (opt.metacampo || 'FULL')
+                           }"
+                           @click="!isCampoOccupatoWeekend(p.categoria_id, item.id, 'casa', p, opt.metacampo) || getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'casa', p, opt.metacampo) : null">
+                        {{ opt.label }}
+                      </div>
+                      <div v-if="getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'casa', p, null)">
+                        Rimuovi
+                      </div>
+                    </div>
+                  </div>
+                  <span v-if="campi.length === 0" class="no-items">Nessuno disponibile</span>
+                </div>
+              </div>
+
+              <!-- Riga Squadra Ospite -->
+              <div class="table-row fuori-row">
+                <div class="col-cat fuori-cell">
+                  <span class="cat-nome">{{ p.avversario || 'Ospite' }}</span>
+                  <span class="tipo-badge fuori">Ospite</span>
+                </div>
+                <div class="col-spo multi-select">
+                  <div v-for="item in spogliatoi" :key="item.id"
+                       class="select-chip"
+                       :class="{
+                         active: getAssegnazioneSpogliatoio(p.categoria_id, item.id, 'ospite', p.id),
+                         occupied: isSpogliatoioOccupatoWeekend(p.categoria_id, item.id, 'ospite', p)
+                       }"
+                       @click="!isSpogliatoioOccupatoWeekend(p.categoria_id, item.id, 'ospite', p) && toggleAssegnazioneSpogliatoio(p.categoria_id, item.id, 'ospite', p)">
+                    {{ item.etichetta }}
+                  </div>
+                  <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
+                </div>
+                <div class="col-campo multi-select">
+                  <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
+                    <div class="select-chip campo-chip-main"
+                         :class="{
+                           active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id),
+                           occupied: isCampoTuttoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p) && !getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id)
+                         }"
+                         @click.stop="toggleCampoMenuWeekend(p.categoria_id, item.id, 'ospite', p.id)">
+                      {{ item.etichetta }}{{ getCampoLabelSuffissoWeekend(p.categoria_id, item.id, 'ospite', p.id) }}
+                      <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
+                        <polyline points="6 9 12 15 18 9"/>
+                      </svg>
+                    </div>
+                    <div v-if="campoMenuAperto === `ospite_${p.id || ''}_${item.id}`" class="campo-dropdown" @click.stop>
+                      <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
+                           class="campo-dropdown-item"
+                           :class="{
+                             active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) === (opt.metacampo || 'FULL'),
+                             disabled: isCampoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p, opt.metacampo) && getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) !== (opt.metacampo || 'FULL')
+                           }"
+                           @click="!isCampoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p, opt.metacampo) || getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'ospite', p, opt.metacampo) : null">
+                        {{ opt.label }}
+                      </div>
+                      <div v-if="getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'ospite', p, null)">
+                        Rimuovi
+                      </div>
+                    </div>
+                  </div>
+                  <span v-if="campi.length === 0" class="no-items">Nessuno disponibile</span>
+                </div>
+              </div>
+            </div> <!-- end match-assignment-block -->
           </div>
         </div>
-        <div class="table-row add-row">
-          <div class="col-cat">
-            <button class="btn-add-squadra" @click="aggiungiSquadraNonCensita('weekend')">+ Squadra non censita</button>
+      </div>
+
+      <!-- Squadre non censite / Esterne -->
+      <div v-if="weekendSelezionatoId" class="non-censite-section">
+        <div class="section-header-compact">
+          <h4>Squadre non a calendario / Esterne</h4>
+          <button class="btn-add-chip" @click="aggiungiSquadraNonCensita('weekend')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Aggiungi squadra esterna
+          </button>
+        </div>
+        <div v-if="squadreNonCensiteWeekend.length > 0" class="assegnazioni-table">
+          <div class="table-header">
+            <div class="col-cat">Squadra</div>
+            <div class="col-spo">Spogliatoio</div>
+            <div class="col-campo">Campo da gioco</div>
           </div>
-          <div class="col-spo"></div>
-          <div class="col-campo"></div>
+          <div v-for="(squadra, idx) in squadreNonCensiteWeekend" :key="'nc-w-' + idx" class="table-row non-censite-row">
+            <div class="col-cat non-censita-cell">
+              <span class="print-team-name">{{ squadra.nome || 'Squadra esterna' }}</span>
+              <input type="text" v-model="squadreNonCensiteWeekend[idx].nome" placeholder="Nome squadra" class="non-censita-input" />
+              <button class="btn-rimuovi-squadra" @click.stop="rimuoviSquadraNonCensita(idx, 'weekend')" title="Rimuovi">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="col-spo multi-select">
+              <div v-for="item in spogliatoi" :key="item.id"
+                   class="select-chip"
+                   :class="{
+                     active: getAssegnazioneSpogliatoioNonCensita(idx, item.id, 'weekend'),
+                     occupied: isSpogliatoioOccupatoNonCensitaWeekend(idx, item.id)
+                   }"
+                   @click="!isSpogliatoioOccupatoNonCensitaWeekend(idx, item.id) && toggleAssegnazioneSpogliatoioNonCensita(idx, item.id, 'weekend')">
+                {{ item.etichetta }}
+              </div>
+              <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
+            </div>
+            <div class="col-campo multi-select">
+              <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
+                <div class="select-chip campo-chip-main"
+                     :class="{
+                       active: getCampoAssegnatoNCWeekend(idx, item.id),
+                       occupied: isCampoTuttoOccupatoNonCensitaWeekend(idx, item.id) && !getCampoAssegnatoNCWeekend(idx, item.id)
+                     }"
+                     @click.stop="toggleCampoMenuNCWeekend(idx, item.id)">
+                  {{ item.etichetta }}{{ getCampoLabelSuffissoNCWeekend(idx, item.id) }}
+                  <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </div>
+                <div v-if="campoMenuAperto === `nc_weekend_${idx}_${item.id}`" class="campo-dropdown" @click.stop>
+                  <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
+                       class="campo-dropdown-item"
+                       :class="{
+                         active: getCampoAssegnatoNCWeekend(idx, item.id) === (opt.metacampo || 'FULL'),
+                         disabled: isCampoOccupatoNonCensitaWeekend(idx, item.id, opt.metacampo) && getCampoAssegnatoNCWeekend(idx, item.id) !== (opt.metacampo || 'FULL')
+                       }"
+                       @click="!isCampoOccupatoNonCensitaWeekend(idx, item.id, opt.metacampo) || getCampoAssegnatoNCWeekend(idx, item.id) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuNCWeekend(idx, item.id, opt.metacampo) : null">
+                    {{ opt.label }}
+                  </div>
+                  <div v-if="getCampoAssegnatoNCWeekend(idx, item.id)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuNCWeekend(idx, item.id, null)">
+                    Rimuovi
+                  </div>
+                </div>
+              </div>
+              <span v-if="campi.length === 0" class="no-items">Nessuno disponibile</span>
+            </div>
+          </div>
         </div>
       </div>
       <div v-if="!weekendSelezionatoId" class="empty-state">
@@ -700,9 +765,11 @@ import {
   getAssegnazioniDefault,
   applyDefaultWeekSpogliatoi,
   salvaAssegnazioniSettimanaSpogliatoi,
+  salvaAssegnazioniWeekendSpogliatoi,
   getCampiAssegnazioniDefault,
   applyDefaultWeekCampi,
   salvaAssegnazioniSettimanaCampi,
+  salvaAssegnazioniWeekendCampi,
   getLocalDateStr
 } from "../../api/index.js"
 
@@ -834,6 +901,57 @@ const weekendPartiteCasa = computed(() =>
 const weekendPartiteFuori = computed(() =>
   (weekendPartite.value || []).filter(p => p && p.id && p.categoria_id && p.casa_fuori === 'fuori')
 )
+
+const weekendPartiteFuoriCount = computed(() => weekendPartiteFuori.value.length)
+
+function formatDateLungo(dataStr) {
+  if (!dataStr || dataStr === 'Senza data') return 'Data da definire'
+  const parts = dataStr.split('-')
+  if (parts.length !== 3) return dataStr
+  const y = Number(parts[0])
+  const m = Number(parts[1])
+  const d = Number(parts[2])
+  const dt = new Date(y, m - 1, d)
+  const giorni = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']
+  const mesi = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+  const giornoNome = giorni[dt.getDay()] || ''
+  const meseNome = mesi[dt.getMonth()] || ''
+  return `${giornoNome} ${d} ${meseNome} ${y}`
+}
+
+const weekendPartiteCasaPerGiorno = computed(() => {
+  const groups = {}
+  const homeMatches = weekendPartiteCasa.value
+  homeMatches.forEach(p => {
+    const d = p.data_partite || 'Senza data'
+    if (!groups[d]) groups[d] = []
+    groups[d].push(p)
+  })
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    if (a === 'Senza data') return 1
+    if (b === 'Senza data') return -1
+    return a.localeCompare(b)
+  })
+  return sortedKeys.map(data => ({
+    data,
+    dataLabel: formatDateLungo(data),
+    partite: groups[data].sort((a, b) => (a.ora || '').localeCompare(b.ora || ''))
+  }))
+})
+
+function partiteSovrapposte(p1, p2) {
+  if (!p1 || !p2) return false
+  if (p1.id === p2.id) return true
+  const d1 = p1.data_partite || ''
+  const d2 = p2.data_partite || ''
+  if (d1 !== d2) return false
+  if (!p1.ora || !p2.ora) return true
+  const [h1, m1] = p1.ora.split(':').map(Number)
+  const [h2, m2] = p2.ora.split(':').map(Number)
+  const mins1 = (h1 || 0) * 60 + (m1 || 0)
+  const mins2 = (h2 || 0) * 60 + (m2 || 0)
+  return Math.abs(mins1 - mins2) < 90
+}
 
 function getLunesdiCorrente() {
   const oggi = new Date()
@@ -1034,50 +1152,77 @@ function isCampoTuttoOccupatoNonCensitaGiorno(idx, itemId, dataGiorno) {
   return false
 }
 
-function isSpogliatoioOccupatoWeekend(catId, itemId, tipo, partitaId) {
-  const altrePartite = tipo === 'ospite' ? weekendPartiteFuori.value : weekendPartiteCasa.value
-  return altrePartite.some(p =>
-    p.id !== partitaId &&
-    assegSpogliatoioWeekend.value[`${tipo}_${p.id || ''}_${itemId}`] !== undefined
+function isSpogliatoioOccupatoWeekend(catId, itemId, tipo, p) {
+  const partitaId = p && typeof p === 'object' ? p.id : p
+  const partitaObj = p && typeof p === 'object' ? p : weekendPartiteCasa.value.find(x => x.id === partitaId)
+
+  // Controlla se l'altro ruolo della stessa partita ha già questo spogliatoio
+  const otherTipo = tipo === 'casa' ? 'ospite' : 'casa'
+  if (assegSpogliatoioWeekend.value[`${otherTipo}_${partitaId || ''}_${itemId}`] !== undefined) {
+    return true
+  }
+
+  // Controlla se altre partite in casa sovrapposte (stesso giorno e orario) occupano questo spogliatoio
+  for (const otherP of weekendPartiteCasa.value) {
+    if (otherP.id === partitaId) continue
+    if (partiteSovrapposte(partitaObj, otherP)) {
+      if (assegSpogliatoioWeekend.value[`casa_${otherP.id}_${itemId}`] !== undefined ||
+          assegSpogliatoioWeekend.value[`ospite_${otherP.id}_${itemId}`] !== undefined) {
+        return true
+      }
+    }
+  }
+
+  // Controlla squadre non censite
+  return squadreNonCensiteWeekend.value.some((_, idx) =>
+    assegSpogliatoioWeekend.value[`noncensita_weekend_${idx}_${itemId}`] !== undefined
   )
 }
 
-function isCampoOccupatoWeekend(catId, itemId, tipo, partitaId, metacampo) {
-  const altrePartite = tipo === 'ospite' ? weekendPartiteFuori.value : weekendPartiteCasa.value
-  const ncSquadre = squadreNonCensiteWeekend.value
+function isCampoOccupatoWeekend(catId, itemId, tipo, p, metacampo) {
+  const partitaId = p && typeof p === 'object' ? p.id : p
+  const partitaObj = p && typeof p === 'object' ? p : weekendPartiteCasa.value.find(x => x.id === partitaId)
+
   if (metacampo === 'A' || metacampo === 'B') {
-    for (const p of altrePartite) {
-      if (p.id === partitaId) continue
-      const a = assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]
-      if (a && (a.metacampo == null || a.metacampo === 'FULL' || a.metacampo === metacampo)) return true
+    for (const otherP of weekendPartiteCasa.value) {
+      if (otherP.id === partitaId) continue
+      if (partiteSovrapposte(partitaObj, otherP)) {
+        const a = assegCampoWeekend.value[`casa_${otherP.id}_${itemId}`] || assegCampoWeekend.value[`ospite_${otherP.id}_${itemId}`]
+        if (a && (a.metacampo == null || a.metacampo === 'FULL' || a.metacampo === metacampo)) return true
+      }
     }
-    for (let i = 0; i < ncSquadre.length; i++) {
+    for (let i = 0; i < squadreNonCensiteWeekend.value.length; i++) {
       const a = assegCampoWeekend.value[`noncensita_weekend_${i}_${itemId}`]
       if (a && (a.metacampo == null || a.metacampo === 'FULL' || a.metacampo === metacampo)) return true
     }
     return false
   }
-  for (const p of altrePartite) {
-    if (p.id === partitaId && assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]) return true
+
+  for (const otherP of weekendPartiteCasa.value) {
+    if (otherP.id === partitaId) continue
+    if (partiteSovrapposte(partitaObj, otherP)) {
+      const a = assegCampoWeekend.value[`casa_${otherP.id}_${itemId}`] || assegCampoWeekend.value[`ospite_${otherP.id}_${itemId}`]
+      if (a) return true
+    }
   }
-  for (const p of altrePartite) {
-    if (p.id !== partitaId && assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]) return true
-  }
-  for (let i = 0; i < ncSquadre.length; i++) {
+  for (let i = 0; i < squadreNonCensiteWeekend.value.length; i++) {
     if (assegCampoWeekend.value[`noncensita_weekend_${i}_${itemId}`]) return true
   }
   return false
 }
 
-function isCampoTuttoOccupatoWeekend(catId, itemId, tipo, partitaId) {
-  const altrePartite = tipo === 'ospite' ? weekendPartiteFuori.value : weekendPartiteCasa.value
-  const ncSquadre = squadreNonCensiteWeekend.value
-  for (const p of altrePartite) {
-    if (p.id === partitaId) continue
-    const a = assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]
-    if (a && (a.metacampo == null || a.metacampo === 'FULL')) return true
+function isCampoTuttoOccupatoWeekend(catId, itemId, tipo, p) {
+  const partitaId = p && typeof p === 'object' ? p.id : p
+  const partitaObj = p && typeof p === 'object' ? p : weekendPartiteCasa.value.find(x => x.id === partitaId)
+
+  for (const otherP of weekendPartiteCasa.value) {
+    if (otherP.id === partitaId) continue
+    if (partiteSovrapposte(partitaObj, otherP)) {
+      const a = assegCampoWeekend.value[`casa_${otherP.id}_${itemId}`] || assegCampoWeekend.value[`ospite_${otherP.id}_${itemId}`]
+      if (a && (a.metacampo == null || a.metacampo === 'FULL')) return true
+    }
   }
-  for (let i = 0; i < ncSquadre.length; i++) {
+  for (let i = 0; i < squadreNonCensiteWeekend.value.length; i++) {
     const a = assegCampoWeekend.value[`noncensita_weekend_${i}_${itemId}`]
     if (a && (a.metacampo == null || a.metacampo === 'FULL')) return true
   }
@@ -1085,21 +1230,21 @@ function isCampoTuttoOccupatoWeekend(catId, itemId, tipo, partitaId) {
 }
 
 function isSpogliatoioOccupatoNonCensitaWeekend(idx, itemId) {
-  return weekendPartiteCasa.value.some(p =>
-    assegSpogliatoioWeekend.value[`casa_${p.id || ''}_${itemId}`] !== undefined
-  ) || weekendPartiteFuori.value.some(p =>
-    assegSpogliatoioWeekend.value[`ospite_${p.id || ''}_${itemId}`] !== undefined
-  ) || squadreNonCensiteWeekend.value.some((_, i) =>
+  for (const p of weekendPartiteCasa.value) {
+    if (assegSpogliatoioWeekend.value[`casa_${p.id}_${itemId}`] !== undefined ||
+        assegSpogliatoioWeekend.value[`ospite_${p.id}_${itemId}`] !== undefined) {
+      return true
+    }
+  }
+  return squadreNonCensiteWeekend.value.some((_, i) =>
     i !== idx && assegSpogliatoioWeekend.value[`noncensita_weekend_${i}_${itemId}`] !== undefined
   )
 }
 
 function isCampoOccupatoNonCensitaWeekend(idx, itemId, metacampo) {
-  const allPartite = [...weekendPartiteCasa.value, ...weekendPartiteFuori.value]
   if (metacampo === 'A' || metacampo === 'B') {
-    for (const p of allPartite) {
-      const tipo = p.casa_fuori === 'fuori' ? 'ospite' : 'casa'
-      const a = assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]
+    for (const p of weekendPartiteCasa.value) {
+      const a = assegCampoWeekend.value[`casa_${p.id}_${itemId}`] || assegCampoWeekend.value[`ospite_${p.id}_${itemId}`]
       if (a && (a.metacampo == null || a.metacampo === 'FULL' || a.metacampo === metacampo)) return true
     }
     for (let i = 0; i < squadreNonCensiteWeekend.value.length; i++) {
@@ -1109,9 +1254,9 @@ function isCampoOccupatoNonCensitaWeekend(idx, itemId, metacampo) {
     }
     return false
   }
-  for (const p of allPartite) {
-    const tipo = p.casa_fuori === 'fuori' ? 'ospite' : 'casa'
-    if (assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]) return true
+  for (const p of weekendPartiteCasa.value) {
+    const a = assegCampoWeekend.value[`casa_${p.id}_${itemId}`] || assegCampoWeekend.value[`ospite_${p.id}_${itemId}`]
+    if (a) return true
   }
   for (let i = 0; i < squadreNonCensiteWeekend.value.length; i++) {
     if (i !== idx && assegCampoWeekend.value[`noncensita_weekend_${i}_${itemId}`]) return true
@@ -1120,10 +1265,8 @@ function isCampoOccupatoNonCensitaWeekend(idx, itemId, metacampo) {
 }
 
 function isCampoTuttoOccupatoNonCensitaWeekend(idx, itemId) {
-  const allPartite = [...weekendPartiteCasa.value, ...weekendPartiteFuori.value]
-  for (const p of allPartite) {
-    const tipo = p.casa_fuori === 'fuori' ? 'ospite' : 'casa'
-    const a = assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]
+  for (const p of weekendPartiteCasa.value) {
+    const a = assegCampoWeekend.value[`casa_${p.id}_${itemId}`] || assegCampoWeekend.value[`ospite_${p.id}_${itemId}`]
     if (a && (a.metacampo == null || a.metacampo === 'FULL')) return true
   }
   for (let i = 0; i < squadreNonCensiteWeekend.value.length; i++) {
@@ -1435,26 +1578,17 @@ function toggleAssegnazioneCampoNonCensitaGiorno(idx, itemId, dataGiorno, metaca
 // ── Assignment helpers: SPOGLIATOI (weekend) ──
 
 function getAssegnazioneSpogliatoio(catId, itemId, tipo, partitaId) {
-  const key = `${tipo}_${partitaId || ''}_${itemId}`
+  const pId = partitaId && typeof partitaId === 'object' ? partitaId.id : partitaId
+  const key = `${tipo}_${pId || ''}_${itemId}`
   return assegSpogliatoioWeekend.value[key] !== undefined
 }
 
-function toggleAssegnazioneSpogliatoio(catId, itemId, tipo, partitaId) {
+function toggleAssegnazioneSpogliatoio(catId, itemId, tipo, p) {
+  const partitaId = p && typeof p === 'object' ? p.id : p
   const key = `${tipo}_${partitaId || ''}_${itemId}`
   if (assegSpogliatoioWeekend.value[key]) {
     delete assegSpogliatoioWeekend.value[key]
   } else {
-    // Rimuovi da altre partite dello stesso tipo (casa/casa o ospite/ospite)
-    const altrePartite = tipo === 'ospite' ? weekendPartiteFuori.value : weekendPartiteCasa.value
-    altrePartite.filter(p => p.id !== partitaId).forEach(p => {
-      const otherKey = `${tipo}_${p.id || ''}_${itemId}`
-      delete assegSpogliatoioWeekend.value[otherKey]
-    })
-    // Rimuovi da non censite
-    squadreNonCensiteWeekend.value.forEach((_, idx) => {
-      const ncKey = `noncensita_weekend_${idx}_${itemId}`
-      delete assegSpogliatoioWeekend.value[ncKey]
-    })
     assegSpogliatoioWeekend.value[key] = {
       categoria_id: catId,
       spogliatoio_id: itemId,
@@ -1475,18 +1609,9 @@ function toggleAssegnazioneSpogliatoioNonCensita(idx, itemId, contesto) {
   if (assegSpogliatoioWeekend.value[key]) {
     delete assegSpogliatoioWeekend.value[key]
   } else {
-    weekendPartiteCasa.value.forEach(p => {
-      delete assegSpogliatoioWeekend.value[`casa_${p.id || ''}_${itemId}`]
-    })
-    weekendPartiteFuori.value.forEach(p => {
-      delete assegSpogliatoioWeekend.value[`ospite_${p.id || ''}_${itemId}`]
-    })
-    squadreNonCensiteWeekend.value.forEach((_, i) => {
-      if (i !== idx) delete assegSpogliatoioWeekend.value[`noncensita_weekend_${i}_${itemId}`]
-    })
     assegSpogliatoioWeekend.value[key] = {
       spogliatoio_id: itemId,
-      nome_squadra_esterna: squadra.nome,
+      nome_squadra_esterna: squadra ? squadra.nome : 'Squadra esterna',
       tipo: 'esterna'
     }
   }
@@ -1495,52 +1620,56 @@ function toggleAssegnazioneSpogliatoioNonCensita(idx, itemId, contesto) {
 // ── Assignment helpers: CAMPI (weekend) ──
 
 function getAssegnazioneCampo(catId, itemId, tipo, partitaId, metacampo) {
-  const key = `${tipo}_${partitaId || ''}_${itemId}`
+  const pId = partitaId && typeof partitaId === 'object' ? partitaId.id : partitaId
+  const key = `${tipo}_${pId || ''}_${itemId}`
   const a = assegCampoWeekend.value[key]
   if (!a) return false
   if (metacampo == null) return a.metacampo == null || a.metacampo === 'FULL'
   return a.metacampo === metacampo
 }
 
-function toggleAssegnazioneCampo(catId, itemId, tipo, partitaId, metacampo) {
+function toggleAssegnazioneCampo(catId, itemId, tipo, p, metacampo) {
+  const partitaId = p && typeof p === 'object' ? p.id : p
+  const partitaObj = p && typeof p === 'object' ? p : weekendPartiteCasa.value.find(x => x.id === partitaId)
+  const catIdVal = catId || (partitaObj ? partitaObj.categoria_id : null)
+
+  const casaKey = `casa_${partitaId || ''}_${itemId}`
+  const ospiteKey = `ospite_${partitaId || ''}_${itemId}`
   const key = `${tipo}_${partitaId || ''}_${itemId}`
+
   const existing = assegCampoWeekend.value[key]
-  if (existing && (metacampo == null ? (existing.metacampo == null || existing.metacampo === 'FULL') : existing.metacampo === metacampo)) {
-    delete assegCampoWeekend.value[key]
+  if (metacampo === null || (existing && (metacampo == null ? (existing.metacampo == null || existing.metacampo === 'FULL') : existing.metacampo === metacampo))) {
+    delete assegCampoWeekend.value[casaKey]
+    delete assegCampoWeekend.value[ospiteKey]
     return
   }
-  const altrePartite = tipo === 'ospite' ? weekendPartiteFuori.value : weekendPartiteCasa.value
-  if (metacampo == null || metacampo === 'FULL') {
-    altrePartite.filter(p => p.id !== partitaId).forEach(p => {
-      delete assegCampoWeekend.value[`${tipo}_${p.id || ''}_${itemId}`]
-    })
-    squadreNonCensiteWeekend.value.forEach((_, idx) => {
-      delete assegCampoWeekend.value[`noncensita_weekend_${idx}_${itemId}`]
-    })
-  } else {
-    altrePartite.filter(p => p.id !== partitaId).forEach(p => {
-      const otherKey = `${tipo}_${p.id || ''}_${itemId}`
-      const other = assegCampoWeekend.value[otherKey]
-      if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
-        delete assegCampoWeekend.value[otherKey]
-      }
-    })
-    squadreNonCensiteWeekend.value.forEach((_, idx) => {
-      const ncKey = `noncensita_weekend_${idx}_${itemId}`
-      const other = assegCampoWeekend.value[ncKey]
-      if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
-        delete assegCampoWeekend.value[ncKey]
-      }
-    })
-  }
-  const payload = {
-    categoria_id: catId,
+
+  // Pulisci eventuali altri campi per questa stessa partita (una partita si gioca su un solo campo)
+  campi.value.forEach(c => {
+    if (c.id !== itemId) {
+      delete assegCampoWeekend.value[`casa_${partitaId || ''}_${c.id}`]
+      delete assegCampoWeekend.value[`ospite_${partitaId || ''}_${c.id}`]
+    }
+  })
+
+  const payloadCasa = {
+    categoria_id: catIdVal,
     campo_id: itemId,
-    tipo: tipo,
+    tipo: 'casa',
     partita_id: partitaId
   }
-  if (metacampo && metacampo !== 'FULL') payload.metacampo = metacampo
-  assegCampoWeekend.value[key] = payload
+  if (metacampo && metacampo !== 'FULL') payloadCasa.metacampo = metacampo
+
+  const payloadOspite = {
+    categoria_id: catIdVal,
+    campo_id: itemId,
+    tipo: 'ospite',
+    partita_id: partitaId
+  }
+  if (metacampo && metacampo !== 'FULL') payloadOspite.metacampo = metacampo
+
+  assegCampoWeekend.value[casaKey] = payloadCasa
+  assegCampoWeekend.value[ospiteKey] = payloadOspite
 }
 
 function getAssegnazioneCampoNonCensita(idx, itemId, contesto, metacampo) {
@@ -1555,48 +1684,13 @@ function toggleAssegnazioneCampoNonCensita(idx, itemId, contesto, metacampo) {
   const key = `noncensita_weekend_${idx}_${itemId}`
   const squadra = squadreNonCensiteWeekend.value[idx]
   const existing = assegCampoWeekend.value[key]
-  if (existing && (metacampo == null ? (existing.metacampo == null || existing.metacampo === 'FULL') : existing.metacampo === metacampo)) {
+  if (metacampo === null || (existing && (metacampo == null ? (existing.metacampo == null || existing.metacampo === 'FULL') : existing.metacampo === metacampo))) {
     delete assegCampoWeekend.value[key]
     return
   }
-  if (metacampo == null || metacampo === 'FULL') {
-    weekendPartiteCasa.value.forEach(p => {
-      delete assegCampoWeekend.value[`casa_${p.id || ''}_${itemId}`]
-    })
-    weekendPartiteFuori.value.forEach(p => {
-      delete assegCampoWeekend.value[`ospite_${p.id || ''}_${itemId}`]
-    })
-    squadreNonCensiteWeekend.value.forEach((_, i) => {
-      if (i !== idx) delete assegCampoWeekend.value[`noncensita_weekend_${i}_${itemId}`]
-    })
-  } else {
-    weekendPartiteCasa.value.forEach(p => {
-      const otherKey = `casa_${p.id || ''}_${itemId}`
-      const other = assegCampoWeekend.value[otherKey]
-      if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
-        delete assegCampoWeekend.value[otherKey]
-      }
-    })
-    weekendPartiteFuori.value.forEach(p => {
-      const otherKey = `ospite_${p.id || ''}_${itemId}`
-      const other = assegCampoWeekend.value[otherKey]
-      if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
-        delete assegCampoWeekend.value[otherKey]
-      }
-    })
-    squadreNonCensiteWeekend.value.forEach((_, i) => {
-      if (i !== idx) {
-        const ncKey = `noncensita_weekend_${i}_${itemId}`
-        const other = assegCampoWeekend.value[ncKey]
-        if (other && (other.metacampo == null || other.metacampo === 'FULL' || other.metacampo === metacampo)) {
-          delete assegCampoWeekend.value[ncKey]
-        }
-      }
-    })
-  }
   const payload = {
     campo_id: itemId,
-    nome_squadra_esterna: squadra.nome,
+    nome_squadra_esterna: squadra ? squadra.nome : 'Squadra esterna',
     tipo: 'esterna'
   }
   if (metacampo && metacampo !== 'FULL') payload.metacampo = metacampo
@@ -1899,14 +1993,18 @@ async function caricaWeekendData() {
     const spData = spRes.data || []
     const nomiUnici = new Set()
     spData.forEach(a => {
-      if (a.categoria_id && a.tipo === 'ospite') {
-        assegSpogliatoioWeekend.value[`ospite_${a.partita_id || ''}_${a.spogliatoio_id}`] = a
+      if (a.partita_id) {
+        const tipo = a.tipo || 'casa'
+        assegSpogliatoioWeekend.value[`${tipo}_${a.partita_id}_${a.spogliatoio_id}`] = a
       } else if (a.categoria_id) {
-        assegSpogliatoioWeekend.value[`casa_${a.partita_id || ''}_${a.spogliatoio_id}`] = a
+        const m = weekendPartiteCasa.value.find(p => p.categoria_id === a.categoria_id)
+        const pId = m ? m.id : ''
+        const tipo = a.tipo || 'casa'
+        assegSpogliatoioWeekend.value[`${tipo}_${pId}_${a.spogliatoio_id}`] = a
       } else if (a.nome_squadra_esterna) {
         if (!nomiUnici.has(a.nome_squadra_esterna)) {
           nomiUnici.add(a.nome_squadra_esterna)
-          squadreNonCensiteWeekend.value.push({ nome: a.nome_squadra_esterna })
+          squadreNonCensiteWeekend.value.push({ id: ++ncIdCounter, nome: a.nome_squadra_esterna })
         }
       }
     })
@@ -1922,14 +2020,20 @@ async function caricaWeekendData() {
     const caData = caRes.data || []
     const nomiUnici2 = new Set()
     caData.forEach(a => {
-      if (a.categoria_id && a.tipo === 'ospite') {
-        assegCampoWeekend.value[`ospite_${a.partita_id || ''}_${a.campo_id}`] = a
+      if (a.partita_id) {
+        const tipo = a.tipo || 'casa'
+        assegCampoWeekend.value[`${tipo}_${a.partita_id}_${a.campo_id}`] = a
       } else if (a.categoria_id) {
-        assegCampoWeekend.value[`casa_${a.partita_id || ''}_${a.campo_id}`] = a
+        const m = weekendPartiteCasa.value.find(p => p.categoria_id === a.categoria_id)
+        const pId = m ? m.id : ''
+        const tipo = a.tipo || 'casa'
+        assegCampoWeekend.value[`${tipo}_${pId}_${a.campo_id}`] = a
       } else if (a.nome_squadra_esterna) {
         if (!nomiUnici2.has(a.nome_squadra_esterna)) {
           nomiUnici2.add(a.nome_squadra_esterna)
-          squadreNonCensiteWeekend.value.push({ nome: a.nome_squadra_esterna })
+          if (!nomiUnici.has(a.nome_squadra_esterna)) {
+            squadreNonCensiteWeekend.value.push({ id: ++ncIdCounter, nome: a.nome_squadra_esterna })
+          }
         }
       }
     })
@@ -2017,37 +2121,80 @@ async function salvaAssegnazioniSettimana() {
 }
 
 async function salvaAssegnazioniWeekend() {
-  // Save spogliatoi
-  for (const [, val] of Object.entries(assegSpogliatoioWeekend.value)) {
-    const payload = {
-      ...val,
+  if (!weekendSelezionatoId.value) return
+  const societaId = societaAttiva.value?.id || null
+
+  const spAssignments = Object.entries(assegSpogliatoioWeekend.value).map(([key, val]) => {
+    if (key.startsWith('noncensita_weekend_')) {
+      const parts = key.split('_')
+      const idx = Number(parts[2])
+      const team = squadreNonCensiteWeekend.value[idx]
+      return {
+        spogliatoio_id: val.spogliatoio_id || Number(parts[3]),
+        categoria_id: null,
+        nome_squadra_esterna: (team && team.nome) || val.nome_squadra_esterna || 'Squadra esterna',
+        tipo: 'esterna',
+        weekend_id: weekendSelezionatoId.value,
+        societa_id: societaId,
+        partita_id: null
+      }
+    }
+    return {
+      spogliatoio_id: val.spogliatoio_id,
+      categoria_id: val.categoria_id,
+      nome_squadra_esterna: null,
+      tipo: val.tipo || 'casa',
       weekend_id: weekendSelezionatoId.value,
-      societa_id: societaAttiva.value?.id || null
+      societa_id: societaId,
+      partita_id: val.partita_id || null
     }
-    if (val.id) {
-      await aggiornaAssegnazione(val.id, payload)
-    } else {
-      const res = await creaAssegnazione(payload)
-      const key = Object.keys(assegSpogliatoioWeekend.value).find(k => assegSpogliatoioWeekend.value[k] === val)
-      if (key) assegSpogliatoioWeekend.value[key] = res.data
+  })
+
+  const caAssignments = Object.entries(assegCampoWeekend.value).map(([key, val]) => {
+    if (key.startsWith('noncensita_weekend_')) {
+      const parts = key.split('_')
+      const idx = Number(parts[2])
+      const team = squadreNonCensiteWeekend.value[idx]
+      return {
+        campo_id: val.campo_id || Number(parts[3]),
+        categoria_id: null,
+        nome_squadra_esterna: (team && team.nome) || val.nome_squadra_esterna || 'Squadra esterna',
+        tipo: 'esterna',
+        weekend_id: weekendSelezionatoId.value,
+        societa_id: societaId,
+        metacampo: val.metacampo || null,
+        partita_id: null
+      }
     }
-  }
-  // Save campi
-  for (const [, val] of Object.entries(assegCampoWeekend.value)) {
-    const payload = {
-      ...val,
+    return {
+      campo_id: val.campo_id,
+      categoria_id: val.categoria_id,
+      nome_squadra_esterna: null,
+      tipo: val.tipo || 'casa',
       weekend_id: weekendSelezionatoId.value,
-      societa_id: societaAttiva.value?.id || null
+      societa_id: societaId,
+      metacampo: val.metacampo || null,
+      partita_id: val.partita_id || null
     }
-    if (val.id) {
-      await aggiornaCampoAssegnazione(val.id, payload)
-    } else {
-      const res = await creaCampoAssegnazione(payload)
-      const key = Object.keys(assegCampoWeekend.value).find(k => assegCampoWeekend.value[k] === val)
-      if (key) assegCampoWeekend.value[key] = res.data
-    }
+  })
+
+  try {
+    await salvaAssegnazioniWeekendSpogliatoi({
+      weekend_id: weekendSelezionatoId.value,
+      societa_id: societaId,
+      assegnazioni: spAssignments
+    })
+    await salvaAssegnazioniWeekendCampi({
+      weekend_id: weekendSelezionatoId.value,
+      societa_id: societaId,
+      assegnazioni: caAssignments
+    })
+    await caricaWeekendData()
+    alert('Assegnazioni weekend salvate!')
+  } catch (err) {
+    console.error('Errore salvataggio weekend:', err)
+    alert('Errore durante il salvataggio delle assegnazioni')
   }
-  alert('Assegnazioni weekend salvate!')
 }
 
 // ── Default Week Save & Load ──
@@ -2982,6 +3129,157 @@ onMounted(() => {
   color: #ef4444;
 }
 
+/* Weekend grouped by days */
+.weekend-giorni-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.weekend-giorno-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.weekend-giorno-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-surface-elevated);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.weekend-giorno-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.giorno-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.giorno-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--color-primary);
+  color: #fff;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-full);
+}
+
+.match-assignment-block {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.match-assignment-block:last-child {
+  border-bottom: none;
+}
+
+.match-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.5rem 1.25rem;
+  background: rgba(99, 102, 241, 0.06);
+  border-bottom: 1px dashed var(--color-border);
+  font-size: 0.8125rem;
+}
+
+.match-time-badge {
+  font-weight: 700;
+  font-size: 0.8125rem;
+  background: var(--color-primary);
+  color: #fff;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.02em;
+}
+
+.match-title {
+  font-weight: 700;
+  color: var(--color-text);
+  font-size: 0.875rem;
+}
+
+.match-title .vs {
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  margin: 0 0.25rem;
+}
+
+.match-campo-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.match-livello-hint {
+  font-size: 0.75rem;
+  color: #f59e0b;
+  font-weight: 600;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.trasferta-note {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.empty-matches-notice {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.empty-matches-notice p {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.empty-matches-notice .sub-notice {
+  font-size: 0.8125rem;
+  margin-top: 0.375rem;
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}
+
+.casa-cell, .fuori-cell, .non-censita-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.casa-row {
+  background: rgba(16, 185, 129, 0.02);
+}
+
+.fuori-row {
+  background: rgba(239, 68, 68, 0.02);
+}
+
 /* Empty state */
 .empty-state {
   text-align: center;
@@ -3272,6 +3570,34 @@ onMounted(() => {
   .print-chip.campo-chip {
     background: #10b981 !important;
     color: #fff !important;
+  }
+
+  .weekend-giorno-card {
+    page-break-inside: avoid;
+    border: 1px solid #ddd !important;
+    margin-bottom: 1rem !important;
+    box-shadow: none !important;
+  }
+
+  .weekend-giorno-header {
+    background: #f3f4f6 !important;
+    color: #111 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .match-banner {
+    background: #f8fafc !important;
+    color: #111 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .match-time-badge {
+    background: #111 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }
 

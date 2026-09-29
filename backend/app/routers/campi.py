@@ -3,7 +3,14 @@ from sqlalchemy import text
 from ..database import get_db
 from ..routers.auth import get_current_user, check_societa
 from ..core.security import get_staff_admin
-from ..schemas import CampoCreate, CampoUpdate, CampoAssegnazioneCreate, CampoAssegnazioneUpdate, CampoAssegnazioneSettimanaSave
+from ..schemas import (
+    CampoCreate,
+    CampoUpdate,
+    CampoAssegnazioneCreate,
+    CampoAssegnazioneUpdate,
+    CampoAssegnazioneSettimanaSave,
+    CampoAssegnazioneWeekendSave,
+)
 
 router = APIRouter(prefix="/campi", tags=["campi"])
 
@@ -173,11 +180,11 @@ def crea_assegnazione(data: CampoAssegnazioneCreate, db=Depends(get_db), user=De
         text("""
             INSERT INTO campi_assegnazioni (
                 campo_id, categoria_id, nome_squadra_esterna,
-                tipo, data_inizio, data, weekend_id, societa_id, metacampo, is_default
+                tipo, data_inizio, data, weekend_id, societa_id, metacampo, is_default, partita_id
             )
             VALUES (
                 :campo_id, :categoria_id, :nome_squadra_esterna,
-                :tipo, :data_inizio, :data, :weekend_id, :societa_id, :metacampo, :is_default
+                :tipo, :data_inizio, :data, :weekend_id, :societa_id, :metacampo, :is_default, :partita_id
             )
             RETURNING *
         """),
@@ -192,6 +199,7 @@ def crea_assegnazione(data: CampoAssegnazioneCreate, db=Depends(get_db), user=De
             "societa_id": societa_id,
             "metacampo": data.metacampo,
             "is_default": data.is_default or False,
+            "partita_id": data.partita_id,
         }
     )
     db.commit()
@@ -216,7 +224,8 @@ def aggiorna_assegnazione(assegnazione_id: int, data: CampoAssegnazioneUpdate, d
                 data_inizio = :data_inizio,
                 data = :data,
                 weekend_id = :weekend_id,
-                metacampo = :metacampo
+                metacampo = :metacampo,
+                partita_id = :partita_id
             WHERE id = :id
             RETURNING *
         """),
@@ -230,6 +239,7 @@ def aggiorna_assegnazione(assegnazione_id: int, data: CampoAssegnazioneUpdate, d
             "data": data.data,
             "weekend_id": data.weekend_id,
             "metacampo": data.metacampo,
+            "partita_id": data.partita_id,
         }
     )
     db.commit()
@@ -295,6 +305,51 @@ def salva_assegnazioni_settimana(data: CampoAssegnazioneSettimanaSave, db=Depend
         )
     db.commit()
     return {"ok": True, "count": len(data.assegnazioni)}
+
+@router.post("/assegnazioni/weekend")
+def salva_assegnazioni_weekend(data: CampoAssegnazioneWeekendSave, db=Depends(get_db), user=Depends(get_staff_admin)):
+    societa_id = data.societa_id
+    if not societa_id and not user.is_super_admin:
+        societa_id = user.societa_id
+    check_societa(user, societa_id)
+    if not user.is_super_admin:
+        db.execute(
+            text("DELETE FROM campi_assegnazioni WHERE weekend_id = :wid AND societa_id = :sid"),
+            {"wid": data.weekend_id, "sid": societa_id}
+        )
+    else:
+        db.execute(
+            text("DELETE FROM campi_assegnazioni WHERE weekend_id = :wid"),
+            {"wid": data.weekend_id}
+        )
+    for a in data.assegnazioni:
+        db.execute(
+            text("""
+                INSERT INTO campi_assegnazioni (
+                    campo_id, categoria_id, nome_squadra_esterna,
+                    tipo, data_inizio, data, weekend_id, societa_id, metacampo, is_default, partita_id
+                )
+                VALUES (
+                    :campo_id, :categoria_id, :nome_squadra_esterna,
+                    :tipo, :data_inizio, :data, :weekend_id, :societa_id, :metacampo, FALSE, :partita_id
+                )
+            """),
+            {
+                "campo_id": a.campo_id,
+                "categoria_id": a.categoria_id,
+                "nome_squadra_esterna": a.nome_squadra_esterna,
+                "tipo": a.tipo or "casa",
+                "data_inizio": a.data_inizio,
+                "data": a.data,
+                "weekend_id": data.weekend_id,
+                "societa_id": a.societa_id or societa_id,
+                "metacampo": a.metacampo,
+                "partita_id": a.partita_id,
+            }
+        )
+    db.commit()
+    return {"ok": True, "count": len(data.assegnazioni)}
+
 
 # ── Settimana Tipo (Default Week) ──
 
