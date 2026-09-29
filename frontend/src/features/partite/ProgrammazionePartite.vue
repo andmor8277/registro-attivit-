@@ -673,6 +673,43 @@ async function stampaWeekend() {
   win.document.close()
 }
 
+const HOUSE_ICON_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABmJLR0QA/wD/AP+gvaeTAAACRElEQVR4nO3ZsWsTYRjH8d/z5BA00kFt3rlgXASXgtRNHCQXtaASQRMR/QMU/Qs6CDrp6iamp0NrEQptVKRkUnc3LSgoQrUoCJEKyT0SlIJFTbi8ubvc836mkHvvvdwzHN8kgOM4juM4WlFiVxaQCfwbINq+tnrwKmZmQjUD2D9X2fZ5o3UXhHO/31oY+yrV1cuNH5kfgKkfzQt58wD8LYdW2iQnv9Qa3zI7gMKDaUOd9pIAk/9Y8ir0vNL62cWPmRuAqZ+YEOo8BrCvx9K3YYjS+oXl13F8Lo7jInvuH5sU6rzo4+a7JpjluQn8qUwMwNT9IxzKSvdl/2fRbhF6Nh74W58TozWAwqxfFaIGgLEIp+dJaHE88C9hiHLD2tjMlq8AdAeAN8A2TKDp/KkitR69aWIkBiAgs9e/KaDrlh6y3T0O7zxd3NU6UH2KZlMs7PnH5sMMHNsWdrS/195dbG6kbgDmV+A8BFDCcFkNJoopcGyzFkwUY+DYZiWYOMbAsc1KMHG8gWPb4MHECQSObQMFUy6hwLEtcjDlEgwc2yIFE6UkcBILJkpR4CQSTJSywIk9mKhH4DwBUMRo+28wcY/AGfWb3wymwr3jh/52kKLsaILynAgqSBEizK/Vls+k8jfBNGMox1COoZwX47VeitCtfhYSyTUAU5kaABHefzq/1P1PsCcTlCsi8QyAoRxDOYZyDOUYyjGUYyjHUI6hHEM5hnIM5RjKMZTzopwkHb4tJH19td0U0oe07O84juM4juPAwU9Xm/HxBvzgWAAAAABJRU5ErkJggg=='
+
+const PLANE_ICON_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABmJLR0QA/wD/AP+gvaeTAAAD3UlEQVR4nO2bX4gbRRzHP7/JJjmxIFZ7hVLBFi6XU4qg14e+HSIU8aRFKfhgqaAPRUGoiEl80CJoktZSSwVFEaQKIgfFmiKCtVLwwAcF8cFc71QK+qBcLSKcl+wm+5O9a/HUay57yW7+bD6wL7Mz85vfd4fv7kwmMGDAgAERRsIO+MOzG4brMfsJhTsF/VWVD9JHnK+JggDlTGKHQc6D3rqiWBU5lC5WT9DPAnxxGGvLYsJ70netctvROuPpV+3vCBkTVqCtVWvndZL3iEtMD9ABTFiBVM2WxjVkK/0sgLtGLOmAIYcqQLdiiDiGiGOIOIaIY4g4hohjiDiGiGOIOIaIY4g4hogjYQQpZ4cmjLpvAOkG1SoIRbNg50dOUqUfBPjp+Rs3O65zFOXRZmMJzLliDqYLlfNBjm1FvPajILOZ+H4wx/6z/9d8F8L7OPYzo8e4TC8JUM4lU8b1prvc24burohobqTgvC1LunaxAD8f4oa/kokMShZI0kZU5IKIHhzN2zN0owDl5kyuVQIxSQnb5Fql3SYpHTK5VmmbSUqHTa7jJindYHKdNEnxYXJvAqN0L+sySWnS5PbTI/g1SQnY5BYRPhe0pGrioK83qHsa3OOiZhLhIYWRMEzSWq1wNhM/CfLU+nxF5r2EBfloyK6eu+04i17pTDaxTxp0J1BPFWtfAt6VLWfj98SQParsBXb4HcTSrLXiu8HZ7FsAQYZ9pn5JRT82xEp/XqlcGH8LhxYZKzjfAN71Qjk7dLuo7hHcSZCJ6437/8jwWjWsFsb4vSglFfdsqlibXn4NtZz3qowVKpcA7wDFiXKOW4wbf0CQSYX7gQ2t9G35qFtH5Ss1WnLrcvqOo9U5OsBYnt/BOQWc8l7NlUTyPleZRNy9zTxxvwIsXjMxyyTObH9l4Te6iGV/qZaAku7jydnt1i6/JmqtWir6iVHz3koTC2p6twuZog7LJqqQm8nG7xYVz0D9C5AqOO/Swyz50T8m2hBDxDFEHEPEMUQcQ8QxRBwTWiDVjY3uK7rRW4USMhJ0AC+pi5nk04IeARJrjOasK/Zjy5+7fSDAjxlucki8I/Cwj2a/qHEfSedr0/SyABez8Z2ofAhsW0fzGsLLqSH7JTnsnbLtMQ+YeS7+OCrT60zew0J5cbaSOEPAmEA6FdntHYFvuSNvmdtfr0GZF5gCPUDN3uSKjquQvTpbAvnxM8gdoWaoC3yLcu7fO0fXcC5fXbEV53JsqmtiQuBBUbzdnpvpVQFc0U+9FXqyYn+27TX+aKbNSJ55sKeAqaW/1yxYu4gZb8trwIABAwYQEH8D5aqF+5cuhlAAAAAASUVORK5CYII='
+
+function drawCasaTrasfertaCell(data) {
+  if (data.section === 'body' && data.column.index === 2 && data.cell.raw && !data.cell.raw.colSpan) {
+    const isFuori = String(data.cell.raw).toLowerCase().includes('trasferta')
+    const iconImg = isFuori ? PLANE_ICON_PNG : HOUSE_ICON_PNG
+    const text = isFuori ? 'Trasferta' : 'Casa'
+
+    const cellX = data.cell.x
+    const cellY = data.cell.y
+    const cellW = data.cell.width
+    const cellH = data.cell.height
+
+    const iconSize = 3.6
+    data.doc.setFontSize(8.5)
+    data.doc.setFont(undefined, 'bold')
+    const textW = data.doc.getTextWidth(text)
+    const spacing = 1.4
+    const totalW = iconSize + spacing + textW
+
+    const startX = cellX + (cellW - totalW) / 2
+    const iconY = cellY + (cellH - iconSize) / 2
+
+    data.doc.addImage(iconImg, 'PNG', startX, iconY, iconSize, iconSize)
+
+    if (isFuori) {
+      data.doc.setTextColor(217, 119, 6)
+    } else {
+      data.doc.setTextColor(22, 163, 74)
+    }
+    data.doc.text(text, startX + iconSize + spacing, cellY + cellH / 2 + 1.1)
+    data.doc.setTextColor(0)
+  }
+}
+
 async function esportaPDFWeekend() {
   if (!weekendSelezionato.value) return
   const doc = new jsPDF({ orientation: 'landscape' })
@@ -717,7 +754,7 @@ async function esportaPDFWeekend() {
     columnStyles: {
       0: { cellWidth: 26, halign: 'center' },
       1: { cellWidth: 15, halign: 'center' },
-      2: { cellWidth: 18, halign: 'center' },
+      2: { cellWidth: 26, halign: 'center' },
       3: { cellWidth: 'wrap' },
       4: { cellWidth: 24, halign: 'center' },
       5: { cellWidth: 'wrap' },
@@ -734,12 +771,18 @@ async function esportaPDFWeekend() {
         d.cell.styles.fontSize = 11
         d.cell.styles.halign = 'left'
         d.cell.styles.cellPadding = { top: 5, bottom: 5, left: 6, right: 6 }
-      } else if (d.section === 'body' && d.cell) {
+      } else if (d.section === 'body' && d.cell && !d.raw?.colSpan) {
         if (d.column.index === 0 && d.cell.raw && String(d.cell.raw).includes('(DOM)')) {
           d.cell.styles.textColor = [217, 119, 6]
           d.cell.styles.fontStyle = 'bold'
         }
+        if (d.column.index === 2) {
+          d.cell.text = []
+        }
       }
+    },
+    didDrawCell: function(d) {
+      drawCasaTrasfertaCell(d)
     }
   })
   const filename = `${weekendSelezionato.value.nome.replace(/\s+/g, '_').toLowerCase()}_${nome.replace(/\s+/g, '_').toLowerCase()}.pdf`
@@ -789,7 +832,7 @@ async function esportaPDFGenitori(group) {
     columnStyles: {
       0: { cellWidth: 26, halign: 'center' },
       1: { cellWidth: 16, halign: 'center' },
-      2: { cellWidth: 20, halign: 'center' },
+      2: { cellWidth: 26, halign: 'center' },
       3: { cellWidth: 'wrap' },
       4: { cellWidth: 'wrap' },
       5: { cellWidth: 'wrap' },
@@ -801,7 +844,13 @@ async function esportaPDFGenitori(group) {
           d.cell.styles.textColor = [217, 119, 6]
           d.cell.styles.fontStyle = 'bold'
         }
+        if (d.column.index === 2) {
+          d.cell.text = []
+        }
       }
+    },
+    didDrawCell: function(d) {
+      drawCasaTrasfertaCell(d)
     }
   })
 
