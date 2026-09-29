@@ -353,7 +353,7 @@ function onCambiaSocieta() {
 function getSocietaNome(societaId) {
   if (!societaId) return ''
   const s = listaSocieta.value.find(s => s.id === societaId)
-  return s ? s.nome_breve || s.nome : ''
+  return s ? s.nome || s.nome_breve : ''
 }
 
 function isMister(u, catId) {

@@ -10,11 +10,13 @@ from .partite import (
     SpogliatoioAssegnazioneCreate,
     SpogliatoioAssegnazioneUpdate,
     SpogliatoioAssegnazioneSettimanaSave,
+    SpogliatoioAssegnazioneWeekendSave,
     CampoCreate,
     CampoUpdate,
     CampoAssegnazioneCreate,
     CampoAssegnazioneUpdate,
     CampoAssegnazioneSettimanaSave,
+    CampoAssegnazioneWeekendSave,
 )
 from .segreteria import OpendayCreate, OpendayUpdate
 
@@ -34,11 +36,13 @@ __all__ = [
     "SpogliatoioAssegnazioneCreate",
     "SpogliatoioAssegnazioneUpdate",
     "SpogliatoioAssegnazioneSettimanaSave",
+    "SpogliatoioAssegnazioneWeekendSave",
     "CampoCreate",
     "CampoUpdate",
     "CampoAssegnazioneCreate",
     "CampoAssegnazioneUpdate",
     "CampoAssegnazioneSettimanaSave",
+    "CampoAssegnazioneWeekendSave",
     "OpendayCreate",
     "OpendayUpdate",
 ]

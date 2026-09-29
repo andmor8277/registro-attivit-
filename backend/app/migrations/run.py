@@ -1246,6 +1246,15 @@ def run_migrations():
                 print(f"Migration warning (partite livello): {e}")
                 conn.rollback()
 
+            try:
+                conn.execute(text("ALTER TABLE spogliatoi_assegnazioni ADD COLUMN IF NOT EXISTS partita_id INTEGER REFERENCES partite(id) ON DELETE CASCADE"))
+                conn.execute(text("ALTER TABLE campi_assegnazioni ADD COLUMN IF NOT EXISTS partita_id INTEGER REFERENCES partite(id) ON DELETE CASCADE"))
+                conn.commit()
+                print("Migration: Added partita_id to spogliatoi_assegnazioni and campi_assegnazioni")
+            except Exception as e:
+                print(f"Migration warning (partita_id in assegnazioni): {e}")
+                conn.rollback()
+
         finally:
             if has_lock:
                 try:

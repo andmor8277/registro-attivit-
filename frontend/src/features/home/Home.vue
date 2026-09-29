@@ -13,7 +13,7 @@
             <path d="M7 16V4m0 0L3 8m4-4l4 4"/>
             <path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
           </svg>
-          {{ societaAttiva?.nome_breve || 'Cambia Società' }}
+          {{ societaAttiva?.nome || societaAttiva?.nome_breve || 'Cambia Società' }}
         </button>
       </div>
     </div>
@@ -334,7 +334,7 @@ function dataLabel(ds) {
 function partitaLabel(p) {
   if (p.source === 'convocazione') return p.title || 'Gara'
   const avv = p.avversario || 'TBD'
-  const noi = societaAttiva.value?.nome_breve || 'Noi'
+  const noi = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Noi'
   return p.casa_fuori === 'fuori' ? `${avv} vs ${noi}` : `${noi} vs ${avv}`
 }
 

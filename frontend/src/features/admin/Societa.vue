@@ -29,6 +29,10 @@
           <input v-model="nuovo.nome" placeholder="Es. RedTigers 1957" />
         </div>
         <div class="input-group">
+          <label>Nome Breve / Sigla</label>
+          <input v-model="nuovo.nome_breve" placeholder="Es. RedTigers 1957" />
+        </div>
+        <div class="input-group">
           <label>Colore Primario</label>
           <div class="color-input">
             <input type="color" v-model="nuovo.colore_primario" />

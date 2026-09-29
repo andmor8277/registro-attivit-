@@ -45,6 +45,20 @@ def lista_partite(categoria_id: int = None, societa_id: int = None, db=Depends(g
     rows = res.fetchall()
     return [dict(r._mapping) for r in rows]
 
+def _clean_str(val):
+    if val is None:
+        return None
+    s = str(val).strip()
+    return s if s else None
+
+def _clean_int(val):
+    if val is None or val == "":
+        return None
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return None
+
 @router.post("/")
 def crea_partita(data: PartitaCreate, db=Depends(get_db), user=Depends(get_staff_admin)):
     societa_id = data.societa_id
@@ -52,6 +66,24 @@ def crea_partita(data: PartitaCreate, db=Depends(get_db), user=Depends(get_staff
         societa_id = user.societa_id
     check_societa(user, societa_id)
     check_categoria(db, user, data.categoria_id)
+
+    if not data.data_partite or not str(data.data_partite).strip():
+        raise HTTPException(400, "La data della partita è obbligatoria")
+    if not data.categoria_id:
+        raise HTTPException(400, "La categoria è obbligatoria")
+
+    ora = _clean_str(data.ora)
+    ora_pres = _clean_str(data.ora_presentazione)
+    avversario = _clean_str(data.avversario)
+    campo = _clean_str(data.campo)
+    indirizzo = _clean_str(data.indirizzo)
+    casa_fuori = _clean_str(data.casa_fuori) or "casa"
+    mister_id = _clean_int(data.mister_id)
+    risultato = _clean_str(data.risultato)
+    note = _clean_str(data.note)
+    weekend_id = _clean_int(data.weekend_id)
+    livello = _clean_str(data.livello)
+
     res = db.execute(
         text("""
             INSERT INTO partite (categoria_id, data_partite, ora, ora_presentazione, avversario, campo, indirizzo, casa_fuori, mister_id, risultato, goal_punti, goal_contro, note, societa_id, weekend_id, livello)
@@ -61,20 +93,20 @@ def crea_partita(data: PartitaCreate, db=Depends(get_db), user=Depends(get_staff
         {
             "categoria_id": data.categoria_id,
             "data_partite": data.data_partite,
-            "ora": data.ora,
-            "ora_presentazione": data.ora_presentazione,
-            "avversario": data.avversario,
-            "campo": data.campo,
-            "indirizzo": data.indirizzo,
-            "casa_fuori": data.casa_fuori,
-            "mister_id": data.mister_id,
-            "risultato": data.risultato,
-            "goal_punti": data.goal_punti,
-            "goal_contro": data.goal_contro,
-            "note": data.note,
+            "ora": ora,
+            "ora_presentazione": ora_pres,
+            "avversario": avversario,
+            "campo": campo,
+            "indirizzo": indirizzo,
+            "casa_fuori": casa_fuori,
+            "mister_id": mister_id,
+            "risultato": risultato,
+            "goal_punti": data.goal_punti or 0,
+            "goal_contro": data.goal_contro or 0,
+            "note": note,
             "societa_id": societa_id,
-            "weekend_id": data.weekend_id,
-            "livello": data.livello,
+            "weekend_id": weekend_id,
+            "livello": livello,
         }
     )
     db.commit()
@@ -85,6 +117,20 @@ def crea_partita(data: PartitaCreate, db=Depends(get_db), user=Depends(get_staff
 def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), user=Depends(get_staff_admin)):
     check_partite_access(db, partita_id, user)
     check_categoria(db, user, data.categoria_id)
+
+    ora = _clean_str(data.ora)
+    ora_pres = _clean_str(data.ora_presentazione)
+    avversario = _clean_str(data.avversario)
+    campo = _clean_str(data.campo)
+    indirizzo = _clean_str(data.indirizzo)
+    casa_fuori = _clean_str(data.casa_fuori) or "casa"
+    mister_id = _clean_int(data.mister_id)
+    risultato = _clean_str(data.risultato)
+    note = _clean_str(data.note)
+    weekend_id = _clean_int(data.weekend_id)
+    livello = _clean_str(data.livello)
+    data_partite = _clean_str(data.data_partite)
+
     res = db.execute(
         text("""
             UPDATE partite SET
@@ -109,20 +155,20 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
         {
             "id": partita_id,
             "categoria_id": data.categoria_id,
-            "data_partite": data.data_partite,
-            "ora": data.ora,
-            "ora_presentazione": data.ora_presentazione,
-            "avversario": data.avversario,
-            "campo": data.campo,
-            "indirizzo": data.indirizzo,
-            "casa_fuori": data.casa_fuori,
-            "mister_id": data.mister_id,
-            "risultato": data.risultato,
-            "goal_punti": data.goal_punti,
-            "goal_contro": data.goal_contro,
-            "note": data.note,
-            "weekend_id": data.weekend_id,
-            "livello": data.livello,
+            "data_partite": data_partite,
+            "ora": ora,
+            "ora_presentazione": ora_pres,
+            "avversario": avversario,
+            "campo": campo,
+            "indirizzo": indirizzo,
+            "casa_fuori": casa_fuori,
+            "mister_id": mister_id,
+            "risultato": risultato,
+            "goal_punti": data.goal_punti or 0,
+            "goal_contro": data.goal_contro or 0,
+            "note": note,
+            "weekend_id": weekend_id,
+            "livello": livello,
         }
     )
     db.commit()

@@ -72,6 +72,7 @@ class SpogliatoioAssegnazioneCreate(BaseModel):
     data: Optional[str] = None
     weekend_id: Optional[int] = None
     societa_id: Optional[int] = None
+    partita_id: Optional[int] = None
     is_default: Optional[bool] = False
 
 
@@ -83,6 +84,7 @@ class SpogliatoioAssegnazioneUpdate(BaseModel):
     data_inizio: Optional[str] = None
     data: Optional[str] = None
     weekend_id: Optional[int] = None
+    partita_id: Optional[int] = None
     is_default: Optional[bool] = None
 
 
@@ -108,6 +110,7 @@ class CampoAssegnazioneCreate(BaseModel):
     data: Optional[str] = None
     weekend_id: Optional[int] = None
     societa_id: Optional[int] = None
+    partita_id: Optional[int] = None
     metacampo: Optional[str] = None
     is_default: Optional[bool] = False
 
@@ -120,6 +123,7 @@ class CampoAssegnazioneUpdate(BaseModel):
     data_inizio: Optional[str] = None
     data: Optional[str] = None
     weekend_id: Optional[int] = None
+    partita_id: Optional[int] = None
     metacampo: Optional[str] = None
     is_default: Optional[bool] = None
 
@@ -134,3 +138,16 @@ class CampoAssegnazioneSettimanaSave(BaseModel):
     data_inizio: str
     societa_id: Optional[int] = None
     assegnazioni: list[CampoAssegnazioneCreate] = []
+
+
+class SpogliatoioAssegnazioneWeekendSave(BaseModel):
+    weekend_id: int
+    societa_id: Optional[int] = None
+    assegnazioni: list[SpogliatoioAssegnazioneCreate] = []
+
+
+class CampoAssegnazioneWeekendSave(BaseModel):
+    weekend_id: int
+    societa_id: Optional[int] = None
+    assegnazioni: list[CampoAssegnazioneCreate] = []
+

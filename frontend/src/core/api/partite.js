@@ -38,6 +38,7 @@ export const eliminaAssegnazione = (id) => api.delete(`/spogliatoi/assegnazioni/
 export const getAssegnazioniDefault = () => api.get('/spogliatoi/assegnazioni/default')
 export const applyDefaultWeekSpogliatoi = (dataInizio) => api.post(`/spogliatoi/assegnazioni/default/apply?data_inizio=${dataInizio}`)
 export const salvaAssegnazioniSettimanaSpogliatoi = (data) => api.post('/spogliatoi/assegnazioni/settimana', data)
+export const salvaAssegnazioniWeekendSpogliatoi = (data) => api.post('/spogliatoi/assegnazioni/weekend', data)
 
 export const getCampi = (societaId) => {
   const params = societaId ? `?societa_id=${societaId}` : ''
@@ -54,6 +55,7 @@ export const eliminaCampoAssegnazione = (id) => api.delete(`/campi/assegnazioni/
 export const getCampiAssegnazioniDefault = () => api.get('/campi/assegnazioni/default')
 export const applyDefaultWeekCampi = (dataInizio) => api.post(`/campi/assegnazioni/default/apply?data_inizio=${dataInizio}`)
 export const salvaAssegnazioniSettimanaCampi = (data) => api.post('/campi/assegnazioni/settimana', data)
+export const salvaAssegnazioniWeekendCampi = (data) => api.post('/campi/assegnazioni/weekend', data)
 
 export const getListeTorneo = (categoriaId) => api.get('/liste-torneo/?categoria_id=' + categoriaId)
 export const creaListaTorneo = (data) => api.post('/liste-torneo/', data)

@@ -69,7 +69,7 @@
             </button>
           </div>
           <div class="partite-list">
-            <div v-for="partita in group.partite" :key="partita.id" class="partita-card" :class="{ played: partita.risultato }">
+            <div v-for="partita in group.partite" :key="partita.id" class="partita-card" :class="{ played: partita.risultato, 'is-domenica': isDomenica(partita.data_partite) }">
               <div class="partita-header">
                 <div class="partita-actions">
                   <button class="btn-icon-sm" @click="apriModal(partita)" title="Modifica">
@@ -113,7 +113,7 @@
                   <span class="casa-fuori-badge" :class="partita.casa_fuori || 'casa'">{{ partita.casa_fuori === 'fuori' ? 'In trasferta' : 'In casa' }}</span>
                 </div>
                 <div class="partita-meta">
-                  <span v-if="partita.casa_fuori" class="meta-item giorno-badge">
+                  <span v-if="partita.casa_fuori" class="meta-item giorno-badge" :class="{ 'domenica-badge': isDomenica(partita.data_partite) }">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                       <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                       <line x1="16" y1="2" x2="16" y2="6"/>
@@ -345,7 +345,7 @@ import "jspdf-autotable"
 const router = useRouter()
 const { societaAttiva } = useStore()
 
-const societaNome = computed(() => societaAttiva.value?.nome_breve || societaAttiva.value?.nome || 'Società')
+const societaNome = computed(() => societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Società')
 
 const categorie = ref([])
 const misterPerCategoria = ref({})
@@ -391,7 +391,7 @@ const weekendPartiteGrouped = computed(() => {
     .sort((a, b) => (a.anno || 9999) - (b.anno || 9999))
   return sortedCats.map(cat => ({
     cat,
-    partite: catMap[cat.id].sort((a, b) => a.data_partite.localeCompare(b.data_partite))
+    partite: catMap[cat.id].sort((a, b) => (a.data_partite || '').localeCompare(b.data_partite || '') || (a.ora || '').localeCompare(b.ora || ''))
   }))
 })
 
@@ -406,6 +406,14 @@ function formatDate(dateStr) {
   return `${d}/${m}/${y}`
 }
 
+function isDomenica(dataStr) {
+  if (!dataStr) return false
+  const parts = dataStr.split('-')
+  if (parts.length !== 3) return false
+  const dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+  return dt.getDay() === 0
+}
+
 function getRisultatoClass(punti, contro) {
   if (punti > contro) return 'win'
   if (punti < contro) return 'loss'
@@ -415,7 +423,9 @@ function getRisultatoClass(punti, contro) {
 function getGiornoSettimana(dataStr) {
   if (!dataStr) return ''
   const giorni = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato']
-  const d = new Date(dataStr)
+  const parts = dataStr.split('-')
+  if (parts.length !== 3) return ''
+  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
   return giorni[d.getDay()]
 }
 
@@ -435,8 +445,8 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
       show: true,
       id: partita.id,
       categoria_id: partita.categoria_id,
-      data_partite: partita.data_partite,
-      ora: partita.ora,
+      data_partite: partita.data_partite || "",
+      ora: partita.ora ? partita.ora.slice(0, 5) : "",
       avversario: partita.avversario || "",
       campo: partita.campo || "",
       indirizzo: partita.indirizzo || "",
@@ -446,15 +456,16 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
       goal_punti: partita.goal_punti || 0,
       goal_contro: partita.goal_contro || 0,
       note: partita.note || "",
-      weekend_id: partita.weekend_id || null,
+      weekend_id: partita.weekend_id || defaultWeekendId || weekendSelezionato.value?.id || null,
       livello: partita.livello || ""
     }
   } else {
+    const defaultData = weekendSelezionato.value?.data_inizio || ""
     modal.value = {
       show: true,
       id: null,
       categoria_id: defaultCatId || categorie.value[0]?.id || null,
-      data_partite: "",
+      data_partite: defaultData,
       ora: "",
       avversario: "",
       campo: "",
@@ -465,7 +476,7 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
       goal_punti: 0,
       goal_contro: 0,
       note: "",
-      weekend_id: defaultWeekendId || null,
+      weekend_id: defaultWeekendId || weekendSelezionato.value?.id || null,
       livello: ""
     }
   }
@@ -476,18 +487,33 @@ function chiudiModal() {
 }
 
 async function salvaPartita() {
+  if (!modal.value.categoria_id) {
+    alert('Seleziona la categoria della partita')
+    return
+  }
+  if (!modal.value.data_partite) {
+    alert('Inserisci la data della partita')
+    return
+  }
   const payload = {
     ...modal.value,
+    ora: modal.value.ora ? modal.value.ora.slice(0, 5) : null,
     societa_id: societaAttiva.value?.id || null
   }
-  if (modal.value.id) {
-    await aggiornaPartita(modal.value.id, payload)
-  } else {
-    await creaPartita(payload)
-  }
-  chiudiModal()
-  if (weekendSelezionato.value) {
-    await caricaWeekendPartite(weekendSelezionato.value.id)
+  try {
+    if (modal.value.id) {
+      await aggiornaPartita(modal.value.id, payload)
+    } else {
+      await creaPartita(payload)
+    }
+    chiudiModal()
+    if (weekendSelezionato.value) {
+      await caricaWeekendPartite(weekendSelezionato.value.id)
+    }
+  } catch (err) {
+    console.error('Errore salvataggio partita:', err)
+    const msg = err.response?.data?.detail || err.message || 'Errore durante il salvataggio della partita'
+    alert(msg)
   }
 }
 
@@ -651,7 +677,7 @@ async function esportaPDFWeekend() {
   doc.setTextColor(0)
   const sorted = weekendPartiteGrouped.value.map(g => ({
     cat: g.cat,
-    partite: g.partite.sort((a, b) => a.data_partite.localeCompare(b.data_partite))
+    partite: g.partite.slice().sort((a, b) => (a.data_partite || '').localeCompare(b.data_partite || '') || (a.ora || '').localeCompare(b.ora || ''))
   }))
   const headers = [['Data', 'Ora', 'C/T', 'Avversario', 'Livello', 'Campo', 'Indirizzo', 'Mister']]
   const body = []
@@ -659,7 +685,8 @@ async function esportaPDFWeekend() {
     const catLabel = `${g.cat.anno} - ${g.cat.nome}`
     body.push([{ content: catLabel, colSpan: 8 }])
     g.partite.forEach(p => {
-      const data = formatDate(p.data_partite)
+      const isDom = isDomenica(p.data_partite)
+      const data = formatDate(p.data_partite) + (isDom ? ' (DOM)' : '')
       const ora = p.ora ? p.ora.slice(0, 5) : '-'
       const cf = p.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa'
       const campo = p.campo || '-'
@@ -680,7 +707,7 @@ async function esportaPDFWeekend() {
     styles: { fontSize: 8.5, cellPadding: 3, halign: 'left', valign: 'middle' },
     headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9 },
     columnStyles: {
-      0: { cellWidth: 24, halign: 'center' },
+      0: { cellWidth: 26, halign: 'center' },
       1: { cellWidth: 15, halign: 'center' },
       2: { cellWidth: 18, halign: 'center' },
       3: { cellWidth: 'wrap' },
@@ -699,6 +726,11 @@ async function esportaPDFWeekend() {
         d.cell.styles.fontSize = 11
         d.cell.styles.halign = 'left'
         d.cell.styles.cellPadding = { top: 5, bottom: 5, left: 6, right: 6 }
+      } else if (d.section === 'body' && d.cell) {
+        if (d.column.index === 0 && d.cell.raw && String(d.cell.raw).includes('(DOM)')) {
+          d.cell.styles.textColor = [217, 119, 6]
+          d.cell.styles.fontStyle = 'bold'
+        }
       }
     }
   })
@@ -723,10 +755,11 @@ async function esportaPDFGenitori(group) {
   doc.text(`${weekendSelezionato.value.nome} (${formatDate(weekendSelezionato.value.data_inizio)} - ${formatDate(weekendSelezionato.value.data_fine)}) | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 30)
   doc.setTextColor(0)
 
-  const sorted = (group.partite || []).slice().sort((a, b) => a.data_partite.localeCompare(b.data_partite) || (a.ora || '').localeCompare(b.ora || ''))
+  const sorted = (group.partite || []).slice().sort((a, b) => (a.data_partite || '').localeCompare(b.data_partite || '') || (a.ora || '').localeCompare(b.ora || ''))
   const headers = [['Data', 'Ora', 'C/T', 'Avversario', 'Campo', 'Indirizzo', 'Mister']]
   const body = sorted.map(p => {
-    const data = formatDate(p.data_partite)
+    const isDom = isDomenica(p.data_partite)
+    const data = formatDate(p.data_partite) + (isDom ? ' (DOM)' : '')
     const ora = p.ora ? p.ora.slice(0, 5) : '-'
     const cf = p.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa'
     const aversario = p.avversario || '-'
@@ -746,13 +779,21 @@ async function esportaPDFGenitori(group) {
     styles: { fontSize: 8.5, cellPadding: 3.5, halign: 'left', valign: 'middle' },
     headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9 },
     columnStyles: {
-      0: { cellWidth: 22, halign: 'center' },
+      0: { cellWidth: 26, halign: 'center' },
       1: { cellWidth: 16, halign: 'center' },
       2: { cellWidth: 20, halign: 'center' },
       3: { cellWidth: 'wrap' },
       4: { cellWidth: 'wrap' },
       5: { cellWidth: 'wrap' },
       6: { cellWidth: 'wrap' }
+    },
+    didParseCell: function(d) {
+      if (d.section === 'body' && d.cell) {
+        if (d.column.index === 0 && d.cell.raw && String(d.cell.raw).includes('(DOM)')) {
+          d.cell.styles.textColor = [217, 119, 6]
+          d.cell.styles.fontStyle = 'bold'
+        }
+      }
     }
   })
 
@@ -1175,6 +1216,22 @@ watch(weekendSelezionato, (newVal) => {
   border-radius: 4px;
 }
 
+.giorno-badge.domenica-badge {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #d97706 !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+  font-weight: 700 !important;
+}
+
+.partita-card.is-domenica {
+  border-left: 4px solid #f59e0b;
+}
+
+.partita-card.is-domenica .partita-date {
+  color: #d97706;
+  font-weight: 700;
+}
+
 .mister-badge {
   background: rgba(139, 92, 246, 0.1);
   color: #8b5cf6;
@@ -1244,8 +1301,12 @@ watch(weekendSelezionato, (newVal) => {
   background: var(--color-surface);
   border-radius: var(--radius-xl);
   width: 100%;
-  max-width: 500px;
+  max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
 }
 
 .modal-header {
@@ -1280,6 +1341,8 @@ watch(weekendSelezionato, (newVal) => {
 
 .modal-body {
   padding: 1.25rem 1.5rem 1.5rem;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .form-row {
