@@ -58,6 +58,15 @@
         <div v-for="group in weekendPartiteGrouped" :key="group.cat.id" class="categoria-section">
           <div class="categoria-section-header">
             <h2 class="categoria-title">{{ group.cat.anno }} - {{ group.cat.nome }}</h2>
+            <button class="btn-secondary-sm" @click="esportaPDFGenitori(group)" title="Esporta PDF per genitori">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <polyline points="9 15 12 18 15 15"/>
+              </svg>
+              Esporta PDF per genitori
+            </button>
           </div>
           <div class="partite-list">
             <div v-for="partita in group.partite" :key="partita.id" class="partita-card" :class="{ played: partita.risultato }">
@@ -126,6 +135,9 @@
                       <circle cx="12" cy="7" r="4"/>
                     </svg>
                     {{ getMisterName(partita.categoria_id, partita.mister_id) }}
+                  </span>
+                  <span v-if="partita.livello" class="meta-item livello-badge">
+                    Livello: {{ partita.livello }}
                   </span>
                   <span v-if="partita.risultato" class="meta-item risultato" :class="getRisultatoClass(partita.goal_punti, partita.goal_contro)">
                     {{ partita.risultato }}
@@ -292,6 +304,20 @@
                   <option v-for="w in weekend" :key="w.id" :value="w.id">{{ w.nome }} ({{ formatDate(w.data_inizio) }} - {{ formatDate(w.data_fine) }})</option>
                 </select>
               </div>
+              <div class="form-group">
+                <label>Livello</label>
+                <select v-model="modal.livello">
+                  <option value="">— Seleziona livello —</option>
+                  <option value="Alto">Alto</option>
+                  <option value="Medio Alto">Medio Alto</option>
+                  <option value="Medio">Medio</option>
+                  <option value="Medio Basso">Medio Basso</option>
+                  <option value="Basso">Basso</option>
+                  <option value="Basso Basso">Basso Basso</option>
+                  <option value="Bassissimo">Bassissimo</option>
+                  <option value="Misto">Misto</option>
+                </select>
+              </div>
             </div>
 
             <div class="form-group">
@@ -342,7 +368,8 @@ const modal = ref({
   goal_punti: 0,
   goal_contro: 0,
   note: "",
-  weekend_id: null
+  weekend_id: null,
+  livello: ""
 })
 
 const weekendModal = ref({
@@ -419,7 +446,8 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
       goal_punti: partita.goal_punti || 0,
       goal_contro: partita.goal_contro || 0,
       note: partita.note || "",
-      weekend_id: partita.weekend_id || null
+      weekend_id: partita.weekend_id || null,
+      livello: partita.livello || ""
     }
   } else {
     modal.value = {
@@ -437,7 +465,8 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
       goal_punti: 0,
       goal_contro: 0,
       note: "",
-      weekend_id: defaultWeekendId || null
+      weekend_id: defaultWeekendId || null,
+      livello: ""
     }
   }
 }
@@ -624,11 +653,11 @@ async function esportaPDFWeekend() {
     cat: g.cat,
     partite: g.partite.sort((a, b) => a.data_partite.localeCompare(b.data_partite))
   }))
-  const headers = [['Data', 'Ora', 'C/T', 'Avversario', 'Campo', 'Indirizzo', 'Mister']]
+  const headers = [['Data', 'Ora', 'C/T', 'Avversario', 'Livello', 'Campo', 'Indirizzo', 'Mister']]
   const body = []
   sorted.forEach(g => {
     const catLabel = `${g.cat.anno} - ${g.cat.nome}`
-    body.push([{ content: catLabel, colSpan: 7 }])
+    body.push([{ content: catLabel, colSpan: 8 }])
     g.partite.forEach(p => {
       const data = formatDate(p.data_partite)
       const ora = p.ora ? p.ora.slice(0, 5) : '-'
@@ -637,7 +666,8 @@ async function esportaPDFWeekend() {
       const indirizzo = p.indirizzo || '-'
       const mister = p.mister_id ? getMisterName(p.categoria_id, p.mister_id) : '-'
       const aversario = p.avversario || '-'
-      body.push([data, ora, cf, aversario, campo, indirizzo, mister])
+      const livello = p.livello || '-'
+      body.push([data, ora, cf, aversario, livello, campo, indirizzo, mister])
     })
   })
   doc.autoTable({
@@ -650,13 +680,14 @@ async function esportaPDFWeekend() {
     styles: { fontSize: 8.5, cellPadding: 3, halign: 'left', valign: 'middle' },
     headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9 },
     columnStyles: {
-      0: { cellWidth: 25, halign: 'center' },
-      1: { cellWidth: 16, halign: 'center' },
-      2: { cellWidth: 20, halign: 'center' },
+      0: { cellWidth: 24, halign: 'center' },
+      1: { cellWidth: 15, halign: 'center' },
+      2: { cellWidth: 18, halign: 'center' },
       3: { cellWidth: 'wrap' },
-      4: { cellWidth: 'wrap' },
+      4: { cellWidth: 24, halign: 'center' },
       5: { cellWidth: 'wrap' },
-      6: { cellWidth: 'wrap' }
+      6: { cellWidth: 'wrap' },
+      7: { cellWidth: 'wrap' }
     },
     didParseCell: function(d) {
       if (d.section === 'body' && d.raw && d.raw.colSpan) {
@@ -673,6 +704,60 @@ async function esportaPDFWeekend() {
   })
   const filename = `${weekendSelezionato.value.nome.replace(/\s+/g, '_').toLowerCase()}_${nome.replace(/\s+/g, '_').toLowerCase()}.pdf`
   await exportPdf(doc, filename, `Partite ${weekendSelezionato.value.nome}`)
+}
+
+async function esportaPDFGenitori(group) {
+  if (!weekendSelezionato.value || !group) return
+  const doc = new jsPDF({ orientation: 'portrait' })
+  const nome = societaNome.value
+  const catLabel = `${group.cat.anno} - ${group.cat.nome}`
+
+  doc.setFontSize(16)
+  doc.text(`${nome}`, 14, 15)
+  doc.setFontSize(12)
+  doc.setFont(undefined, 'bold')
+  doc.text(`Programmazione Gare — ${catLabel}`, 14, 23)
+  doc.setFont(undefined, 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(100)
+  doc.text(`${weekendSelezionato.value.nome} (${formatDate(weekendSelezionato.value.data_inizio)} - ${formatDate(weekendSelezionato.value.data_fine)}) | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 30)
+  doc.setTextColor(0)
+
+  const sorted = (group.partite || []).slice().sort((a, b) => a.data_partite.localeCompare(b.data_partite) || (a.ora || '').localeCompare(b.ora || ''))
+  const headers = [['Data', 'Ora', 'C/T', 'Avversario', 'Campo', 'Indirizzo', 'Mister']]
+  const body = sorted.map(p => {
+    const data = formatDate(p.data_partite)
+    const ora = p.ora ? p.ora.slice(0, 5) : '-'
+    const cf = p.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa'
+    const aversario = p.avversario || '-'
+    const campo = p.campo || '-'
+    const indirizzo = p.indirizzo || '-'
+    const mister = p.mister_id ? getMisterName(p.categoria_id, p.mister_id) : '-'
+    return [data, ora, cf, aversario, campo, indirizzo, mister]
+  })
+
+  doc.autoTable({
+    head: headers,
+    body: body,
+    startY: 36,
+    theme: 'grid',
+    margin: { left: 14, right: 14 },
+    tableWidth: 182,
+    styles: { fontSize: 8.5, cellPadding: 3.5, halign: 'left', valign: 'middle' },
+    headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9 },
+    columnStyles: {
+      0: { cellWidth: 22, halign: 'center' },
+      1: { cellWidth: 16, halign: 'center' },
+      2: { cellWidth: 20, halign: 'center' },
+      3: { cellWidth: 'wrap' },
+      4: { cellWidth: 'wrap' },
+      5: { cellWidth: 'wrap' },
+      6: { cellWidth: 'wrap' }
+    }
+  })
+
+  const filename = `gare_${catLabel.replace(/[\s\/-]+/g, '_').toLowerCase()}_genitori.pdf`
+  await exportPdf(doc, filename, `Gare ${catLabel} - Genitori`)
 }
 
 onMounted(() => {
@@ -877,6 +962,8 @@ watch(weekendSelezionato, (newVal) => {
 .categoria-section-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
@@ -1091,6 +1178,14 @@ watch(weekendSelezionato, (newVal) => {
 .mister-badge {
   background: rgba(139, 92, 246, 0.1);
   color: #8b5cf6;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+}
+
+.livello-badge {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
   font-weight: 600;
   padding: 0.125rem 0.5rem;
   border-radius: 4px;

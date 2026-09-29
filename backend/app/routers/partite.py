@@ -54,8 +54,8 @@ def crea_partita(data: PartitaCreate, db=Depends(get_db), user=Depends(get_staff
     check_categoria(db, user, data.categoria_id)
     res = db.execute(
         text("""
-            INSERT INTO partite (categoria_id, data_partite, ora, ora_presentazione, avversario, campo, indirizzo, casa_fuori, mister_id, risultato, goal_punti, goal_contro, note, societa_id, weekend_id)
-            VALUES (:categoria_id, :data_partite, :ora, :ora_presentazione, :avversario, :campo, :indirizzo, :casa_fuori, :mister_id, :risultato, :goal_punti, :goal_contro, :note, :societa_id, :weekend_id)
+            INSERT INTO partite (categoria_id, data_partite, ora, ora_presentazione, avversario, campo, indirizzo, casa_fuori, mister_id, risultato, goal_punti, goal_contro, note, societa_id, weekend_id, livello)
+            VALUES (:categoria_id, :data_partite, :ora, :ora_presentazione, :avversario, :campo, :indirizzo, :casa_fuori, :mister_id, :risultato, :goal_punti, :goal_contro, :note, :societa_id, :weekend_id, :livello)
             RETURNING *
         """),
         {
@@ -74,6 +74,7 @@ def crea_partita(data: PartitaCreate, db=Depends(get_db), user=Depends(get_staff
             "note": data.note,
             "societa_id": societa_id,
             "weekend_id": data.weekend_id,
+            "livello": data.livello,
         }
     )
     db.commit()
@@ -100,7 +101,8 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
                 goal_punti = :goal_punti,
                 goal_contro = :goal_contro,
                 note = :note,
-                weekend_id = :weekend_id
+                weekend_id = :weekend_id,
+                livello = :livello
             WHERE id = :id
             RETURNING *
         """),
@@ -120,6 +122,7 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
             "goal_contro": data.goal_contro,
             "note": data.note,
             "weekend_id": data.weekend_id,
+            "livello": data.livello,
         }
     )
     db.commit()

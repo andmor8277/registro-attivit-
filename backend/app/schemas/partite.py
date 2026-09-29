@@ -18,6 +18,7 @@ class PartitaCreate(BaseModel):
     note: Optional[str] = None
     societa_id: Optional[int] = None
     weekend_id: Optional[int] = None
+    livello: Optional[str] = None
 
 
 class PartitaUpdate(BaseModel):
@@ -35,6 +36,7 @@ class PartitaUpdate(BaseModel):
     goal_contro: Optional[int] = 0
     note: Optional[str] = None
     weekend_id: Optional[int] = None
+    livello: Optional[str] = None
 
 
 class WeekendCreate(BaseModel):
