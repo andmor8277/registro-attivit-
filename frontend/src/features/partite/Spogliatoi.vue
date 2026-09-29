@@ -818,6 +818,12 @@ function getCategoriePerGiornoSettimana(dow) {
   })
 }
 
+function getGiornoLabel(dataStr) {
+  if (!dataStr) return ''
+  const g = giorniSettimana.value.find(d => d.data === dataStr)
+  return g ? `${g.nomeLungo} (${formatDate(dataStr)})` : formatDate(dataStr)
+}
+
 const giorniDefault = computed(() => {
   const giorni = []
   const nomi = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven']
