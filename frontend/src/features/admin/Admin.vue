@@ -2,8 +2,16 @@
   <div class="admin">
     <header class="page-header">
       <div class="header-content">
-        <h1>Gestione Utenti</h1>
-        <p class="page-subtitle">Crea e gestisci gli account degli utenti</p>
+        <button class="btn-back" @click="router.push('/')" title="Torna alla Home">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+        </button>
+        <div>
+          <h1>Gestione Utenti</h1>
+          <p class="page-subtitle">Crea e gestisci gli account degli utenti</p>
+        </div>
       </div>
       <div class="header-actions">
         <button @click="cambiaSocieta" class="btn-societa">
@@ -1056,6 +1064,38 @@ onMounted(() => {
 
 .header-content {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-back {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.btn-back:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.btn-back svg {
+  width: 20px;
+  height: 20px;
+  color: var(--color-text);
+}
+
+.btn-back:hover svg {
+  color: white;
 }
 
 .header-actions {

@@ -2,7 +2,14 @@
   <div class="conv-page">
     <header class="page-header">
       <div class="header-left">
-        <button class="icon-btn" @click="router.push('/')" aria-label="Home">
+        <button class="btn-back-pill" @click="router.push('/scelta/' + (route.params.id || categoriaAttiva?.id))" title="Torna alla Scelta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+          <span>Indietro</span>
+        </button>
+        <button class="icon-btn" @click="router.push('/')" aria-label="Home" title="Torna alla Home">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         </button>
       </div>
@@ -1907,7 +1914,31 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.header-left { display: flex; align-items: center; gap: 0.25rem; }
+.header-left { display: flex; align-items: center; gap: 0.5rem; }
+
+.btn-back-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.btn-back-pill:hover {
+  background: var(--color-bg);
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+.btn-back-pill svg {
+  width: 16px;
+  height: 16px;
+}
 
 .icon-btn {
   width: 36px;

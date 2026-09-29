@@ -622,6 +622,21 @@ onMounted(async () => {
     CapApp.getLaunchUrl().then((launchUrl) => {
       if (launchUrl?.url) handleDeepUrl(launchUrl.url)
     }).catch(() => {})
+    CapApp.addListener('backButton', () => {
+      if (showPasswordModal.value) {
+        showPasswordModal.value = false
+        return
+      }
+      if (mobileMenuOpen.value) {
+        mobileMenuOpen.value = false
+        return
+      }
+      if (route.path === '/' || route.path === '/login') {
+        CapApp.exitApp()
+      } else {
+        router.back()
+      }
+    })
   }
 
   if (token.value) {

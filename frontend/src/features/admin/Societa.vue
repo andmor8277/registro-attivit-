@@ -1,8 +1,18 @@
 <template>
   <div class="admin">
     <header class="page-header">
-      <h1>{{ isSuperAdmin ? 'Gestione Società' : 'Modifica la tua Società' }}</h1>
-      <p class="page-subtitle">{{ isSuperAdmin ? 'Crea e gestisci le società sportive' : 'Modifica logo e colori della tua società' }}</p>
+      <div class="header-content">
+        <button class="btn-back" @click="goBack" title="Torna indietro">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+        </button>
+        <div>
+          <h1>{{ isSuperAdmin ? 'Gestione Società' : 'Modifica la tua Società' }}</h1>
+          <p class="page-subtitle">{{ isSuperAdmin ? 'Crea e gestisci le società sportive' : 'Modifica logo e colori della tua società' }}</p>
+        </div>
+      </div>
     </header>
 
     <div class="card card-create">
@@ -131,6 +141,14 @@ const route = useRoute()
 const router = useRouter()
 
 const isSuperAdmin = ref(false)
+
+function goBack() {
+  if (isSuperAdmin.value) {
+    router.push('/admin')
+  } else {
+    router.push('/')
+  }
+}
 
 const societa = ref([])
 const editing = ref(null)
@@ -290,6 +308,41 @@ onMounted(async () => {
 
 .page-header {
   margin-bottom: 2rem;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-back {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.btn-back:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.btn-back svg {
+  width: 20px;
+  height: 20px;
+  color: var(--color-text);
+}
+
+.btn-back:hover svg {
+  color: white;
 }
 
 .page-header h1 {
