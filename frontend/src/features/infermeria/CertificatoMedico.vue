@@ -44,6 +44,21 @@
             Senza <span class="filter-count">{{ senzaCertificato }}</span>
           </button>
         </div>
+        <button
+          class="btn-export-all"
+          @click="esportaPdfTutte"
+          :disabled="esportandoTutti || totale === 0"
+          title="Esporta il report completo dei certificati medici per tutte le categorie in PDF"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <span>{{ esportandoTutti ? 'Esportazione...' : 'Esporta Tutte (PDF)' }}</span>
+        </button>
       </div>
 
       <div class="cat-grid">
@@ -53,9 +68,26 @@
           class="cat-section"
         >
           <div class="cat-header">
-            <span class="cat-anno">{{ cat.anno }}</span>
-            <span class="cat-nome">{{ cat.nome }}</span>
-            <span class="cat-count">{{ getFilteredPlayers(cat.id).length }} iscritti</span>
+            <div class="cat-header-info">
+              <span class="cat-anno">{{ cat.anno }}</span>
+              <span class="cat-nome">{{ cat.nome }}</span>
+              <span class="cat-count">{{ getFilteredPlayers(cat.id).length }} iscritti</span>
+            </div>
+            <button
+              class="btn-export-pdf"
+              @click="esportaPdfCategoria(cat)"
+              :disabled="esportandoCatId === cat.id || getFilteredPlayers(cat.id).length === 0"
+              title="Esporta elenco certificati medici della categoria in PDF"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+              <span>{{ esportandoCatId === cat.id ? 'Esportazione...' : 'Esporta PDF' }}</span>
+            </button>
           </div>
 
           <div class="table-wrap">
@@ -197,15 +229,23 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '../../store.js'
-import { getCategorie, getPersone, updateScadenzaCertificato, getLocalDateStr } from '../../api/index.js'
+import { getCategorie, getPersone, updateScadenzaCertificato, getLocalDateStr, saveOrSharePdf } from '../../api/index.js'
+import { jsPDF } from 'jspdf'
+import 'jspdf-autotable'
 
 const router = useRouter()
-const { utenteAttivo } = useStore()
+const { utenteAttivo, societaAttiva } = useStore()
 
 const categorie = ref([])
 const persone = ref([])
 const search = ref('')
 const filtro = ref('tutti')
+const esportandoCatId = ref(null)
+const esportandoTutti = ref(false)
+
+const societaNome = computed(() => {
+  return societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'The Home of Football'
+})
 
 const editModal = ref({
   show: false,
@@ -363,6 +403,186 @@ async function salvaCertificato() {
     editModal.value.error = err?.response?.data?.detail || 'Errore durante il salvataggio della scadenza certificato'
   } finally {
     editModal.value.loading = false
+  }
+}
+
+async function generaPdfCertificati(catList, filename, shareTitle) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const societa = societaNome.value
+  const oggi = new Date().toLocaleDateString('it-IT')
+
+  catList.forEach((cat, cIdx) => {
+    if (cIdx > 0) {
+      doc.addPage()
+    }
+    const players = getFilteredPlayers(cat.id)
+    const sortedPlayers = [...players].sort((a, b) => {
+      const cA = (a.cognome || '').toLowerCase()
+      const cB = (b.cognome || '').toLowerCase()
+      if (cA !== cB) return cA.localeCompare(cB)
+      return (a.nome || '').toLowerCase().localeCompare((b.nome || '').toLowerCase())
+    })
+
+    const catLabel = `${cat.nome}${cat.anno ? ' (' + cat.anno + ')' : ''}`
+    const catScaduti = sortedPlayers.filter(p => p.scadenza_certificato && isScaduta(p.scadenza_certificato)).length
+    const catInScadenza = sortedPlayers.filter(p => p.scadenza_certificato && isInScadenza(p.scadenza_certificato)).length
+    const catSenza = sortedPlayers.filter(p => !p.scadenza_certificato).length
+    const catValidi = sortedPlayers.length - catScaduti - catInScadenza - catSenza
+
+    // Intestazione Categoria
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(15)
+    doc.setTextColor(30, 41, 59)
+    doc.text(societa.toUpperCase(), 14, 15)
+
+    doc.setFontSize(11)
+    doc.setTextColor(220, 38, 38)
+    doc.text(`CERTIFICATI MEDICI — ${catLabel.toUpperCase()}`, 14, 21)
+
+    doc.setDrawColor(220, 38, 38)
+    doc.setLineWidth(0.6)
+    doc.line(14, 23.5, pageWidth - 14, 23.5)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8.5)
+    doc.setTextColor(100, 116, 139)
+    let metaInfo = `Data esportazione: ${oggi}   |   Iscritti: ${sortedPlayers.length} (Validi: ${catValidi} · In Scadenza: ${catInScadenza} · Scaduti: ${catScaduti} · Senza: ${catSenza})`
+    if (filtro.value !== 'tutti') {
+      const filtroMap = {
+        scaduti: 'Scaduti',
+        in_scadenza: 'In Scadenza',
+        senza: 'Senza Certificato'
+      }
+      metaInfo += `  [Filtro: ${filtroMap[filtro.value] || filtro.value}]`
+    }
+    doc.text(metaInfo, 14, 28)
+
+    const headers = [['#', 'Cognome', 'Nome', 'Data Nascita', 'Scadenza', 'Struttura Rilascio', 'Stato']]
+    const rows = sortedPlayers.map((p, idx) => {
+      let stato = 'Valido'
+      if (!p.scadenza_certificato) stato = 'Senza'
+      else if (isScaduta(p.scadenza_certificato)) stato = 'Scaduto'
+      else if (isInScadenza(p.scadenza_certificato)) stato = 'In Scadenza'
+
+      return [
+        idx + 1,
+        p.cognome || '—',
+        p.nome || '—',
+        formatData(p.data_nascita) || '—',
+        formatData(p.scadenza_certificato) || '—',
+        p.struttura_rilascio || '—',
+        stato
+      ]
+    })
+
+    doc.autoTable({
+      head: headers,
+      body: rows.length > 0 ? rows : [['-', 'Nessun atleta trovato', '', '', '', '', '']],
+      startY: 31,
+      theme: 'grid',
+      margin: { left: 14, right: 14, top: 18, bottom: 16 },
+      tableWidth: pageWidth - 28,
+      styles: {
+        fontSize: 8.5,
+        cellPadding: 2.8,
+        valign: 'middle',
+        overflow: 'linebreak'
+      },
+      headStyles: {
+        fillColor: [30, 41, 59],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 9,
+        halign: 'center'
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 34 },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 24, halign: 'center' },
+        4: { cellWidth: 24, halign: 'center' },
+        5: { cellWidth: 'auto' },
+        6: { cellWidth: 28, halign: 'center' }
+      },
+      didParseCell: function(data) {
+        if (data.section === 'body' && data.column.index === 6) {
+          const val = data.cell.raw
+          if (val === 'Scaduto') {
+            data.cell.styles.textColor = [220, 38, 38]
+            data.cell.styles.fontStyle = 'bold'
+          } else if (val === 'In Scadenza') {
+            data.cell.styles.textColor = [217, 119, 6]
+            data.cell.styles.fontStyle = 'bold'
+          } else if (val === 'Valido') {
+            data.cell.styles.textColor = [16, 185, 129]
+            data.cell.styles.fontStyle = 'bold'
+          } else if (val === 'Senza') {
+            data.cell.styles.textColor = [100, 116, 139]
+            data.cell.styles.fontStyle = 'italic'
+          }
+        }
+      }
+    })
+  })
+
+  const totalPages = doc.getNumberOfPages()
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.setDrawColor(226, 232, 240)
+    doc.setLineWidth(0.3)
+    doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12)
+
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(148, 163, 184)
+    doc.text(`The Home of Football — ${societa}`, 14, pageHeight - 7)
+    doc.text(`Pagina ${i} di ${totalPages}`, pageWidth - 14, pageHeight - 7, { align: 'right' })
+  }
+
+  await saveOrSharePdf(doc, filename, shareTitle)
+}
+
+async function esportaPdfCategoria(cat) {
+  const players = getFilteredPlayers(cat.id)
+  if (!players || players.length === 0) {
+    alert('Nessun giocatore trovato per questa categoria.')
+    return
+  }
+  esportandoCatId.value = cat.id
+  try {
+    const cleanCatNome = (cat.nome || 'categoria').trim().replace(/[^a-zA-Z0-9_-]/g, '_')
+    const cleanAnno = cat.anno ? `_${cat.anno}` : ''
+    const filename = `certificati_${cleanCatNome}${cleanAnno}.pdf`
+    const catLabel = `${cat.nome}${cat.anno ? ' (' + cat.anno + ')' : ''}`
+    await generaPdfCertificati([cat], filename, `Certificati Medici ${catLabel}`)
+  } catch (err) {
+    console.error('Errore esportazione PDF categoria:', err)
+    alert('Errore durante la creazione del PDF.')
+  } finally {
+    esportandoCatId.value = null
+  }
+}
+
+async function esportaPdfTutte() {
+  const catsConGiocatori = categorieOrdinate.value.filter(c => getFilteredPlayers(c.id).length > 0)
+  if (catsConGiocatori.length === 0) {
+    alert('Nessun giocatore trovato da esportare.')
+    return
+  }
+  esportandoTutti.value = true
+  try {
+    const filename = `certificati_tutte_categorie_${new Date().toISOString().slice(0, 10)}.pdf`
+    await generaPdfCertificati(catsConGiocatori, filename, 'Certificati Medici - Tutte le Categorie')
+  } catch (err) {
+    console.error('Errore esportazione PDF tutte categorie:', err)
+    alert('Errore durante la creazione del PDF.')
+  } finally {
+    esportandoTutti.value = false
   }
 }
 </script>
@@ -549,9 +769,18 @@ async function salvaCertificato() {
 .cat-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 0.75rem;
   padding: 0.5rem 0;
+  flex-wrap: wrap;
+}
+
+.cat-header-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .cat-anno {
@@ -572,7 +801,61 @@ async function salvaCertificato() {
 .cat-count {
   font-size: 0.75rem;
   color: var(--color-text-secondary);
+}
+
+.btn-export-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.2s);
+  white-space: nowrap;
+}
+
+.btn-export-pdf:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.15);
+  border-color: var(--color-primary);
+  color: #f87171;
+}
+
+.btn-export-pdf:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-export-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.85rem;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.2s);
+  white-space: nowrap;
   margin-left: auto;
+}
+
+.btn-export-all:hover:not(:disabled) {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.btn-export-all:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .table-wrap {
