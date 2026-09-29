@@ -53,7 +53,10 @@
             <div class="match-group">
               <div class="match-group-header">
                 <span class="match-group-badge casa">
-                  <span class="dot-casa"></span> In casa
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13" class="badge-icon">
+                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                  </svg>
+                  In casa
                 </span>
                 <span class="match-group-count" v-if="gareInCasa.length">({{ gareInCasa.length }})</span>
               </div>
@@ -86,7 +89,10 @@
             <div class="match-group">
               <div class="match-group-header">
                 <span class="match-group-badge fuori">
-                  <span class="dot-fuori"></span> In trasferta
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13" class="badge-icon">
+                    <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                  </svg>
+                  In trasferta
                 </span>
                 <span class="match-group-count" v-if="gareInTrasferta.length">({{ gareInTrasferta.length }})</span>
               </div>
@@ -724,23 +730,36 @@ onMounted(async () => {
 
 /* ── Prossima gara ── */
 .match-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+
+@media (max-width: 680px) {
+  .match-groups {
+    grid-template-columns: 1fr;
+  }
 }
 
 .match-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  background: var(--color-slate-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  min-width: 0;
 }
 
 .match-group-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px dashed var(--color-border);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .match-group-badge {
@@ -755,28 +774,18 @@ onMounted(async () => {
   border-radius: 6px;
 }
 
+.match-group-badge .badge-icon {
+  flex-shrink: 0;
+}
+
 .match-group-badge.casa {
-  background: rgba(16, 185, 129, 0.12);
+  background: rgba(16, 185, 129, 0.15);
   color: #10b981;
 }
 
 .match-group-badge.fuori {
-  background: rgba(245, 158, 11, 0.12);
+  background: rgba(245, 158, 11, 0.15);
   color: #f59e0b;
-}
-
-.dot-casa {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #10b981;
-}
-
-.dot-fuori {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #f59e0b;
 }
 
 .match-group-count {
@@ -786,51 +795,50 @@ onMounted(async () => {
 }
 
 .match-group-empty {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--color-text-muted);
   font-style: italic;
-  padding: 4px 0;
+  padding: 14px 0;
   margin: 0;
+  text-align: center;
 }
 
 .match-box {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .match-row {
   padding-bottom: 10px;
   border-bottom: 1px solid var(--color-border-light);
 }
-.match-row:last-child { border-bottom: none; padding-bottom: 0; }
-.match-row .match-teams .team { text-align: left; }
-.match-row .match-teams .pill { flex-shrink: 0; }
+
+.match-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
 
 .match-teams {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
+  margin-bottom: 5px;
 }
 
-.team {
-  flex: 1;
-  text-align: center;
+.match-row .match-teams .team {
+  text-align: left;
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 0.88rem;
   color: var(--color-text);
-  letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 
-.match-vs {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--color-text-muted);
-  background: var(--color-slate-soft);
-  border-radius: 999px;
-  padding: 3px 9px;
+.match-row .match-teams .pill {
   flex-shrink: 0;
+  font-size: 0.68rem;
+  padding: 2px 7px;
 }
 
 .match-meta {
@@ -843,8 +851,8 @@ onMounted(async () => {
 .meta-item {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.78rem;
+  gap: 4px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-text-secondary);
 }
