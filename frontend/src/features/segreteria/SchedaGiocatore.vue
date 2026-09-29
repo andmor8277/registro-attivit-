@@ -3,12 +3,12 @@
     <!-- Toolbar in alto (solo su schermo) -->
     <header class="page-header no-print">
       <div class="header-left">
-        <button class="btn-tool" @click="router.push('/segreteria')" title="Torna alla Segreteria">
+        <button class="btn-tool" @click="goBack" title="Torna indietro">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="19" y1="12" x2="5" y2="12"/>
             <polyline points="12 19 5 12 12 5"/>
           </svg>
-          <span class="btn-text">Segreteria</span>
+          <span class="btn-text">Indietro</span>
         </button>
       </div>
 
@@ -514,6 +514,14 @@ import { useStore } from '../../store'
 const route = useRoute()
 const router = useRouter()
 const { utenteAttivo, societaAttiva, hideTopbar } = useStore()
+
+function goBack() {
+  if (window.history.state?.back) {
+    router.back()
+  } else {
+    router.push('/segreteria')
+  }
+}
 
 const schedaContainer = ref(null)
 const esportandoPdf = ref(false)
