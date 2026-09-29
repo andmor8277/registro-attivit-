@@ -452,13 +452,15 @@
                 <span v-if="p.livello" class="match-livello-hint">Livello: {{ p.livello }}</span>
               </div>
 
-              <!-- Riga Squadra Casa -->
-              <div class="table-row casa-row">
-                <div class="col-cat casa-cell">
+              <!-- Griglia Partita: Squadre e Spogliatoi distinti, Campo da gioco unificato -->
+              <div class="match-assignment-grid">
+                <!-- Squadra Casa -->
+                <div class="col-cat casa-cell match-grid-cell cell-squadra-casa">
                   <span class="cat-anno">{{ getCatLabel(p.categoria_id) }}</span>
                   <span class="tipo-badge casa">Casa</span>
                 </div>
-                <div class="col-spo multi-select">
+                <!-- Spogliatoio Casa -->
+                <div class="col-spo multi-select match-grid-cell cell-spo-casa">
                   <div v-for="item in spogliatoi" :key="item.id"
                        class="select-chip"
                        :class="{
@@ -470,45 +472,14 @@
                   </div>
                   <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
                 </div>
-                <div class="col-campo multi-select">
-                  <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
-                    <div class="select-chip campo-chip-main"
-                         :class="{
-                           active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id),
-                           occupied: isCampoTuttoOccupatoWeekend(p.categoria_id, item.id, 'casa', p) && !getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id)
-                         }"
-                         @click.stop="toggleCampoMenuWeekend(p.categoria_id, item.id, 'casa', p.id)">
-                      {{ item.etichetta }}{{ getCampoLabelSuffissoWeekend(p.categoria_id, item.id, 'casa', p.id) }}
-                      <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
-                        <polyline points="6 9 12 15 18 9"/>
-                      </svg>
-                    </div>
-                    <div v-if="campoMenuAperto === `casa_${p.id || ''}_${item.id}`" class="campo-dropdown" @click.stop>
-                      <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
-                           class="campo-dropdown-item"
-                           :class="{
-                             active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) === (opt.metacampo || 'FULL'),
-                             disabled: isCampoOccupatoWeekend(p.categoria_id, item.id, 'casa', p, opt.metacampo) && getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) !== (opt.metacampo || 'FULL')
-                           }"
-                           @click="!isCampoOccupatoWeekend(p.categoria_id, item.id, 'casa', p, opt.metacampo) || getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'casa', p, opt.metacampo) : null">
-                        {{ opt.label }}
-                      </div>
-                      <div v-if="getCampoAssegnatoWeekend(p.categoria_id, item.id, 'casa', p.id)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'casa', p, null)">
-                        Rimuovi
-                      </div>
-                    </div>
-                  </div>
-                  <span v-if="campi.length === 0" class="no-items">Nessuno disponibile</span>
-                </div>
-              </div>
 
-              <!-- Riga Squadra Ospite -->
-              <div class="table-row fuori-row">
-                <div class="col-cat fuori-cell">
+                <!-- Squadra Ospite -->
+                <div class="col-cat fuori-cell match-grid-cell cell-squadra-ospite">
                   <span class="cat-nome">{{ p.avversario || 'Ospite' }}</span>
                   <span class="tipo-badge fuori">Ospite</span>
                 </div>
-                <div class="col-spo multi-select">
+                <!-- Spogliatoio Ospite -->
+                <div class="col-spo multi-select match-grid-cell cell-spo-ospite">
                   <div v-for="item in spogliatoi" :key="item.id"
                        class="select-chip"
                        :class="{
@@ -520,30 +491,32 @@
                   </div>
                   <span v-if="spogliatoi.length === 0" class="no-items">Nessuno disponibile</span>
                 </div>
-                <div class="col-campo multi-select">
+
+                <!-- Campo da gioco: unico per entrambe le squadre della partita -->
+                <div class="col-campo match-campo-cell multi-select match-grid-cell cell-campo-partita">
                   <div v-for="item in campi" :key="item.id" class="campo-menu-wrapper">
                     <div class="select-chip campo-chip-main"
                          :class="{
-                           active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id),
-                           occupied: isCampoTuttoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p) && !getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id)
+                           active: getCampoAssegnatoWeekendPartita(p.id, item.id),
+                           occupied: isCampoTuttoOccupatoWeekend(p.categoria_id, item.id, 'casa', p) && !getCampoAssegnatoWeekendPartita(p.id, item.id)
                          }"
-                         @click.stop="toggleCampoMenuWeekend(p.categoria_id, item.id, 'ospite', p.id)">
-                      {{ item.etichetta }}{{ getCampoLabelSuffissoWeekend(p.categoria_id, item.id, 'ospite', p.id) }}
+                         @click.stop="clickCampoWeekendPartita(p, item)">
+                      {{ item.etichetta }}{{ getCampoLabelSuffissoWeekendPartita(p.id, item.id) }}
                       <svg v-if="getCampoMenuOpzioni(item).length > 1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10">
                         <polyline points="6 9 12 15 18 9"/>
                       </svg>
                     </div>
-                    <div v-if="campoMenuAperto === `ospite_${p.id || ''}_${item.id}`" class="campo-dropdown" @click.stop>
+                    <div v-if="campoMenuAperto === `partita_${p.id}_${item.id}`" class="campo-dropdown" @click.stop>
                       <div v-for="opt in getCampoMenuOpzioni(item)" :key="opt.metacampo || 'full'"
                            class="campo-dropdown-item"
                            :class="{
-                             active: getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) === (opt.metacampo || 'FULL'),
-                             disabled: isCampoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p, opt.metacampo) && getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) !== (opt.metacampo || 'FULL')
+                             active: getCampoAssegnatoWeekendPartita(p.id, item.id) === (opt.metacampo || 'FULL'),
+                             disabled: isCampoOccupatoWeekend(p.categoria_id, item.id, 'casa', p, opt.metacampo) && getCampoAssegnatoWeekendPartita(p.id, item.id) !== (opt.metacampo || 'FULL')
                            }"
-                           @click="!isCampoOccupatoWeekend(p.categoria_id, item.id, 'ospite', p, opt.metacampo) || getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'ospite', p, opt.metacampo) : null">
+                           @click="!isCampoOccupatoWeekend(p.categoria_id, item.id, 'casa', p, opt.metacampo) || getCampoAssegnatoWeekendPartita(p.id, item.id) === (opt.metacampo || 'FULL') ? assegnaCampoDaMenuWeekendPartita(p, item.id, opt.metacampo) : null">
                         {{ opt.label }}
                       </div>
-                      <div v-if="getCampoAssegnatoWeekend(p.categoria_id, item.id, 'ospite', p.id)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuWeekend(p.categoria_id, item.id, 'ospite', p, null)">
+                      <div v-if="getCampoAssegnatoWeekendPartita(p.id, item.id)" class="campo-dropdown-item rimuovi" @click="assegnaCampoDaMenuWeekendPartita(p, item.id, 'REMOVE')">
                         Rimuovi
                       </div>
                     </div>
@@ -1351,9 +1324,9 @@ function getCampoChips(campo) {
 
 function getCampoMenuOpzioni(campo) {
   const tipo = parseInt(campo.tipo_campo) || 11
-  if (tipo <= 5) return [{ label: 'Tutto', metacampo: null }]
+  if (tipo <= 5) return [{ label: 'Tutto', metacampo: 'FULL' }]
   return [
-    { label: 'Tutto', metacampo: null },
+    { label: 'Tutto', metacampo: 'FULL' },
     { label: 'Metà A', metacampo: 'A' },
     { label: 'Metà B', metacampo: 'B' },
   ]
@@ -1423,6 +1396,36 @@ function getCampoLabelSuffissoWeekend(catId, itemId, tipo, partitaId) {
   if (asg === 'A') return ' A'
   if (asg === 'B') return ' B'
   return ''
+}
+
+function getCampoAssegnatoWeekendPartita(partitaId, itemId) {
+  const a = assegCampoWeekend.value[`casa_${partitaId}_${itemId}`] || assegCampoWeekend.value[`ospite_${partitaId}_${itemId}`]
+  if (!a) return null
+  return a.metacampo || 'FULL'
+}
+
+function getCampoLabelSuffissoWeekendPartita(partitaId, itemId) {
+  const asg = getCampoAssegnatoWeekendPartita(partitaId, itemId)
+  if (asg === 'A') return ' A'
+  if (asg === 'B') return ' B'
+  return ''
+}
+
+function clickCampoWeekendPartita(p, item) {
+  const opzioni = getCampoMenuOpzioni(item)
+  if (opzioni.length <= 1) {
+    const giaAssegnato = getCampoAssegnatoWeekendPartita(p.id, item.id)
+    toggleAssegnazioneCampo(p.categoria_id, item.id, p, giaAssegnato ? 'REMOVE' : 'FULL')
+    campoMenuAperto.value = null
+  } else {
+    const key = `partita_${p.id}_${item.id}`
+    campoMenuAperto.value = campoMenuAperto.value === key ? null : key
+  }
+}
+
+function assegnaCampoDaMenuWeekendPartita(p, itemId, metacampo) {
+  toggleAssegnazioneCampo(p.categoria_id, itemId, p, metacampo)
+  campoMenuAperto.value = null
 }
 
 function toggleCampoMenuWeekend(catId, itemId, tipo, partitaId) {
@@ -1628,17 +1631,30 @@ function getAssegnazioneCampo(catId, itemId, tipo, partitaId, metacampo) {
   return a.metacampo === metacampo
 }
 
-function toggleAssegnazioneCampo(catId, itemId, tipo, p, metacampo) {
-  const partitaId = p && typeof p === 'object' ? p.id : p
-  const partitaObj = p && typeof p === 'object' ? p : weekendPartiteCasa.value.find(x => x.id === partitaId)
+function toggleAssegnazioneCampo(catId, itemId, p, metacampoOrUndef, maybeMetacampo) {
+  let partita = p
+  let metacampo = metacampoOrUndef
+  if (maybeMetacampo !== undefined) {
+    partita = metacampoOrUndef
+    metacampo = maybeMetacampo
+  } else if (typeof p === 'string' && (p === 'casa' || p === 'ospite')) {
+    partita = metacampoOrUndef
+    metacampo = null
+  }
+
+  const partitaId = partita && typeof partita === 'object' ? partita.id : partita
+  const partitaObj = partita && typeof partita === 'object' ? partita : weekendPartiteCasa.value.find(x => x.id === partitaId)
   const catIdVal = catId || (partitaObj ? partitaObj.categoria_id : null)
 
   const casaKey = `casa_${partitaId || ''}_${itemId}`
   const ospiteKey = `ospite_${partitaId || ''}_${itemId}`
-  const key = `${tipo}_${partitaId || ''}_${itemId}`
 
-  const existing = assegCampoWeekend.value[key]
-  if (metacampo === null || (existing && (metacampo == null ? (existing.metacampo == null || existing.metacampo === 'FULL') : existing.metacampo === metacampo))) {
+  const existing = assegCampoWeekend.value[casaKey] || assegCampoWeekend.value[ospiteKey]
+  const currentVal = existing ? (existing.metacampo || 'FULL') : null
+  const requestedVal = (metacampo === 'A' || metacampo === 'B') ? metacampo : 'FULL'
+
+  // Se è richiesta esplicitamente la rimozione, o se si riclicca la stessa opzione già attiva -> rimuovi
+  if (metacampo === 'REMOVE' || (existing && currentVal === requestedVal)) {
     delete assegCampoWeekend.value[casaKey]
     delete assegCampoWeekend.value[ospiteKey]
     return
@@ -1652,21 +1668,23 @@ function toggleAssegnazioneCampo(catId, itemId, tipo, p, metacampo) {
     }
   })
 
+  const metacampoVal = (metacampo === 'A' || metacampo === 'B') ? metacampo : null
+
+  // Assegna lo stesso identico campo a entrambe le squadre (Casa e Ospite)
   const payloadCasa = {
     categoria_id: catIdVal,
     campo_id: itemId,
     tipo: 'casa',
-    partita_id: partitaId
+    partita_id: partitaId,
+    metacampo: metacampoVal
   }
-  if (metacampo && metacampo !== 'FULL') payloadCasa.metacampo = metacampo
-
   const payloadOspite = {
     categoria_id: catIdVal,
     campo_id: itemId,
     tipo: 'ospite',
-    partita_id: partitaId
+    partita_id: partitaId,
+    metacampo: metacampoVal
   }
-  if (metacampo && metacampo !== 'FULL') payloadOspite.metacampo = metacampo
 
   assegCampoWeekend.value[casaKey] = payloadCasa
   assegCampoWeekend.value[ospiteKey] = payloadOspite
@@ -1684,16 +1702,21 @@ function toggleAssegnazioneCampoNonCensita(idx, itemId, contesto, metacampo) {
   const key = `noncensita_weekend_${idx}_${itemId}`
   const squadra = squadreNonCensiteWeekend.value[idx]
   const existing = assegCampoWeekend.value[key]
-  if (metacampo === null || (existing && (metacampo == null ? (existing.metacampo == null || existing.metacampo === 'FULL') : existing.metacampo === metacampo))) {
+  const currentVal = existing ? (existing.metacampo || 'FULL') : null
+  const requestedVal = (metacampo === 'A' || metacampo === 'B') ? metacampo : 'FULL'
+
+  if (metacampo === 'REMOVE' || (existing && currentVal === requestedVal)) {
     delete assegCampoWeekend.value[key]
     return
   }
+
+  const metacampoVal = (metacampo === 'A' || metacampo === 'B') ? metacampo : null
   const payload = {
     campo_id: itemId,
     nome_squadra_esterna: squadra ? squadra.nome : 'Squadra esterna',
-    tipo: 'esterna'
+    tipo: 'esterna',
+    metacampo: metacampoVal
   }
-  if (metacampo && metacampo !== 'FULL') payload.metacampo = metacampo
   assegCampoWeekend.value[key] = payload
 }
 
@@ -2023,11 +2046,15 @@ async function caricaWeekendData() {
       if (a.partita_id) {
         const tipo = a.tipo || 'casa'
         assegCampoWeekend.value[`${tipo}_${a.partita_id}_${a.campo_id}`] = a
+        assegCampoWeekend.value[`casa_${a.partita_id}_${a.campo_id}`] = { ...a, tipo: 'casa' }
+        assegCampoWeekend.value[`ospite_${a.partita_id}_${a.campo_id}`] = { ...a, tipo: 'ospite' }
       } else if (a.categoria_id) {
         const m = weekendPartiteCasa.value.find(p => p.categoria_id === a.categoria_id)
         const pId = m ? m.id : ''
-        const tipo = a.tipo || 'casa'
-        assegCampoWeekend.value[`${tipo}_${pId}_${a.campo_id}`] = a
+        if (pId) {
+          assegCampoWeekend.value[`casa_${pId}_${a.campo_id}`] = { ...a, tipo: 'casa', partita_id: pId }
+          assegCampoWeekend.value[`ospite_${pId}_${a.campo_id}`] = { ...a, tipo: 'ospite', partita_id: pId }
+        }
       } else if (a.nome_squadra_esterna) {
         if (!nomiUnici2.has(a.nome_squadra_esterna)) {
           nomiUnici2.add(a.nome_squadra_esterna)
@@ -3280,6 +3307,59 @@ onMounted(() => {
   background: rgba(239, 68, 68, 0.02);
 }
 
+/* Match assignment grid (3 colonne: Squadra, Spogliatoio, Campo) */
+.match-assignment-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr 1fr;
+  grid-template-rows: auto auto;
+}
+
+.match-grid-cell {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+}
+
+.cell-squadra-casa {
+  grid-column: 1;
+  grid-row: 1;
+  background: rgba(16, 185, 129, 0.02);
+}
+
+.cell-spo-casa {
+  grid-column: 2;
+  grid-row: 1;
+  background: rgba(16, 185, 129, 0.02);
+}
+
+.cell-squadra-ospite {
+  grid-column: 1;
+  grid-row: 2;
+  background: rgba(239, 68, 68, 0.02);
+}
+
+.cell-spo-ospite {
+  grid-column: 2;
+  grid-row: 2;
+  background: rgba(239, 68, 68, 0.02);
+}
+
+.cell-campo-partita {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  border-right: none;
+  background: var(--color-surface);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: center;
+  gap: 0.375rem;
+}
+
+.match-assignment-block:last-child .match-assignment-grid > .match-grid-cell {
+  border-bottom: none;
+}
+
 /* Empty state */
 .empty-state {
   text-align: center;
@@ -3598,6 +3678,22 @@ onMounted(() => {
     color: #fff !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .match-assignment-grid {
+    page-break-inside: avoid;
+  }
+
+  .match-assignment-grid .select-chip:not(.active),
+  .non-censite-row .select-chip:not(.active) {
+    display: none !important;
+  }
+
+  .match-assignment-grid .select-chip.active,
+  .non-censite-row .select-chip.active {
+    font-size: 11px !important;
+    padding: 2px 6px !important;
+    border: none !important;
   }
 }
 
