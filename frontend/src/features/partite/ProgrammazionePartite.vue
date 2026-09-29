@@ -36,14 +36,6 @@
             </svg>
             Modifica
           </button>
-          <button class="btn-secondary-sm" @click="stampaWeekend" title="Stampa">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-              <polyline points="6 9 6 2 18 2 18 9"/>
-              <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
-              <rect x="6" y="14" width="12" height="8"/>
-            </svg>
-            Stampa
-          </button>
           <button class="btn-secondary-sm" @click="esportaPDFWeekend" title="Esporta PDF">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
@@ -51,7 +43,7 @@
               <line x1="12" y1="18" x2="12" y2="12"/>
               <polyline points="9 15 12 18 15 15"/>
             </svg>
-            PDF
+            Esporta PDF
           </button>
           <button class="btn-add-sm" @click="apriModal(null, null, weekendSelezionato.id)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
