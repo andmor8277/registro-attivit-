@@ -386,13 +386,15 @@ def apply_default_week(data_inizio: str, db=Depends(get_db), user=Depends(get_st
     )
     db.execute(
         text("""
-            INSERT INTO spogliatoi_assegnazioni (spogliatoio_id, categoria_id, nome_squadra_esterna, tipo, data_inizio, data, weekend_id, societa_id)
-            SELECT spogliatoio_id, categoria_id, nome_squadra_esterna, tipo, :data_inizio, data, weekend_id, societa_id
+            INSERT INTO spogliatoi_assegnazioni (spogliatoio_id, categoria_id, nome_squadra_esterna, tipo, data_inizio, data, weekend_id, societa_id, is_default)
+            SELECT spogliatoio_id, categoria_id, nome_squadra_esterna, tipo, :data_inizio_date,
+                   (:data_inizio_date + ((CASE WHEN EXTRACT(DOW FROM data)::int = 0 THEN 0 ELSE EXTRACT(DOW FROM data)::int - 1 END) || ' days')::interval)::date,
+                   weekend_id, societa_id, FALSE
             FROM spogliatoi_assegnazioni
             WHERE is_default = TRUE
               AND (:sid IS NULL OR societa_id = :sid)
         """),
-        {"data_inizio": data_inizio, "sid": societa_id}
+        {"data_inizio_date": data_inizio_date, "sid": societa_id}
     )
     db.commit()
     return {"ok": True}

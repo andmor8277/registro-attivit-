@@ -288,8 +288,7 @@
       <!-- Day tabs -->
       <div class="day-tabs" v-if="giorniDefault.length > 0">
         <button v-for="g in giorniDefault" :key="g.data" class="day-tab" :class="{ active: giornoDefaultAttivo === g.data, empty: g.categorie.length === 0 }" @click="giornoDefaultAttivo = g.data">
-          <span class="day-name">{{ g.nomeBreve }}</span>
-          <span class="day-date">{{ g.giorno }}</span>
+          <span class="day-name">{{ g.nomeLungo }}</span>
           <span class="day-count" v-if="g.categorie.length > 0">{{ g.categorie.length }}</span>
         </button>
       </div>
@@ -824,26 +823,30 @@ function getGiornoLabel(dataStr) {
   return g ? `${g.nomeLungo} (${formatDate(dataStr)})` : formatDate(dataStr)
 }
 
+const CANONICAL_DEFAULT_DATES = ['2000-01-03', '2000-01-04', '2000-01-05', '2000-01-06', '2000-01-07']
+
+function getCanonicalDefaultDate(dataStr) {
+  if (!dataStr) return CANONICAL_DEFAULT_DATES[0]
+  const d = new Date(dataStr + (dataStr.length === 10 ? 'T12:00:00' : ''))
+  let dow = d.getDay()
+  if (dow < 1 || dow > 5) dow = 1
+  return CANONICAL_DEFAULT_DATES[dow - 1]
+}
+
 const giorniDefault = computed(() => {
-  const giorni = []
   const nomi = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven']
-  const d = new Date()
-  const giorno = d.getDay()
-  const diff = giorno === 0 ? -6 : 1 - giorno
-  d.setDate(d.getDate() + diff)
-  for (let i = 0; i < 5; i++) {
-    const dataStr = getLocalDateStr(d)
-    const dow = d.getDay()
+  const nomiLunghi = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì']
+  return CANONICAL_DEFAULT_DATES.map((cDate, idx) => {
+    const dow = idx + 1
     const cats = getCategoriePerGiornoSettimana(dow)
-    giorni.push({
-      data: dataStr,
-      nomeBreve: nomi[i],
-      giorno: d.getDate(),
+    return {
+      data: cDate,
+      dow: dow,
+      nomeBreve: nomi[idx],
+      nomeLungo: nomiLunghi[idx],
       categorie: cats
-    })
-    d.setDate(d.getDate() + 1)
-  }
-  return giorni
+    }
+  })
 })
 
 function getCategorieGiorno(dataGiorno) {
@@ -2249,6 +2252,7 @@ async function salvaAssegnazioniDefault() {
   for (const [, val] of Object.entries(assegSpogliatoioDefault.value)) {
     await creaAssegnazione({
       ...val,
+      data: getCanonicalDefaultDate(val.data),
       societa_id: societaAttiva.value?.id || null,
       is_default: true
     })
@@ -2257,6 +2261,7 @@ async function salvaAssegnazioniDefault() {
   for (const [, val] of Object.entries(assegCampoDefault.value)) {
     await creaCampoAssegnazione({
       ...val,
+      data: getCanonicalDefaultDate(val.data),
       societa_id: societaAttiva.value?.id || null,
       is_default: true
     })
@@ -2280,19 +2285,17 @@ async function caricaAssegnazioniDefault() {
       haSettimanaTipo.value = true
     }
     spData.forEach(a => {
-      const dataKey = a.data || getLunesdiCorrente()
-      const key = `${a.categoria_id}_${a.spogliatoio_id}_${dataKey}`
-      assegSpogliatoioDefault.value[key] = a
+      const canonicalDate = getCanonicalDefaultDate(a.data)
+      const key = `${a.categoria_id}_${a.spogliatoio_id}_${canonicalDate}`
+      assegSpogliatoioDefault.value[key] = { ...a, data: canonicalDate }
     })
     caData.forEach(a => {
-      const dataKey = a.data || getLunesdiCorrente()
-      const key = `${a.categoria_id}_${a.campo_id}_${dataKey}`
-      assegCampoDefault.value[key] = a
+      const canonicalDate = getCanonicalDefaultDate(a.data)
+      const key = `${a.categoria_id}_${a.campo_id}_${canonicalDate}`
+      assegCampoDefault.value[key] = { ...a, data: canonicalDate }
     })
     if (giorniDefault.value.length > 0 && !giornoDefaultAttivo.value) {
-      const oggi = getLocalDateStr()
-      const todayMatch = giorniDefault.value.find(g => g.data === oggi)
-      giornoDefaultAttivo.value = todayMatch ? todayMatch.data : giorniDefault.value[0].data
+      giornoDefaultAttivo.value = giorniDefault.value[0].data
     }
   } catch (e) {
     console.error('Errore caricamento settimana tipo:', e)
