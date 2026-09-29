@@ -52,23 +52,14 @@
           </svg>
           Applica Settimana Tipo
         </button>
-        <button class="btn-save btn-export-pdf" @click="esportaPDFGiornaliero(giornoAttivo)" :title="'Esporta PDF ' + getGiornoLabel(giornoAttivo)">
+        <button class="btn-save btn-export-pdf" @click="apriModalPdf" title="Esporta PDF assegnazioni spogliatoi e campi">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
             <line x1="12" y1="18" x2="12" y2="12"/>
             <polyline points="9 15 12 18 15 15"/>
           </svg>
-          Esporta PDF Giornaliero
-        </button>
-        <button class="btn-save btn-export-pdf" @click="esportaPDFSettimanale" title="Esporta PDF 5 giorni di allenamento (Lunedì - Venerdì)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="12" y1="18" x2="12" y2="12"/>
-            <polyline points="9 15 12 18 15 15"/>
-          </svg>
-          Esporta PDF Settimana (5 gg)
+          Esporta PDF
         </button>
       </div>
 
@@ -384,23 +375,6 @@
         </button>
       </div>
 
-      <div v-if="weekendSelezionatoId" class="weekend-info">
-        <div class="info-section" v-if="weekendPartite.length > 0">
-          <h3>Partite programmate</h3>
-          <div v-for="p in weekendPartite" :key="p.id" class="partita-info-chip" :class="{ 'trasferta-chip': p.casa_fuori === 'fuori' }">
-            <span class="chip-cat">{{ getCatLabel(p.categoria_id) }}</span>
-            <span class="chip-match">{{ p.avversario || 'TBD' }} {{ p.casa_fuori === 'fuori' ? '(trasferta - no spogliatoio)' : '(in casa)' }}</span>
-            <span class="chip-date">{{ formatDate(p.data_partite) }} {{ p.ora ? p.ora.slice(0,5) : '' }}</span>
-          </div>
-        </div>
-        <div class="info-section" v-if="weekendAllenamenti.length > 0">
-          <h3>Allenamenti in settimana</h3>
-          <div v-for="a in weekendAllenamenti" :key="a.id" class="allenamento-info-chip">
-            <span class="chip-cat">{{ getCatLabel(a.categoria_id) }}</span>
-            <span class="chip-date">{{ formatDate(a.data) }}</span>
-          </div>
-        </div>
-      </div>
 
       <!-- Nessuna partita in casa -->
       <div v-if="weekendSelezionatoId && weekendPartiteCasaPerGiorno.length === 0" class="empty-matches-notice">
@@ -707,6 +681,112 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Modal Esporta PDF -->
+    <Teleport to="body">
+      <div v-if="modalPdf.show" class="modal-overlay" @click.self="chiudiModalPdf">
+        <div class="modal modal-export-pdf">
+          <div class="modal-header">
+            <div class="modal-header-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <polyline points="9 15 12 18 15 15"/>
+              </svg>
+              <h3>Esporta PDF Spogliatoi e Campi</h3>
+            </div>
+            <button class="modal-close" @click="chiudiModalPdf">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <!-- Periodo -->
+            <div class="form-group">
+              <label class="form-label-bold">Periodo da esportare</label>
+              <div class="export-options-grid">
+                <label class="export-option-card" :class="{ selected: modalPdf.ambito === 'settimana' }">
+                  <input type="radio" value="settimana" v-model="modalPdf.ambito" />
+                  <div class="option-icon">📅</div>
+                  <div class="option-content">
+                    <span class="option-title">5 Giorni di Allenamento</span>
+                    <span class="option-sub">Lunedì – Venerdì (un giorno per pagina)</span>
+                  </div>
+                </label>
+
+                <label class="export-option-card" :class="{ selected: modalPdf.ambito === 'giornaliero' }">
+                  <input type="radio" value="giornaliero" v-model="modalPdf.ambito" />
+                  <div class="option-icon">📆</div>
+                  <div class="option-content">
+                    <span class="option-title">Singolo Giorno</span>
+                    <span class="option-sub">Solo la giornata selezionata</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Selezione giorno se giornaliero -->
+            <div class="form-group" v-if="modalPdf.ambito === 'giornaliero'">
+              <label>Scegli il giorno</label>
+              <select v-model="modalPdf.giorno" class="form-select">
+                <option v-for="g in giorniSettimanaCinque" :key="g.data" :value="g.data">
+                  {{ g.nomeLungo }} {{ g.giorno }} ({{ formatDate(g.data) }})
+                </option>
+              </select>
+            </div>
+
+            <!-- Selezione Settore -->
+            <div class="form-group">
+              <label class="form-label-bold">Settore da visualizzare</label>
+              <div class="export-options-grid options-3col">
+                <label class="export-option-card" :class="{ selected: modalPdf.settore === 'tutti' }">
+                  <input type="radio" value="tutti" v-model="modalPdf.settore" />
+                  <div class="option-icon">👥</div>
+                  <div class="option-content">
+                    <span class="option-title">Entrambi</span>
+                    <span class="option-sub">Tutte le categorie</span>
+                  </div>
+                </label>
+
+                <label class="export-option-card" :class="{ selected: modalPdf.settore === 'agonistica' }">
+                  <input type="radio" value="agonistica" v-model="modalPdf.settore" />
+                  <div class="option-icon">⚽</div>
+                  <div class="option-content">
+                    <span class="option-title">Solo Agonistica</span>
+                    <span class="option-sub">Under 14 - Under 17...</span>
+                  </div>
+                </label>
+
+                <label class="export-option-card" :class="{ selected: modalPdf.settore === 'scuola_calcio' }">
+                  <input type="radio" value="scuola_calcio" v-model="modalPdf.settore" />
+                  <div class="option-icon">🎒</div>
+                  <div class="option-content">
+                    <span class="option-title">Solo Scuola Calcio</span>
+                    <span class="option-sub">Esordienti, Pulcini...</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn-secondary" @click="chiudiModalPdf">Annulla</button>
+            <button class="btn-primary btn-confirm-export" :disabled="esportandoPdf" @click="eseguiEsportaPdf">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              <span>{{ esportandoPdf ? 'Generazione PDF...' : 'Scarica PDF' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -785,6 +865,14 @@ const haSettimanaTipo = ref(false)
 const modal = ref({ show: false, id: null, tipo: 'spogliatoi', etichetta: '', ordine: 0, tipo_campo: '11' })
 const campoMenuAperto = ref(null)
 
+const modalPdf = ref({
+  show: false,
+  ambito: 'settimana',
+  giorno: '',
+  settore: 'tutti',
+})
+const esportandoPdf = ref(false)
+
 const categorieOrdinate = computed(() =>
   categorie.value.sort((a, b) => (a.anno || 9999) - (b.anno || 9999))
 )
@@ -809,6 +897,8 @@ const giorniSettimana = computed(() => {
   }
   return giorni
 })
+
+const giorniSettimanaCinque = computed(() => (giorniSettimana.value || []).slice(0, 5))
 
 function getCategoriePerGiornoSettimana(dow) {
   return categorie.value.filter(c => {
@@ -2366,12 +2456,86 @@ function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
-function buildDayTableData(dataGiorno) {
+function getCategoriaMacro(catId) {
+  if (!catId) return 'altro'
+  const idNum = Number(catId)
+  const cat = categorie.value.find(c => Number(c.id) === idNum)
+  if (!cat) return 'altro'
+  if (cat.parent_id) {
+    const parent = categorie.value.find(p => Number(p.id) === Number(cat.parent_id))
+    if (parent) {
+      const pNome = (parent.nome || '').toLowerCase()
+      if (pNome.includes('agonistica')) return 'agonistica'
+      if (pNome.includes('scuola')) return 'scuola_calcio'
+    }
+  }
+  const cNome = (cat.nome || '').toLowerCase()
+  if (cNome.includes('agonistica')) return 'agonistica'
+  if (cNome.includes('scuola')) return 'scuola_calcio'
+  if (cat.anno && Number(cat.anno) <= 2013) return 'agonistica'
+  if (cat.anno && Number(cat.anno) > 2013) return 'scuola_calcio'
+  return 'altro'
+}
+
+function isCategoriaInSettore(catId, settore) {
+  if (!settore || settore === 'tutti' || settore === 'entrambi') return true
+  const macro = getCategoriaMacro(catId)
+  if (settore === 'agonistica') return macro === 'agonistica'
+  if (settore === 'scuola_calcio') return macro === 'scuola_calcio'
+  return true
+}
+
+function getSettoreLabel(settore) {
+  if (settore === 'agonistica') return 'Solo Agonistica'
+  if (settore === 'scuola_calcio') return 'Solo Scuola Calcio'
+  return 'Agonistica e Scuola Calcio'
+}
+
+function apriModalPdf() {
+  modalPdf.value = {
+    show: true,
+    ambito: 'settimana',
+    giorno: giornoAttivo.value || (giorniSettimanaCinque.value[0]?.data || ''),
+    settore: 'tutti'
+  }
+}
+
+function chiudiModalPdf() {
+  modalPdf.value.show = false
+}
+
+async function eseguiEsportaPdf() {
+  if (esportandoPdf.value) return
+  esportandoPdf.value = true
+  try {
+    if (modalPdf.value.ambito === 'giornaliero') {
+      await esportaPDFGiornaliero(modalPdf.value.giorno, modalPdf.value.settore)
+    } else {
+      await esportaPDFSettimanale(modalPdf.value.settore)
+    }
+    modalPdf.value.show = false
+  } catch (err) {
+    console.error('Errore export PDF:', err)
+  } finally {
+    esportandoPdf.value = false
+  }
+}
+
+function buildDayTableData(dataGiorno, filtroSettore = 'tutti') {
   const slots = categoriePerOrario(dataGiorno)
   const body = []
 
   for (const [ora, cats] of Object.entries(slots)) {
-    for (const cat of cats) {
+    const catsFiltrate = cats.filter(cat => isCategoriaInSettore(cat.id, filtroSettore))
+    const ncSquadre = (filtroSettore === 'tutti' || !filtroSettore)
+      ? squadreNonCensiteSettimanali.value.filter(s => s.ora === ora && s.dataGiorno === dataGiorno)
+      : []
+
+    if (catsFiltrate.length === 0 && ncSquadre.length === 0) {
+      continue
+    }
+
+    for (const cat of catsFiltrate) {
       const spoItems = spogliatoi.value.filter(s => getAssegnazioneSpogliatoioGiorno(cat.id, s.id, dataGiorno))
       const spoText = spoItems.map(s => s.etichetta).join(', ') || '—'
 
@@ -2393,7 +2557,6 @@ function buildDayTableData(dataGiorno) {
       ])
     }
 
-    const ncSquadre = squadreNonCensiteSettimanali.value.filter(s => s.ora === ora && s.dataGiorno === dataGiorno)
     for (const sq of ncSquadre) {
       const gidx = squadreNonCensiteSettimanali.value.findIndex(s => s.id === sq.id)
       const spoItems = spogliatoi.value.filter(s => getAssegnazioneSpogliatoioNonCensitaGiorno(gidx, s.id, dataGiorno))
@@ -2421,13 +2584,15 @@ function buildDayTableData(dataGiorno) {
   return body
 }
 
-async function esportaPDFGiornaliero(dataGiorno) {
+async function esportaPDFGiornaliero(dataGiorno, settore = 'tutti') {
   if (!dataGiorno) return
   const g = giorniSettimana.value.find(d => d.data === dataGiorno)
   if (!g) return
 
   const doc = new jsPDF({ orientation: 'portrait' })
   const nome = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Società'
+  const settoreLabel = getSettoreLabel(settore)
+  const settoreTitolo = settore !== 'tutti' ? ` — ${settoreLabel}` : ''
   const giornoTitolo = `${g.nomeLungo} ${g.giorno} (${formatDate(dataGiorno)})`
 
   doc.setFontSize(16)
@@ -2438,17 +2603,23 @@ async function esportaPDFGiornaliero(dataGiorno) {
   doc.setFontSize(12)
   doc.setFont(undefined, 'bold')
   doc.setTextColor(30, 41, 59)
-  doc.text(`Assegnazione Spogliatoi e Campi — ${giornoTitolo}`, 14, 22)
+  doc.text(`Assegnazione Spogliatoi e Campi${settoreTitolo} — ${giornoTitolo}`, 14, 22)
 
   doc.setFont(undefined, 'normal')
   doc.setFontSize(8.5)
   doc.setTextColor(100)
-  doc.text(`Settimana dal ${formatDate(settimanaInizio.value)} al ${formatDate(settimanaFine.value)} | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 28)
+  const subText = settore !== 'tutti'
+    ? `Settimana dal ${formatDate(settimanaInizio.value)} al ${formatDate(settimanaFine.value)} | Settore: ${settoreLabel} | Generato il ${new Date().toLocaleDateString('it-IT')}`
+    : `Settimana dal ${formatDate(settimanaInizio.value)} al ${formatDate(settimanaFine.value)} | Generato il ${new Date().toLocaleDateString('it-IT')}`
+  doc.text(subText, 14, 28)
   doc.setTextColor(0)
 
-  const body = buildDayTableData(dataGiorno)
+  const body = buildDayTableData(dataGiorno, settore)
   if (body.length === 0) {
-    body.push([{ content: 'Nessun allenamento programmato per questa giornata', colSpan: 4, styles: { halign: 'center', fontStyle: 'italic', textColor: 120 } }])
+    const emptyMsg = settore !== 'tutti'
+      ? `Nessun allenamento programmato per ${settoreLabel.toLowerCase()} in questa giornata`
+      : 'Nessun allenamento programmato per questa giornata'
+    body.push([{ content: emptyMsg, colSpan: 4, styles: { halign: 'center', fontStyle: 'italic', textColor: 120 } }])
   }
 
   doc.autoTable({
@@ -2468,15 +2639,18 @@ async function esportaPDFGiornaliero(dataGiorno) {
     }
   })
 
-  const filename = `spogliatoi_${g.nomeBreve.toLowerCase()}_${dataGiorno}.pdf`
-  await exportPdf(doc, filename, `Spogliatoi ${giornoTitolo}`)
+  const settoreSuffix = settore !== 'tutti' ? `_${settore}` : ''
+  const filename = `spogliatoi_${g.nomeBreve.toLowerCase()}${settoreSuffix}_${dataGiorno}.pdf`
+  await exportPdf(doc, filename, `Spogliatoi ${giornoTitolo} ${settoreTitolo}`)
 }
 
-async function esportaPDFSettimanale() {
+async function esportaPDFSettimanale(settore = 'tutti') {
   if (giorniSettimana.value.length === 0) return
 
   const doc = new jsPDF({ orientation: 'portrait' })
   const nome = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Società'
+  const settoreLabel = getSettoreLabel(settore)
+  const settoreTitolo = settore !== 'tutti' ? ` — ${settoreLabel}` : ''
 
   // Esclusione weekend: esattamente i 5 giorni di allenamento (Lunedì - Venerdì)
   const cinqueGiorni = giorniSettimana.value.slice(0, 5)
@@ -2496,17 +2670,23 @@ async function esportaPDFSettimanale() {
     doc.setFontSize(12)
     doc.setFont(undefined, 'bold')
     doc.setTextColor(30, 41, 59)
-    doc.text(`Assegnazione Spogliatoi e Campi — ${giornoTitolo}`, 14, 22)
+    doc.text(`Assegnazione Spogliatoi e Campi${settoreTitolo} — ${giornoTitolo}`, 14, 22)
 
     doc.setFont(undefined, 'normal')
     doc.setFontSize(8.5)
     doc.setTextColor(100)
-    doc.text(`Programma Allenamenti Settimanale (5 Giorni) | Dal ${formatDate(settimanaInizio.value)} al ${formatDate(settimanaFine.value)} | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 28)
+    const subText = settore !== 'tutti'
+      ? `Programma Allenamenti Settimanale (5 Giorni) | Settore: ${settoreLabel} | Dal ${formatDate(settimanaInizio.value)} al ${formatDate(settimanaFine.value)} | Generato il ${new Date().toLocaleDateString('it-IT')}`
+      : `Programma Allenamenti Settimanale (5 Giorni) | Dal ${formatDate(settimanaInizio.value)} al ${formatDate(settimanaFine.value)} | Generato il ${new Date().toLocaleDateString('it-IT')}`
+    doc.text(subText, 14, 28)
     doc.setTextColor(0)
 
-    const body = buildDayTableData(g.data)
+    const body = buildDayTableData(g.data, settore)
     if (body.length === 0) {
-      body.push([{ content: 'Nessun allenamento programmato per questa giornata', colSpan: 4, styles: { halign: 'center', fontStyle: 'italic', textColor: 120 } }])
+      const emptyMsg = settore !== 'tutti'
+        ? `Nessun allenamento programmato per ${settoreLabel.toLowerCase()} in questa giornata`
+        : 'Nessun allenamento programmato per questa giornata'
+      body.push([{ content: emptyMsg, colSpan: 4, styles: { halign: 'center', fontStyle: 'italic', textColor: 120 } }])
     }
 
     doc.autoTable({
@@ -2527,8 +2707,9 @@ async function esportaPDFSettimanale() {
     })
   })
 
-  const filename = `spogliatoi_settimana_5gg_${settimanaInizio.value}.pdf`
-  await exportPdf(doc, filename, `Spogliatoi Settimana (5 Giorni)`)
+  const settoreSuffix = settore !== 'tutti' ? `_${settore}` : ''
+  const filename = `spogliatoi_settimana_5gg${settoreSuffix}_${settimanaInizio.value}.pdf`
+  await exportPdf(doc, filename, `Spogliatoi Settimana (5 Giorni) ${settoreTitolo}`)
 }
 
 async function esportaPDFWeekend() {
@@ -3689,6 +3870,121 @@ onMounted(() => {
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
+}
+
+/* Modal Export PDF */
+.modal-export-pdf {
+  max-width: 520px;
+}
+
+.modal-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #dc2626;
+}
+
+.modal-header-title h3 {
+  color: var(--color-text);
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.form-label-bold {
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  color: var(--color-text) !important;
+  margin-bottom: 0.6rem !important;
+}
+
+.export-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 0.5rem;
+}
+
+.export-options-grid.options-3col {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+@media (max-width: 540px) {
+  .export-options-grid.options-3col {
+    grid-template-columns: 1fr;
+  }
+  .export-options-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.export-option-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 12px 10px;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.export-option-card input[type="radio"] {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  margin: 0;
+  width: auto;
+  accent-color: #dc2626;
+}
+
+.export-option-card:hover {
+  border-color: rgba(220, 38, 38, 0.4);
+  background: var(--color-surface);
+}
+
+.export-option-card.selected {
+  border-color: #dc2626;
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.option-icon {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+
+.option-title {
+  display: block;
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.25;
+}
+
+.option-sub {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-top: 3px;
+  line-height: 1.2;
+}
+
+.btn-confirm-export {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-confirm-export:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
 }
 
 /* Print */
