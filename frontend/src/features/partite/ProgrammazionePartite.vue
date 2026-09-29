@@ -110,7 +110,15 @@
                     <span class="score" v-else>vs</span>
                     <span class="team-name">{{ partita.avversario || 'TBD' }}</span>
                   </template>
-                  <span class="casa-fuori-badge" :class="partita.casa_fuori || 'casa'">{{ partita.casa_fuori === 'fuori' ? 'In trasferta' : 'In casa' }}</span>
+                  <span class="casa-fuori-badge" :class="partita.casa_fuori || 'casa'">
+                    <svg v-if="partita.casa_fuori === 'fuori'" viewBox="0 0 24 24" fill="currentColor" width="13" height="13" class="badge-icon">
+                      <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                    </svg>
+                    <svg v-else viewBox="0 0 24 24" fill="currentColor" width="13" height="13" class="badge-icon">
+                      <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                    </svg>
+                    {{ partita.casa_fuori === 'fuori' ? 'In trasferta' : 'In casa' }}
+                  </span>
                 </div>
                 <div class="partita-meta">
                   <span v-if="partita.casa_fuori" class="meta-item giorno-badge" :class="{ 'domenica-badge': isDomenica(partita.data_partite) }">
@@ -266,8 +274,8 @@
               <div class="form-group">
                 <label>In Casa / Fuori</label>
                 <select v-model="modal.casa_fuori">
-                  <option value="casa">In Casa</option>
-                  <option value="fuori">In Trasferta</option>
+                  <option value="casa">🏠 In Casa</option>
+                  <option value="fuori">✈️ In Trasferta</option>
                 </select>
               </div>
             </div>
@@ -638,7 +646,7 @@ async function stampaWeekend() {
     g.partite.forEach(p => {
       const data = esc(formatDate(p.data_partite))
       const ora = esc(p.ora ? p.ora.slice(0, 5) : '-')
-      const cf = p.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa'
+      const cf = p.casa_fuori === 'fuori' ? '✈️ Trasferta' : '🏠 Casa'
       const campo = esc(p.campo || '-')
       const indirizzo = esc(p.indirizzo || '-')
       const mister = esc(p.mister_id ? getMisterName(p.categoria_id, p.mister_id) : '-')
@@ -1190,12 +1198,19 @@ watch(weekendSelezionato, (newVal) => {
 }
 
 .casa-fuori-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.7rem;
   font-weight: 700;
   padding: 0.125rem 0.5rem;
   border-radius: 4px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.casa-fuori-badge .badge-icon {
+  flex-shrink: 0;
 }
 
 .casa-fuori-badge.casa {
