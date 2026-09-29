@@ -52,21 +52,23 @@
           </svg>
           Applica Settimana Tipo
         </button>
-        <button class="btn-save" @click="stampaGiornoSingolo(giornoAttivo)">
+        <button class="btn-save btn-export-pdf" @click="esportaPDFGiornaliero(giornoAttivo)" :title="'Esporta PDF ' + getGiornoLabel(giornoAttivo)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-            <polyline points="6 9 6 2 18 2 18 9"/>
-            <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
-            <rect x="6" y="14" width="12" height="8"/>
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <polyline points="9 15 12 18 15 15"/>
           </svg>
-          Stampa Giorno
+          Esporta PDF Giornaliero
         </button>
-        <button class="btn-save" @click="stampa">
+        <button class="btn-save btn-export-pdf" @click="esportaPDFSettimanale" title="Esporta PDF 5 giorni di allenamento (Lunedì - Venerdì)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-            <polyline points="6 9 6 2 18 2 18 9"/>
-            <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
-            <rect x="6" y="14" width="12" height="8"/>
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <polyline points="9 15 12 18 15 15"/>
           </svg>
-          Stampa Settimana
+          Esporta PDF Settimana (5 gg)
         </button>
       </div>
 
@@ -372,13 +374,14 @@
           </svg>
           Salva
         </button>
-        <button v-if="weekendSelezionatoId" class="btn-save" @click="stampa">
+        <button v-if="weekendSelezionatoId" class="btn-save btn-export-pdf" @click="esportaPDFWeekend" title="Esporta PDF assegnazioni weekend">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-            <polyline points="6 9 6 2 18 2 18 9"/>
-            <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
-            <rect x="6" y="14" width="12" height="8"/>
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <polyline points="9 15 12 18 15 15"/>
           </svg>
-          Stampa
+          Esporta PDF Weekend
         </button>
       </div>
 
@@ -713,6 +716,8 @@ import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useStore } from "../../store.js"
 import { oraPerGiorno } from "../../composables/categoriaOrari.js"
+import { jsPDF } from "jspdf"
+import "jspdf-autotable"
 import {
   getAllCategorie,
   getSpogliatoi,
@@ -743,7 +748,8 @@ import {
   applyDefaultWeekCampi,
   salvaAssegnazioniSettimanaCampi,
   salvaAssegnazioniWeekendCampi,
-  getLocalDateStr
+  getLocalDateStr,
+  exportPdf
 } from "../../api/index.js"
 
 const router = useRouter()
@@ -2351,95 +2357,282 @@ function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
-function stampa() {
-  window.print()
+function buildDayTableData(dataGiorno) {
+  const slots = categoriePerOrario(dataGiorno)
+  const body = []
+
+  for (const [ora, cats] of Object.entries(slots)) {
+    for (const cat of cats) {
+      const spoItems = spogliatoi.value.filter(s => getAssegnazioneSpogliatoioGiorno(cat.id, s.id, dataGiorno))
+      const spoText = spoItems.map(s => s.etichetta).join(', ') || '—'
+
+      const camFull = campi.value.filter(s => getAssegnazioneCampoGiorno(cat.id, s.id, dataGiorno, null))
+      const camA = campi.value.filter(s => getAssegnazioneCampoGiorno(cat.id, s.id, dataGiorno, 'A'))
+      const camB = campi.value.filter(s => getAssegnazioneCampoGiorno(cat.id, s.id, dataGiorno, 'B'))
+      const camParts = [
+        ...camFull.map(s => s.etichetta),
+        ...camA.map(s => `${s.etichetta} A`),
+        ...camB.map(s => `${s.etichetta} B`)
+      ]
+      const camText = camParts.join(', ') || '—'
+
+      body.push([
+        ora || 'Senza orario',
+        `${cat.anno || ''} - ${cat.nome || ''}`,
+        spoText,
+        camText
+      ])
+    }
+
+    const ncSquadre = squadreNonCensiteSettimanali.value.filter(s => s.ora === ora && s.dataGiorno === dataGiorno)
+    for (const sq of ncSquadre) {
+      const gidx = squadreNonCensiteSettimanali.value.findIndex(s => s.id === sq.id)
+      const spoItems = spogliatoi.value.filter(s => getAssegnazioneSpogliatoioNonCensitaGiorno(gidx, s.id, dataGiorno))
+      const spoText = spoItems.map(s => s.etichetta).join(', ') || '—'
+
+      const camFull = campi.value.filter(s => getAssegnazioneCampoNonCensitaGiorno(gidx, s.id, dataGiorno, null))
+      const camA = campi.value.filter(s => getAssegnazioneCampoNonCensitaGiorno(gidx, s.id, dataGiorno, 'A'))
+      const camB = campi.value.filter(s => getAssegnazioneCampoNonCensitaGiorno(gidx, s.id, dataGiorno, 'B'))
+      const camParts = [
+        ...camFull.map(s => s.etichetta),
+        ...camA.map(s => `${s.etichetta} A`),
+        ...camB.map(s => `${s.etichetta} B`)
+      ]
+      const camText = camParts.join(', ') || '—'
+
+      body.push([
+        ora || 'Senza orario',
+        `${sq.nome || 'Squadra esterna'} (Esterna)`,
+        spoText,
+        camText
+      ])
+    }
+  }
+
+  return body
 }
 
-function stampaGiornoSingolo(dataGiorno) {
+async function esportaPDFGiornaliero(dataGiorno) {
   if (!dataGiorno) return
   const g = giorniSettimana.value.find(d => d.data === dataGiorno)
   if (!g) return
-  let w = window.open('', '_blank')
-  let isIframe = false
-  if (!w) {
-    const iframe = document.createElement('iframe')
-    iframe.style.position = 'fixed'
-    iframe.style.right = '0'
-    iframe.style.bottom = '0'
-    iframe.style.width = '0'
-    iframe.style.height = '0'
-    iframe.style.border = '0'
-    document.body.appendChild(iframe)
-    w = iframe.contentWindow
-    isIframe = true
+
+  const doc = new jsPDF({ orientation: 'portrait' })
+  const nome = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Società'
+  const giornoTitolo = `${g.nomeLungo} ${g.giorno} (${formatDate(dataGiorno)})`
+
+  doc.setFontSize(16)
+  doc.setFont(undefined, 'bold')
+  doc.setTextColor(220, 38, 38)
+  doc.text(nome, 14, 15)
+
+  doc.setFontSize(12)
+  doc.setFont(undefined, 'bold')
+  doc.setTextColor(30, 41, 59)
+  doc.text(`Assegnazione Spogliatoi e Campi — ${giornoTitolo}`, 14, 22)
+
+  doc.setFont(undefined, 'normal')
+  doc.setFontSize(8.5)
+  doc.setTextColor(100)
+  doc.text(`Settimana dal ${formatDate(settimanaInizio.value)} al ${formatDate(settimanaFine.value)} | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 28)
+  doc.setTextColor(0)
+
+  const body = buildDayTableData(dataGiorno)
+  if (body.length === 0) {
+    body.push([{ content: 'Nessun allenamento programmato per questa giornata', colSpan: 4, styles: { halign: 'center', fontStyle: 'italic', textColor: 120 } }])
   }
-  const slots = categoriePerOrario(dataGiorno)
-  let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(g.nomeLungo)} ${esc(g.giorno)}</title>
-  <style>
-    body { font-family: -apple-system, sans-serif; margin: 20px; color: #111; }
-    h1 { font-size: 18px; margin: 0 0 4px; }
-    h2 { font-size: 13px; margin: 0 0 16px; color: #555; font-weight: 400; }
-    .slot { margin-bottom: 14px; }
-    .slot-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
-    th { background: #f3f4f6; font-weight: 700; font-size: 13px; }
-    th.spo { background: #6366f1; color: #fff; }
-    th.cam { background: #10b981; color: #fff; }
-    .spo-chip { display: inline-block; background: #6366f1; color: #fff; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; margin: 1px; }
-    .cam-chip { display: inline-block; background: #10b981; color: #fff; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; margin: 1px; }
-    .cat-anno { font-weight: 700; font-size: 13px; }
-    .cat-nome { color: #555; font-size: 12px; }
-    @media print {
-      body { margin: 10px; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  doc.autoTable({
+    head: [['Orario', 'Categoria / Squadra', 'Spogliatoio', 'Campo da gioco']],
+    body: body,
+    startY: 33,
+    theme: 'grid',
+    margin: { left: 14, right: 14 },
+    tableWidth: 182,
+    styles: { fontSize: 9, cellPadding: 3.5, halign: 'left', valign: 'middle' },
+    headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9.5 },
+    columnStyles: {
+      0: { cellWidth: 26, halign: 'center', fontStyle: 'bold' },
+      1: { cellWidth: 56 },
+      2: { cellWidth: 50 },
+      3: { cellWidth: 50 }
     }
-  </style></head><body>
-  <h1>${esc(g.nomeLungo)} ${esc(g.giorno)}</h1>
-  <h2>${esc(societaAttiva?.value?.nome || '')} - Assegnazioni Spogliatoi e Campi</h2>`
-  for (const [ora, cats] of Object.entries(slots)) {
-    html += `<div class="slot"><div class="slot-title">${esc(ora || 'Senza orario')}</div><table>
-      <tr><th>Categoria</th><th class="spo">Spogliatoio</th><th class="cam">Campo da gioco</th></tr>`
-    for (const cat of cats) {
-      const spoItems = spogliatoi.value.filter(item => getAssegnazioneSpogliatoioGiorno(cat.id, item.id, dataGiorno))
-      const camFull = campi.value.filter(item => getAssegnazioneCampoGiorno(cat.id, item.id, dataGiorno, null))
-      const camA = campi.value.filter(item => getAssegnazioneCampoGiorno(cat.id, item.id, dataGiorno, 'A'))
-      const camB = campi.value.filter(item => getAssegnazioneCampoGiorno(cat.id, item.id, dataGiorno, 'B'))
-      const camChips = [...camFull.map(i => `<span class="cam-chip">${esc(i.etichetta)}</span>`), ...camA.map(i => `<span class="cam-chip">${esc(i.etichetta)} A</span>`), ...camB.map(i => `<span class="cam-chip">${esc(i.etichetta)} B</span>`)]
-      html += `<tr>
-        <td><span class="cat-anno">${esc(cat.anno)}</span> <span class="cat-nome">${esc(cat.nome)}</span></td>
-        <td>${spoItems.map(i => `<span class="spo-chip">${esc(i.etichetta)}</span>`).join(' ') || '—'}</td>
-        <td>${camChips.join(' ') || '—'}</td>
-      </tr>`
+  })
+
+  const filename = `spogliatoi_${g.nomeBreve.toLowerCase()}_${dataGiorno}.pdf`
+  await exportPdf(doc, filename, `Spogliatoi ${giornoTitolo}`)
+}
+
+async function esportaPDFSettimanale() {
+  if (giorniSettimana.value.length === 0) return
+
+  const doc = new jsPDF({ orientation: 'portrait' })
+  const nome = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Società'
+
+  // Esclusione weekend: esattamente i 5 giorni di allenamento (Lunedì - Venerdì)
+  const cinqueGiorni = giorniSettimana.value.slice(0, 5)
+
+  cinqueGiorni.forEach((g, idx) => {
+    if (idx > 0) {
+      doc.addPage()
     }
-    const ncSquadre = squadreNonCensiteSettimanali.value.filter(s => s.ora === ora && s.dataGiorno === dataGiorno)
-    for (const squadra of ncSquadre) {
-      const gidx = squadreNonCensiteSettimanali.value.findIndex(s => s.id === squadra.id)
-      const spoItems = spogliatoi.value.filter(item => getAssegnazioneSpogliatoioNonCensitaGiorno(gidx, item.id, dataGiorno))
-      const camFull = campi.value.filter(item => getAssegnazioneCampoNonCensitaGiorno(gidx, item.id, dataGiorno, null))
-      const camA = campi.value.filter(item => getAssegnazioneCampoNonCensitaGiorno(gidx, item.id, dataGiorno, 'A'))
-      const camB = campi.value.filter(item => getAssegnazioneCampoNonCensitaGiorno(gidx, item.id, dataGiorno, 'B'))
-      const camChips = [...camFull.map(i => `<span class="cam-chip">${esc(i.etichetta)}</span>`), ...camA.map(i => `<span class="cam-chip">${esc(i.etichetta)} A</span>`), ...camB.map(i => `<span class="cam-chip">${esc(i.etichetta)} B</span>`)]
-      html += `<tr>
-        <td>${esc(squadra.nome || 'Squadra non censita')}</td>
-        <td>${spoItems.map(i => `<span class="spo-chip">${esc(i.etichetta)}</span>`).join(' ') || '—'}</td>
-        <td>${camChips.join(' ') || '—'}</td>
-      </tr>`
+
+    const giornoTitolo = `${g.nomeLungo} ${g.giorno} (${formatDate(g.data)})`
+
+    doc.setFontSize(16)
+    doc.setFont(undefined, 'bold')
+    doc.setTextColor(220, 38, 38)
+    doc.text(nome, 14, 15)
+
+    doc.setFontSize(12)
+    doc.setFont(undefined, 'bold')
+    doc.setTextColor(30, 41, 59)
+    doc.text(`Assegnazione Spogliatoi e Campi — ${giornoTitolo}`, 14, 22)
+
+    doc.setFont(undefined, 'normal')
+    doc.setFontSize(8.5)
+    doc.setTextColor(100)
+    doc.text(`Programma Allenamenti Settimanale (5 Giorni) | Dal ${formatDate(settimanaInizio.value)} al ${formatDate(settimanaFine.value)} | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 28)
+    doc.setTextColor(0)
+
+    const body = buildDayTableData(g.data)
+    if (body.length === 0) {
+      body.push([{ content: 'Nessun allenamento programmato per questa giornata', colSpan: 4, styles: { halign: 'center', fontStyle: 'italic', textColor: 120 } }])
     }
-    html += `</table></div>`
+
+    doc.autoTable({
+      head: [['Orario', 'Categoria / Squadra', 'Spogliatoio', 'Campo da gioco']],
+      body: body,
+      startY: 33,
+      theme: 'grid',
+      margin: { left: 14, right: 14 },
+      tableWidth: 182,
+      styles: { fontSize: 9, cellPadding: 3.5, halign: 'left', valign: 'middle' },
+      headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9.5 },
+      columnStyles: {
+        0: { cellWidth: 26, halign: 'center', fontStyle: 'bold' },
+        1: { cellWidth: 56 },
+        2: { cellWidth: 50 },
+        3: { cellWidth: 50 }
+      }
+    })
+  })
+
+  const filename = `spogliatoi_settimana_5gg_${settimanaInizio.value}.pdf`
+  await exportPdf(doc, filename, `Spogliatoi Settimana (5 Giorni)`)
+}
+
+async function esportaPDFWeekend() {
+  if (!weekendSelezionatoId.value) return
+  const w = weekend.value.find(x => x.id === weekendSelezionatoId.value)
+  if (!w) return
+
+  const doc = new jsPDF({ orientation: 'landscape' })
+  const nome = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Società'
+
+  doc.setFontSize(16)
+  doc.setFont(undefined, 'bold')
+  doc.setTextColor(220, 38, 38)
+  doc.text(nome, 14, 15)
+
+  doc.setFontSize(12)
+  doc.setFont(undefined, 'bold')
+  doc.setTextColor(30, 41, 59)
+  doc.text(`${w.nome} — Assegnazione Spogliatoi e Campi Gare`, 14, 22)
+
+  doc.setFont(undefined, 'normal')
+  doc.setFontSize(8.5)
+  doc.setTextColor(100)
+  doc.text(`Dal ${formatDate(w.data_inizio)} al ${formatDate(w.data_fine)} | Solo gare casalinghe | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 28)
+  doc.setTextColor(0)
+
+  const headers = [['Giorno / Ora', 'Partita / Categoria', 'Spogliatoio Casa', 'Spogliatoio Ospite', 'Campo da gioco', 'Livello']]
+  const body = []
+
+  const gruppi = weekendPartiteCasaPerGiorno.value
+  gruppi.forEach(grp => {
+    body.push([{ content: grp.dataLabel, colSpan: 6 }])
+    grp.partite.forEach(p => {
+      const ora = p.ora ? `Ore ${p.ora.slice(0, 5)}` : 'Senza orario'
+      const matchLabel = `${getCatLabel(p.categoria_id)} vs ${p.avversario || 'Ospite'}`
+
+      const spoCasa = spogliatoi.value
+        .filter(s => getAssegnazioneSpogliatoio(p.categoria_id, s.id, 'casa', p.id))
+        .map(s => s.etichetta).join(', ') || '—'
+
+      const spoOspite = spogliatoi.value
+        .filter(s => getAssegnazioneSpogliatoio(p.categoria_id, s.id, 'ospite', p.id))
+        .map(s => s.etichetta).join(', ') || '—'
+
+      // Campo da gioco unificato per la partita
+      const camAss = campi.value
+        .filter(c => getCampoAssegnatoWeekendPartita(p.id, c.id))
+        .map(c => `${c.etichetta}${getCampoLabelSuffissoWeekendPartita(p.id, c.id)}`)
+        .join(', ') || '—'
+
+      body.push([ora, matchLabel, spoCasa, spoOspite, camAss, p.livello || '—'])
+    })
+  })
+
+  // Se ci sono squadre esterne / non censite nel weekend
+  if (squadreNonCensiteWeekend.value.length > 0) {
+    body.push([{ content: 'Squadre esterne / non a calendario', colSpan: 6 }])
+    squadreNonCensiteWeekend.value.forEach((sq, idx) => {
+      const spo = spogliatoi.value
+        .filter(s => getAssegnazioneSpogliatoioNonCensita(idx, s.id, 'weekend'))
+        .map(s => s.etichetta).join(', ') || '—'
+      const cam = campi.value
+        .filter(c => getCampoAssegnatoNCWeekend(idx, c.id))
+        .map(c => `${c.etichetta}${getCampoLabelSuffissoNCWeekend(idx, c.id)}`)
+        .join(', ') || '—'
+      body.push(['—', sq.nome || 'Squadra esterna', spo, '—', cam, '—'])
+    })
   }
-  html += `</body></html>`
-  w.document.open()
-  w.document.write(html)
-  w.document.close()
-  setTimeout(() => {
-    w.print()
-    if (isIframe) {
-      setTimeout(() => {
-        try { document.body.removeChild(w.frameElement) } catch (e) {}
-      }, 2000)
+
+  if (body.length === 0) {
+    body.push([{ content: 'Nessuna partita in casa per questo weekend', colSpan: 6, styles: { halign: 'center', fontStyle: 'italic', textColor: 120 } }])
+  }
+
+  doc.autoTable({
+    head: headers,
+    body: body,
+    startY: 33,
+    theme: 'grid',
+    margin: { left: 14, right: 14 },
+    tableWidth: 269,
+    styles: { fontSize: 9, cellPadding: 3.5, halign: 'left', valign: 'middle' },
+    headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9.5 },
+    columnStyles: {
+      0: { cellWidth: 28, halign: 'center', fontStyle: 'bold' },
+      1: { cellWidth: 70 },
+      2: { cellWidth: 46 },
+      3: { cellWidth: 46 },
+      4: { cellWidth: 55 },
+      5: { cellWidth: 24, halign: 'center' }
+    },
+    didParseCell: function(d) {
+      if (d.section === 'body' && d.raw && d.raw.colSpan) {
+        d.cell.colSpan = d.raw.colSpan
+        d.cell.raw = d.raw.content
+        d.cell.styles.fillColor = [241, 245, 249]
+        d.cell.styles.textColor = [15, 23, 42]
+        d.cell.styles.fontStyle = 'bold'
+        d.cell.styles.fontSize = 10
+        d.cell.styles.halign = 'left'
+      }
     }
-  }, 250)
+  })
+
+  const filename = `spogliatoi_weekend_${w.nome.replace(/\s+/g, '_').toLowerCase()}.pdf`
+  await exportPdf(doc, filename, `Spogliatoi ${w.nome}`)
+}
+
+function stampa() {
+  esportaPDFSettimanale()
+}
+
+function stampaGiornoSingolo(dataGiorno) {
+  esportaPDFGiornaliero(dataGiorno)
 }
 
 onMounted(() => {
@@ -2784,6 +2977,23 @@ onMounted(() => {
 
 .btn-save:hover { opacity: 0.9; }
 .btn-save svg { color: white; }
+
+.btn-export-pdf {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.btn-export-pdf:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-surface);
+  opacity: 1;
+}
+
+.btn-export-pdf svg {
+  color: currentColor;
+}
 
 /* Weekend selector */
 .weekend-selector {
