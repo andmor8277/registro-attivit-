@@ -48,26 +48,71 @@
           <span v-if="prossimaGara" class="pill pill-blue">{{ countdown }}</span>
         </div>
         <div class="card-body">
-          <div v-if="prossimeGare.length" class="match-box">
-            <div v-for="(g, gi) in prossimeGare" :key="'g-' + gi" class="match-row">
-              <div class="match-teams">
-                <span class="team">{{ partitaLabel(g) }}</span>
-                <span class="pill pill-violet" v-if="catNome(g.categoria_id)">{{ badgeLabel(g) }} · {{ catNome(g.categoria_id) }}</span>
+          <div v-if="prossimeGare.length" class="match-groups">
+            <!-- In casa -->
+            <div class="match-group">
+              <div class="match-group-header">
+                <span class="match-group-badge casa">
+                  <span class="dot-casa"></span> In casa
+                </span>
+                <span class="match-group-count" v-if="gareInCasa.length">({{ gareInCasa.length }})</span>
               </div>
-              <div class="match-meta">
-                <span class="meta-item">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                  {{ dataLabel(g.data) }}
-                </span>
-                <span v-if="g.ora" class="meta-item">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-                  {{ g.ora.slice(0, 5) }}
-                </span>
-                <span v-if="g.campo" class="meta-item">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                  {{ g.campo }}
-                </span>
+              <div v-if="gareInCasa.length" class="match-box">
+                <div v-for="(g, gi) in gareInCasa" :key="'casa-' + gi" class="match-row">
+                  <div class="match-teams">
+                    <span class="team">{{ partitaLabel(g) }}</span>
+                    <span class="pill pill-violet" v-if="catNome(g.categoria_id) || g.source === 'convocazione'">{{ catNome(g.categoria_id) || badgeLabel(g) }}</span>
+                  </div>
+                  <div class="match-meta">
+                    <span class="meta-item">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                      {{ dataLabel(g.data) }}
+                    </span>
+                    <span v-if="g.ora" class="meta-item">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                      {{ g.ora.slice(0, 5) }}
+                    </span>
+                    <span v-if="g.campo" class="meta-item">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                      {{ g.campo }}
+                    </span>
+                  </div>
+                </div>
               </div>
+              <p v-else class="match-group-empty">Nessuna gara in casa</p>
+            </div>
+
+            <!-- In trasferta -->
+            <div class="match-group">
+              <div class="match-group-header">
+                <span class="match-group-badge fuori">
+                  <span class="dot-fuori"></span> In trasferta
+                </span>
+                <span class="match-group-count" v-if="gareInTrasferta.length">({{ gareInTrasferta.length }})</span>
+              </div>
+              <div v-if="gareInTrasferta.length" class="match-box">
+                <div v-for="(g, gi) in gareInTrasferta" :key="'fuori-' + gi" class="match-row">
+                  <div class="match-teams">
+                    <span class="team">{{ partitaLabel(g) }}</span>
+                    <span class="pill pill-violet" v-if="catNome(g.categoria_id) || g.source === 'convocazione'">{{ catNome(g.categoria_id) || badgeLabel(g) }}</span>
+                  </div>
+                  <div class="match-meta">
+                    <span class="meta-item">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                      {{ dataLabel(g.data) }}
+                    </span>
+                    <span v-if="g.ora" class="meta-item">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                      {{ g.ora.slice(0, 5) }}
+                    </span>
+                    <span v-if="g.campo" class="meta-item">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                      {{ g.campo }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="match-group-empty">Nessuna gara in trasferta</p>
             </div>
           </div>
           <p v-else class="empty-note">Nessuna gara in programma</p>
@@ -343,6 +388,26 @@ const prossimeGare = computed(() => {
     .filter(e => e.data >= winStart && e.data <= winEnd)
     .sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.ora || '').localeCompare(b.ora || ''))
 })
+
+function isTrasferta(g) {
+  if (g.casa_fuori === 'fuori') return true
+  if (g.casa_fuori === 'casa') return false
+  const title = (g.title || g.gara || '').toLowerCase()
+  const noiBreve = (societaAttiva.value?.nome_breve || '').trim().toLowerCase()
+  const noi = (societaAttiva.value?.nome || '').trim().toLowerCase()
+  if (title.includes(' vs ')) {
+    const parts = title.split(' vs ')
+    const teamCasa = (parts[0] || '').trim()
+    const teamOspite = (parts[1] || '').trim()
+    if ((noiBreve && teamOspite.includes(noiBreve)) || (noi && teamOspite.includes(noi)) || teamOspite.includes('noi')) return true
+    if ((noiBreve && teamCasa.includes(noiBreve)) || (noi && teamCasa.includes(noi)) || teamCasa.includes('noi')) return false
+  }
+  if (title.includes('trasferta')) return true
+  return false
+}
+
+const gareInCasa = computed(() => prossimeGare.value.filter(g => !isTrasferta(g)))
+const gareInTrasferta = computed(() => prossimeGare.value.filter(g => isTrasferta(g)))
 
 const prossimaGara = computed(() => prossimeGare.value[0] || null)
 
@@ -658,6 +723,76 @@ onMounted(async () => {
 }
 
 /* ── Prossima gara ── */
+.match-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.match-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.match-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.match-group-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.match-group-badge.casa {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.match-group-badge.fuori {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.dot-casa {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.dot-fuori {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+
+.match-group-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.match-group-empty {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  padding: 4px 0;
+  margin: 0;
+}
+
 .match-box {
   display: flex;
   flex-direction: column;
