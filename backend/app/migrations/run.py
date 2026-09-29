@@ -193,7 +193,7 @@ def run_migrations():
                 print(f"Migration warning (partite table): {e}")
                 conn.rollback()
 
-            for col_name, col_type in [('indirizzo', 'VARCHAR(200)'), ('casa_fuori', 'VARCHAR(10)'), ('mister_id', 'INTEGER'), ('ora_presentazione', 'TIME')]:
+            for col_name, col_type in [('indirizzo', 'VARCHAR(200)'), ('casa_fuori', 'VARCHAR(10)'), ('mister_id', 'INTEGER'), ('ora_presentazione', 'TIME'), ('livello', 'VARCHAR(50)')]:
                 try:
                     result = conn.execute(text(
                         "SELECT column_name FROM information_schema.columns "
@@ -1236,6 +1236,14 @@ def run_migrations():
                 print("Migration: Added registration sheet columns to persone")
             except Exception as e:
                 print(f"Migration warning (persone registration columns): {e}")
+                conn.rollback()
+
+            try:
+                conn.execute(text("ALTER TABLE partite ADD COLUMN IF NOT EXISTS livello VARCHAR(50)"))
+                conn.commit()
+                print("Migration: Added livello to partite")
+            except Exception as e:
+                print(f"Migration warning (partite livello): {e}")
                 conn.rollback()
 
         finally:
