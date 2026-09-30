@@ -272,12 +272,12 @@ onMounted(async () => {
 
 async function loadDati() {
   try {
-    const res = await getCategorie()
+    const res = await getCategorie(societaId.value)
     let cats = Array.isArray(res) ? res : (res?.data || [])
     categorie.value = cats.filter(c => c.societa_id === societaId.value && !c.is_archiviata && !c.is_portieri && c.parent_id !== null)
     const validCatIds = new Set(categorie.value.map(c => c.id))
 
-    const pRes = await getPersone()
+    const pRes = await getPersone(null, societaId.value)
     const allPlayers = Array.isArray(pRes) ? pRes : (pRes?.data || [])
     persone.value = allPlayers.filter(p => validCatIds.has(p.categoria_id))
   } catch (e) {
@@ -287,7 +287,7 @@ async function loadDati() {
 
 async function loadInfortuni() {
   try {
-    const res = await getInfortuni()
+    const res = await getInfortuni({ societa_id: societaId.value })
     const data = Array.isArray(res) ? res : (res?.data || [])
     infortuni.value = data
   } catch (e) {

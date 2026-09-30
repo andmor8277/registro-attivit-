@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy import text
+from typing import Optional
 from ..database import get_db
 from ..routers.auth import get_current_user, check_societa
 from ..core.security import get_staff_admin
+from ..core.deps import get_societa_filter, resolve_tenant_societa_id
 from ..schemas import PartitaCreate, PartitaUpdate
 
 router = APIRouter(prefix="/partite", tags=["partite"])
@@ -29,14 +31,19 @@ def check_categoria(db, user, categoria_id):
         raise HTTPException(403, "Categoria di un'altra società")
 
 @router.get("/")
-def lista_partite(categoria_id: int = None, societa_id: int = None, db=Depends(get_db), user=Depends(get_current_user)):
-    if not user.is_super_admin:
-        societa_id = user.societa_id
+def lista_partite(
+    categoria_id: Optional[int] = None,
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
+    db=Depends(get_db),
+    user=Depends(get_current_user)
+):
+    sid = get_societa_filter(user, societa_id, request)
     conditions = []
     params = {}
-    if societa_id:
+    if sid:
         conditions.append("p.societa_id = :sid")
-        params["sid"] = societa_id
+        params["sid"] = sid
     if categoria_id:
         conditions.append("p.categoria_id = :cid")
         params["cid"] = categoria_id
@@ -60,10 +67,8 @@ def _clean_int(val):
         return None
 
 @router.post("/")
-def crea_partita(data: PartitaCreate, db=Depends(get_db), user=Depends(get_staff_admin)):
-    societa_id = data.societa_id
-    if not societa_id and not user.is_super_admin:
-        societa_id = user.societa_id
+def crea_partita(data: PartitaCreate, request: Request = None, db=Depends(get_db), user=Depends(get_staff_admin)):
+    societa_id = resolve_tenant_societa_id(user, data.societa_id, request, categoria_id=data.categoria_id, db=db)
     check_societa(user, societa_id)
     check_categoria(db, user, data.categoria_id)
 

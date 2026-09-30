@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text, or_, and_
 from .. import models
@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Any
 from datetime import date, datetime
 from .auth import get_current_user
+from ..core.deps import get_societa_filter, resolve_tenant_societa_id
 
 router = APIRouter(prefix="/allenamenti", tags=["allenamenti"])
 
@@ -188,22 +189,39 @@ def get_focus_list(db: Session = Depends(get_db)):
     }
 
 @router.get("/catalogo-new")
-def get_catalogo_new(focus: Optional[str] = None, db: Session = Depends(get_db), current_user: models.Utente = Depends(get_current_user)):
+def get_catalogo_new(
+    focus: Optional[str] = None,
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user: models.Utente = Depends(get_current_user)
+):
     query = db.query(models.CatalogoEsercizio)
     if focus:
         query = query.filter(models.CatalogoEsercizio.focus == focus)
 
-    # Filter: public exercises + society-only exercises from user's own society
-    user_societa_id = current_user.societa_id
-    query = query.filter(
-        or_(
-            models.CatalogoEsercizio.visibilita == 'pubblico',
-            and_(
-                models.CatalogoEsercizio.visibilita == 'societa',
-                models.CatalogoEsercizio.societa_id == user_societa_id
+    # Filter: public exercises + society-only exercises from active society
+    eff_soc = get_societa_filter(current_user, societa_id, request)
+    if eff_soc is not None:
+        query = query.filter(
+            or_(
+                models.CatalogoEsercizio.visibilita == 'pubblico',
+                and_(
+                    models.CatalogoEsercizio.visibilita == 'societa',
+                    models.CatalogoEsercizio.societa_id == eff_soc
+                )
             )
         )
-    )
+    elif not current_user.is_super_admin:
+        query = query.filter(
+            or_(
+                models.CatalogoEsercizio.visibilita == 'pubblico',
+                and_(
+                    models.CatalogoEsercizio.visibilita == 'societa',
+                    models.CatalogoEsercizio.societa_id == current_user.societa_id
+                )
+            )
+        )
 
     esercizi = query.order_by(models.CatalogoEsercizio.titolo).all()
     
@@ -249,7 +267,7 @@ class CatalogoEsercizioIn(BaseModel):
     visibilita: str = 'pubblico'
 
 @router.post("/catalogo-new")
-def save_to_catalogo(data: CatalogoEsercizioIn, db: Session = Depends(get_db), current_user: models.Utente = Depends(get_current_user)):
+def save_to_catalogo(data: CatalogoEsercizioIn, request: Request = None, db: Session = Depends(get_db), current_user: models.Utente = Depends(get_current_user)):
     from datetime import datetime
     
     titolo = data.titolo.strip()
@@ -273,6 +291,7 @@ def save_to_catalogo(data: CatalogoEsercizioIn, db: Session = Depends(get_db), c
         existing.visibilita = data.visibilita
         existing.aggiornato_il = datetime.now()
     else:
+        soc_id = resolve_tenant_societa_id(current_user, None, request)
         new_ex = models.CatalogoEsercizio(
             titolo=titolo,
             focus=data.focus,
@@ -284,7 +303,7 @@ def save_to_catalogo(data: CatalogoEsercizioIn, db: Session = Depends(get_db), c
             creato_da=current_user.id,
             creato_il=datetime.now(),
             visibilita=data.visibilita,
-            societa_id=current_user.societa_id
+            societa_id=soc_id
         )
         db.add(new_ex)
     

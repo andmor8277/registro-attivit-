@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from datetime import date, datetime
 from .. import models
 from ..database import get_db
 from ..routers.auth import get_current_user
+from ..core.deps import get_societa_filter, resolve_tenant_societa_id
 from ..models import Utente
 from pydantic import BaseModel
 from typing import Optional
@@ -16,6 +17,7 @@ class PlanningEventoCreate(BaseModel):
     tipo: str  # sospensione, vacanza, evento, festa, gara
     titolo: Optional[str] = None
     note: Optional[str] = None
+    societa_id: Optional[int] = None
 
 class PlanningEventoUpdate(BaseModel):
     data: Optional[date] = None
@@ -26,15 +28,15 @@ class PlanningEventoUpdate(BaseModel):
 @router.get("/")
 def get_eventi(
     categoria_id: Optional[int] = None,
-    societa_id: Optional[int] = None,
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utente = Depends(get_current_user)
 ):
     query = db.query(models.PlanningEvento)
-    if current_user.societa_id and not current_user.is_super_admin:
-        query = query.filter(models.PlanningEvento.societa_id == current_user.societa_id)
-    elif societa_id:
-        query = query.filter(models.PlanningEvento.societa_id == societa_id)
+    sid = get_societa_filter(current_user, societa_id, request)
+    if sid:
+        query = query.filter(models.PlanningEvento.societa_id == sid)
     if categoria_id:
         query = query.filter(models.PlanningEvento.categoria_id == categoria_id)
     return query.order_by(models.PlanningEvento.data.desc()).all()
@@ -42,10 +44,11 @@ def get_eventi(
 @router.post("/")
 def create_evento(
     evento: PlanningEventoCreate,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utente = Depends(get_current_user)
 ):
-    societa_id = current_user.societa_id
+    societa_id = resolve_tenant_societa_id(current_user, evento.societa_id, request, categoria_id=evento.categoria_id, db=db)
     if not societa_id:
         raise HTTPException(status_code=400, detail="Società non impostata")
     db_evento = models.PlanningEvento(

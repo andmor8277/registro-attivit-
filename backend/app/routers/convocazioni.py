@@ -80,7 +80,7 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
         raise HTTPException(status_code=404, detail="Categoria non trovata")
     if not current_user.is_super_admin and cat.societa_id != current_user.societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato a operare su questa categoria")
-    societa_id = get_societa_filter(current_user) or current_user.societa_id
+    societa_id = cat.societa_id
     c = Convocazione(societa_id=societa_id, categoria_id=data.categoria_id, data_inizio=data.data_inizio, data_fine=data.data_fine, note=data.note, esclusioni=data.esclusioni)
     db.add(c)
     db.flush()

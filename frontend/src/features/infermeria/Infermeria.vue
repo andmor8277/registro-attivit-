@@ -137,18 +137,18 @@ const validiTotali = computed(() => {
 
 onMounted(async () => {
   try {
-    const res = await getCategorie()
+    const res = await getCategorie(societaId.value)
     let cats = Array.isArray(res) ? res : (res?.data || [])
     categorie.value = cats.filter(c => c.societa_id === societaId.value && !c.is_archiviata && c.parent_id !== null)
     const activeCat = categorie.value.find(c => c.stagione)
     currentSeason.value = activeCat ? `${activeCat.stagione}/${activeCat.stagione + 1}` : currentSeason.value
 
     const validCatIds = new Set(categorie.value.map(c => c.id))
-    const pRes = await getPersone()
+    const pRes = await getPersone(null, societaId.value)
     const players = Array.isArray(pRes) ? pRes : (pRes?.data || [])
     tuttiGiocatori.value = players.filter(p => validCatIds.has(p.categoria_id))
 
-    const infRes = await getInfortuni({ attivi: true })
+    const infRes = await getInfortuni({ attivi: true, societa_id: societaId.value })
     const infData = Array.isArray(infRes) ? infRes : (infRes?.data || [])
     infortunatiAttivi.value = infData.length
   } catch (e) {
