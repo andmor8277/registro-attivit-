@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useStore } from '../store.js'
 import { getMe } from './api/auth.js'
+import { isSessionExpired, clearActivity, recordActivity } from '../composables/useInactivity.js'
 
 const store = useStore()
 
@@ -93,6 +94,17 @@ export const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const token = localStorage.getItem('token')
+
+  if (token && isSessionExpired()) {
+    store.clearToken()
+    clearActivity()
+    return next('/login?session_expired=1')
+  }
+
+  if (token) {
+    recordActivity()
+  }
+
   let user = store.utenteAttivo.value
   const isSuperAdmin = user?.is_super_admin || user?.ruolo === 'super_admin'
 
