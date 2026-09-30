@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
 from pydantic import BaseModel
@@ -7,6 +7,7 @@ from app.models import Utente, Gruppo
 from app.database import get_db
 from app.routers.auth import get_current_user
 from app.core.security import get_persona_staff
+from app.core.deps import get_societa_filter, resolve_tenant_societa_id
 
 router = APIRouter(prefix="/gruppi", tags=["gruppi"])
 
@@ -22,34 +23,33 @@ class GruppoOut(BaseModel):
 class GruppoIn(BaseModel):
     nome: Optional[str] = None
     categoria_id: Optional[int] = None
+    societa_id: Optional[int] = None
     is_misto: bool = False
 
 class GruppoUpdate(BaseModel):
     nome: Optional[str] = None
     is_misto: Optional[bool] = None
 
-def get_societa_filter(current_user: Utente):
-    if current_user.is_super_admin:
-        return None
-    return current_user.societa_id
-
 @router.get("/", response_model=list[GruppoOut])
-def get_gruppi(categoria_id: Optional[int] = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
-    societa_id = get_societa_filter(current_user)
+def get_gruppi(categoria_id: Optional[int] = None, societa_id: Optional[int] = Query(None), request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    sid = get_societa_filter(current_user, societa_id, request)
     query = db.query(Gruppo)
-    if societa_id:
-        query = query.filter(Gruppo.societa_id == societa_id)
     if categoria_id:
-        cat_row = db.execute(text("SELECT is_portieri FROM categorie WHERE id = :id"), {"id": categoria_id}).first()
-        if cat_row and cat_row.is_portieri == 1:
-            query = query.filter(func.lower(Gruppo.nome) == "portieri")
-        else:
-            query = query.filter(Gruppo.categoria_id == categoria_id)
+        cat_row = db.execute(text("SELECT is_portieri, societa_id FROM categorie WHERE id = :id"), {"id": categoria_id}).first()
+        if cat_row:
+            if cat_row.societa_id:
+                sid = cat_row.societa_id
+            if cat_row.is_portieri == 1:
+                query = query.filter(func.lower(Gruppo.nome) == "portieri")
+            else:
+                query = query.filter(Gruppo.categoria_id == categoria_id)
+    if sid:
+        query = query.filter(Gruppo.societa_id == sid)
     return query.order_by(Gruppo.nome).all()
 
 @router.post("/", response_model=GruppoOut)
-def create_gruppo(data: GruppoIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_persona_staff)):
-    societa_id = get_societa_filter(current_user) or current_user.societa_id
+def create_gruppo(data: GruppoIn, request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_persona_staff)):
+    societa_id = resolve_tenant_societa_id(current_user, data.societa_id, request, categoria_id=data.categoria_id, db=db)
     # Auto-generate nome if not provided
     if not data.nome:
         existing = db.query(Gruppo).filter(

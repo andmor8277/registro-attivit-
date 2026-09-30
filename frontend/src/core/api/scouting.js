@@ -5,6 +5,7 @@ export const getSegnalazioniScouting = (params = {}) => {
   if (params.stato) qs.set('stato', params.stato)
   if (params.categoria_id) qs.set('categoria_id', params.categoria_id)
   if (params.q) qs.set('q', params.q)
+  if (params.societa_id) qs.set('societa_id', params.societa_id)
   return api.get('/scouting/segnalazioni?' + qs.toString())
 }
 

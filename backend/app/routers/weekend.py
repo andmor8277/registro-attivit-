@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy import text
+from typing import Optional
 from ..database import get_db
 from ..routers.auth import get_current_user, check_societa
 from ..core.security import get_staff_admin
+from ..core.deps import get_societa_filter, resolve_tenant_societa_id
 from ..schemas import WeekendCreate, WeekendUpdate
 
 router = APIRouter(prefix="/weekend", tags=["weekend"])
@@ -17,13 +19,12 @@ def check_weekend_access(db, weekend_id, user):
     check_societa(user, row.societa_id)
 
 @router.get("/")
-def lista_weekend(societa_id: int = None, db=Depends(get_db), user=Depends(get_current_user)):
-    if not user.is_super_admin:
-        societa_id = user.societa_id
-    if societa_id:
+def lista_weekend(societa_id: Optional[int] = Query(None), request: Request = None, db=Depends(get_db), user=Depends(get_current_user)):
+    sid = get_societa_filter(user, societa_id, request)
+    if sid:
         res = db.execute(
             text("SELECT * FROM weekend WHERE societa_id = :sid ORDER BY data_inizio DESC"),
-            {"sid": societa_id}
+            {"sid": sid}
         )
     else:
         res = db.execute(text("SELECT * FROM weekend ORDER BY data_inizio DESC"))
@@ -47,10 +48,8 @@ def weekend_partite(weekend_id: int, db=Depends(get_db), user=Depends(get_curren
     return [dict(r._mapping) for r in rows]
 
 @router.post("/")
-def crea_weekend(data: WeekendCreate, db=Depends(get_db), user=Depends(get_staff_admin)):
-    societa_id = data.societa_id
-    if not societa_id and not user.is_super_admin:
-        societa_id = user.societa_id
+def crea_weekend(data: WeekendCreate, request: Request = None, db=Depends(get_db), user=Depends(get_staff_admin)):
+    societa_id = resolve_tenant_societa_id(user, data.societa_id, request)
     check_societa(user, societa_id)
     res = db.execute(
         text("""

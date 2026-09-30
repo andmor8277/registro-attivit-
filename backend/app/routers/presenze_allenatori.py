@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import extract
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -9,42 +9,41 @@ from ..database import get_db
 from ..models import PresenzaAllenatore, Utente, UtenteCategoria, Categoria
 from .auth import get_current_user
 from ..core.security import get_staff_admin
+from ..core.deps import get_societa_filter, resolve_tenant_societa_id
 
 router = APIRouter(prefix="/presenze-allenatori", tags=["presenze-allenatori"])
-
-def get_societa_filter(current_user: Utente):
-    if current_user.is_super_admin:
-        return None
-    return current_user.societa_id
 
 class PresenzaAllenatoreIn(BaseModel):
     utente_id: int
     data: date
     codice: Optional[str] = None
+    societa_id: Optional[int] = None
 
 class PresenzaAllenatoreOut(BaseModel):
     id: int
     utente_id: int
     data: date
     codice: Optional[str] = None
+    societa_id: Optional[int] = None
 
     class Config:
         from_attributes = True
 
 @router.get("/mese/{anno}/{mese}")
-def get_mese(anno: int, mese: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_staff_admin)):
-    societa_id = get_societa_filter(current_user)
+def get_mese(anno: int, mese: int, societa_id: Optional[int] = Query(None), request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_staff_admin)):
+    sid = get_societa_filter(current_user, societa_id, request)
     query = db.query(PresenzaAllenatore).filter(
         extract("year", PresenzaAllenatore.data) == anno,
         extract("month", PresenzaAllenatore.data) == mese
     )
-    if societa_id:
-        query = query.filter(PresenzaAllenatore.societa_id == societa_id)
+    if sid:
+        query = query.filter(PresenzaAllenatore.societa_id == sid)
     return query.all()
 
 @router.post("/", response_model=PresenzaAllenatoreOut)
-def upsert_presenza(entry: PresenzaAllenatoreIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_staff_admin)):
-    societa_id = get_societa_filter(current_user) or current_user.societa_id
+def upsert_presenza(entry: PresenzaAllenatoreIn, request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_staff_admin)):
+    u = db.query(Utente).filter(Utente.id == entry.utente_id).first()
+    societa_id = u.societa_id if (u and u.societa_id) else resolve_tenant_societa_id(current_user, entry.societa_id, request)
     data = entry.model_dump()
     data["societa_id"] = societa_id
     data.pop("id", None)
@@ -65,11 +64,11 @@ def upsert_presenza(entry: PresenzaAllenatoreIn, db: Session = Depends(get_db), 
     return r
 
 @router.get("/mister")
-def get_mister(db: Session = Depends(get_db), current_user: Utente = Depends(get_staff_admin)):
-    societa_id = get_societa_filter(current_user)
+def get_mister(societa_id: Optional[int] = Query(None), request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_staff_admin)):
+    sid = get_societa_filter(current_user, societa_id, request)
     query = db.query(Utente).filter(Utente.ruolo == "mister")
-    if societa_id:
-        query = query.filter(Utente.societa_id == societa_id)
+    if sid:
+        query = query.filter(Utente.societa_id == sid)
     mister_list = query.order_by(Utente.cognome).all()
 
     result = []

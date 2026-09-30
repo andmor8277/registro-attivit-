@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from .. import models
 from ..database import get_db
 from ..routers.auth import get_current_user, get_admin
+from ..core.deps import get_societa_filter
 from ..models import Utente, UtenteCategoria
 from pydantic import BaseModel
 from typing import Optional, List, Dict
@@ -28,23 +29,14 @@ class CategoriaCreate(BaseModel):
     data_inizio_stagione: Optional[date] = None
     data_fine_stagione: Optional[date] = None
 
-def get_societa_filter(current_user: Utente):
-    """Restituisce il filter per societa_id - super_admin vede tutto, gli altri solo la propria societa"""
-    if current_user.is_super_admin:
-        return None
-    return current_user.societa_id
-
 @router.get("/")
 def get_categorie(
     db: Session = Depends(get_db), 
     current_user: Utente = Depends(get_current_user),
-    societa_id: Optional[int] = Query(None)
+    societa_id: Optional[int] = Query(None),
+    request: Request = None
 ):
-    # Se è super_admin e societa_id è specificato, usa quello
-    if current_user.is_super_admin and societa_id:
-        filter_societa_id = societa_id
-    else:
-        filter_societa_id = get_societa_filter(current_user)
+    filter_societa_id = get_societa_filter(current_user, societa_id, request)
     
     query = db.query(models.Categoria).filter(models.Categoria.is_archiviata == 0)
     if filter_societa_id:
@@ -62,31 +54,34 @@ def get_categorie(
 def get_all_categorie(
     db: Session = Depends(get_db), 
     current_user: Utente = Depends(get_current_user),
-    societa_id: Optional[int] = Query(None)
+    societa_id: Optional[int] = Query(None),
+    request: Request = None
 ):
-    if current_user.is_super_admin and societa_id:
-        filter_societa_id = societa_id
-    else:
-        filter_societa_id = get_societa_filter(current_user)
-    
+    filter_societa_id = get_societa_filter(current_user, societa_id, request)
     query = db.query(models.Categoria).filter(models.Categoria.is_archiviata == 0)
     if filter_societa_id:
         query = query.filter(models.Categoria.societa_id == filter_societa_id)
     return query.order_by(models.Categoria.anno.desc()).all()
 
 @router.get("/archived")
-def get_categorie_archived(db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
+def get_categorie_archived(
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user: Utente = Depends(get_admin)
+):
     query = db.query(models.Categoria).filter(models.Categoria.is_archiviata == 1)
-    societa_id = get_societa_filter(current_user)
-    if societa_id:
-        query = query.filter(models.Categoria.societa_id == societa_id)
+    filter_id = get_societa_filter(current_user, societa_id, request)
+    if filter_id:
+        query = query.filter(models.Categoria.societa_id == filter_id)
     return query.order_by(models.Categoria.anno.desc()).all()
 
 @router.get("/stagioni")
 def get_stagioni(
     db: Session = Depends(get_db), 
     current_user: Utente = Depends(get_current_user),
-    societa_id: Optional[int] = Query(None)
+    societa_id: Optional[int] = Query(None),
+    request: Request = None
 ):
     query_attive = db.query(models.Categoria.stagione).filter(
         models.Categoria.is_archiviata == 0,
@@ -96,11 +91,7 @@ def get_stagioni(
         models.Categoria.is_archiviata == 1,
         models.Categoria.stagione.isnot(None)
     )
-    # Se super_admin e societa_id specificato, usa quello
-    if current_user.is_super_admin and societa_id:
-        filter_id = societa_id
-    else:
-        filter_id = get_societa_filter(current_user)
+    filter_id = get_societa_filter(current_user, societa_id, request)
     if filter_id:
         query_attive = query_attive.filter(models.Categoria.societa_id == filter_id)
         query_archiviate = query_archiviate.filter(models.Categoria.societa_id == filter_id)
@@ -156,11 +147,17 @@ def ripristina_stagione(
     return {"ok": True, "messaggio": f"Stagione {stagione}/{stagione+1} ripristinata", "categorie_aggiornate": count}
 
 @router.get("/by-stagione/{stagione}")
-def get_categorie_by_stagione(stagione: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def get_categorie_by_stagione(
+    stagione: int,
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user: Utente = Depends(get_current_user)
+):
     query = db.query(models.Categoria).filter(models.Categoria.stagione == stagione)
-    societa_id = get_societa_filter(current_user)
-    if societa_id:
-        query = query.filter(models.Categoria.societa_id == societa_id)
+    filter_id = get_societa_filter(current_user, societa_id, request)
+    if filter_id:
+        query = query.filter(models.Categoria.societa_id == filter_id)
     categorie = query.order_by(models.Categoria.nome).all()
     if not categorie:
         raise HTTPException(status_code=404, detail="Nessuna categoria per questa stagione")

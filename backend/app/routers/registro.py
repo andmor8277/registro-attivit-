@@ -29,11 +29,12 @@ def get_mese(categoria_id: int, anno: int, mese: int, db: Session = Depends(get_
     records = query.all()
 
     # Se non è la categoria Portieri, mergia anche le presenze dalla categoria Portieri per i portieri di questa categoria
-    cat_row = db.execute(text("SELECT is_portieri FROM categorie WHERE id = :id"), {"id": categoria_id}).first()
+    cat_row = db.execute(text("SELECT is_portieri, societa_id FROM categorie WHERE id = :id"), {"id": categoria_id}).first()
     if cat_row and cat_row.is_portieri != 1:
-        sid_param = {"sid": societa_id} if societa_id else {}
+        target_societa = cat_row.societa_id or societa_id
+        sid_param = {"sid": target_societa} if target_societa else {}
         portieri_cat = db.execute(text(
-            "SELECT id FROM categorie WHERE is_portieri = 1 AND is_archiviata = 0" + (" AND societa_id = :sid" if societa_id else "")
+            "SELECT id FROM categorie WHERE is_portieri = 1 AND is_archiviata = 0" + (" AND societa_id = :sid" if target_societa else "")
         ), sid_param).first()
 
         if portieri_cat:
@@ -87,17 +88,20 @@ def upsert_registro(entry: schemas.RegistroEntry, db: Session = Depends(get_db),
     # Se la categoria corrente NON è Portieri ma la persona è un portiere, reindirizza alla categoria Portieri
     target_categoria_id = entry.categoria_id
     if target_categoria_id:
-        cat_row = db.execute(text("SELECT is_portieri FROM categorie WHERE id = :id"), {"id": target_categoria_id}).first()
-        if cat_row and cat_row.is_portieri != 1:
-            persona = db.execute(text("SELECT gruppo_id FROM persone WHERE id = :pid"), {"pid": entry.persona_id}).first()
-            if persona and persona.gruppo_id:
-                gruppo_row = db.execute(text("SELECT nome FROM gruppi WHERE id = :gid"), {"gid": persona.gruppo_id}).first()
-                if gruppo_row and gruppo_row.nome.lower() == "portieri":
-                    portieri_cat = db.execute(text(
-                        "SELECT id FROM categorie WHERE is_portieri = 1 AND is_archiviata = 0" + (" AND societa_id = :sid" if societa_id else "")
-                    ), {"sid": societa_id} if societa_id else {}).first()
-                    if portieri_cat:
-                        target_categoria_id = portieri_cat.id
+        cat_row = db.execute(text("SELECT is_portieri, societa_id FROM categorie WHERE id = :id"), {"id": target_categoria_id}).first()
+        if cat_row:
+            if not societa_id:
+                societa_id = cat_row.societa_id
+            if cat_row.is_portieri != 1:
+                persona = db.execute(text("SELECT gruppo_id FROM persone WHERE id = :pid"), {"pid": entry.persona_id}).first()
+                if persona and persona.gruppo_id:
+                    gruppo_row = db.execute(text("SELECT nome FROM gruppi WHERE id = :gid"), {"gid": persona.gruppo_id}).first()
+                    if gruppo_row and gruppo_row.nome.lower() == "portieri":
+                        portieri_cat = db.execute(text(
+                            "SELECT id FROM categorie WHERE is_portieri = 1 AND is_archiviata = 0" + (" AND societa_id = :sid" if societa_id else "")
+                        ), {"sid": societa_id} if societa_id else {}).first()
+                        if portieri_cat:
+                            target_categoria_id = portieri_cat.id
 
     data = entry.model_dump()
     data["societa_id"] = societa_id

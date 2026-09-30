@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func, extract
 from datetime import date, datetime, timedelta
@@ -8,6 +8,7 @@ from .. import models
 from ..database import get_db
 from ..routers.auth import get_current_user, get_admin
 from ..models import Utente
+from ..core.deps import get_societa_filter, resolve_tenant_societa_id
 
 router = APIRouter(prefix="/schede-allenamento", tags=["schede allenamento"])
 
@@ -33,12 +34,15 @@ def get_schede(
     categoria_id: Optional[int] = Query(None),
     data: Optional[date] = Query(None),
     persona_id: Optional[int] = Query(None),
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utente = Depends(get_current_user)
 ):
-    query = db.query(models.SchedaAllenamento).filter(
-        models.SchedaAllenamento.societa_id == current_user.societa_id
-    )
+    eff_soc = get_societa_filter(current_user, societa_id, request)
+    query = db.query(models.SchedaAllenamento)
+    if eff_soc is not None:
+        query = query.filter(models.SchedaAllenamento.societa_id == eff_soc)
     if categoria_id:
         query = query.filter(models.SchedaAllenamento.categoria_id == categoria_id)
     if data:
@@ -48,13 +52,14 @@ def get_schede(
     return query.order_by(models.SchedaAllenamento.data.desc()).all()
 
 @router.post("/")
-def create_scheda(data: SchedaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def create_scheda(data: SchedaCreate, request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     from sqlalchemy import func
     now = db.scalar(func.now())
+    soc_id = resolve_tenant_societa_id(current_user, None, request, categoria_id=data.categoria_id, persona_id=data.persona_id, db=db)
     scheda = models.SchedaAllenamento(
         persona_id=data.persona_id,
         categoria_id=data.categoria_id,
-        societa_id=current_user.societa_id,
+        societa_id=soc_id,
         data=data.data,
         distanza_totale=data.distanza_totale,
         distanza_alta_velocita=data.distanza_alta_velocita,
@@ -76,11 +81,12 @@ def create_scheda(data: SchedaCreate, db: Session = Depends(get_db), current_use
     return scheda
 
 @router.put("/{scheda_id}")
-def update_scheda(scheda_id: int, data: SchedaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
-    scheda = db.query(models.SchedaAllenamento).filter(
-        models.SchedaAllenamento.id == scheda_id,
-        models.SchedaAllenamento.societa_id == current_user.societa_id
-    ).first()
+def update_scheda(scheda_id: int, data: SchedaCreate, request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    query = db.query(models.SchedaAllenamento).filter(models.SchedaAllenamento.id == scheda_id)
+    eff_soc = get_societa_filter(current_user, None, request)
+    if eff_soc is not None:
+        query = query.filter(models.SchedaAllenamento.societa_id == eff_soc)
+    scheda = query.first()
     if not scheda:
         raise HTTPException(status_code=404, detail="Scheda non trovata")
     for field in ['distanza_totale', 'distanza_alta_velocita', 'distanza_sprint', 'velocita_massima',
@@ -94,11 +100,12 @@ def update_scheda(scheda_id: int, data: SchedaCreate, db: Session = Depends(get_
     return scheda
 
 @router.delete("/{scheda_id}")
-def delete_scheda(scheda_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
-    scheda = db.query(models.SchedaAllenamento).filter(
-        models.SchedaAllenamento.id == scheda_id,
-        models.SchedaAllenamento.societa_id == current_user.societa_id
-    ).first()
+def delete_scheda(scheda_id: int, request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
+    query = db.query(models.SchedaAllenamento).filter(models.SchedaAllenamento.id == scheda_id)
+    eff_soc = get_societa_filter(current_user, None, request)
+    if eff_soc is not None:
+        query = query.filter(models.SchedaAllenamento.societa_id == eff_soc)
+    scheda = query.first()
     if not scheda:
         raise HTTPException(status_code=404, detail="Scheda non trovata")
     db.delete(scheda)
@@ -123,20 +130,34 @@ def _date_filter(period: str, now: datetime = None):
         return season_start
     return now - timedelta(days=365)
 
+def _get_effective_soc_for_cat(db: Session, current_user: Utente, categoria_id: int, request: Request = None, societa_id: Optional[int] = None) -> Optional[int]:
+    eff_soc = get_societa_filter(current_user, societa_id, request)
+    if eff_soc is not None:
+        return eff_soc
+    if categoria_id:
+        cat = db.query(models.Categoria).filter(models.Categoria.id == categoria_id).first()
+        if cat and cat.societa_id:
+            return cat.societa_id
+    return None
+
 @router.get("/stats/trend")
 def get_trend(
     categoria_id: int = Query(...),
     period: str = Query('week', regex='^(day|week|month|season)$'),
     metric: str = Query('distanza_totale', regex='^(' + '|'.join(METRICS) + ')$'),
     persona_id: Optional[int] = Query(None),
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utente = Depends(get_current_user)
 ):
+    eff_soc = _get_effective_soc_for_cat(db, current_user, categoria_id, request, societa_id)
     base_q = db.query(models.SchedaAllenamento).filter(
-        models.SchedaAllenamento.societa_id == current_user.societa_id,
         models.SchedaAllenamento.categoria_id == categoria_id,
         models.SchedaAllenamento.data >= _date_filter(period)
     )
+    if eff_soc is not None:
+        base_q = base_q.filter(models.SchedaAllenamento.societa_id == eff_soc)
     if persona_id:
         base_q = base_q.filter(models.SchedaAllenamento.persona_id == persona_id)
 
@@ -169,14 +190,18 @@ def get_summary(
     categoria_id: int = Query(...),
     period: str = Query('week', regex='^(week|month|season)$'),
     persona_id: Optional[int] = Query(None),
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utente = Depends(get_current_user)
 ):
+    eff_soc = _get_effective_soc_for_cat(db, current_user, categoria_id, request, societa_id)
     base_q = db.query(models.SchedaAllenamento).filter(
-        models.SchedaAllenamento.societa_id == current_user.societa_id,
         models.SchedaAllenamento.categoria_id == categoria_id,
         models.SchedaAllenamento.data >= _date_filter(period)
     )
+    if eff_soc is not None:
+        base_q = base_q.filter(models.SchedaAllenamento.societa_id == eff_soc)
     if persona_id:
         base_q = base_q.filter(models.SchedaAllenamento.persona_id == persona_id)
 
@@ -214,21 +239,26 @@ def get_team_stats(
     categoria_id: int = Query(...),
     period: str = Query('week', regex='^(week|month|season)$'),
     metric: str = Query('distanza_totale', regex='^(' + '|'.join(METRICS) + ')$'),
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utente = Depends(get_current_user)
 ):
+    eff_soc = _get_effective_soc_for_cat(db, current_user, categoria_id, request, societa_id)
     col = getattr(models.SchedaAllenamento, metric)
-    rows = db.query(
+    q = db.query(
         models.SchedaAllenamento.persona_id,
         func.avg(col).label('avg'),
         func.max(col).label('max'),
         func.sum(col).label('sum'),
         func.count(col).label('count')
     ).join(models.Persona).filter(
-        models.SchedaAllenamento.societa_id == current_user.societa_id,
         models.SchedaAllenamento.categoria_id == categoria_id,
         models.SchedaAllenamento.data >= _date_filter(period)
-    ).group_by(
+    )
+    if eff_soc is not None:
+        q = q.filter(models.SchedaAllenamento.societa_id == eff_soc)
+    rows = q.group_by(
         models.SchedaAllenamento.persona_id,
         models.Persona.nome,
         models.Persona.cognome
@@ -249,15 +279,20 @@ def get_player_trend(
     categoria_id: int = Query(...),
     persona_id: int = Query(...),
     period: str = Query('month', regex='^(week|month|season)$'),
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utente = Depends(get_current_user)
 ):
-    rows = db.query(models.SchedaAllenamento).filter(
-        models.SchedaAllenamento.societa_id == current_user.societa_id,
+    eff_soc = _get_effective_soc_for_cat(db, current_user, categoria_id, request, societa_id)
+    q = db.query(models.SchedaAllenamento).filter(
         models.SchedaAllenamento.categoria_id == categoria_id,
         models.SchedaAllenamento.persona_id == persona_id,
         models.SchedaAllenamento.data >= _date_filter(period)
-    ).order_by(models.SchedaAllenamento.data.asc()).all()
+    )
+    if eff_soc is not None:
+        q = q.filter(models.SchedaAllenamento.societa_id == eff_soc)
+    rows = q.order_by(models.SchedaAllenamento.data.asc()).all()
 
     return [{
         'data': str(r.data),

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
@@ -7,6 +7,7 @@ from app.models import Utente, ListaTorneo, ListaTorneoGiocatore
 from app.database import get_db
 from app.routers.auth import get_current_user
 from app.core.encryption import safe_decrypt
+from app.core.deps import get_societa_filter, resolve_tenant_societa_id
 
 router = APIRouter(prefix="/liste-torneo", tags=["liste-torneo"])
 
@@ -14,13 +15,14 @@ class ListaTorneoOut(BaseModel):
     id: int
     nome: str
     categoria_id: int
-    societa_id: int
+    societa_id: Optional[int] = None
     class Config:
         from_attributes = True
 
 class ListaTorneoIn(BaseModel):
     nome: str
     categoria_id: int
+    societa_id: Optional[int] = None
 
 class GiocatoreListaOut(BaseModel):
     id: int
@@ -31,22 +33,19 @@ class GiocatoreListaOut(BaseModel):
     class Config:
         from_attributes = True
 
-def get_societa_filter(current_user: Utente):
-    if current_user.is_super_admin:
-        return None
-    return current_user.societa_id
-
 @router.get("/", response_model=list[ListaTorneoOut])
-def get_liste_torneo(categoria_id: Optional[int] = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
-    societa_id = get_societa_filter(current_user)
-    query = db.query(ListaTorneo).filter(ListaTorneo.societa_id == societa_id if societa_id else True)
+def get_liste_torneo(categoria_id: Optional[int] = None, societa_id: Optional[int] = Query(None), request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    sid = get_societa_filter(current_user, societa_id, request)
+    query = db.query(ListaTorneo)
+    if sid:
+        query = query.filter(ListaTorneo.societa_id == sid)
     if categoria_id:
         query = query.filter(ListaTorneo.categoria_id == categoria_id)
     return query.order_by(ListaTorneo.creato_il.desc()).all()
 
 @router.post("/", response_model=ListaTorneoOut)
-def create_lista_torneo(data: ListaTorneoIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
-    societa_id = get_societa_filter(current_user) or current_user.societa_id
+def create_lista_torneo(data: ListaTorneoIn, request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    societa_id = resolve_tenant_societa_id(current_user, data.societa_id, request, categoria_id=data.categoria_id, db=db)
     lista = ListaTorneo(nome=data.nome, categoria_id=data.categoria_id, societa_id=societa_id, creato_il=text("NOW()"))
     db.add(lista)
     db.commit()

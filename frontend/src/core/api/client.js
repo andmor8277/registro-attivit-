@@ -30,6 +30,10 @@ api.interceptors.request.use(config => {
   }
   const token = localStorage.getItem('token')
   if (token) config.headers.Authorization = `Bearer ${token}`
+  const activeSocietaId = localStorage.getItem('societa_id')
+  if (activeSocietaId) {
+    config.headers['X-Societa-Id'] = activeSocietaId
+  }
   recordActivity()
   return config
 })

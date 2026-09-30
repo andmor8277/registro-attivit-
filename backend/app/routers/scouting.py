@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text, or_
 from datetime import datetime, date
@@ -17,6 +17,7 @@ from ..models import (
 )
 from ..routers.auth import get_current_user, check_societa
 from ..core.security import get_scouting
+from ..core.deps import get_societa_filter
 
 router = APIRouter(prefix="/scouting", tags=["scouting"])
 
@@ -226,15 +227,16 @@ def lista_segnalazioni(
     stato: Optional[str] = None,
     categoria_id: Optional[int] = None,
     q: Optional[str] = None,
+    societa_id: Optional[int] = None,
+    request: Request = None,
     db: Session = Depends(get_db),
     user: Utente = Depends(get_current_user),
 ):
     query = db.query(ScoutingSegnalazione)
-    if user.is_super_admin:
-        pass
-    elif user.is_admin or user.ruolo == "scouting":
-        query = query.filter(ScoutingSegnalazione.societa_id == user.societa_id)
-    else:
+    eff_soc = get_societa_filter(user, societa_id, request)
+    if eff_soc is not None:
+        query = query.filter(ScoutingSegnalazione.societa_id == eff_soc)
+    if not (user.is_super_admin or user.is_admin or user.ruolo == "scouting"):
         query = query.filter(ScoutingSegnalazione.autore_id == user.id)
 
     if stato:

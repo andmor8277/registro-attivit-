@@ -1255,6 +1255,49 @@ def run_migrations():
                 print(f"Migration warning (partita_id in assegnazioni): {e}")
                 conn.rollback()
 
+            # Backfill missing societa_id across core tables for multi-tenant data consistency
+            try:
+                conn.execute(text("""
+                    UPDATE persone p SET societa_id = c.societa_id 
+                    FROM categorie c 
+                    WHERE p.societa_id IS NULL AND p.categoria_id = c.id AND c.societa_id IS NOT NULL;
+                """))
+                conn.execute(text("""
+                    UPDATE partite p SET societa_id = c.societa_id 
+                    FROM categorie c 
+                    WHERE p.societa_id IS NULL AND p.categoria_id = c.id AND c.societa_id IS NOT NULL;
+                """))
+                conn.execute(text("""
+                    UPDATE convocazioni cv SET societa_id = c.societa_id 
+                    FROM categorie c 
+                    WHERE cv.societa_id IS NULL AND cv.categoria_id = c.id AND c.societa_id IS NOT NULL;
+                """))
+                conn.execute(text("""
+                    UPDATE infortuni i SET societa_id = p.societa_id 
+                    FROM persone p 
+                    WHERE i.societa_id IS NULL AND i.persona_id = p.id AND p.societa_id IS NOT NULL;
+                """))
+                conn.execute(text("""
+                    UPDATE gruppi g SET societa_id = c.societa_id 
+                    FROM categorie c 
+                    WHERE g.societa_id IS NULL AND g.categoria_id = c.id AND c.societa_id IS NOT NULL;
+                """))
+                conn.execute(text("""
+                    UPDATE schede_allenamento s SET societa_id = c.societa_id 
+                    FROM categorie c 
+                    WHERE s.societa_id IS NULL AND s.categoria_id = c.id AND c.societa_id IS NOT NULL;
+                """))
+                conn.execute(text("""
+                    UPDATE planning_eventi pe SET societa_id = c.societa_id 
+                    FROM categorie c 
+                    WHERE pe.societa_id IS NULL AND pe.categoria_id = c.id AND c.societa_id IS NOT NULL;
+                """))
+                conn.commit()
+                print("Migration: Backfilled missing societa_id across core tables")
+            except Exception as e:
+                print(f"Migration warning (backfill missing societa_id): {e}")
+                conn.rollback()
+
         finally:
             if has_lock:
                 try:

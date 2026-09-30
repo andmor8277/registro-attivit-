@@ -240,7 +240,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue"
+import { ref, computed, watch, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useStore } from "../../store.js"
 import { getSocieta, getCategorie, getInfortuni, getPartite, getPersone, getConvocazioni, getConvocazione, getLocalDateStr } from "../../api/index.js"
@@ -351,7 +351,12 @@ function badgeLabel(p) {
 
 const prossimeGare = computed(() => {
   const today = todayStr()
-  const partiteFuture = partite.value.filter(p => p.data_partite && !p.risultato && p.data_partite >= today)
+  const activeSocId = societaAttiva.value?.id
+  const partiteFuture = partite.value.filter(p => {
+    if (!p.data_partite || p.risultato || p.data_partite < today) return false
+    if (activeSocId && p.societa_id && p.societa_id !== activeSocId) return false
+    return true
+  })
   const convFuture = convocazioniUpcoming.value.filter(c =>
     c.data_fine ? c.data_fine >= today : (c.data_inizio && c.data_inizio >= today)
   )
@@ -448,8 +453,9 @@ async function loadPlanning() {
 }
 
 async function loadPartite() {
+  const societaId = societaAttiva.value?.id || null
   try {
-    const res = await getPartite()
+    const res = await getPartite(null, societaId)
     partite.value = res.data || []
   } catch (e) {
     console.error('Errore caricamento partite:', e)
@@ -457,7 +463,10 @@ async function loadPartite() {
 }
 
 async function loadConvocazioni() {
-  if (allCategories.value.length === 0) return
+  if (allCategories.value.length === 0) {
+    convocazioniUpcoming.value = []
+    return
+  }
   const today = todayStr()
   const upcoming = []
   for (const c of allCategories.value) {
@@ -477,8 +486,9 @@ async function loadConvocazioni() {
 
 async function loadInfortuni() {
   if (!canInfermeria.value) return
+  const societaId = societaAttiva.value?.id || null
   try {
-    const res = await getInfortuni({ attivi: true })
+    const res = await getInfortuni({ attivi: true, societa_id: societaId })
     infortuniCount.value = (res.data || []).length
   } catch (e) {
     console.error('Errore caricamento infortuni:', e)
@@ -487,8 +497,9 @@ async function loadInfortuni() {
 
 async function loadCertificati() {
   if (!canSegreteria.value) return
+  const societaId = societaAttiva.value?.id || null
   try {
-    const res = await getPersone()
+    const res = await getPersone(null, societaId)
     const list = res.data || []
     // Solo giocatori della stagione in corso (categorie non archiviate)
     const currentCatIds = new Set(
@@ -501,6 +512,16 @@ async function loadCertificati() {
     console.error('Errore caricamento certificati:', e)
   }
 }
+
+watch(() => societaAttiva.value?.id, async (newId, oldId) => {
+  if (newId !== oldId) {
+    await loadPlanning()
+    loadPartite()
+    loadInfortuni()
+    loadCertificati()
+    loadConvocazioni()
+  }
+})
 
 onMounted(async () => {
   if (!societaAttiva.value) {

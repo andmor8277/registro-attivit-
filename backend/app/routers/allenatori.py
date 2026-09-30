@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
@@ -6,35 +6,33 @@ from ..database import get_db
 from ..models import Allenatore
 from .auth import get_current_user
 from ..core.security import get_staff_admin
+from ..core.deps import get_societa_filter, resolve_tenant_societa_id
 
 router = APIRouter(prefix="/allenatori", tags=["allenatori"])
 
-def get_societa_filter(user):
-    if user.is_super_admin:
-        return None
-    return user.societa_id
-
 class AllenatoreIn(BaseModel):
     cognome: str
+    societa_id: Optional[int] = None
 
 class AllenatoreOut(BaseModel):
     id: int
     cognome: str
+    societa_id: Optional[int] = None
 
     class Config:
         from_attributes = True
 
 @router.get("/", response_model=list[AllenatoreOut])
-def lista(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def lista(societa_id: Optional[int] = Query(None), request: Request = None, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     query = db.query(Allenatore)
-    sid = get_societa_filter(current_user)
+    sid = get_societa_filter(current_user, societa_id, request)
     if sid:
         query = query.filter(Allenatore.societa_id == sid)
     return query.order_by(Allenatore.cognome).all()
 
 @router.post("/", response_model=AllenatoreOut)
-def crea(data: AllenatoreIn, db: Session = Depends(get_db), current_user=Depends(get_staff_admin)):
-    societa_id = get_societa_filter(current_user) or current_user.societa_id
+def crea(data: AllenatoreIn, request: Request = None, db: Session = Depends(get_db), current_user=Depends(get_staff_admin)):
+    societa_id = resolve_tenant_societa_id(current_user, data.societa_id, request)
     a = Allenatore(cognome=data.cognome, societa_id=societa_id)
     db.add(a)
     db.commit()

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import date, timedelta
@@ -7,14 +7,10 @@ from pydantic import BaseModel
 from ..database import get_db
 from ..routers.auth import get_current_user
 from ..core.security import get_infermeria
+from ..core.deps import get_societa_filter, resolve_tenant_societa_id
 from ..models import Utente
 
 router = APIRouter(prefix="/infortuni", tags=["infortuni"])
-
-def get_societa_filter(current_user: Utente):
-    if current_user.is_super_admin:
-        return None
-    return current_user.societa_id
 
 class InfortunioCreate(BaseModel):
     persona_id: int
@@ -23,6 +19,7 @@ class InfortunioCreate(BaseModel):
     giorni_assenza: int = 0
     tipo_infortunio: Optional[str] = None
     note: Optional[str] = None
+    societa_id: Optional[int] = None
 
 class InfortunioUpdate(BaseModel):
     data_inizio: Optional[str] = None
@@ -35,12 +32,14 @@ class InfortunioUpdate(BaseModel):
 def lista_infortuni(
     categoria_id: Optional[int] = None,
     attivi: Optional[bool] = None,
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utente = Depends(get_current_user)
 ):
-    societa_id = get_societa_filter(current_user)
-    params = {"sid": societa_id} if societa_id else {}
-    soc_filter = " AND i.societa_id = :sid" if societa_id else ""
+    sid = get_societa_filter(current_user, societa_id, request)
+    params = {"sid": sid} if sid else {}
+    soc_filter = " AND i.societa_id = :sid" if sid else ""
 
     conditions = []
     if categoria_id:
@@ -86,10 +85,18 @@ def lista_infortuni(
 @router.post("/")
 def crea_infortunio(
     data: InfortunioCreate,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utente = Depends(get_infermeria)
 ):
-    societa_id = get_societa_filter(current_user) or current_user.societa_id
+    societa_id = resolve_tenant_societa_id(
+        current_user,
+        data.societa_id,
+        request,
+        categoria_id=data.categoria_id,
+        persona_id=data.persona_id,
+        db=db
+    )
     data_inizio = date.fromisoformat(data.data_inizio)
     data_fine = (data_inizio + timedelta(days=data.giorni_assenza)).isoformat() if data.giorni_assenza > 0 else None
 
@@ -225,12 +232,14 @@ def chiudi_infortunio(
 
 @router.get("/scaduti")
 def segnala_scaduti(
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utente = Depends(get_current_user)
 ):
-    societa_id = get_societa_filter(current_user)
-    params = {"sid": societa_id} if societa_id else {}
-    soc_filter = " AND i.societa_id = :sid" if societa_id else ""
+    sid = get_societa_filter(current_user, societa_id, request)
+    params = {"sid": sid} if sid else {}
+    soc_filter = " AND i.societa_id = :sid" if sid else ""
 
     rows = db.execute(
         text(f"""

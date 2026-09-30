@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime
@@ -8,30 +8,44 @@ from ..routers.auth import get_current_user
 from ..core.security import get_segreteria
 from ..models import Utente
 from ..schemas import OpendayCreate, OpendayUpdate
+from ..core.deps import get_societa_filter, resolve_tenant_societa_id
 from typing import Optional
 
 router = APIRouter()
 
-def get_societa_filter(user: Utente):
-    if user.is_super_admin:
-        return None
-    return user.societa_id
-
 @router.get("/")
-def get_openday(current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
-    societa_id = get_societa_filter(current_user) or current_user.societa_id
-    query = """
-        SELECT o.id, o.nome, o.cognome, o.data_nascita, o.iscritto, o.persona_id, o.creato_il,
-               o.date_prova, o.nulla_osta, o.certificato_medico, o.scadenza_certificato,
-               o.tel_papa, o.tel_mamma, o.email_papa, o.email_mamma,
-               pc.anno as categoria_anno, pc.nome as categoria_nome, pc.id as categoria_id
-        FROM openday o
-        LEFT JOIN persone p ON o.persona_id = p.id
-        LEFT JOIN categorie pc ON p.categoria_id = pc.id
-        WHERE o.societa_id = :sid
-        ORDER BY o.iscritto DESC, o.cognome, o.nome
-    """
-    rows = db.execute(text(query), {"sid": societa_id}).fetchall()
+def get_openday(
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
+    current_user: Utente = Depends(get_segreteria),
+    db: Session = Depends(get_db)
+):
+    eff_soc = get_societa_filter(current_user, societa_id, request)
+    if eff_soc is not None:
+        query = """
+            SELECT o.id, o.nome, o.cognome, o.data_nascita, o.iscritto, o.persona_id, o.creato_il,
+                   o.date_prova, o.nulla_osta, o.certificato_medico, o.scadenza_certificato,
+                   o.tel_papa, o.tel_mamma, o.email_papa, o.email_mamma,
+                   pc.anno as categoria_anno, pc.nome as categoria_nome, pc.id as categoria_id
+            FROM openday o
+            LEFT JOIN persone p ON o.persona_id = p.id
+            LEFT JOIN categorie pc ON p.categoria_id = pc.id
+            WHERE o.societa_id = :sid
+            ORDER BY o.iscritto DESC, o.cognome, o.nome
+        """
+        rows = db.execute(text(query), {"sid": eff_soc}).fetchall()
+    else:
+        query = """
+            SELECT o.id, o.nome, o.cognome, o.data_nascita, o.iscritto, o.persona_id, o.creato_il,
+                   o.date_prova, o.nulla_osta, o.certificato_medico, o.scadenza_certificato,
+                   o.tel_papa, o.tel_mamma, o.email_papa, o.email_mamma,
+                   pc.anno as categoria_anno, pc.nome as categoria_nome, pc.id as categoria_id
+            FROM openday o
+            LEFT JOIN persone p ON o.persona_id = p.id
+            LEFT JOIN categorie pc ON p.categoria_id = pc.id
+            ORDER BY o.iscritto DESC, o.cognome, o.nome
+        """
+        rows = db.execute(text(query)).fetchall()
     result = []
     for r in rows:
         d = dict(r._mapping)
@@ -47,10 +61,18 @@ def format_nome(val):
     return ' '.join(w[:1].upper() + w[1:].lower() for w in val.split())
 
 @router.post("/")
-def create_openday(entry: OpendayCreate, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
-    societa_id = get_societa_filter(current_user) or current_user.societa_id
+def create_openday(
+    entry: OpendayCreate,
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
+    current_user: Utente = Depends(get_segreteria),
+    db: Session = Depends(get_db)
+):
+    eff_soc = resolve_tenant_societa_id(current_user, societa_id, request)
+    if not eff_soc:
+        raise HTTPException(status_code=400, detail="Specificare una societa_id valida")
     o = models.Openday(
-        societa_id=societa_id,
+        societa_id=eff_soc,
         nome=format_nome(entry.nome),
         cognome=format_cognome(entry.cognome),
         data_nascita=entry.data_nascita,
@@ -77,12 +99,12 @@ def create_openday(entry: OpendayCreate, current_user: Utente = Depends(get_segr
     }
 
 @router.put("/{entry_id}")
-def update_openday(entry_id: int, entry: OpendayUpdate, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
+def update_openday(entry_id: int, entry: OpendayUpdate, request: Request = None, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
     o = db.query(models.Openday).filter(models.Openday.id == entry_id).first()
     if not o:
         raise HTTPException(status_code=404, detail="Non trovato")
-    societa_id = get_societa_filter(current_user) or current_user.societa_id
-    if o.societa_id != societa_id:
+    eff_soc = get_societa_filter(current_user, None, request)
+    if eff_soc is not None and o.societa_id != eff_soc:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     fields = entry.model_dump(exclude_unset=True)
     for field, val in fields.items():
@@ -101,12 +123,12 @@ def update_openday(entry_id: int, entry: OpendayUpdate, current_user: Utente = D
     }
 
 @router.delete("/{entry_id}")
-def delete_openday(entry_id: int, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
+def delete_openday(entry_id: int, request: Request = None, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
     o = db.query(models.Openday).filter(models.Openday.id == entry_id).first()
     if not o:
         raise HTTPException(status_code=404, detail="Non trovato")
-    societa_id = get_societa_filter(current_user) or current_user.societa_id
-    if o.societa_id != societa_id:
+    eff_soc = get_societa_filter(current_user, None, request)
+    if eff_soc is not None and o.societa_id != eff_soc:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     persona_id = o.persona_id
     db.delete(o)
@@ -122,10 +144,13 @@ def delete_openday(entry_id: int, current_user: Utente = Depends(get_segreteria)
     return {"ok": True}
 
 @router.post("/{entry_id}/iscrivi")
-def iscrivi_openday(entry_id: int, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
+def iscrivi_openday(entry_id: int, request: Request = None, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
     o = db.query(models.Openday).filter(models.Openday.id == entry_id).first()
     if not o:
         raise HTTPException(status_code=404, detail="Non trovato")
+    eff_soc = get_societa_filter(current_user, None, request)
+    if eff_soc is not None and o.societa_id != eff_soc:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     if o.iscritto:
         return {"ok": True, "persona_id": o.persona_id}
 
@@ -163,10 +188,13 @@ def iscrivi_openday(entry_id: int, current_user: Utente = Depends(get_segreteria
     return {"ok": True, "persona_id": p.id, "categoria_id": cat.id, "categoria_anno": cat.anno}
 
 @router.post("/{entry_id}/disiscrivi")
-def disiscrivi_openday(entry_id: int, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
+def disiscrivi_openday(entry_id: int, request: Request = None, current_user: Utente = Depends(get_segreteria), db: Session = Depends(get_db)):
     o = db.query(models.Openday).filter(models.Openday.id == entry_id).first()
     if not o:
         raise HTTPException(status_code=404, detail="Non trovato")
+    eff_soc = get_societa_filter(current_user, None, request)
+    if eff_soc is not None and o.societa_id != eff_soc:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     if not o.iscritto:
         return {"ok": True, "persona_id": o.persona_id}
 

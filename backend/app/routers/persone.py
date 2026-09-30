@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -11,7 +11,7 @@ from ..rate_limit import limiter
 from ..utils.codice_fiscale import genera_codice_fiscale
 from ..core import encryption
 from ..core.naming import format_nome, format_cognome
-from ..core.deps import get_societa_filter
+from ..core.deps import get_societa_filter, resolve_tenant_societa_id
 from ..core.encryption import (
     safe_encrypt,
     safe_decrypt,
@@ -28,8 +28,14 @@ SENSITIVE_FIELDS = frozenset(['codice_fiscale', 'tel_papa', 'tel_mamma', 'tel_ra
 
 @router.get("/")
 @limiter.limit("60/minute")
-def get_persone(request: Request, categoria_id: Optional[int] = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
-    societa_id = get_societa_filter(current_user)
+def get_persone(
+    request: Request,
+    categoria_id: Optional[int] = None,
+    societa_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Utente = Depends(get_current_user)
+):
+    societa_id = get_societa_filter(current_user, societa_id, request)
     is_admin = current_user.is_admin or current_user.is_super_admin or current_user.ruolo == 'segreteria'
 
     # Se la categoria è Portieri (is_portieri=1), restituisci tutti i portieri di tutte le categorie
@@ -104,8 +110,8 @@ def get_persone(request: Request, categoria_id: Optional[int] = None, db: Sessio
     return results
 
 @router.post("/")
-def create_persona(p: schemas.PersonaCreate, db: Session = Depends(get_db), current_user: Utente = Depends(get_persona_staff)):
-    societa_id = get_societa_filter(current_user) or current_user.societa_id
+def create_persona(p: schemas.PersonaCreate, request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_persona_staff)):
+    societa_id = resolve_tenant_societa_id(current_user, getattr(p, 'societa_id', None), request, categoria_id=p.categoria_id, db=db)
     data = p.model_dump()
     data["societa_id"] = societa_id
     if data.get("pagamenti_in_regola") is None:

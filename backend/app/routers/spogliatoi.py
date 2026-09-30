@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy import text
+from typing import Optional
 from ..database import get_db
 from ..routers.auth import get_current_user, check_societa
 from ..core.security import get_staff_admin
+from ..core.deps import get_societa_filter, resolve_tenant_societa_id
 from ..schemas import (
     SpogliatoioCreate,
     SpogliatoioUpdate,
@@ -24,13 +26,12 @@ def check_spogliatoio_access(db, spogliatoio_id, user):
     check_societa(user, row.societa_id)
 
 @router.get("/")
-def lista_spogliatoi(societa_id: int = None, db=Depends(get_db), user=Depends(get_current_user)):
-    if not user.is_super_admin:
-        societa_id = user.societa_id
-    if societa_id:
+def lista_spogliatoi(societa_id: Optional[int] = Query(None), request: Request = None, db=Depends(get_db), user=Depends(get_current_user)):
+    sid = get_societa_filter(user, societa_id, request)
+    if sid:
         res = db.execute(
             text("SELECT * FROM spogliatoi WHERE societa_id = :sid ORDER BY ordine, etichetta"),
-            {"sid": societa_id}
+            {"sid": sid}
         )
     else:
         res = db.execute(text("SELECT * FROM spogliatoi ORDER BY ordine, etichetta"))
@@ -38,15 +39,15 @@ def lista_spogliatoi(societa_id: int = None, db=Depends(get_db), user=Depends(ge
     return [dict(r._mapping) for r in rows]
 
 @router.get("/assegnazioni/settimana/{data_inizio}")
-def assegnazioni_settimana(data_inizio: str, db=Depends(get_db), user=Depends(get_current_user)):
+def assegnazioni_settimana(data_inizio: str, societa_id: Optional[int] = Query(None), request: Request = None, db=Depends(get_db), user=Depends(get_current_user)):
     from datetime import datetime, timedelta
     data_inizio_date = datetime.strptime(data_inizio, "%Y-%m-%d").date()
     data_fine_date = data_inizio_date + timedelta(days=4)
-    societa_filter = ""
+    sid = get_societa_filter(user, societa_id, request)
+    societa_filter = " AND sa.societa_id = :sid" if sid else ""
     params = {"data_inizio": data_inizio, "data_inizio_date": data_inizio_date, "data_fine_date": data_fine_date}
-    if not user.is_super_admin:
-        societa_filter = " AND sa.societa_id = :sid"
-        params["sid"] = user.societa_id
+    if sid:
+        params["sid"] = sid
     res = db.execute(
         text(f"""
             SELECT sa.*, s.etichetta as spogliatoio_etichetta,
@@ -68,12 +69,12 @@ def assegnazioni_settimana(data_inizio: str, db=Depends(get_db), user=Depends(ge
     return [dict(r._mapping) for r in rows]
 
 @router.get("/assegnazioni/giorno/{data_giorno}")
-def assegnazioni_giorno(data_giorno: str, db=Depends(get_db), user=Depends(get_current_user)):
-    societa_filter = ""
+def assegnazioni_giorno(data_giorno: str, societa_id: Optional[int] = Query(None), request: Request = None, db=Depends(get_db), user=Depends(get_current_user)):
+    sid = get_societa_filter(user, societa_id, request)
+    societa_filter = " AND sa.societa_id = :sid" if sid else ""
     params = {"data": data_giorno}
-    if not user.is_super_admin:
-        societa_filter = " AND sa.societa_id = :sid"
-        params["sid"] = user.societa_id
+    if sid:
+        params["sid"] = sid
     res = db.execute(
         text(f"""
             SELECT sa.*, s.etichetta as spogliatoio_etichetta,
@@ -91,12 +92,12 @@ def assegnazioni_giorno(data_giorno: str, db=Depends(get_db), user=Depends(get_c
     return [dict(r._mapping) for r in rows]
 
 @router.get("/assegnazioni/weekend/{weekend_id}")
-def assegnazioni_weekend(weekend_id: int, db=Depends(get_db), user=Depends(get_current_user)):
-    societa_filter = ""
+def assegnazioni_weekend(weekend_id: int, societa_id: Optional[int] = Query(None), request: Request = None, db=Depends(get_db), user=Depends(get_current_user)):
+    sid = get_societa_filter(user, societa_id, request)
+    societa_filter = " AND sa.societa_id = :sid" if sid else ""
     params = {"wid": weekend_id}
-    if not user.is_super_admin:
-        societa_filter = " AND sa.societa_id = :sid"
-        params["sid"] = user.societa_id
+    if sid:
+        params["sid"] = sid
     res = db.execute(
         text(f"""
             SELECT sa.*, s.etichetta as spogliatoio_etichetta,
@@ -113,10 +114,8 @@ def assegnazioni_weekend(weekend_id: int, db=Depends(get_db), user=Depends(get_c
     return [dict(r._mapping) for r in rows]
 
 @router.post("/")
-def crea_spogliatoio(data: SpogliatoioCreate, db=Depends(get_db), user=Depends(get_staff_admin)):
-    societa_id = data.societa_id
-    if not societa_id and not user.is_super_admin:
-        societa_id = user.societa_id
+def crea_spogliatoio(data: SpogliatoioCreate, request: Request = None, db=Depends(get_db), user=Depends(get_staff_admin)):
+    societa_id = resolve_tenant_societa_id(user, data.societa_id, request)
     check_societa(user, societa_id)
     res = db.execute(
         text("""
@@ -346,12 +345,12 @@ def salva_assegnazioni_weekend(data: SpogliatoioAssegnazioneWeekendSave, db=Depe
 # ── Settimana Tipo (Default Week) ──
 
 @router.get("/assegnazioni/default")
-def assegnazioni_default(db=Depends(get_db), user=Depends(get_current_user)):
-    societa_filter = ""
+def assegnazioni_default(societa_id: Optional[int] = Query(None), request: Request = None, db=Depends(get_db), user=Depends(get_current_user)):
+    sid = get_societa_filter(user, societa_id, request)
+    societa_filter = " AND sa.societa_id = :sid" if sid else ""
     params = {}
-    if not user.is_super_admin:
-        societa_filter = " AND sa.societa_id = :sid"
-        params["sid"] = user.societa_id
+    if sid:
+        params["sid"] = sid
     res = db.execute(
         text(f"""
             SELECT sa.*, s.etichetta as spogliatoio_etichetta,
@@ -369,11 +368,13 @@ def assegnazioni_default(db=Depends(get_db), user=Depends(get_current_user)):
     return [dict(r._mapping) for r in rows]
 
 @router.post("/assegnazioni/default/apply")
-def apply_default_week(data_inizio: str, db=Depends(get_db), user=Depends(get_staff_admin)):
+def apply_default_week(data_inizio: str, societa_id: Optional[int] = Query(None), request: Request = None, db=Depends(get_db), user=Depends(get_staff_admin)):
     from datetime import datetime, timedelta
     data_inizio_date = datetime.strptime(data_inizio, "%Y-%m-%d").date()
     data_fine_date = data_inizio_date + timedelta(days=4)
-    societa_id = user.societa_id if not user.is_super_admin else None
+    sid = get_societa_filter(user, societa_id, request)
+    if not sid and not user.is_super_admin:
+        sid = user.societa_id
     db.execute(
         text("""
             DELETE FROM spogliatoi_assegnazioni
@@ -382,7 +383,7 @@ def apply_default_week(data_inizio: str, db=Depends(get_db), user=Depends(get_st
               AND (data_inizio = :data_inizio_date OR data BETWEEN :data_inizio_date AND :data_fine_date)
               AND (:sid IS NULL OR societa_id = :sid)
         """),
-        {"data_inizio_date": data_inizio_date, "data_fine_date": data_fine_date, "sid": societa_id}
+        {"data_inizio_date": data_inizio_date, "data_fine_date": data_fine_date, "sid": sid}
     )
     db.execute(
         text("""
@@ -394,7 +395,7 @@ def apply_default_week(data_inizio: str, db=Depends(get_db), user=Depends(get_st
             WHERE is_default = TRUE
               AND (:sid IS NULL OR societa_id = :sid)
         """),
-        {"data_inizio_date": data_inizio_date, "sid": societa_id}
+        {"data_inizio_date": data_inizio_date, "sid": sid}
     )
     db.commit()
     return {"ok": True}
