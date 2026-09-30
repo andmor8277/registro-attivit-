@@ -136,6 +136,14 @@
           <h1>The Home of <span class="home-text">Football</span></h1>
           <p class="subtitle">Accedi al tuo account</p>
         </div>
+
+        <div v-if="route.query.session_expired === '1'" class="session-expired-notice">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span>Sessione scaduta per inattività (30 minuti). Effettua nuovamente l'accesso.</span>
+        </div>
         
         <form @submit.prevent="doLogin" class="login-form">
         <div class="form-group">
@@ -235,9 +243,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { login, getMe, getSocieta, getSocietaById, createSocieta, updateSocieta, uploadSocietaFile, createUtente, createCategoria, getCategorie, verificaInvito, googleAuthorize, creaInvito, api, getUploadUrl } from '../../api/index.js'
 import { useStore } from '../../store.js'
+import { resetActivity } from '../../composables/useInactivity.js'
 
 const username = ref('')
 const password = ref('')
@@ -339,6 +348,7 @@ function handleLogosponsorUpload(event) {
   }
 }
 const router = useRouter()
+const route = useRoute()
 const { setToken, clearToken, utenteAttivo, setUtenteAttivo, setSocietaAttiva, setListaSocieta, societaAttiva, setCategoria } = useStore()
 
 function loginGoogle() {
@@ -1406,5 +1416,26 @@ h1 {
 
 .btn-google:active {
   transform: translateY(0);
+}
+
+.session-expired-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  color: #facc15;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.session-expired-notice svg {
+  flex-shrink: 0;
+  color: #facc15;
 }
 </style>

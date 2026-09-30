@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { Capacitor } from '@capacitor/core'
+import { isSessionExpired, recordActivity, clearActivity } from '../../composables/useInactivity.js'
 
 const DEFAULT_PROD_API = 'https://thof.crickethouse.mywire.org/api'
 
@@ -16,8 +17,20 @@ export function getApiBaseUrl() {
 export const api = axios.create({ baseURL: getApiBaseUrl(), timeout: 15000 })
 
 api.interceptors.request.use(config => {
+  if (isSessionExpired()) {
+    localStorage.removeItem('token')
+    localStorage.removeItem('societa_id')
+    localStorage.removeItem('societa_data')
+    localStorage.removeItem('utente_data')
+    clearActivity()
+    if (!window.location.pathname.includes('/login')) {
+      window.location.href = '/login?session_expired=1'
+    }
+    return Promise.reject(new Error('Sessione scaduta per inattività'))
+  }
   const token = localStorage.getItem('token')
   if (token) config.headers.Authorization = `Bearer ${token}`
+  recordActivity()
   return config
 })
 
@@ -28,6 +41,8 @@ api.interceptors.response.use(
       localStorage.removeItem('token')
       localStorage.removeItem('societa_id')
       localStorage.removeItem('societa_data')
+      localStorage.removeItem('utente_data')
+      clearActivity()
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login'
       }

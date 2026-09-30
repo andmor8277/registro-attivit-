@@ -39,7 +39,11 @@ export function useStore() {
       localStorage.removeItem('categoria_data')
     }
   }
-  function setToken(t) { token.value = t; localStorage.setItem('token', t) }
+  function setToken(t) { 
+    token.value = t; 
+    localStorage.setItem('token', t)
+    localStorage.setItem('thof_last_activity', Date.now().toString())
+  }
   function setStagioneCorrente(s) {
     stagioneCorrente.value = s
     if (s) {
@@ -87,6 +91,7 @@ export function useStore() {
     localStorage.removeItem('categoria_id')
     localStorage.removeItem('categoria_data')
     localStorage.removeItem('utente_data')
+    localStorage.removeItem('thof_last_activity')
   }
   
   // Carica utente salvato
