@@ -1,0 +1,1 @@
+scripts/sync_to_usb.sh
