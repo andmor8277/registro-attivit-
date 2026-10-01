@@ -1,12 +1,17 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # The Home of Football — Git post-commit hook
 # Sincronizza automaticamente il repository sulla chiavetta USB dopo ogni commit (se collegata).
 
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+# Rimuovi variabili d'ambiente Git interne esportate dal motore degli hook
+unset GIT_DIR GIT_INDEX_FILE GIT_PREFIX GIT_WORK_TREE
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 if [ -f "$ROOT/scripts/sync_to_usb.sh" ]; then
-    # Esegui in background senza bloccare il flusso git se richiesto, oppure sincrono veloce
-    "$ROOT/scripts/sync_to_usb.sh" --quiet >/dev/null 2>&1 &
+    # Esegue la sincronizzazione silenziosa verso USB se presente
+    if "$ROOT/scripts/sync_to_usb.sh" --quiet 2>/dev/null; then
+        echo -e "\033[1;32m[THOF]\033[0m 💾 Chiavetta USB aggiornata all'ultimo commit!"
+    fi
 fi
 
 exit 0
