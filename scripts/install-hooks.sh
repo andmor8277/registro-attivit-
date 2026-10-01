@@ -21,3 +21,10 @@ fi
 
 echo "Hook pre-commit installato in $ROOT/.git/hooks/pre-commit"
 ls -l "$ROOT/.git/hooks/pre-commit"
+
+if [ -f "$ROOT/scripts/git-hooks/post-commit" ]; then
+  chmod +x "$ROOT/scripts/git-hooks/post-commit"
+  ln -sf ../../scripts/git-hooks/post-commit "$ROOT/.git/hooks/post-commit"
+  echo "Hook post-commit (sync USB) installato in $ROOT/.git/hooks/post-commit"
+  ls -l "$ROOT/.git/hooks/post-commit"
+fi

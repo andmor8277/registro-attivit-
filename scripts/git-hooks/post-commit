@@ -1,0 +1,12 @@
+#!/bin/sh
+# The Home of Football — Git post-commit hook
+# Sincronizza automaticamente il repository sulla chiavetta USB dopo ogni commit (se collegata).
+
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+
+if [ -f "$ROOT/scripts/sync_to_usb.sh" ]; then
+    # Esegui in background senza bloccare il flusso git se richiesto, oppure sincrono veloce
+    "$ROOT/scripts/sync_to_usb.sh" --quiet >/dev/null 2>&1 &
+fi
+
+exit 0

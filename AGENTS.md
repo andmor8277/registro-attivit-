@@ -20,6 +20,9 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 ./scripts/backup_offsite_github.sh  # Backup offsite cifrato AES-256 (DB + uploads) su GitHub privato
 ./scripts/restore_offsite_github.sh # Disaster Recovery / ripristino da backup GitHub
 ./scripts/setup_backup_cron.sh      # Installa cron job automatico notturno (ore 03:00)
+./sync_to_usb.sh                    # Sincronizza il progetto sulla chiavetta USB (anche auto al commit)
+./aggiorna_progetto.sh              # Aggiorna il progetto all'ultimo commit (da GitHub o da USB se offline)
+./scripts/clone_from_usb.sh         # Inizializza/clona il progetto da USB su una nuova postazione
 ```
 
 ## Flusso di Lavoro Obbligatorio (Dev-First)
