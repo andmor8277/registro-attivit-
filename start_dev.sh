@@ -3,10 +3,12 @@ set -e
 
 echo "=== Avvio Ambiente Dev ==="
 
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Carica variabili d'ambiente
-if [ -f /home/andrea/registro_presenze/.env ]; then
+if [ -f "${PROJECT_DIR}/.env" ]; then
     set -a
-    source /home/andrea/registro_presenze/.env
+    source "${PROJECT_DIR}/.env"
     set +a
 fi
 
@@ -44,13 +46,13 @@ fi
 echo "3. Avvio Backend (porta 8000)..."
 tmux kill-session -t registro_backend 2>/dev/null || true
 tmux new-session -d -s registro_backend \
-  'set -a && source /home/andrea/registro_presenze/.env && set +a && export DATABASE_URL="postgresql://registro_user:'${DB_PASSWORD:-postgres}'@/registro?host=/tmp/pgsocket&port=5433" && cd /home/andrea/registro_presenze/backend && python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000'
+  'set -a && source "'${PROJECT_DIR}'/.env" && set +a && export DATABASE_URL="postgresql://registro_user:'${DB_PASSWORD:-postgres}'@/registro?host=/tmp/pgsocket&port=5433" && cd "'${PROJECT_DIR}'/backend" && python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000'
 
 # 4. Avvia frontend in tmux
 echo "4. Avvio Frontend (porta 5173)..."
 tmux kill-session -t registro_frontend 2>/dev/null || true
 tmux new-session -d -s registro_frontend \
-  'cd /home/andrea/registro_presenze/frontend && npm run dev'
+  'cd "'${PROJECT_DIR}'/frontend" && npm run dev'
 
 sleep 2
 echo ""
