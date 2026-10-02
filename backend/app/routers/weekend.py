@@ -96,6 +96,9 @@ def aggiorna_weekend(weekend_id: int, data: WeekendUpdate, db=Depends(get_db), u
 @router.delete("/{weekend_id}")
 def elimina_weekend(weekend_id: int, db=Depends(get_db), user=Depends(get_staff_admin)):
     check_weekend_access(db, weekend_id, user)
+    db.execute(text("DELETE FROM campi_assegnazioni WHERE weekend_id = :id"), {"id": weekend_id})
+    db.execute(text("DELETE FROM spogliatoi_assegnazioni WHERE weekend_id = :id"), {"id": weekend_id})
+    db.execute(text("DELETE FROM partite WHERE weekend_id = :id"), {"id": weekend_id})
     db.execute(text("DELETE FROM weekend WHERE id = :id"), {"id": weekend_id})
     db.commit()
     return {"ok": True}

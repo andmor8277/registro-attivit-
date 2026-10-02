@@ -1170,6 +1170,37 @@ def run_migrations():
                 print(f"Migration warning (retroactive sync): {e}")
                 conn.rollback()
 
+            # Pulizia partite orfane (partite con weekend_id inesistente) e vincolo FK con ON DELETE CASCADE
+            try:
+                conn.execute(text("""
+                    DELETE FROM partite 
+                    WHERE weekend_id IS NOT NULL 
+                      AND weekend_id NOT IN (SELECT id FROM weekend);
+                """))
+                conn.commit()
+                print("Migration: Cleaned up orphaned partite")
+            except Exception as e:
+                print(f"Migration warning (clean orphaned partite): {e}")
+                conn.rollback()
+
+            try:
+                result = conn.execute(text("""
+                    SELECT constraint_name 
+                    FROM information_schema.table_constraints 
+                    WHERE table_name = 'partite' AND constraint_name = 'partite_weekend_id_fkey'
+                """))
+                if result.fetchone() is None:
+                    conn.execute(text("""
+                        ALTER TABLE partite 
+                        ADD CONSTRAINT partite_weekend_id_fkey 
+                        FOREIGN KEY (weekend_id) REFERENCES weekend(id) ON DELETE CASCADE
+                    """))
+                    conn.commit()
+                    print("Migration: Added FK constraint partite_weekend_id_fkey")
+            except Exception as e:
+                print(f"Migration warning (partite_weekend_id_fkey): {e}")
+                conn.rollback()
+
             try:
                 result = conn.execute(text(
                     "SELECT column_name FROM information_schema.columns "
