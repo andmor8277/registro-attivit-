@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="true"
@@ -40,6 +41,14 @@
 
         </activity>
 
+        <!-- Override tema per evitare schermata nera su CustomTabs/BrowserControllerActivity su Android datati -->
+        <activity
+            android:name="com.capacitorjs.plugins.browser.BrowserControllerActivity"
+            android:theme="@style/TransparentBrowserTheme"
+            tools:replace="android:theme"
+            android:exported="false"
+            android:launchMode="singleTask" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -50,6 +59,17 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
     </application>
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+    </queries>
 
     <!-- Permissions -->
 
