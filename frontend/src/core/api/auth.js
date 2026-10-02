@@ -30,7 +30,20 @@ export const googleAuthorize = async (invitoToken) => {
   if (Capacitor.isNativePlatform()) {
     params.append('mobile', 'true')
     const authUrl = `${getApiBaseUrl()}/auth/google/authorize?${params.toString()}`
-    await Browser.open({ url: authUrl, windowName: '_system' })
+
+    // Su Android nativo: usa l'intent di sistema per aprire il browser predefinito.
+    // Risolve definitivamente il freeze a schermata nera causato da CustomTabs/BrowserControllerActivity su dispositivi datati.
+    if (window.AndroidBridge && typeof window.AndroidBridge.openSystemBrowser === 'function') {
+      window.AndroidBridge.openSystemBrowser(authUrl)
+      return
+    }
+
+    try {
+      await Browser.open({ url: authUrl })
+    } catch (e) {
+      console.warn('Browser.open fallito, fallback su browser di sistema:', e)
+      window.open(authUrl, '_system')
+    }
     return
   }
   const queryStr = params.toString() ? `?${params.toString()}` : ''
