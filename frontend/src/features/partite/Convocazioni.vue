@@ -1776,16 +1776,16 @@ async function esportaPDF() {
       doc.text(`Pagina ${i} di ${pageCount}`, pageWidth - margin, pageHeight - 7, { align: 'right' })
     }
 
-    const categoriaNome = categoriaAttiva.value?.nome || 'Categoria'
+    const categoriaNome = (categoriaAttiva.value?.nome || 'Categoria').replace(/[/\\?%*:|"<>]/g, '_')
     const dataInizio = convocazione.value.data_inizio || ''
     const dataFine = convocazione.value.data_fine || ''
-    const dataFormattata = dataInizio ? dataInizio.split('-').reverse().join('/') : 'data'
-    const dataFinale = dataFine ? dataFormattata + '-' + dataFine.split('-').reverse().join('/') : dataFormattata
-    const filename = `Convocazioni ${categoriaNome} ${dataFinale}.pdf`
-    await exportPdf(doc, filename, `Convocazioni ${categoriaNome}`)
+    const dataFormattata = dataInizio ? dataInizio.split('-').reverse().join('-') : 'data'
+    const dataFinale = dataFine ? dataFormattata + '_' + dataFine.split('-').reverse().join('-') : dataFormattata
+    const filename = `Convocazioni_${categoriaNome}_${dataFinale}.pdf`
+    await exportPdf(doc, filename, `Convocazioni ${categoriaAttiva.value?.nome || ''}`.trim())
   } catch (e) {
     console.error('Errore PDF:', e)
-    alert('Errore nella generazione del PDF')
+    alert('Errore nella generazione del PDF: ' + (e?.message || e))
   }
 }
 
