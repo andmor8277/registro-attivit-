@@ -1615,16 +1615,17 @@ async function esportaPDF() {
     y += multiGare ? 4 : 6
 
     function buildRows(gara) {
-      return (gara.giocatori || [])
-        .map((pid, i) => {
-          if (!pid) return null
+      const list = (gara.giocatori || [])
+        .filter(Boolean)
+        .map(pid => {
           const p = getPersona(pid)
           const cognome = (p?.cognome || '—').trim()
           const nome = (p?.nome || '').trim()
           const full = nome ? `${cognome} ${nome}` : cognome
-          return [String(i + 1), full]
+          return { pid, cognome, nome, full }
         })
-        .filter(Boolean)
+      list.sort((a, b) => a.cognome.localeCompare(b.cognome, 'it', { sensitivity: 'base' }) || a.nome.localeCompare(b.nome, 'it', { sensitivity: 'base' }))
+      return list.map((item, idx) => [String(idx + 1), item.full])
     }
 
     function renderInfoAbove(gara, x, width, startY, compact = false) {
