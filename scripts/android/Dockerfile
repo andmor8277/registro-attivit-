@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk-jammy
+FROM docker.io/library/eclipse-temurin:21-jdk-jammy
 
 ENV ANDROID_SDK_ROOT=/opt/android-sdk
 ENV ANDROID_HOME=/opt/android-sdk
