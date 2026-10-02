@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import date
@@ -79,6 +80,7 @@ def dettaglio(cid: int, db: Session = Depends(get_db), current_user: Utente = De
         result_gare.append({
             "id": g.id, "partita_id": g.partita_id, "numero": g.numero, "gara": g.gara, "data": g.data,
             "campo": g.campo, "indirizzo": g.indirizzo, "appuntamento": g.appuntamento,
+            "inizio_gara": g.inizio_gara, "allenatore": g.allenatore, "allenatori": g.allenatori or [], "giocatori": persone
         })
     w_row = db.execute(text("SELECT nome FROM weekend WHERE id = :wid"), {"wid": c.weekend_id}).fetchone() if c.weekend_id else None
     weekend_nome = w_row[0] if w_row else None
