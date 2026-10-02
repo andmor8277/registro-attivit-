@@ -79,9 +79,10 @@ def dettaglio(cid: int, db: Session = Depends(get_db), current_user: Utente = De
         result_gare.append({
             "id": g.id, "partita_id": g.partita_id, "numero": g.numero, "gara": g.gara, "data": g.data,
             "campo": g.campo, "indirizzo": g.indirizzo, "appuntamento": g.appuntamento,
-            "inizio_gara": g.inizio_gara, "allenatore": g.allenatore, "allenatori": g.allenatori or [], "giocatori": persone
         })
-    return {"id": c.id, "categoria_id": c.categoria_id, "weekend_id": c.weekend_id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "note": c.note, "esclusioni": c.esclusioni or [], "gare": result_gare}
+    w_row = db.execute(text("SELECT nome FROM weekend WHERE id = :wid"), {"wid": c.weekend_id}).fetchone() if c.weekend_id else None
+    weekend_nome = w_row[0] if w_row else None
+    return {"id": c.id, "categoria_id": c.categoria_id, "weekend_id": c.weekend_id, "weekend_nome": weekend_nome, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "note": c.note, "esclusioni": c.esclusioni or [], "gare": result_gare}
 
 @router.post("/")
 def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
@@ -98,20 +99,30 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
     weekend_id = data.weekend_id
     if not weekend_id and data.data_inizio:
         w_row = db.execute(text("""
-            SELECT id FROM weekend
+            SELECT id, data_inizio, data_fine FROM weekend
             WHERE societa_id = :sid AND data_inizio <= :di AND data_fine >= :di
             LIMIT 1
         """), {"sid": societa_id, "di": data.data_inizio}).fetchone()
         if w_row:
             weekend_id = w_row[0]
 
-    c = Convocazione(societa_id=societa_id, categoria_id=data.categoria_id, weekend_id=weekend_id, data_inizio=data.data_inizio, data_fine=data.data_fine, note=data.note, esclusioni=data.esclusioni)
+    if not weekend_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Non è possibile creare una convocazione senza un weekend programmato dal Responsabile."
+        )
+
+    w_info = db.execute(text("SELECT data_inizio, data_fine FROM weekend WHERE id = :wid"), {"wid": weekend_id}).fetchone()
+    data_inizio = w_info[0] if w_info else data.data_inizio
+    data_fine = w_info[1] if w_info else data.data_fine
+
+    c = Convocazione(societa_id=societa_id, categoria_id=data.categoria_id, weekend_id=weekend_id, data_inizio=data_inizio, data_fine=data_fine, note=data.note, esclusioni=data.esclusioni)
     db.add(c)
     db.flush()
     for g in data.gare:
         partita_id = g.partita_id
-        if not partita_id and (g.data or data.data_inizio):
-            dt = g.data or data.data_inizio
+        dt = g.data or data_inizio
+        if not partita_id and dt:
             p_row = db.execute(text("""
                 SELECT id FROM partite
                 WHERE categoria_id = :cid AND data_partite = :data
@@ -120,7 +131,32 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
             if p_row:
                 partita_id = p_row[0]
 
-        if partita_id:
+        if not partita_id and weekend_id:
+            # Nuova partita aggiunta dal mister al weekend del responsabile: registrala in partite
+            ora_short = g.inizio_gara[:5] if g.inizio_gara else None
+            appunt = g.appuntamento if g.appuntamento else None
+            res_p = db.execute(text("""
+                INSERT INTO partite (
+                    categoria_id, data_partite, ora, ora_presentazione,
+                    avversario, campo, indirizzo, casa_fuori, societa_id, weekend_id
+                ) VALUES (
+                    :cid, :data, :ora, :appunt,
+                    :avv, :campo, :indirizzo, :cf, :sid, :wid
+                ) RETURNING id
+            """), {
+                "cid": data.categoria_id,
+                "data": dt,
+                "ora": ora_short,
+                "appunt": appunt,
+                "avv": g.gara or "Gara",
+                "campo": g.campo or "",
+                "indirizzo": g.indirizzo or "",
+                "cf": "casa",
+                "sid": societa_id,
+                "wid": weekend_id
+            })
+            partita_id = res_p.scalar()
+        elif partita_id:
             ora_short = g.inizio_gara[:5] if g.inizio_gara else None
             appunt = g.appuntamento if g.appuntamento else None
             db.execute(text("""
@@ -138,7 +174,7 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
                 "indirizzo": g.indirizzo if g.indirizzo else None
             })
 
-        gara = ConvocazioneGara(convocazione_id=c.id, partita_id=partita_id, numero=g.numero, gara=g.gara, data=g.data,
+        gara = ConvocazioneGara(convocazione_id=c.id, partita_id=partita_id, numero=g.numero, gara=g.gara, data=dt,
             campo=g.campo, indirizzo=g.indirizzo, appuntamento=g.appuntamento,
             inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [])
         db.add(gara)
@@ -158,21 +194,34 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
     societa_id = get_societa_filter(current_user)
     if societa_id and c.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
-    c.data_inizio = data.data_inizio
-    c.data_fine = data.data_fine
-    c.note = data.note
-    c.esclusioni = data.esclusioni
 
     weekend_id = data.weekend_id or c.weekend_id
     if not weekend_id and data.data_inizio and c.societa_id:
         w_row = db.execute(text("""
-            SELECT id FROM weekend
+            SELECT id, data_inizio, data_fine FROM weekend
             WHERE societa_id = :sid AND data_inizio <= :di AND data_fine >= :di
             LIMIT 1
         """), {"sid": c.societa_id, "di": data.data_inizio}).fetchone()
         if w_row:
             weekend_id = w_row[0]
+
+    if not weekend_id:
+        raise HTTPException(
+            status_code=400,
+            detail="La convocazione deve essere associata a un weekend programmato dal Responsabile."
+        )
+
+    w_info = db.execute(text("SELECT data_inizio, data_fine FROM weekend WHERE id = :wid"), {"wid": weekend_id}).fetchone()
+    if w_info:
+        c.data_inizio = w_info[0]
+        c.data_fine = w_info[1]
+    else:
+        c.data_inizio = data.data_inizio
+        c.data_fine = data.data_fine
+
     c.weekend_id = weekend_id
+    c.note = data.note
+    c.esclusioni = data.esclusioni
 
     # Elimina e ricrea gare
     gare_old = db.query(ConvocazioneGara).filter(ConvocazioneGara.convocazione_id == cid).all()
@@ -181,17 +230,42 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
     db.query(ConvocazioneGara).filter(ConvocazioneGara.convocazione_id == cid).delete()
     for g in data.gare:
         partita_id = g.partita_id
-        if not partita_id and (g.data or data.data_inizio):
-            dt = g.data or data.data_inizio
+        dt = g.data or c.data_inizio
+        if not partita_id and dt:
             p_row = db.execute(text("""
                 SELECT id FROM partite
                 WHERE categoria_id = :cid AND data_partite = :data
                 LIMIT 1
-            """), {"cid": data.categoria_id, "data": dt}).fetchone()
+            """), {"cid": c.categoria_id, "data": dt}).fetchone()
             if p_row:
                 partita_id = p_row[0]
 
-        if partita_id:
+        if not partita_id and weekend_id:
+            # Nuova partita aggiunta dal mister al weekend del responsabile: registrala in partite
+            ora_short = g.inizio_gara[:5] if g.inizio_gara else None
+            appunt = g.appuntamento if g.appuntamento else None
+            res_p = db.execute(text("""
+                INSERT INTO partite (
+                    categoria_id, data_partite, ora, ora_presentazione,
+                    avversario, campo, indirizzo, casa_fuori, societa_id, weekend_id
+                ) VALUES (
+                    :cid, :data, :ora, :appunt,
+                    :avv, :campo, :indirizzo, :cf, :sid, :wid
+                ) RETURNING id
+            """), {
+                "cid": c.categoria_id,
+                "data": dt,
+                "ora": ora_short,
+                "appunt": appunt,
+                "avv": g.gara or "Gara",
+                "campo": g.campo or "",
+                "indirizzo": g.indirizzo or "",
+                "cf": "casa",
+                "sid": c.societa_id,
+                "wid": weekend_id
+            })
+            partita_id = res_p.scalar()
+        elif partita_id:
             ora_short = g.inizio_gara[:5] if g.inizio_gara else None
             appunt = g.appuntamento if g.appuntamento else None
             db.execute(text("""
@@ -209,7 +283,7 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
                 "indirizzo": g.indirizzo if g.indirizzo else None
             })
 
-        gara = ConvocazioneGara(convocazione_id=cid, partita_id=partita_id, numero=g.numero, gara=g.gara, data=g.data,
+        gara = ConvocazioneGara(convocazione_id=cid, partita_id=partita_id, numero=g.numero, gara=g.gara, data=dt,
             campo=g.campo, indirizzo=g.indirizzo, appuntamento=g.appuntamento,
             inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [])
         db.add(gara)
