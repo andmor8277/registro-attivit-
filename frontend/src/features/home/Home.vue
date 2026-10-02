@@ -338,15 +338,19 @@ function dataLabel(ds) {
 }
 
 function partitaLabel(p) {
-  if (p.source === 'convocazione') return p.title || 'Gara'
-  const avv = p.avversario || 'TBD'
   const noi = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Noi'
-  return p.casa_fuori === 'fuori' ? `${avv} vs ${noi}` : `${noi} vs ${avv}`
+  if (p.avversario) {
+    const avv = p.avversario
+    return p.casa_fuori === 'fuori' ? `${avv} vs ${noi}` : `${noi} vs ${avv}`
+  }
+  if (p.title || p.gara) return p.title || p.gara
+  return 'Gara'
 }
 
 function badgeLabel(p) {
-  if (p.source === 'convocazione') return 'Gara'
-  return p.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa'
+  if (p.casa_fuori === 'fuori') return 'Trasferta'
+  if (p.casa_fuori === 'casa') return 'Casa'
+  return isTrasferta(p) ? 'Trasferta' : 'Casa'
 }
 
 const prossimeGare = computed(() => {
@@ -362,37 +366,134 @@ const prossimeGare = computed(() => {
   )
 
   const events = []
+  const matchedGareKeys = new Set()
+
+  // 1. Processa le partite dal programma gare del responsabile (fonte principale del calendario)
   for (const p of partiteFuture) {
     const d = new Date(p.data_partite + 'T' + (p.ora ? p.ora.slice(0, 5) : '00:00'))
     if (isNaN(d)) continue
-    events.push({ ...p, data: p.data_partite, ora: p.ora || '', _dt: d, source: 'partita' })
+
+    let matchedConv = null
+    let matchedGara = null
+    let matchedGaraKey = null
+
+    for (const c of convFuture) {
+      if (c.categoria_id !== p.categoria_id) continue
+      const gare = c.gare || []
+      for (let gi = 0; gi < gare.length; gi++) {
+        const g = gare[gi]
+        const gKey = `${c.id}_${g.id || gi}`
+        if (matchedGareKeys.has(gKey)) continue
+
+        const dataGara = g.data || c.data_inizio
+        const matchByPartitaId = g.partita_id && g.partita_id === p.id
+        const sameDate = dataGara === p.data_partite
+
+        let matchByDetails = false
+        if (sameDate) {
+          const avvLower = (p.avversario || '').toLowerCase().trim()
+          const gTitLower = (g.gara || '').toLowerCase().trim()
+          const opponentMatch = avvLower && gTitLower && (gTitLower.includes(avvLower) || avvLower.includes(gTitLower))
+          const timeMatch = p.ora && g.inizio_gara && p.ora.slice(0, 5) === g.inizio_gara.slice(0, 5)
+          const singleGame = gare.length === 1 && partiteFuture.filter(pf => pf.categoria_id === p.categoria_id && pf.data_partite === p.data_partite).length === 1
+
+          if (opponentMatch || timeMatch || singleGame) {
+            matchByDetails = true
+          }
+        }
+
+        if (matchByPartitaId || matchByDetails) {
+          matchedConv = c
+          matchedGara = g
+          matchedGaraKey = gKey
+          break
+        }
+      }
+      if (matchedGara) break
+    }
+
+    if (matchedGara) {
+      matchedGareKeys.add(matchedGaraKey)
+      events.push({
+        ...p,
+        ...matchedGara,
+        data: p.data_partite,
+        ora: p.ora ? p.ora.slice(0, 5) : (matchedGara.inizio_gara ? matchedGara.inizio_gara.slice(0, 5) : ''),
+        avversario: p.avversario,
+        casa_fuori: p.casa_fuori || 'casa',
+        campo: p.campo || matchedGara.campo || '',
+        indirizzo: p.indirizzo || matchedGara.indirizzo || '',
+        categoria_id: p.categoria_id,
+        convocazione_id: matchedConv.id,
+        has_convocazione: true,
+        _dt: d,
+        source: 'partita'
+      })
+    } else {
+      events.push({
+        ...p,
+        data: p.data_partite,
+        ora: p.ora ? p.ora.slice(0, 5) : '',
+        avversario: p.avversario,
+        casa_fuori: p.casa_fuori || 'casa',
+        campo: p.campo || '',
+        indirizzo: p.indirizzo || '',
+        categoria_id: p.categoria_id,
+        has_convocazione: false,
+        _dt: d,
+        source: 'partita'
+      })
+    }
   }
+
+  // 2. Aggiungi convocazioni non associate a partite del calendario (es. amichevoli o tornei inseriti solo dai mister)
   for (const c of convFuture) {
-    for (const g of c.gare || []) {
+    const gare = c.gare || []
+    for (let gi = 0; gi < gare.length; gi++) {
+      const g = gare[gi]
+      const gKey = `${c.id}_${g.id || gi}`
+      if (matchedGareKeys.has(gKey)) continue
+
       const dataGara = g.data || c.data_inizio
       if (!dataGara) continue
       const d = new Date(dataGara + 'T' + (g.inizio_gara ? g.inizio_gara.slice(0, 5) : '00:00'))
       if (isNaN(d)) continue
-      events.push({ ...g, categoria_id: c.categoria_id, convocazione_id: c.id, data: dataGara, ora: g.inizio_gara || '', title: g.gara || '', _dt: d, source: 'convocazione' })
+
+      events.push({
+        ...g,
+        categoria_id: c.categoria_id,
+        convocazione_id: c.id,
+        data: dataGara,
+        ora: g.inizio_gara ? g.inizio_gara.slice(0, 5) : '',
+        title: g.gara || '',
+        has_convocazione: true,
+        _dt: d,
+        source: 'convocazione'
+      })
     }
   }
+
   events.sort((a, b) => a._dt - b._dt)
 
+  // Calcola la finestra temporale della prossima giornata / weekend di gare
   let winStart = null
   let winEnd = null
-  const convSorted = convFuture.slice().sort((a, b) => (a.data_inizio || '').localeCompare(b.data_inizio || ''))
-  if (convSorted.length > 0) {
-    winStart = convSorted[0].data_inizio
-    winEnd = convSorted[0].data_fine || convSorted[0].data_inizio
-  } else if (events.length > 0) {
-    const dow = events[0]._dt.getDay()
-    const sab = new Date(events[0]._dt)
-    sab.setDate(sab.getDate() - ((dow + 1) % 7))
-    const dom = new Date(sab)
-    dom.setDate(sab.getDate() + 1)
-    winStart = getLocalDateStr(sab)
-    winEnd = getLocalDateStr(dom)
+  if (events.length > 0) {
+    const firstDt = events[0]._dt
+    const dow = firstDt.getDay() // 0=dom, 6=sab
+    if (dow === 6 || dow === 0) {
+      const sab = new Date(firstDt)
+      sab.setDate(sab.getDate() - (dow === 0 ? 1 : 0))
+      const dom = new Date(sab)
+      dom.setDate(sab.getDate() + 1)
+      winStart = getLocalDateStr(sab)
+      winEnd = getLocalDateStr(dom)
+    } else {
+      winStart = getLocalDateStr(firstDt)
+      winEnd = winStart
+    }
   }
+
   if (!winStart) return []
 
   return events

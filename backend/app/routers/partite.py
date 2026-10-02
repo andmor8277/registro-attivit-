@@ -176,15 +176,46 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
             "livello": livello,
         }
     )
-    db.commit()
     row = res.fetchone()
     if not row:
         raise HTTPException(404, "Partita non trovata")
+
+    # Sincronizza automaticamente le gare collegate in convocazione_gare
+    try:
+        ora_short = ora[:5] if ora else None
+        soc_row = db.execute(text("SELECT nome, nome_breve FROM societa WHERE id = :sid"), {"sid": row["societa_id"]}).fetchone()
+        nome_soc = (soc_row._mapping["nome_breve"] or soc_row._mapping["nome"] or "Noi") if soc_row else "Noi"
+        gara_nome = f"{avversario or 'TBD'} vs {nome_soc}" if casa_fuori == "fuori" else f"{nome_soc} vs {avversario or 'TBD'}"
+
+        db.execute(text("""
+            UPDATE convocazione_gare SET
+                data = :data_partite,
+                inizio_gara = :ora,
+                campo = :campo,
+                indirizzo = :indirizzo,
+                gara = :gara
+            WHERE partita_id = :pid
+        """), {
+            "pid": partita_id,
+            "data_partite": data_partite,
+            "ora": ora_short,
+            "campo": campo,
+            "indirizzo": indirizzo,
+            "gara": gara_nome
+        })
+        db.commit()
+    except Exception as e:
+        print(f"Avviso sincronizzazione convocazione_gare: {e}")
+
     return dict(row._mapping)
 
 @router.delete("/{partita_id}")
 def elimina_partita(partita_id: int, db=Depends(get_db), user=Depends(get_staff_admin)):
     check_partite_access(db, partita_id, user)
+    try:
+        db.execute(text("UPDATE convocazione_gare SET partita_id = NULL WHERE partita_id = :id"), {"id": partita_id})
+    except Exception:
+        pass
     db.execute(text("DELETE FROM partite WHERE id = :id"), {"id": partita_id})
     db.commit()
     return {"ok": True}

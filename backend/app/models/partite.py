@@ -8,6 +8,7 @@ class Convocazione(Base):
     id = Column(Integer, primary_key=True)
     societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
     categoria_id = Column(Integer, ForeignKey("categorie.id", ondelete="CASCADE"))
+    weekend_id = Column(Integer, ForeignKey("weekend.id", ondelete="SET NULL"), nullable=True)
     data_inizio = Column(Date, nullable=False)
     data_fine = Column(Date, nullable=True)
     note = Column(String(1000), nullable=True)
@@ -18,6 +19,7 @@ class ConvocazioneGara(Base):
     __tablename__ = "convocazione_gare"
     id = Column(Integer, primary_key=True)
     convocazione_id = Column(Integer, ForeignKey("convocazioni.id", ondelete="CASCADE"))
+    partita_id = Column(Integer, ForeignKey("partite.id", ondelete="SET NULL"), nullable=True)
     numero = Column(Integer, nullable=False)
     gara = Column(String(200), nullable=True)
     data = Column(Date, nullable=True)
