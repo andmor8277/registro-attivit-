@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+import re
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -121,22 +122,35 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
     c = Convocazione(societa_id=societa_id, categoria_id=data.categoria_id, weekend_id=weekend_id, data_inizio=data_inizio, data_fine=data_fine, note=data.note, esclusioni=data.esclusioni)
     db.add(c)
     db.flush()
+    used_pids = {g.partita_id for g in data.gare if g.partita_id}
     for g in data.gare:
         partita_id = g.partita_id
         dt = g.data or data_inizio
         if not partita_id and dt:
-            p_row = db.execute(text("""
+            p_rows = db.execute(text("""
                 SELECT id FROM partite
                 WHERE categoria_id = :cid AND data_partite = :data
-                LIMIT 1
-            """), {"cid": data.categoria_id, "data": dt}).fetchone()
-            if p_row:
-                partita_id = p_row[0]
+                ORDER BY ora ASC NULLS LAST, id ASC
+            """), {"cid": data.categoria_id, "data": dt}).fetchall()
+            for r in p_rows:
+                if r[0] not in used_pids:
+                    partita_id = r[0]
+                    used_pids.add(partita_id)
+                    break
+
+        ora_short = None
+        if g.inizio_gara:
+            m = re.search(r'\b([01]?\d|2[0-3]):[0-5]\d\b', g.inizio_gara)
+            if m:
+                ora_short = m.group(0)
+        appunt_time = None
+        if g.appuntamento:
+            m = re.search(r'\b([01]?\d|2[0-3]):[0-5]\d\b', g.appuntamento)
+            if m:
+                appunt_time = m.group(0)
 
         if not partita_id and weekend_id:
             # Nuova partita aggiunta dal mister al weekend del responsabile: registrala in partite
-            ora_short = g.inizio_gara[:5] if g.inizio_gara else None
-            appunt = g.appuntamento if g.appuntamento else None
             res_p = db.execute(text("""
                 INSERT INTO partite (
                     categoria_id, data_partite, ora, ora_presentazione,
@@ -149,7 +163,7 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
                 "cid": data.categoria_id,
                 "data": dt,
                 "ora": ora_short,
-                "appunt": appunt,
+                "appunt": appunt_time,
                 "avv": g.gara or "Gara",
                 "campo": g.campo or "",
                 "indirizzo": g.indirizzo or "",
@@ -158,9 +172,9 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
                 "wid": weekend_id
             })
             partita_id = res_p.scalar()
+            if partita_id:
+                used_pids.add(partita_id)
         elif partita_id:
-            ora_short = g.inizio_gara[:5] if g.inizio_gara else None
-            appunt = g.appuntamento if g.appuntamento else None
             db.execute(text("""
                 UPDATE partite SET
                     ora = COALESCE(:ora, ora),
@@ -171,7 +185,7 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
             """), {
                 "pid": partita_id,
                 "ora": ora_short,
-                "appunt": appunt,
+                "appunt": appunt_time,
                 "campo": g.campo if g.campo else None,
                 "indirizzo": g.indirizzo if g.indirizzo else None
             })
@@ -230,22 +244,35 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
     for g in gare_old:
         db.query(ConvocazioneGiocatore).filter(ConvocazioneGiocatore.gara_id == g.id).delete()
     db.query(ConvocazioneGara).filter(ConvocazioneGara.convocazione_id == cid).delete()
+    used_pids = {g.partita_id for g in data.gare if g.partita_id}
     for g in data.gare:
         partita_id = g.partita_id
         dt = g.data or c.data_inizio
         if not partita_id and dt:
-            p_row = db.execute(text("""
+            p_rows = db.execute(text("""
                 SELECT id FROM partite
                 WHERE categoria_id = :cid AND data_partite = :data
-                LIMIT 1
-            """), {"cid": c.categoria_id, "data": dt}).fetchone()
-            if p_row:
-                partita_id = p_row[0]
+                ORDER BY ora ASC NULLS LAST, id ASC
+            """), {"cid": c.categoria_id, "data": dt}).fetchall()
+            for r in p_rows:
+                if r[0] not in used_pids:
+                    partita_id = r[0]
+                    used_pids.add(partita_id)
+                    break
+
+        ora_short = None
+        if g.inizio_gara:
+            m = re.search(r'\b([01]?\d|2[0-3]):[0-5]\d\b', g.inizio_gara)
+            if m:
+                ora_short = m.group(0)
+        appunt_time = None
+        if g.appuntamento:
+            m = re.search(r'\b([01]?\d|2[0-3]):[0-5]\d\b', g.appuntamento)
+            if m:
+                appunt_time = m.group(0)
 
         if not partita_id and weekend_id:
             # Nuova partita aggiunta dal mister al weekend del responsabile: registrala in partite
-            ora_short = g.inizio_gara[:5] if g.inizio_gara else None
-            appunt = g.appuntamento if g.appuntamento else None
             res_p = db.execute(text("""
                 INSERT INTO partite (
                     categoria_id, data_partite, ora, ora_presentazione,
@@ -258,7 +285,7 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
                 "cid": c.categoria_id,
                 "data": dt,
                 "ora": ora_short,
-                "appunt": appunt,
+                "appunt": appunt_time,
                 "avv": g.gara or "Gara",
                 "campo": g.campo or "",
                 "indirizzo": g.indirizzo or "",
@@ -267,9 +294,9 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
                 "wid": weekend_id
             })
             partita_id = res_p.scalar()
+            if partita_id:
+                used_pids.add(partita_id)
         elif partita_id:
-            ora_short = g.inizio_gara[:5] if g.inizio_gara else None
-            appunt = g.appuntamento if g.appuntamento else None
             db.execute(text("""
                 UPDATE partite SET
                     ora = COALESCE(:ora, ora),
@@ -280,7 +307,7 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
             """), {
                 "pid": partita_id,
                 "ora": ora_short,
-                "appunt": appunt,
+                "appunt": appunt_time,
                 "campo": g.campo if g.campo else None,
                 "indirizzo": g.indirizzo if g.indirizzo else None
             })
