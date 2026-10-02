@@ -43,12 +43,21 @@ class ConvocazioneIn(BaseModel):
 
 @router.get("/")
 def lista(categoria_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    from sqlalchemy import text
     societa_id = get_societa_filter(current_user)
-    q = db.query(Convocazione).filter(Convocazione.categoria_id == categoria_id)
+    where_soc = "AND c.societa_id = :sid" if societa_id else ""
+    params = {"cid": categoria_id}
     if societa_id:
-        q = q.filter(Convocazione.societa_id == societa_id)
-    convs = q.order_by(Convocazione.data_inizio.desc()).all()
-    return [{"id": c.id, "weekend_id": c.weekend_id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "categoria_id": c.categoria_id} for c in convs]
+        params["sid"] = societa_id
+    res = db.execute(text(f"""
+        SELECT c.id, c.weekend_id, c.data_inizio, c.data_fine, c.categoria_id, w.nome as weekend_nome
+        FROM convocazioni c
+        LEFT JOIN weekend w ON c.weekend_id = w.id
+        WHERE c.categoria_id = :cid {where_soc}
+        ORDER BY c.data_inizio DESC
+    """), params)
+    rows = res.fetchall()
+    return [dict(r._mapping) for r in rows]
 
 @router.get("/{cid}")
 def dettaglio(cid: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
@@ -77,17 +86,59 @@ def dettaglio(cid: int, db: Session = Depends(get_db), current_user: Utente = De
 @router.post("/")
 def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     from ..models import Categoria
+    from sqlalchemy import text
     cat = db.query(Categoria).filter(Categoria.id == data.categoria_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="Categoria non trovata")
     if not current_user.is_super_admin and cat.societa_id != current_user.societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato a operare su questa categoria")
     societa_id = cat.societa_id
-    c = Convocazione(societa_id=societa_id, categoria_id=data.categoria_id, weekend_id=data.weekend_id, data_inizio=data.data_inizio, data_fine=data.data_fine, note=data.note, esclusioni=data.esclusioni)
+
+    # Trova weekend corrispondente se non fornito
+    weekend_id = data.weekend_id
+    if not weekend_id and data.data_inizio:
+        w_row = db.execute(text("""
+            SELECT id FROM weekend
+            WHERE societa_id = :sid AND data_inizio <= :di AND data_fine >= :di
+            LIMIT 1
+        """), {"sid": societa_id, "di": data.data_inizio}).fetchone()
+        if w_row:
+            weekend_id = w_row[0]
+
+    c = Convocazione(societa_id=societa_id, categoria_id=data.categoria_id, weekend_id=weekend_id, data_inizio=data.data_inizio, data_fine=data.data_fine, note=data.note, esclusioni=data.esclusioni)
     db.add(c)
     db.flush()
     for g in data.gare:
-        gara = ConvocazioneGara(convocazione_id=c.id, partita_id=g.partita_id, numero=g.numero, gara=g.gara, data=g.data,
+        partita_id = g.partita_id
+        if not partita_id and (g.data or data.data_inizio):
+            dt = g.data or data.data_inizio
+            p_row = db.execute(text("""
+                SELECT id FROM partite
+                WHERE categoria_id = :cid AND data_partite = :data
+                LIMIT 1
+            """), {"cid": data.categoria_id, "data": dt}).fetchone()
+            if p_row:
+                partita_id = p_row[0]
+
+        if partita_id:
+            ora_short = g.inizio_gara[:5] if g.inizio_gara else None
+            appunt = g.appuntamento if g.appuntamento else None
+            db.execute(text("""
+                UPDATE partite SET
+                    ora = COALESCE(:ora, ora),
+                    ora_presentazione = COALESCE(:appunt, ora_presentazione),
+                    campo = COALESCE(:campo, campo),
+                    indirizzo = COALESCE(:indirizzo, indirizzo)
+                WHERE id = :pid
+            """), {
+                "pid": partita_id,
+                "ora": ora_short,
+                "appunt": appunt,
+                "campo": g.campo if g.campo else None,
+                "indirizzo": g.indirizzo if g.indirizzo else None
+            })
+
+        gara = ConvocazioneGara(convocazione_id=c.id, partita_id=partita_id, numero=g.numero, gara=g.gara, data=g.data,
             campo=g.campo, indirizzo=g.indirizzo, appuntamento=g.appuntamento,
             inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [])
         db.add(gara)
@@ -99,6 +150,7 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
 
 @router.put("/{cid}")
 def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+    from sqlalchemy import text
     c = db.query(Convocazione).filter(Convocazione.id == cid).first()
     if not c:
         raise HTTPException(status_code=404, detail="Non trovata")
@@ -110,15 +162,54 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
     c.data_fine = data.data_fine
     c.note = data.note
     c.esclusioni = data.esclusioni
-    if data.weekend_id is not None:
-        c.weekend_id = data.weekend_id
+
+    weekend_id = data.weekend_id or c.weekend_id
+    if not weekend_id and data.data_inizio and c.societa_id:
+        w_row = db.execute(text("""
+            SELECT id FROM weekend
+            WHERE societa_id = :sid AND data_inizio <= :di AND data_fine >= :di
+            LIMIT 1
+        """), {"sid": c.societa_id, "di": data.data_inizio}).fetchone()
+        if w_row:
+            weekend_id = w_row[0]
+    c.weekend_id = weekend_id
+
     # Elimina e ricrea gare
     gare_old = db.query(ConvocazioneGara).filter(ConvocazioneGara.convocazione_id == cid).all()
     for g in gare_old:
         db.query(ConvocazioneGiocatore).filter(ConvocazioneGiocatore.gara_id == g.id).delete()
     db.query(ConvocazioneGara).filter(ConvocazioneGara.convocazione_id == cid).delete()
     for g in data.gare:
-        gara = ConvocazioneGara(convocazione_id=cid, partita_id=g.partita_id, numero=g.numero, gara=g.gara, data=g.data,
+        partita_id = g.partita_id
+        if not partita_id and (g.data or data.data_inizio):
+            dt = g.data or data.data_inizio
+            p_row = db.execute(text("""
+                SELECT id FROM partite
+                WHERE categoria_id = :cid AND data_partite = :data
+                LIMIT 1
+            """), {"cid": data.categoria_id, "data": dt}).fetchone()
+            if p_row:
+                partita_id = p_row[0]
+
+        if partita_id:
+            ora_short = g.inizio_gara[:5] if g.inizio_gara else None
+            appunt = g.appuntamento if g.appuntamento else None
+            db.execute(text("""
+                UPDATE partite SET
+                    ora = COALESCE(:ora, ora),
+                    ora_presentazione = COALESCE(:appunt, ora_presentazione),
+                    campo = COALESCE(:campo, campo),
+                    indirizzo = COALESCE(:indirizzo, indirizzo)
+                WHERE id = :pid
+            """), {
+                "pid": partita_id,
+                "ora": ora_short,
+                "appunt": appunt,
+                "campo": g.campo if g.campo else None,
+                "indirizzo": g.indirizzo if g.indirizzo else None
+            })
+
+        gara = ConvocazioneGara(convocazione_id=cid, partita_id=partita_id, numero=g.numero, gara=g.gara, data=g.data,
             campo=g.campo, indirizzo=g.indirizzo, appuntamento=g.appuntamento,
             inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [])
         db.add(gara)
