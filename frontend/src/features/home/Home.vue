@@ -327,7 +327,8 @@ function todayStr() { return getLocalDateStr() }
 
 function catNome(catId) {
   const cat = allCategories.value.find(c => c.id === catId)
-  return cat?.nome || ''
+  if (!cat) return ''
+  return cat.anno ? `${cat.nome} ${cat.anno}` : cat.nome
 }
 
 function dataLabel(ds) {
@@ -356,11 +357,24 @@ function badgeLabel(p) {
 const prossimeGare = computed(() => {
   const today = todayStr()
   const activeSocId = societaAttiva.value?.id
-  const partiteFuture = partite.value.filter(p => {
+  const partiteFutureRaw = partite.value.filter(p => {
     if (!p.data_partite || p.risultato || p.data_partite < today) return false
     if (activeSocId && p.societa_id && p.societa_id !== activeSocId) return false
     return true
   })
+
+  // Deduplica eventuali partite identiche dal programma gare (es. duplicati per stessa categoria, data, ora e avversario)
+  const seenPartiteKeys = new Set()
+  const partiteFuture = []
+  for (const p of partiteFutureRaw) {
+    const oraKey = (p.ora || '').slice(0, 5)
+    const avvKey = (p.avversario || '').toLowerCase().trim()
+    const pKey = `${p.categoria_id}_${p.data_partite}_${oraKey}_${avvKey}`
+    if (seenPartiteKeys.has(pKey)) continue
+    seenPartiteKeys.add(pKey)
+    partiteFuture.push(p)
+  }
+
   const convFuture = convocazioniUpcoming.value.filter(c =>
     c.data_fine ? c.data_fine >= today : (c.data_inizio && c.data_inizio >= today)
   )
