@@ -114,8 +114,25 @@ def crea_partita(data: PartitaCreate, request: Request = None, db=Depends(get_db
             "livello": livello,
         }
     )
-    db.commit()
     row = res.fetchone()
+    if not row:
+        raise HTTPException(500, "Errore creazione partita")
+
+    # Collega retroattivamente eventuale convocazione_gara esistente per la stessa categoria e data
+    try:
+        db.execute(text("""
+            UPDATE convocazione_gare cg
+            SET partita_id = :pid
+            FROM convocazioni c
+            WHERE cg.convocazione_id = c.id
+              AND c.categoria_id = :cid
+              AND (cg.data = :dt OR (cg.data IS NULL AND c.data_inizio = :dt))
+              AND cg.partita_id IS NULL
+        """), {"pid": row["id"], "cid": data.categoria_id, "dt": data.data_partite})
+        db.commit()
+    except Exception as e:
+        print(f"Avviso auto-collegamento convocazione_gare: {e}")
+
     return dict(row._mapping)
 
 @router.put("/{partita_id}")

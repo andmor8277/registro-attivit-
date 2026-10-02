@@ -1145,6 +1145,31 @@ def run_migrations():
                 print(f"Migration warning (convocazioni weekend_id): {e}")
                 conn.rollback()
 
+            # Sincronizzazione retroattiva: collega convocazioni esistenti a weekend e gare a partite
+            try:
+                conn.execute(text("""
+                    UPDATE convocazioni c
+                    SET weekend_id = w.id
+                    FROM weekend w
+                    WHERE c.weekend_id IS NULL
+                      AND c.societa_id = w.societa_id
+                      AND c.data_inizio >= w.data_inizio AND c.data_inizio <= w.data_fine
+                """))
+                conn.execute(text("""
+                    UPDATE convocazione_gare cg
+                    SET partita_id = p.id
+                    FROM convocazioni c, partite p
+                    WHERE cg.convocazione_id = c.id
+                      AND cg.partita_id IS NULL
+                      AND c.categoria_id = p.categoria_id
+                      AND (cg.data = p.data_partite OR (cg.data IS NULL AND c.data_inizio = p.data_partite))
+                """))
+                conn.commit()
+                print("Migration: Retroactively linked convocazioni to weekend and partite")
+            except Exception as e:
+                print(f"Migration warning (retroactive sync): {e}")
+                conn.rollback()
+
             try:
                 result = conn.execute(text(
                     "SELECT column_name FROM information_schema.columns "

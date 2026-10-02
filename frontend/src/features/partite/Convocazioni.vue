@@ -27,7 +27,7 @@
         <!-- WEEKEND CHIPS -->
         <div class="weekend-chips">
           <button v-for="c in convocazioniAttive" :key="'a-' + c.id" :class="['wk', { active: convocazioneId === c.id }]" @click="caricaConvocazione(c.id)">
-            {{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' \u2013 ' + formatDataShort(c.data_fine) : '' }}
+            {{ c.weekend_nome ? c.weekend_nome + ' · ' : '' }}{{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' \u2013 ' + formatDataShort(c.data_fine) : '' }}
           </button>
           <button v-for="w in weekendDisponibili" :key="'w-' + w.id" class="wk wk-new" @click="creaConvocazioneDaWeekend(w)">
             + {{ w.nome || formatDataShort(w.data_inizio) }}
@@ -40,7 +40,7 @@
           <div class="storico-title">Storico</div>
           <div class="storico-chips">
             <button v-for="c in convocazioniStorico" :key="'s-' + c.id" :class="['wk', 'wk-storico', { active: convocazioneId === c.id }]" @click="caricaConvocazione(c.id)">
-              {{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' \u2013 ' + formatDataShort(c.data_fine) : '' }}
+              {{ c.weekend_nome ? c.weekend_nome + ' · ' : '' }}{{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' \u2013 ' + formatDataShort(c.data_fine) : '' }}
             </button>
           </div>
         </div>
