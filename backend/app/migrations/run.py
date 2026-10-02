@@ -1122,6 +1122,32 @@ def run_migrations():
             try:
                 result = conn.execute(text(
                     "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'convocazione_gare' AND column_name = 'partita_id'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text("ALTER TABLE convocazione_gare ADD COLUMN partita_id INTEGER REFERENCES partite(id) ON DELETE SET NULL"))
+                    conn.commit()
+                    print("Migration: Added partita_id to convocazione_gare")
+            except Exception as e:
+                print(f"Migration warning (convocazione_gare partita_id): {e}")
+                conn.rollback()
+
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'convocazioni' AND column_name = 'weekend_id'"
+                ))
+                if result.fetchone() is None:
+                    conn.execute(text("ALTER TABLE convocazioni ADD COLUMN weekend_id INTEGER REFERENCES weekend(id) ON DELETE SET NULL"))
+                    conn.commit()
+                    print("Migration: Added weekend_id to convocazioni")
+            except Exception as e:
+                print(f"Migration warning (convocazioni weekend_id): {e}")
+                conn.rollback()
+
+            try:
+                result = conn.execute(text(
+                    "SELECT column_name FROM information_schema.columns "
                     "WHERE table_name = 'persone' AND column_name = 'pagamenti_in_regola'"
                 ))
                 if result.fetchone() is None:

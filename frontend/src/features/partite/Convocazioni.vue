@@ -82,7 +82,7 @@
               </div>
             </div>
             <div class="editor-actions">
-              <button class="btn btn-ghost" @click="caricaPartiteEsistenti">Carica Partite</button>
+              <button class="btn btn-ghost" @click="allineaConProgrammaGare(true)" title="Sincronizza orari, campi e gare con il programma del responsabile mantenendo i giocatori convocati">Sincronizza Programma</button>
               <button class="btn btn-danger" @click="elimina">Elimina</button>
               <button class="btn btn-primary" @click="salva">Salva</button>
             </div>
@@ -1110,7 +1110,7 @@ function formatDataShort(d) {
 }
 
 function garaVuota(numero) {
-  return { numero, gara: '', data: '', campo: '', indirizzo: '', appuntamento: '', inizio_gara: '', allenatore: '', allenatori: [], giocatori: Array(10).fill(null), nonPresenti: new Set() }
+  return { partita_id: null, numero, gara: '', data: '', campo: '', indirizzo: '', appuntamento: '', inizio_gara: '', allenatore: '', allenatori: [], giocatori: Array(10).fill(null), nonPresenti: new Set() }
 }
 
 async function caricaPartiteWeekend(dataInizio, dataFine) {
@@ -1174,26 +1174,55 @@ function getAllenatoriLabelCompatta(gara) {
   return gara?.allenatore || ''
 }
 
-function nuovaConvocazione() {
+async function nuovaConvocazione() {
   convocazioneId.value = null
-  const oggi = getLocalDateStr()
-  const domani = new Date()
-  domani.setDate(domani.getDate() + 1)
-  const domenica = getLocalDateStr(domani)
-  popolaConvocazione(oggi, domenica)
+  // Se c'è già un weekend con partite disponibili per questa categoria, usalo direttamente
+  if (weekendDisponibili.value.length > 0) {
+    await creaConvocazioneDaWeekend(weekendDisponibili.value[0])
+    return
+  }
+  // Altrimenti cerca tra tutti i weekend futuri programmati dal responsabile
+  try {
+    const res = await getWeekend(societaAttiva.value?.id || null)
+    const tuttiWk = (res.data || []).sort((a, b) => (a.data_inizio || '').localeCompare(b.data_inizio || ''))
+    const today = todayStr()
+    const futuro = tuttiWk.find(w => (w.data_fine || w.data_inizio) >= today)
+    if (futuro) {
+      await popolaConvocazione(futuro.data_inizio, futuro.data_fine || futuro.data_inizio, futuro.id)
+      return
+    }
+  } catch (e) {}
+
+  // Fallback: prossimo weekend (sabato-domenica)
+  const d = new Date()
+  const dow = d.getDay() // 0=dom, 6=sab
+  const daysToSab = (6 - dow + 7) % 7
+  const sab = new Date(d); sab.setDate(d.getDate() + (dow === 6 ? 0 : daysToSab))
+  const dom = new Date(sab); dom.setDate(sab.getDate() + 1)
+  await popolaConvocazione(getLocalDateStr(sab), getLocalDateStr(dom))
 }
 
-async function popolaConvocazione(dataInizio, dataFine) {
+async function popolaConvocazione(dataInizio, dataFine, weekendId = null) {
   const partite = await caricaPartiteWeekend(dataInizio, dataFine)
   const nomeSocieta = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Noi'
   const gare = partite.length > 0 ? partite.map((p, idx) => ({
-    numero: idx + 1, gara: `${nomeSocieta} vs ${p.avversario || 'TBD'}`, data: p.data_partite, campo: p.campo || '',
-    indirizzo: p.indirizzo || '', appuntamento: '', inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
-    allenatore: getMisterCognome(p.mister_id), allenatori: p.mister_id ? [p.mister_id] : [], giocatori: Array(10).fill(null), nonPresenti: new Set()
+    partita_id: p.id,
+    numero: idx + 1,
+    gara: p.casa_fuori === 'fuori' ? `${p.avversario || 'TBD'} vs ${nomeSocieta}` : `${nomeSocieta} vs ${p.avversario || 'TBD'}`,
+    data: p.data_partite,
+    campo: p.campo || '',
+    indirizzo: p.indirizzo || '',
+    appuntamento: p.ora_presentazione || '',
+    inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
+    allenatore: getMisterCognome(p.mister_id),
+    allenatori: p.mister_id ? [p.mister_id] : [],
+    giocatori: Array(10).fill(null),
+    nonPresenti: new Set()
   })) : [garaVuota(1)]
   numPartite.value = gare.length
   activeGaraIdx.value = 0
   convocazione.value = {
+    weekend_id: weekendId,
     data_inizio: dataInizio, data_fine: dataFine, esclusioni: [],
     note: `PRESENTARSI ALL'APPUNTAMENTO IN ORARIO STABILITO ED IN TENUTA DA RAPPRESENTANZA MACRON (NO GIA CAMBIATI).
 SI GIOCA CON KIT GARA* (MAGLIA CALZONCINI E CALZETTONI) PORTARE FELPA D'ALLENAMENTO PER RISCALDAMENTO E K-WAY IN BORSA PER L'EVENIENZA.
@@ -1203,19 +1232,79 @@ AVVISARE TEMPESTIVAMENTE L'ALLENATORE PRESENTE IN GARA IN CASO DI RITARDO O ASSE
   }
 }
 
+async function allineaConProgrammaGare(manualAlert = false) {
+  if (!convocazione.value || !convocazione.value.data_inizio) {
+    if (manualAlert) alert('Seleziona prima le date di inizio e fine convocazione')
+    return
+  }
+  try {
+    const dataInizio = convocazione.value.data_inizio
+    const dataFine = convocazione.value.data_fine || dataInizio
+    const partite = await caricaPartiteWeekend(dataInizio, dataFine)
+    if (!partite || partite.length === 0) {
+      if (manualAlert) alert('Nessuna partita programmata trovata per questo weekend nel programma gare del responsabile.')
+      return
+    }
+
+    const nomeSocieta = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Noi'
+    const gare = convocazione.value.gare || []
+
+    partite.forEach((p, idx) => {
+      let targetGara = gare.find(g => g.partita_id && g.partita_id === p.id)
+      if (!targetGara) {
+        // Cerca per data e corrispondenza avversario
+        targetGara = gare.find(g => g.data === p.data_partite && p.avversario && g.gara && g.gara.toLowerCase().includes(p.avversario.toLowerCase()))
+      }
+      if (!targetGara && idx < gare.length && !gare[idx].partita_id) {
+        targetGara = gare[idx]
+      }
+
+      const title = p.casa_fuori === 'fuori' ? `${p.avversario || 'TBD'} vs ${nomeSocieta}` : `${nomeSocieta} vs ${p.avversario || 'TBD'}`
+      const oraP = p.ora ? p.ora.slice(0, 5) : ''
+
+      if (targetGara) {
+        targetGara.partita_id = p.id
+        targetGara.data = p.data_partite
+        if (oraP) targetGara.inizio_gara = oraP
+        if (p.campo) targetGara.campo = p.campo
+        if (p.indirizzo) targetGara.indirizzo = p.indirizzo
+        if (p.avversario) targetGara.gara = title
+        if (p.ora_presentazione && !targetGara.appuntamento) targetGara.appuntamento = p.ora_presentazione
+        if (p.mister_id && (!targetGara.allenatori || !targetGara.allenatori.length)) {
+          targetGara.allenatori = [p.mister_id]
+          targetGara.allenatore = getMisterCognome(p.mister_id)
+        }
+      } else {
+        gare.push({
+          partita_id: p.id,
+          numero: gare.length + 1,
+          gara: title,
+          data: p.data_partite,
+          campo: p.campo || '',
+          indirizzo: p.indirizzo || '',
+          appuntamento: p.ora_presentazione || '',
+          inizio_gara: oraP,
+          allenatore: getMisterCognome(p.mister_id),
+          allenatori: p.mister_id ? [p.mister_id] : [],
+          giocatori: Array(10).fill(null),
+          nonPresenti: new Set()
+        })
+      }
+    })
+
+    convocazione.value.gare = gare
+    numPartite.value = gare.length
+    if (manualAlert) {
+      alert('Gare sincronizzate con successo con il programma del responsabile! I giocatori convocati sono stati mantenuti.')
+    }
+  } catch (err) {
+    console.error('Errore allineaConProgrammaGare:', err)
+    if (manualAlert) alert('Errore durante la sincronizzazione con il programma gare')
+  }
+}
+
 async function caricaPartiteEsistenti() {
-  if (!convocazione.value || !convocazione.value.data_inizio || !convocazione.value.data_fine) { alert('Seleziona prima il weekend (data inizio e fine)'); return }
-  const partite = await caricaPartiteWeekend(convocazione.value.data_inizio, convocazione.value.data_fine)
-  if (partite.length === 0) { alert('Nessuna partita trovata per questo weekend'); return }
-  const nomeSocieta = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Noi'
-  const gare = partite.map((p, idx) => ({
-    numero: idx + 1, gara: `${nomeSocieta} vs ${p.avversario || 'TBD'}`, data: p.data_partite, campo: p.campo || '',
-    indirizzo: p.indirizzo || '', appuntamento: '', inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
-    allenatore: getMisterCognome(p.mister_id), allenatori: p.mister_id ? [p.mister_id] : [], giocatori: Array(10).fill(null), nonPresenti: new Set()
-  }))
-  convocazione.value.gare = gare
-  numPartite.value = gare.length
-  if (activeGaraIdx.value >= gare.length) activeGaraIdx.value = 0
+  await allineaConProgrammaGare(true)
 }
 
 async function caricaConvocazione(id) {
@@ -1223,21 +1312,28 @@ async function caricaConvocazione(id) {
   const res = await getConvocazione(id)
   const d = res.data
   convocazione.value = {
+    weekend_id: d.weekend_id || null,
     data_inizio: d.data_inizio, data_fine: d.data_fine || '', esclusioni: d.esclusioni || [],
     note: d.note || '',
     gare: d.gare.map((g, idx) => {
       const giocatoriArr = (g.giocatori || []).sort((a, b) => a.posizione - b.posizione)
       const nonPresenti = new Set(giocatoriArr.filter(x => x.non_presente).map(x => x.persona_id))
       return {
-        ...g, numero: g.numero || idx + 1, data: g.data || '',
+        ...g,
+        partita_id: g.partita_id || null,
+        numero: g.numero || idx + 1,
+        data: g.data || '',
         allenatori: inferisciAllenatori(g),
-        giocatori: padGiocatori(giocatoriArr.map(x => x.persona_id)), nonPresenti
+        giocatori: padGiocatori(giocatoriArr.map(x => x.persona_id)),
+        nonPresenti
       }
     })
   }
+  // Allinea con il programma gare del responsabile se ci sono stati aggiornamenti
+  await allineaConProgrammaGare(false)
   numPartite.value = convocazione.value.gare.length
   activeGaraIdx.value = 0
-  const referenceDates = [...new Set([d.data_inizio, ...(d.gare || []).map(g => g.data)].filter(Boolean))]
+  const referenceDates = [...new Set([d.data_inizio, ...(convocazione.value.gare || []).map(g => g.data)].filter(Boolean))]
   for (const referenceDate of referenceDates) {
     await ensureRegistroPerData(referenceDate)
   }
@@ -1278,23 +1374,32 @@ async function creaConvocazioneDaWeekend(weekend) {
   const dataInizio = weekend.data_inizio
   const dataFine = weekend.data_fine || dataInizio
   const nomeSocieta = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Noi'
-  const gare = weekend.partite.map((p, idx) => ({
+  const gare = (weekend.partite || []).map((p, idx) => ({
+    partita_id: p.id,
     numero: idx + 1,
     gara: p.casa_fuori === 'fuori' ? `${p.avversario || 'TBD'} vs ${nomeSocieta}` : `${nomeSocieta} vs ${p.avversario || 'TBD'}`,
-    data: p.data_partite, campo: p.campo || '', indirizzo: p.indirizzo || '', appuntamento: '',
-    inizio_gara: p.ora ? p.ora.slice(0, 5) : '', allenatore: getMisterCognome(p.mister_id), allenatori: p.mister_id ? [p.mister_id] : [], giocatori: Array(10).fill(null), nonPresenti: new Set()
+    data: p.data_partite,
+    campo: p.campo || '',
+    indirizzo: p.indirizzo || '',
+    appuntamento: p.ora_presentazione || '',
+    inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
+    allenatore: getMisterCognome(p.mister_id),
+    allenatori: p.mister_id ? [p.mister_id] : [],
+    giocatori: Array(10).fill(null),
+    nonPresenti: new Set()
   }))
-  numPartite.value = gare.length
+  numPartite.value = gare.length || 1
   activeGaraIdx.value = 0
   convocazione.value = {
+    weekend_id: weekend.id,
     data_inizio: dataInizio, data_fine: dataFine, esclusioni: [],
     note: `PRESENTARSI ALL'APPUNTAMENTO IN ORARIO STABILITO ED IN TENUTA DA RAPPRESENTANZA MACRON (NO GIA CAMBIATI).
  SI GIOCA CON KIT GARA* (MAGLIA CALZONCINI E CALZETTONI) PORTARE FELPA D'ALLENAMENTO PER RISCALDAMENTO E K-WAY IN BORSA PER L'EVENIENZA.
  AVVISARE TEMPESTIVAMENTE L'ALLENATORE PRESENTE IN GARA IN CASO DI RITARDO O ASSENZA.
  *PORTARE COMUNQUE MAGLIA DI RICAMBIO, CALZONCINI E CALZETTONI PER MODIFICARE I COLORI IN BASE ALL'AVVERSARIO.`,
-    gare
+    gare: gare.length ? gare : [garaVuota(1)]
   }
-  const referenceDates = [...new Set([dataInizio, ...gare.map(g => g.data)].filter(Boolean))]
+  const referenceDates = [...new Set([dataInizio, ...convocazione.value.gare.map(g => g.data)].filter(Boolean))]
   for (const referenceDate of referenceDates) {
     await ensureRegistroPerData(referenceDate)
   }
@@ -1302,16 +1407,26 @@ async function creaConvocazioneDaWeekend(weekend) {
 
 async function salva() {
   const payload = {
-    categoria_id: categoriaId, data_inizio: convocazione.value.data_inizio, data_fine: convocazione.value.data_fine,
-    esclusioni: convocazione.value.esclusioni || [], note: convocazione.value.note,
+    categoria_id: categoriaId,
+    weekend_id: convocazione.value.weekend_id || null,
+    data_inizio: convocazione.value.data_inizio,
+    data_fine: convocazione.value.data_fine,
+    esclusioni: convocazione.value.esclusioni || [],
+    note: convocazione.value.note,
     gare: convocazione.value.gare.map((g, gi) => {
       const allenatori = g.allenatori || []
       const allenatoriNomi = allenatori
         .map(id => responsabili.value.find(r => r.id === id)?.cognome)
         .filter(Boolean)
       return {
-        numero: gi + 1, gara: g.gara, data: g.data || null, campo: g.campo, indirizzo: g.indirizzo,
-        appuntamento: g.appuntamento, inizio_gara: g.inizio_gara,
+        partita_id: g.partita_id || null,
+        numero: gi + 1,
+        gara: g.gara,
+        data: g.data || null,
+        campo: g.campo,
+        indirizzo: g.indirizzo,
+        appuntamento: g.appuntamento,
+        inizio_gara: g.inizio_gara,
         allenatore: allenatoriNomi.length ? allenatoriNomi.join(', ') : (g.allenatore || ''),
         allenatori,
         giocatori: g.giocatori.map((pid, i) => pid ? { persona_id: pid, posizione: i + 1, non_presente: g.nonPresenti?.has(pid) || false } : null).filter(Boolean)

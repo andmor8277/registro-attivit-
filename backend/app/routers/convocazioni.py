@@ -21,6 +21,7 @@ class GiocatoreIn(BaseModel):
 
 class GaraIn(BaseModel):
     numero: int
+    partita_id: Optional[int] = None
     gara: Optional[str] = None
     data: Optional[date] = None
     campo: Optional[str] = None
@@ -33,6 +34,7 @@ class GaraIn(BaseModel):
 
 class ConvocazioneIn(BaseModel):
     categoria_id: int
+    weekend_id: Optional[int] = None
     data_inizio: date
     data_fine: Optional[date] = None
     note: Optional[str] = None
@@ -46,7 +48,7 @@ def lista(categoria_id: int, db: Session = Depends(get_db), current_user: Utente
     if societa_id:
         q = q.filter(Convocazione.societa_id == societa_id)
     convs = q.order_by(Convocazione.data_inizio.desc()).all()
-    return [{"id": c.id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "categoria_id": c.categoria_id} for c in convs]
+    return [{"id": c.id, "weekend_id": c.weekend_id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "categoria_id": c.categoria_id} for c in convs]
 
 @router.get("/{cid}")
 def dettaglio(cid: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
@@ -66,11 +68,11 @@ def dettaglio(cid: int, db: Session = Depends(get_db), current_user: Utente = De
             p = db.query(Persona).filter(Persona.id == gk.persona_id).first()
             persone.append({"persona_id": gk.persona_id, "posizione": gk.posizione, "nome": p.nome if p else "", "cognome": p.cognome if p else "", "non_presente": bool(gk.non_presente)})
         result_gare.append({
-            "id": g.id, "numero": g.numero, "gara": g.gara, "data": g.data,
+            "id": g.id, "partita_id": g.partita_id, "numero": g.numero, "gara": g.gara, "data": g.data,
             "campo": g.campo, "indirizzo": g.indirizzo, "appuntamento": g.appuntamento,
             "inizio_gara": g.inizio_gara, "allenatore": g.allenatore, "allenatori": g.allenatori or [], "giocatori": persone
         })
-    return {"id": c.id, "categoria_id": c.categoria_id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "note": c.note, "esclusioni": c.esclusioni or [], "gare": result_gare}
+    return {"id": c.id, "categoria_id": c.categoria_id, "weekend_id": c.weekend_id, "data_inizio": c.data_inizio, "data_fine": c.data_fine, "note": c.note, "esclusioni": c.esclusioni or [], "gare": result_gare}
 
 @router.post("/")
 def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
@@ -81,11 +83,11 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
     if not current_user.is_super_admin and cat.societa_id != current_user.societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato a operare su questa categoria")
     societa_id = cat.societa_id
-    c = Convocazione(societa_id=societa_id, categoria_id=data.categoria_id, data_inizio=data.data_inizio, data_fine=data.data_fine, note=data.note, esclusioni=data.esclusioni)
+    c = Convocazione(societa_id=societa_id, categoria_id=data.categoria_id, weekend_id=data.weekend_id, data_inizio=data.data_inizio, data_fine=data.data_fine, note=data.note, esclusioni=data.esclusioni)
     db.add(c)
     db.flush()
     for g in data.gare:
-        gara = ConvocazioneGara(convocazione_id=c.id, numero=g.numero, gara=g.gara, data=g.data,
+        gara = ConvocazioneGara(convocazione_id=c.id, partita_id=g.partita_id, numero=g.numero, gara=g.gara, data=g.data,
             campo=g.campo, indirizzo=g.indirizzo, appuntamento=g.appuntamento,
             inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [])
         db.add(gara)
@@ -108,13 +110,15 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
     c.data_fine = data.data_fine
     c.note = data.note
     c.esclusioni = data.esclusioni
+    if data.weekend_id is not None:
+        c.weekend_id = data.weekend_id
     # Elimina e ricrea gare
     gare_old = db.query(ConvocazioneGara).filter(ConvocazioneGara.convocazione_id == cid).all()
     for g in gare_old:
         db.query(ConvocazioneGiocatore).filter(ConvocazioneGiocatore.gara_id == g.id).delete()
     db.query(ConvocazioneGara).filter(ConvocazioneGara.convocazione_id == cid).delete()
     for g in data.gare:
-        gara = ConvocazioneGara(convocazione_id=cid, numero=g.numero, gara=g.gara, data=g.data,
+        gara = ConvocazioneGara(convocazione_id=cid, partita_id=g.partita_id, numero=g.numero, gara=g.gara, data=g.data,
             campo=g.campo, indirizzo=g.indirizzo, appuntamento=g.appuntamento,
             inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [])
         db.add(gara)
