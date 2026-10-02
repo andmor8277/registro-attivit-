@@ -1262,11 +1262,11 @@ async function allineaConProgrammaGare(manualAlert = false) {
 
       if (targetGara) {
         targetGara.partita_id = p.id
-        targetGara.data = p.data_partite
-        if (oraP) targetGara.inizio_gara = oraP
-        if (p.campo) targetGara.campo = p.campo
-        if (p.indirizzo) targetGara.indirizzo = p.indirizzo
-        if (p.avversario) targetGara.gara = title
+        if (!targetGara.data) targetGara.data = p.data_partite
+        if (oraP && (!targetGara.inizio_gara || manualAlert)) targetGara.inizio_gara = oraP
+        if (p.campo && (!targetGara.campo || manualAlert)) targetGara.campo = p.campo
+        if (p.indirizzo && (!targetGara.indirizzo || manualAlert)) targetGara.indirizzo = p.indirizzo
+        if (p.avversario && (!targetGara.gara || manualAlert)) targetGara.gara = title
         if (p.ora_presentazione && !targetGara.appuntamento) targetGara.appuntamento = p.ora_presentazione
         if (p.mister_id && (!targetGara.allenatori || !targetGara.allenatori.length)) {
           targetGara.allenatori = [p.mister_id]
@@ -1434,38 +1434,51 @@ function rimuoviGara(idx) {
 }
 
 async function salva() {
-  const payload = {
-    categoria_id: categoriaId,
-    weekend_id: convocazione.value.weekend_id || null,
-    data_inizio: convocazione.value.data_inizio,
-    data_fine: convocazione.value.data_fine,
-    esclusioni: convocazione.value.esclusioni || [],
-    note: convocazione.value.note,
-    gare: convocazione.value.gare.map((g, gi) => {
-      const allenatori = g.allenatori || []
-      const allenatoriNomi = allenatori
-        .map(id => responsabili.value.find(r => r.id === id)?.cognome)
-        .filter(Boolean)
-      return {
-        partita_id: g.partita_id || null,
-        numero: gi + 1,
-        gara: g.gara,
-        data: g.data || null,
-        campo: g.campo,
-        indirizzo: g.indirizzo,
-        appuntamento: g.appuntamento,
-        inizio_gara: g.inizio_gara,
-        allenatore: allenatoriNomi.length ? allenatoriNomi.join(', ') : (g.allenatore || ''),
-        allenatori,
-        giocatori: g.giocatori.map((pid, i) => pid ? { persona_id: pid, posizione: i + 1, non_presente: g.nonPresenti?.has(pid) || false } : null).filter(Boolean)
-      }
-    })
+  try {
+    const payload = {
+      categoria_id: categoriaId,
+      weekend_id: convocazione.value.weekend_id || null,
+      data_inizio: convocazione.value.data_inizio,
+      data_fine: convocazione.value.data_fine,
+      esclusioni: convocazione.value.esclusioni || [],
+      note: convocazione.value.note,
+      gare: convocazione.value.gare.map((g, gi) => {
+        const allenatori = g.allenatori || []
+        const allenatoriNomi = allenatori
+          .map(id => responsabili.value.find(r => r.id === id)?.cognome)
+          .filter(Boolean)
+        return {
+          partita_id: g.partita_id || null,
+          numero: gi + 1,
+          gara: g.gara,
+          data: g.data || null,
+          campo: g.campo,
+          indirizzo: g.indirizzo,
+          appuntamento: g.appuntamento,
+          inizio_gara: g.inizio_gara,
+          allenatore: allenatoriNomi.length ? allenatoriNomi.join(', ') : (g.allenatore || ''),
+          allenatori,
+          giocatori: g.giocatori.map((pid, i) => pid ? { persona_id: pid, posizione: i + 1, non_presente: g.nonPresenti?.has(pid) || false } : null).filter(Boolean)
+        }
+      })
+    }
+    if (convocazioneId.value) {
+      await updateConvocazione(convocazioneId.value, payload)
+    } else {
+      const res = await createConvocazione(payload)
+      convocazioneId.value = res.data.id
+    }
+    await loadStorico()
+    await loadWeekendDisponibili()
+    if (convocazioneId.value) {
+      await caricaConvocazione(convocazioneId.value)
+    }
+    alert('Salvato!')
+  } catch (err) {
+    console.error('Errore salvataggio convocazione:', err)
+    const errMsg = err.response?.data?.detail || err.message || 'Errore sconosciuto'
+    alert('Errore durante il salvataggio: ' + errMsg)
   }
-  if (convocazioneId.value) await updateConvocazione(convocazioneId.value, payload)
-  else { const res = await createConvocazione(payload); convocazioneId.value = res.data.id }
-  await loadStorico()
-  await loadWeekendDisponibili()
-  alert('Salvato!')
 }
 
 function esc(s) {
