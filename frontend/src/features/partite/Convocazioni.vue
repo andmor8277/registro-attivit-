@@ -29,10 +29,12 @@
           <button v-for="c in convocazioniAttive" :key="'a-' + c.id" :class="['wk', { active: convocazioneId === c.id }]" @click="caricaConvocazione(c.id)">
             {{ c.weekend_nome ? c.weekend_nome + ' · ' : '' }}{{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' \u2013 ' + formatDataShort(c.data_fine) : '' }}
           </button>
-          <button v-for="w in weekendDisponibili" :key="'w-' + w.id" class="wk wk-new" @click="creaConvocazioneDaWeekend(w)">
-            + {{ w.nome || formatDataShort(w.data_inizio) }}
+          <button v-for="w in weekendDisponibili" :key="'w-' + w.id" class="wk wk-new" @click="creaConvocazioneDaWeekend(w)" :title="'Crea convocazione per ' + (w.nome || 'weekend')">
+            + {{ w.nome || (formatDataShort(w.data_inizio) + ' \u2013 ' + formatDataShort(w.data_fine)) }}
           </button>
-          <button class="wk wk-new" @click="nuovaConvocazione()">+ nuovo</button>
+          <span v-if="convocazioniAttive.length === 0 && weekendDisponibili.length === 0" class="no-weekend-text">
+            Nessun weekend programmato dal Responsabile
+          </span>
         </div>
 
         <!-- STORICO -->
@@ -69,12 +71,11 @@
           <div class="editor-topbar">
             <div class="date-pickers">
               <div class="date-field">
-                <label>Inizio</label>
-                <input type="date" v-model="convocazione.data_inizio" />
-              </div>
-              <div class="date-field">
-                <label>Fine</label>
-                <input type="date" v-model="convocazione.data_fine" />
+                <label>Weekend Programmato</label>
+                <div class="weekend-locked-badge" :title="'Weekend programmato dal Responsabile: ' + (convocazione.weekend_nome || '')">
+                  <span class="locked-icon">🔒</span>
+                  <span class="locked-text">{{ convocazione.weekend_nome ? convocazione.weekend_nome + ' · ' : '' }}{{ formatDataShort(convocazione.data_inizio) }} &ndash; {{ formatDataShort(convocazione.data_fine) }}</span>
+                </div>
               </div>
               <div class="date-field">
                 <label>Gare</label>
@@ -131,9 +132,14 @@
           </div>
 
           <!-- GARE TABS -->
-          <div class="gara-tabs" v-if="convocazione.gare.length > 0">
-            <button v-for="(g, gi) in convocazione.gare" :key="'t-' + gi" :class="['gtab', { active: gi === activeGaraIdx }]" @click="activeGaraIdx = gi">
-              Gara {{ gi + 1 }}<span v-if="g.gara" class="gtab-label"> &middot; {{ g.gara }}</span>
+          <div class="gara-tabs-container" v-if="convocazione.gare.length > 0">
+            <div class="gara-tabs">
+              <button v-for="(g, gi) in convocazione.gare" :key="'t-' + gi" :class="['gtab', { active: gi === activeGaraIdx }]" @click="activeGaraIdx = gi">
+                Gara {{ gi + 1 }}<span v-if="g.gara" class="gtab-label"> &middot; {{ g.gara }}</span>
+              </button>
+            </div>
+            <button class="btn-add-gara" @click="aggiungiNuovaGara" title="Aggiungi una nuova partita a questo weekend">
+              + Aggiungi Gara
             </button>
           </div>
 
@@ -142,7 +148,10 @@
             <div class="card">
               <div class="card-h">
                 <h2><input v-model="garaAttiva.gara" class="gara-title-inline" :placeholder="nomeSocieta + ' vs Avversario'" /></h2>
-                <span class="conv-count">{{ countAssigned(garaAttiva) }} convocati</span>
+                <div class="card-header-actions">
+                  <span class="conv-count">{{ countAssigned(garaAttiva) }} convocati</span>
+                  <button v-if="convocazione.gare.length > 1" class="btn-remove-gara" @click="rimuoviGara(activeGaraIdx)" title="Rimuovi questa partita dal weekend">Rimuovi Gara</button>
+                </div>
               </div>
               <ul class="roster">
                 <li v-for="(pid, pos) in garaAttiva.giocatori" :key="'r-' + pos" :class="[pid ? (garaAttiva.nonPresenti && garaAttiva.nonPresenti.has(pid) ? 'off' : 'on') : 'empty']">
@@ -188,7 +197,7 @@
               <div class="card">
                 <div class="card-h"><h2>Dettagli gara</h2></div>
                 <ul class="info-dl">
-                  <li><span class="k">Data</span><span class="v"><input type="date" v-model="garaAttiva.data" /></span></li>
+                  <li><span class="k">Data</span><span class="v"><input type="date" v-model="garaAttiva.data" :min="convocazione.data_inizio" :max="convocazione.data_fine || convocazione.data_inizio" /></span></li>
                   <li><span class="k">Campo</span><span class="v"><input v-model="garaAttiva.campo" placeholder="Comunale n.1" /></span></li>
                   <li><span class="k">Indirizzo</span><span class="v"><input v-model="garaAttiva.indirizzo" placeholder="&mdash;" /></span></li>
                   <li><span class="k">Orario Appuntamento</span><span class="v"><input v-model="garaAttiva.appuntamento" placeholder="13:45 &middot; spogliatoi" /></span></li>
@@ -466,8 +475,15 @@
         <div v-if="!convocazione" class="empty-state">
           <div class="empty-icon">&#9917;</div>
           <div class="empty-title">Nessuna convocazione attiva</div>
-          <div class="empty-sub">Seleziona un weekend dai chip sopra o crea una nuova convocazione</div>
-          <button class="btn btn-primary" @click="nuovaConvocazione()">+ Nuova Convocazione</button>
+          <div class="empty-sub" v-if="weekendDisponibili.length > 0">
+            Seleziona uno dei weekend programmati dal Responsabile in alto per compilare le convocazioni.
+          </div>
+          <div class="empty-sub" v-else>
+            Non ci sono weekend programmati dal Responsabile. Attendi che il Responsabile crei il weekend prima di compilare le convocazioni.
+          </div>
+          <button v-if="weekendDisponibili.length > 0" class="btn btn-primary" @click="creaConvocazioneDaWeekend(weekendDisponibili[0])">
+            + Convocazione per {{ weekendDisponibili[0].nome || 'prossimo weekend' }}
+          </button>
         </div>
       </main>
     </div>
@@ -1176,30 +1192,12 @@ function getAllenatoriLabelCompatta(gara) {
 
 async function nuovaConvocazione() {
   convocazioneId.value = null
-  // Se c'è già un weekend con partite disponibili per questa categoria, usalo direttamente
+  // Se c'è un weekend programmato dal responsabile disponibile, usalo
   if (weekendDisponibili.value.length > 0) {
     await creaConvocazioneDaWeekend(weekendDisponibili.value[0])
     return
   }
-  // Altrimenti cerca tra tutti i weekend futuri programmati dal responsabile
-  try {
-    const res = await getWeekend(societaAttiva.value?.id || null)
-    const tuttiWk = (res.data || []).sort((a, b) => (a.data_inizio || '').localeCompare(b.data_inizio || ''))
-    const today = todayStr()
-    const futuro = tuttiWk.find(w => (w.data_fine || w.data_inizio) >= today)
-    if (futuro) {
-      await popolaConvocazione(futuro.data_inizio, futuro.data_fine || futuro.data_inizio, futuro.id)
-      return
-    }
-  } catch (e) {}
-
-  // Fallback: prossimo weekend (sabato-domenica)
-  const d = new Date()
-  const dow = d.getDay() // 0=dom, 6=sab
-  const daysToSab = (6 - dow + 7) % 7
-  const sab = new Date(d); sab.setDate(d.getDate() + (dow === 6 ? 0 : daysToSab))
-  const dom = new Date(sab); dom.setDate(sab.getDate() + 1)
-  await popolaConvocazione(getLocalDateStr(sab), getLocalDateStr(dom))
+  alert("Nessun nuovo weekend programmato dal Responsabile. Le convocazioni possono essere create solo sui weekend programmati dal Responsabile in Programmazione Gare.")
 }
 
 async function popolaConvocazione(dataInizio, dataFine, weekendId = null) {
@@ -1313,6 +1311,7 @@ async function caricaConvocazione(id) {
   const d = res.data
   convocazione.value = {
     weekend_id: d.weekend_id || null,
+    weekend_nome: d.weekend_nome || '',
     data_inizio: d.data_inizio, data_fine: d.data_fine || '', esclusioni: d.esclusioni || [],
     note: d.note || '',
     gare: d.gare.map((g, idx) => {
@@ -1355,14 +1354,14 @@ async function loadWeekendDisponibili() {
   try {
     const res = await getWeekend(societaAttiva.value?.id || null)
     const tuttiWeekend = res.data || []
+    const convocazioneWeekendIds = new Set(storico.value.map(c => c.weekend_id).filter(Boolean))
     const convocazioneRanges = storico.value.map(c => ({ inizio: c.data_inizio, fine: c.data_fine || c.data_inizio }))
     const result = []
     for (const w of tuttiWeekend) {
-      const giaConvocato = convocazioneRanges.some(r => w.data_inizio >= r.inizio && w.data_inizio <= r.fine)
+      const giaConvocato = convocazioneWeekendIds.has(w.id) || convocazioneRanges.some(r => w.data_inizio >= r.inizio && w.data_inizio <= r.fine)
       if (giaConvocato) continue
       const partiteRes = await getWeekendPartite(w.id)
       const partite = (partiteRes.data || []).filter(p => p.categoria_id === categoriaId)
-      if (partite.length === 0) continue
       result.push({ ...w, partite: partite.sort((a, b) => a.data_partite.localeCompare(b.data_partite) || (a.ora || '').localeCompare(b.ora || '')) })
     }
     weekendDisponibili.value = result.sort((a, b) => a.data_inizio.localeCompare(b.data_inizio))
@@ -1388,21 +1387,50 @@ async function creaConvocazioneDaWeekend(weekend) {
     giocatori: Array(10).fill(null),
     nonPresenti: new Set()
   }))
-  numPartite.value = gare.length || 1
+  const gareIniziali = gare.length ? gare : [garaVuota(1)]
+  if (!gareIniziali[0].data) gareIniziali[0].data = dataInizio
+  numPartite.value = gareIniziali.length
   activeGaraIdx.value = 0
   convocazione.value = {
     weekend_id: weekend.id,
+    weekend_nome: weekend.nome || '',
     data_inizio: dataInizio, data_fine: dataFine, esclusioni: [],
     note: `PRESENTARSI ALL'APPUNTAMENTO IN ORARIO STABILITO ED IN TENUTA DA RAPPRESENTANZA MACRON (NO GIA CAMBIATI).
- SI GIOCA CON KIT GARA* (MAGLIA CALZONCINI E CALZETTONI) PORTARE FELPA D'ALLENAMENTO PER RISCALDAMENTO E K-WAY IN BORSA PER L'EVENIENZA.
- AVVISARE TEMPESTIVAMENTE L'ALLENATORE PRESENTE IN GARA IN CASO DI RITARDO O ASSENZA.
- *PORTARE COMUNQUE MAGLIA DI RICAMBIO, CALZONCINI E CALZETTONI PER MODIFICARE I COLORI IN BASE ALL'AVVERSARIO.`,
-    gare: gare.length ? gare : [garaVuota(1)]
+SI GIOCA CON KIT GARA* (MAGLIA CALZONCINI E CALZETTONI) PORTARE FELPA D'ALLENAMENTO PER RISCALDAMENTO E K-WAY IN BORSA PER L'EVENIENZA.
+AVVISARE TEMPESTIVAMENTE L'ALLENATORE PRESENTE IN GARA IN CASO DI RITARDO O ASSENZA.
+*PORTARE COMUNQUE MAGLIA DI RICAMBIO, CALZONCINI E CALZETTONI PER MODIFICARE I COLORI IN BASE ALL'AVVERSARIO.`,
+    gare: gareIniziali
   }
   const referenceDates = [...new Set([dataInizio, ...convocazione.value.gare.map(g => g.data)].filter(Boolean))]
   for (const referenceDate of referenceDates) {
     await ensureRegistroPerData(referenceDate)
   }
+}
+
+function aggiungiNuovaGara() {
+  if (!convocazione.value) return
+  if (convocazione.value.gare.length >= 7) {
+    alert('Massimo 7 gare per weekend')
+    return
+  }
+  const nextNum = convocazione.value.gare.length + 1
+  const newG = garaVuota(nextNum)
+  newG.data = convocazione.value.data_inizio
+  convocazione.value.gare.push(newG)
+  numPartite.value = convocazione.value.gare.length
+  activeGaraIdx.value = convocazione.value.gare.length - 1
+}
+
+function rimuoviGara(idx) {
+  if (!convocazione.value || convocazione.value.gare.length <= 1) {
+    alert('Deve essere presente almeno una gara nel weekend')
+    return
+  }
+  if (!confirm(`Sei sicuro di voler rimuovere Gara ${idx + 1}?`)) return
+  convocazione.value.gare.splice(idx, 1)
+  convocazione.value.gare.forEach((g, i) => { g.numero = i + 1 })
+  numPartite.value = convocazione.value.gare.length
+  activeGaraIdx.value = Math.max(0, idx - 1)
 }
 
 async function salva() {
@@ -2170,6 +2198,73 @@ onMounted(async () => {
 .date-field input:focus { border-color: #dc2626; }
 
 .num-input { width: 56px !important; text-align: center; }
+
+.weekend-locked-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 0.4rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.locked-icon { font-size: 0.75rem; opacity: 0.8; }
+.no-weekend-text {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  padding: 6px 12px;
+}
+.gara-tabs-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.btn-add-gara {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border: 1px dashed rgba(220, 38, 38, 0.4);
+  border-radius: 8px;
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.05);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-add-gara:hover {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: #dc2626;
+}
+.card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.btn-remove-gara {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-remove-gara:hover {
+  background: #dc2626;
+  color: #fff;
+}
 
 .editor-actions { display: flex; gap: 0.5rem; margin-left: auto; }
 
