@@ -1339,11 +1339,11 @@ async function exportPdf() {
     
   }
 
-  const categoriaNome = categoriaAttiva.value?.nome || 'Categoria'
+  const categoriaNome = (categoriaAttiva.value?.nome || 'Categoria').replace(/[/\\?%*:|"<>]/g, '_')
   const dataSelezionata = selectedDay.value?.data || 'data'
-  const dataFormattata = dataSelezionata.split('-').reverse().join('/')
-  const filename = 'Scheda ' + categoriaNome + ' del ' + dataFormattata + '.pdf'
-  await saveOrSharePdf(doc, filename, `Scheda Allenamento ${categoriaNome}`)
+  const dataFormattata = dataSelezionata.split('-').reverse().join('-')
+  const filename = `Scheda_${categoriaNome}_del_${dataFormattata}.pdf`
+  await saveOrSharePdf(doc, filename, `Scheda Allenamento ${categoriaAttiva.value?.nome || ''}`.trim())
 }
 
 function saveEsercizio(ex) {

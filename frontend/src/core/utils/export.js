@@ -3,39 +3,78 @@ import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 
 /**
+ * Pulisce il nome file eliminando caratteri illegali nei filesystem (/ \ ? % * : | " < >).
+ */
+export function sanitizeFilename(name, defaultExt = '.pdf') {
+  if (!name) return `documento${defaultExt}`
+  let clean = String(name)
+    .replace(/[/\\?%*:|"<>]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (defaultExt && !clean.toLowerCase().endsWith(defaultExt.toLowerCase())) {
+    clean += defaultExt
+  }
+  return clean
+}
+
+/**
  * Salva o condivide un documento jsPDF.
  * - Su Web (desktop / browser): doc.save(filename)
  * - Su Mobile (Capacitor nativo): salva in cache locale e apre il menu nativo di condivisione
  *   (WhatsApp, Salva su File, Drive, Stampa, ecc.).
  */
 export async function saveOrSharePdf(doc, filename, title = '') {
+  const safeFilename = sanitizeFilename(filename, '.pdf')
+
   if (Capacitor.isNativePlatform()) {
     try {
       const dataUri = doc.output('datauristring')
       const base64Data = dataUri.split(',')[1]
 
       const fileResult = await Filesystem.writeFile({
-        path: filename,
+        path: safeFilename,
         data: base64Data,
         directory: Directory.Cache
       })
 
+      // Ottieni l'URI esatto risolto dal Filesystem nativo
+      let shareUri = fileResult?.uri
+      try {
+        const uriResult = await Filesystem.getUri({
+          directory: Directory.Cache,
+          path: safeFilename
+        })
+        if (uriResult?.uri) {
+          shareUri = uriResult.uri
+        }
+      } catch (uriErr) {
+        console.warn('Filesystem.getUri fallback a fileResult.uri:', uriErr)
+      }
+
       await Share.share({
-        title: title || filename,
-        text: title || filename,
-        url: fileResult.uri,
+        title: title || safeFilename,
+        url: shareUri,
         dialogTitle: 'Condividi o Salva PDF'
       })
       return true
     } catch (err) {
-      if (err?.message?.includes('canceled') || err?.message?.includes('cancelled')) {
+      const msg = String(err?.message || err || '').toLowerCase()
+      if (msg.includes('cancel') || msg.includes('annullat')) {
         return false
       }
       console.error('Errore export PDF nativo:', err)
-      throw err
+
+      // Fallback: prova download browser se supportato dalla webview
+      try {
+        doc.save(safeFilename)
+        return true
+      } catch (fallbackErr) {
+        console.error('Fallback doc.save fallito:', fallbackErr)
+        throw err
+      }
     }
   } else {
-    doc.save(filename)
+    doc.save(safeFilename)
     return true
   }
 }
@@ -46,6 +85,8 @@ export async function saveOrSharePdf(doc, filename, title = '') {
  * - Su Mobile (Capacitor nativo): salva in cache e apre il menu di condivisione nativo
  */
 export async function saveOrShareText(content, filename, mimeType = 'text/csv;charset=utf-8;', title = '') {
+  const safeFilename = sanitizeFilename(filename, '')
+
   if (Capacitor.isNativePlatform()) {
     try {
       const utf8Bytes = new TextEncoder().encode(content)
@@ -56,20 +97,33 @@ export async function saveOrShareText(content, filename, mimeType = 'text/csv;ch
       const base64Data = btoa(binary)
 
       const fileResult = await Filesystem.writeFile({
-        path: filename,
+        path: safeFilename,
         data: base64Data,
         directory: Directory.Cache
       })
 
+      let shareUri = fileResult?.uri
+      try {
+        const uriResult = await Filesystem.getUri({
+          directory: Directory.Cache,
+          path: safeFilename
+        })
+        if (uriResult?.uri) {
+          shareUri = uriResult.uri
+        }
+      } catch (uriErr) {
+        console.warn('Filesystem.getUri fallback a fileResult.uri:', uriErr)
+      }
+
       await Share.share({
-        title: title || filename,
-        text: title || filename,
-        url: fileResult.uri,
+        title: title || safeFilename,
+        url: shareUri,
         dialogTitle: 'Condividi o Salva File'
       })
       return true
     } catch (err) {
-      if (err?.message?.includes('canceled') || err?.message?.includes('cancelled')) {
+      const msg = String(err?.message || err || '').toLowerCase()
+      if (msg.includes('cancel') || msg.includes('annullat')) {
         return false
       }
       console.error('Errore export file nativo:', err)
@@ -80,7 +134,7 @@ export async function saveOrShareText(content, filename, mimeType = 'text/csv;ch
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = filename
+    a.download = safeFilename
     a.click()
     URL.revokeObjectURL(url)
     return true
