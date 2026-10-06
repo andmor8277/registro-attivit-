@@ -117,6 +117,10 @@ def crea_partita(data: PartitaCreate, request: Request = None, db=Depends(get_db
     row = res.fetchone()
     if not row:
         raise HTTPException(500, "Errore creazione partita")
+    db.commit()
+
+    partita_dict = dict(row._mapping)
+    pid = partita_dict["id"]
 
     # Collega retroattivamente eventuale convocazione_gara esistente per la stessa categoria e data
     try:
@@ -128,12 +132,12 @@ def crea_partita(data: PartitaCreate, request: Request = None, db=Depends(get_db
               AND c.categoria_id = :cid
               AND (cg.data = :dt OR (cg.data IS NULL AND c.data_inizio = :dt))
               AND cg.partita_id IS NULL
-        """), {"pid": row["id"], "cid": data.categoria_id, "dt": data.data_partite})
+        """), {"pid": pid, "cid": data.categoria_id, "dt": data.data_partite})
         db.commit()
     except Exception as e:
         print(f"Avviso auto-collegamento convocazione_gare: {e}")
 
-    return dict(row._mapping)
+    return partita_dict
 
 @router.put("/{partita_id}")
 def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), user=Depends(get_staff_admin)):
@@ -196,12 +200,18 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
     row = res.fetchone()
     if not row:
         raise HTTPException(404, "Partita non trovata")
+    db.commit()
+
+    partita_dict = dict(row._mapping)
 
     # Sincronizza automaticamente le gare collegate in convocazione_gare
     try:
         ora_short = ora[:5] if ora else None
-        soc_row = db.execute(text("SELECT nome, nome_breve FROM societa WHERE id = :sid"), {"sid": row["societa_id"]}).fetchone()
-        nome_soc = (soc_row._mapping["nome_breve"] or soc_row._mapping["nome"] or "Noi") if soc_row else "Noi"
+        soc_row = db.execute(text("SELECT nome, nome_breve FROM societa WHERE id = :sid"), {"sid": partita_dict["societa_id"]}).fetchone()
+        nome_soc = "Noi"
+        if soc_row:
+            s_map = soc_row._mapping
+            nome_soc = s_map.get("nome_breve") or s_map.get("nome") or "Noi"
         gara_nome = f"{avversario or 'TBD'} vs {nome_soc}" if casa_fuori == "fuori" else f"{nome_soc} vs {avversario or 'TBD'}"
 
         db.execute(text("""
@@ -224,7 +234,7 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
     except Exception as e:
         print(f"Avviso sincronizzazione convocazione_gare: {e}")
 
-    return dict(row._mapping)
+    return partita_dict
 
 @router.delete("/{partita_id}")
 def elimina_partita(partita_id: int, db=Depends(get_db), user=Depends(get_staff_admin)):
