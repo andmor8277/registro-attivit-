@@ -301,15 +301,10 @@
                   type="text"
                   v-model="modal.campo"
                   placeholder="Nome campo"
-                  list="campi-sportivi-list"
                   @input="onCampoChange"
                   @change="onCampoChange"
+                  @blur="onCampoChange"
                 />
-                <datalist id="campi-sportivi-list">
-                  <option v-for="cs in campiSportivi" :key="cs.id" :value="cs.nome">
-                    {{ cs.indirizzo ? cs.indirizzo : cs.nome }}
-                  </option>
-                </datalist>
               </div>
               <div class="form-group">
                 <label>Indirizzo Campo</label>
@@ -506,9 +501,21 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
 function onCampoChange() {
   if (!modal.value.campo) return
   const cVal = modal.value.campo.trim().toLowerCase()
-  const match = campiSportivi.value.find(
+  if (!cVal) return
+  let match = campiSportivi.value.find(
     cs => cs.nome && cs.nome.trim().toLowerCase() === cVal
   )
+  if (!match && cVal.length >= 3) {
+    const candidates = campiSportivi.value.filter(
+      cs => cs.nome && cs.indirizzo && (
+        cs.nome.trim().toLowerCase().includes(cVal) ||
+        cVal.includes(cs.nome.trim().toLowerCase())
+      )
+    )
+    if (candidates.length === 1) {
+      match = candidates[0]
+    }
+  }
   if (match && match.indirizzo) {
     modal.value.indirizzo = match.indirizzo
   }

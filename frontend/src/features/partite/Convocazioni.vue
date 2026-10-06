@@ -202,15 +202,10 @@
                     <input
                       v-model="garaAttiva.campo"
                       placeholder="Comunale n.1"
-                      list="campi-sportivi-conv-list"
                       @input="onCampoChangeGara"
                       @change="onCampoChangeGara"
+                      @blur="onCampoChangeGara"
                     />
-                    <datalist id="campi-sportivi-conv-list">
-                      <option v-for="cs in campiSportivi" :key="cs.id" :value="cs.nome">
-                        {{ cs.indirizzo ? cs.indirizzo : cs.nome }}
-                      </option>
-                    </datalist>
                   </span></li>
                   <li><span class="k">Indirizzo</span><span class="v"><input v-model="garaAttiva.indirizzo" placeholder="&mdash;" /></span></li>
                   <li><span class="k">Orario Appuntamento</span><span class="v"><input v-model="garaAttiva.appuntamento" placeholder="13:45 &middot; spogliatoi" /></span></li>
@@ -1451,9 +1446,21 @@ function rimuoviGara(idx) {
 function onCampoChangeGara() {
   if (!garaAttiva.value || !garaAttiva.value.campo) return
   const cVal = garaAttiva.value.campo.trim().toLowerCase()
-  const match = campiSportivi.value.find(
+  if (!cVal) return
+  let match = campiSportivi.value.find(
     cs => cs.nome && cs.nome.trim().toLowerCase() === cVal
   )
+  if (!match && cVal.length >= 3) {
+    const candidates = campiSportivi.value.filter(
+      cs => cs.nome && cs.indirizzo && (
+        cs.nome.trim().toLowerCase().includes(cVal) ||
+        cVal.includes(cs.nome.trim().toLowerCase())
+      )
+    )
+    if (candidates.length === 1) {
+      match = candidates[0]
+    }
+  }
   if (match && match.indirizzo) {
     garaAttiva.value.indirizzo = match.indirizzo
   }
