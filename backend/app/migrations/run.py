@@ -1398,35 +1398,52 @@ def run_migrations():
                         CONSTRAINT uq_campi_sportivi_soc_nome UNIQUE (societa_id, nome)
                     );
                 """))
+                conn.commit()
+                print("Migration: Created campi_sportivi table")
+            except Exception as e:
+                print(f"Migration warning (create campi_sportivi table): {e}")
+                conn.rollback()
+
+            try:
                 conn.execute(text("""
                     INSERT INTO campi_sportivi (societa_id, nome, indirizzo)
-                    SELECT DISTINCT p.societa_id, TRIM(p.campo), TRIM(p.indirizzo)
+                    SELECT DISTINCT ON (p.societa_id, TRIM(p.campo))
+                        p.societa_id,
+                        TRIM(p.campo) AS nome,
+                        TRIM(p.indirizzo) AS indirizzo
                     FROM partite p
                     WHERE p.campo IS NOT NULL AND TRIM(p.campo) != ''
                       AND p.indirizzo IS NOT NULL AND TRIM(p.indirizzo) != ''
                       AND p.societa_id IS NOT NULL
-                    ON CONFLICT (societa_id, nome) DO UPDATE 
-                    SET indirizzo = EXCLUDED.indirizzo 
-                    WHERE (campi_sportivi.indirizzo IS NULL OR TRIM(campi_sportivi.indirizzo) = '')
-                      AND EXCLUDED.indirizzo IS NOT NULL AND TRIM(EXCLUDED.indirizzo) != '';
-                """))
-                conn.execute(text("""
-                    INSERT INTO campi_sportivi (societa_id, nome, indirizzo)
-                    SELECT DISTINCT c.societa_id, TRIM(cg.campo), TRIM(cg.indirizzo)
-                    FROM convocazione_gare cg
-                    JOIN convocazioni c ON cg.convocazione_id = c.id
-                    WHERE cg.campo IS NOT NULL AND TRIM(cg.campo) != ''
-                      AND cg.indirizzo IS NOT NULL AND TRIM(cg.indirizzo) != ''
-                      AND c.societa_id IS NOT NULL
+                    ORDER BY p.societa_id, TRIM(p.campo), LENGTH(TRIM(p.indirizzo)) DESC, p.id DESC
                     ON CONFLICT (societa_id, nome) DO UPDATE 
                     SET indirizzo = EXCLUDED.indirizzo 
                     WHERE (campi_sportivi.indirizzo IS NULL OR TRIM(campi_sportivi.indirizzo) = '')
                       AND EXCLUDED.indirizzo IS NOT NULL AND TRIM(EXCLUDED.indirizzo) != '';
                 """))
                 conn.commit()
-                print("Migration: Created and populated campi_sportivi table")
+
+                conn.execute(text("""
+                    INSERT INTO campi_sportivi (societa_id, nome, indirizzo)
+                    SELECT DISTINCT ON (c.societa_id, TRIM(cg.campo))
+                        c.societa_id,
+                        TRIM(cg.campo) AS nome,
+                        TRIM(cg.indirizzo) AS indirizzo
+                    FROM convocazione_gare cg
+                    JOIN convocazioni c ON cg.convocazione_id = c.id
+                    WHERE cg.campo IS NOT NULL AND TRIM(cg.campo) != ''
+                      AND cg.indirizzo IS NOT NULL AND TRIM(cg.indirizzo) != ''
+                      AND c.societa_id IS NOT NULL
+                    ORDER BY c.societa_id, TRIM(cg.campo), LENGTH(TRIM(cg.indirizzo)) DESC, cg.id DESC
+                    ON CONFLICT (societa_id, nome) DO UPDATE 
+                    SET indirizzo = EXCLUDED.indirizzo 
+                    WHERE (campi_sportivi.indirizzo IS NULL OR TRIM(campi_sportivi.indirizzo) = '')
+                      AND EXCLUDED.indirizzo IS NOT NULL AND TRIM(EXCLUDED.indirizzo) != '';
+                """))
+                conn.commit()
+                print("Migration: Populated campi_sportivi table")
             except Exception as e:
-                print(f"Migration warning (campi_sportivi table): {e}")
+                print(f"Migration warning (populate campi_sportivi table): {e}")
                 conn.rollback()
 
         finally:
