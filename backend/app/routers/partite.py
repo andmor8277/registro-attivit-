@@ -52,6 +52,23 @@ def lista_partite(
     rows = res.fetchall()
     return [dict(r._mapping) for r in rows]
 
+@router.get("/campi-sportivi")
+def lista_campi_sportivi(
+    societa_id: Optional[int] = Query(None),
+    request: Request = None,
+    db=Depends(get_db),
+    user=Depends(get_current_user)
+):
+    sid = get_societa_filter(user, societa_id, request)
+    where = "WHERE societa_id = :sid" if sid else ""
+    params = {"sid": sid} if sid else {}
+    res = db.execute(
+        text(f"SELECT id, nome, indirizzo FROM campi_sportivi {where} ORDER BY nome ASC"),
+        params
+    )
+    rows = res.fetchall()
+    return [dict(r._mapping) for r in rows]
+
 def _clean_str(val):
     if val is None:
         return None
@@ -89,6 +106,15 @@ def crea_partita(data: PartitaCreate, request: Request = None, db=Depends(get_db
     weekend_id = _clean_int(data.weekend_id)
     livello = _clean_str(data.livello)
 
+    # Se il campo è specificato ma l'indirizzo è vuoto, recupera l'indirizzo memorizzato
+    if campo and not indirizzo:
+        cs = db.execute(
+            text("SELECT indirizzo FROM campi_sportivi WHERE societa_id = :sid AND LOWER(TRIM(nome)) = LOWER(TRIM(:nome)) LIMIT 1"),
+            {"sid": societa_id, "nome": campo}
+        ).fetchone()
+        if cs and cs[0]:
+            indirizzo = cs[0]
+
     res = db.execute(
         text("""
             INSERT INTO partite (categoria_id, data_partite, ora, ora_presentazione, avversario, campo, indirizzo, casa_fuori, mister_id, risultato, goal_punti, goal_contro, note, societa_id, weekend_id, livello)
@@ -121,6 +147,21 @@ def crea_partita(data: PartitaCreate, request: Request = None, db=Depends(get_db
 
     partita_dict = dict(row._mapping)
     pid = partita_dict["id"]
+
+    # Salva o aggiorna indirizzo del campo sportivo per riutilizzo futuro
+    if campo and indirizzo:
+        try:
+            db.execute(text("""
+                INSERT INTO campi_sportivi (societa_id, nome, indirizzo, updated_at)
+                VALUES (:sid, :nome, :indirizzo, CURRENT_TIMESTAMP)
+                ON CONFLICT (societa_id, nome) DO UPDATE
+                SET indirizzo = EXCLUDED.indirizzo,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE EXCLUDED.indirizzo IS NOT NULL AND TRIM(EXCLUDED.indirizzo) != ''
+            """), {"sid": societa_id, "nome": campo, "indirizzo": indirizzo})
+            db.commit()
+        except Exception as e:
+            print(f"Avviso salvataggio campo_sportivo: {e}")
 
     # Collega retroattivamente eventuale convocazione_gara esistente per la stessa categoria e data
     try:
@@ -156,6 +197,18 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
     weekend_id = _clean_int(data.weekend_id)
     livello = _clean_str(data.livello)
     data_partite = _clean_str(data.data_partite)
+
+    res_soc = db.execute(text("SELECT societa_id FROM partite WHERE id = :id"), {"id": partita_id}).fetchone()
+    soc_id = res_soc[0] if res_soc else user.societa_id
+
+    # Se il campo è specificato ma l'indirizzo è vuoto, recupera l'indirizzo memorizzato
+    if campo and not indirizzo:
+        cs = db.execute(
+            text("SELECT indirizzo FROM campi_sportivi WHERE societa_id = :sid AND LOWER(TRIM(nome)) = LOWER(TRIM(:nome)) LIMIT 1"),
+            {"sid": soc_id, "nome": campo}
+        ).fetchone()
+        if cs and cs[0]:
+            indirizzo = cs[0]
 
     res = db.execute(
         text("""
@@ -203,6 +256,21 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
     db.commit()
 
     partita_dict = dict(row._mapping)
+
+    # Salva o aggiorna indirizzo del campo sportivo per riutilizzo futuro
+    if campo and indirizzo:
+        try:
+            db.execute(text("""
+                INSERT INTO campi_sportivi (societa_id, nome, indirizzo, updated_at)
+                VALUES (:sid, :nome, :indirizzo, CURRENT_TIMESTAMP)
+                ON CONFLICT (societa_id, nome) DO UPDATE
+                SET indirizzo = EXCLUDED.indirizzo,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE EXCLUDED.indirizzo IS NOT NULL AND TRIM(EXCLUDED.indirizzo) != ''
+            """), {"sid": partita_dict["societa_id"], "nome": campo, "indirizzo": indirizzo})
+            db.commit()
+        except Exception as e:
+            print(f"Avviso salvataggio campo_sportivo: {e}")
 
     # Sincronizza automaticamente le gare collegate in convocazione_gare
     try:

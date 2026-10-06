@@ -13,6 +13,10 @@ export const getPartite = (categoriaId, societaId) => {
   const qs = params.toString()
   return api.get('/partite/' + (qs ? `?${qs}` : ''))
 }
+export const getCampiSportivi = (societaId) => {
+  const params = societaId ? `?societa_id=${societaId}` : ''
+  return api.get('/partite/campi-sportivi' + params)
+}
 export const creaPartita = (data) => api.post('/partite/', data)
 export const aggiornaPartita = (id, data) => api.put(`/partite/${id}`, data)
 export const eliminaPartita = (id) => api.delete(`/partite/${id}`)

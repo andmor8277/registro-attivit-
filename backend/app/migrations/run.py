@@ -1385,6 +1385,50 @@ def run_migrations():
                 print(f"Migration warning (backfill missing societa_id): {e}")
                 conn.rollback()
 
+            # Tabella campi_sportivi per memorizzazione indirizzi campi da gioco
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS campi_sportivi (
+                        id SERIAL PRIMARY KEY,
+                        societa_id INTEGER REFERENCES societa(id) ON DELETE CASCADE,
+                        nome VARCHAR(150) NOT NULL,
+                        indirizzo VARCHAR(255),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT uq_campi_sportivi_soc_nome UNIQUE (societa_id, nome)
+                    );
+                """))
+                conn.execute(text("""
+                    INSERT INTO campi_sportivi (societa_id, nome, indirizzo)
+                    SELECT DISTINCT p.societa_id, TRIM(p.campo), TRIM(p.indirizzo)
+                    FROM partite p
+                    WHERE p.campo IS NOT NULL AND TRIM(p.campo) != ''
+                      AND p.indirizzo IS NOT NULL AND TRIM(p.indirizzo) != ''
+                      AND p.societa_id IS NOT NULL
+                    ON CONFLICT (societa_id, nome) DO UPDATE 
+                    SET indirizzo = EXCLUDED.indirizzo 
+                    WHERE (campi_sportivi.indirizzo IS NULL OR TRIM(campi_sportivi.indirizzo) = '')
+                      AND EXCLUDED.indirizzo IS NOT NULL AND TRIM(EXCLUDED.indirizzo) != '';
+                """))
+                conn.execute(text("""
+                    INSERT INTO campi_sportivi (societa_id, nome, indirizzo)
+                    SELECT DISTINCT c.societa_id, TRIM(cg.campo), TRIM(cg.indirizzo)
+                    FROM convocazione_gare cg
+                    JOIN convocazioni c ON cg.convocazione_id = c.id
+                    WHERE cg.campo IS NOT NULL AND TRIM(cg.campo) != ''
+                      AND cg.indirizzo IS NOT NULL AND TRIM(cg.indirizzo) != ''
+                      AND c.societa_id IS NOT NULL
+                    ON CONFLICT (societa_id, nome) DO UPDATE 
+                    SET indirizzo = EXCLUDED.indirizzo 
+                    WHERE (campi_sportivi.indirizzo IS NULL OR TRIM(campi_sportivi.indirizzo) = '')
+                      AND EXCLUDED.indirizzo IS NOT NULL AND TRIM(EXCLUDED.indirizzo) != '';
+                """))
+                conn.commit()
+                print("Migration: Created and populated campi_sportivi table")
+            except Exception as e:
+                print(f"Migration warning (campi_sportivi table): {e}")
+                conn.rollback()
+
         finally:
             if has_lock:
                 try:

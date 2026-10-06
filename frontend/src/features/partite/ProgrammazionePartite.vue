@@ -297,7 +297,19 @@
             <div class="form-row">
               <div class="form-group">
                 <label>Campo Sportivo</label>
-                <input type="text" v-model="modal.campo" placeholder="Nome campo" />
+                <input
+                  type="text"
+                  v-model="modal.campo"
+                  placeholder="Nome campo"
+                  list="campi-sportivi-list"
+                  @input="onCampoChange"
+                  @change="onCampoChange"
+                />
+                <datalist id="campi-sportivi-list">
+                  <option v-for="cs in campiSportivi" :key="cs.id" :value="cs.nome">
+                    {{ cs.indirizzo ? cs.indirizzo : cs.nome }}
+                  </option>
+                </datalist>
               </div>
               <div class="form-group">
                 <label>Indirizzo Campo</label>
@@ -346,7 +358,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue"
 import { useRouter } from "vue-router"
-import { getAllCategorie, getCategoriaResponsabili, creaPartita, aggiornaPartita, eliminaPartita as eliminaPartitaApi, getWeekend, getWeekendPartite, creaWeekend, aggiornaWeekend, eliminaWeekend as eliminaWeekendApi, exportPdf } from "../../api/index.js"
+import { getAllCategorie, getCategoriaResponsabili, getCampiSportivi, creaPartita, aggiornaPartita, eliminaPartita as eliminaPartitaApi, getWeekend, getWeekendPartite, creaWeekend, aggiornaWeekend, eliminaWeekend as eliminaWeekendApi, exportPdf } from "../../api/index.js"
 import { useStore } from "../../store.js"
 import { jsPDF } from "jspdf"
 import "jspdf-autotable"
@@ -360,6 +372,7 @@ const misterPerCategoria = ref({})
 const weekend = ref([])
 const weekendSelezionato = ref(null)
 const weekendPartite = ref([])
+const campiSportivi = ref([])
 
 const modal = ref({
   show: false,
@@ -490,6 +503,17 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
   }
 }
 
+function onCampoChange() {
+  if (!modal.value.campo) return
+  const cVal = modal.value.campo.trim().toLowerCase()
+  const match = campiSportivi.value.find(
+    cs => cs.nome && cs.nome.trim().toLowerCase() === cVal
+  )
+  if (match && match.indirizzo) {
+    modal.value.indirizzo = match.indirizzo
+  }
+}
+
 function chiudiModal() {
   modal.value.show = false
 }
@@ -514,6 +538,7 @@ async function salvaPartita() {
     } else {
       await creaPartita(payload)
     }
+    loadCampiSportivi()
     chiudiModal()
     if (weekendSelezionato.value) {
       await caricaWeekendPartite(weekendSelezionato.value.id)
@@ -560,6 +585,17 @@ async function loadWeekend() {
   } catch (e) {
     console.error('Errore caricamento weekend:', e)
     weekend.value = []
+  }
+}
+
+async function loadCampiSportivi() {
+  const societaId = societaAttiva.value?.id || null
+  try {
+    const res = await getCampiSportivi(societaId)
+    campiSportivi.value = res.data || []
+  } catch (e) {
+    console.error('Errore caricamento campi sportivi:', e)
+    campiSportivi.value = []
   }
 }
 
@@ -861,6 +897,7 @@ async function esportaPDFGenitori(group) {
 onMounted(() => {
   loadCategorie()
   loadWeekend()
+  loadCampiSportivi()
 })
 
 watch(weekendSelezionato, (newVal) => {

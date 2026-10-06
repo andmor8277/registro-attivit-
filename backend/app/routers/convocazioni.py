@@ -149,6 +149,28 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
             if m:
                 appunt_time = m.group(0)
 
+        g_campo = g.campo.strip() if g.campo else ""
+        g_indirizzo = g.indirizzo.strip() if g.indirizzo else ""
+        if g_campo and not g_indirizzo and societa_id:
+            cs = db.execute(
+                text("SELECT indirizzo FROM campi_sportivi WHERE societa_id = :sid AND LOWER(TRIM(nome)) = LOWER(TRIM(:nome)) LIMIT 1"),
+                {"sid": societa_id, "nome": g_campo}
+            ).fetchone()
+            if cs and cs[0]:
+                g_indirizzo = cs[0]
+        if g_campo and g_indirizzo and societa_id:
+            try:
+                db.execute(text("""
+                    INSERT INTO campi_sportivi (societa_id, nome, indirizzo, updated_at)
+                    VALUES (:sid, :nome, :indirizzo, CURRENT_TIMESTAMP)
+                    ON CONFLICT (societa_id, nome) DO UPDATE
+                    SET indirizzo = EXCLUDED.indirizzo,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE EXCLUDED.indirizzo IS NOT NULL AND TRIM(EXCLUDED.indirizzo) != ''
+                """), {"sid": societa_id, "nome": g_campo, "indirizzo": g_indirizzo})
+            except Exception as e:
+                pass
+
         if not partita_id and weekend_id:
             # Nuova partita aggiunta dal mister al weekend del responsabile: registrala in partite
             res_p = db.execute(text("""
@@ -165,8 +187,8 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
                 "ora": ora_short,
                 "appunt": appunt_time,
                 "avv": g.gara or "Gara",
-                "campo": g.campo or "",
-                "indirizzo": g.indirizzo or "",
+                "campo": g_campo,
+                "indirizzo": g_indirizzo,
                 "cf": "casa",
                 "sid": societa_id,
                 "wid": weekend_id
@@ -186,12 +208,12 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
                 "pid": partita_id,
                 "ora": ora_short,
                 "appunt": appunt_time,
-                "campo": g.campo if g.campo else None,
-                "indirizzo": g.indirizzo if g.indirizzo else None
+                "campo": g_campo if g_campo else None,
+                "indirizzo": g_indirizzo if g_indirizzo else None
             })
 
         gara = ConvocazioneGara(convocazione_id=c.id, partita_id=partita_id, numero=g.numero, gara=g.gara, data=dt,
-            campo=g.campo, indirizzo=g.indirizzo, appuntamento=g.appuntamento,
+            campo=g_campo, indirizzo=g_indirizzo, appuntamento=g.appuntamento,
             inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [])
         db.add(gara)
         db.flush()
@@ -271,6 +293,28 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
             if m:
                 appunt_time = m.group(0)
 
+        g_campo = g.campo.strip() if g.campo else ""
+        g_indirizzo = g.indirizzo.strip() if g.indirizzo else ""
+        if g_campo and not g_indirizzo and c.societa_id:
+            cs = db.execute(
+                text("SELECT indirizzo FROM campi_sportivi WHERE societa_id = :sid AND LOWER(TRIM(nome)) = LOWER(TRIM(:nome)) LIMIT 1"),
+                {"sid": c.societa_id, "nome": g_campo}
+            ).fetchone()
+            if cs and cs[0]:
+                g_indirizzo = cs[0]
+        if g_campo and g_indirizzo and c.societa_id:
+            try:
+                db.execute(text("""
+                    INSERT INTO campi_sportivi (societa_id, nome, indirizzo, updated_at)
+                    VALUES (:sid, :nome, :indirizzo, CURRENT_TIMESTAMP)
+                    ON CONFLICT (societa_id, nome) DO UPDATE
+                    SET indirizzo = EXCLUDED.indirizzo,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE EXCLUDED.indirizzo IS NOT NULL AND TRIM(EXCLUDED.indirizzo) != ''
+                """), {"sid": c.societa_id, "nome": g_campo, "indirizzo": g_indirizzo})
+            except Exception as e:
+                pass
+
         if not partita_id and weekend_id:
             # Nuova partita aggiunta dal mister al weekend del responsabile: registrala in partite
             res_p = db.execute(text("""
@@ -287,8 +331,8 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
                 "ora": ora_short,
                 "appunt": appunt_time,
                 "avv": g.gara or "Gara",
-                "campo": g.campo or "",
-                "indirizzo": g.indirizzo or "",
+                "campo": g_campo,
+                "indirizzo": g_indirizzo,
                 "cf": "casa",
                 "sid": c.societa_id,
                 "wid": weekend_id
@@ -308,12 +352,12 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
                 "pid": partita_id,
                 "ora": ora_short,
                 "appunt": appunt_time,
-                "campo": g.campo if g.campo else None,
-                "indirizzo": g.indirizzo if g.indirizzo else None
+                "campo": g_campo if g_campo else None,
+                "indirizzo": g_indirizzo if g_indirizzo else None
             })
 
         gara = ConvocazioneGara(convocazione_id=cid, partita_id=partita_id, numero=g.numero, gara=g.gara, data=dt,
-            campo=g.campo, indirizzo=g.indirizzo, appuntamento=g.appuntamento,
+            campo=g_campo, indirizzo=g_indirizzo, appuntamento=g.appuntamento,
             inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [])
         db.add(gara)
         db.flush()
