@@ -475,7 +475,7 @@ import { caricaUtente } from './core/router.js'
 import { App as CapApp } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { Capacitor } from '@capacitor/core'
-import { initInactivityTracker, clearActivity } from './composables/useInactivity.js'
+import { initInactivityTracker, clearActivity, isSessionExpired } from './composables/useInactivity.js'
 
 const { token, setToken, utenteAttivo, setUtenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva, hideTopbar, categoriaAttiva } = useStore()
 const router = useRouter()
@@ -641,6 +641,23 @@ onMounted(async () => {
     })
   }
 
+  initInactivityTracker(() => {
+    clearActivity()
+    clearToken()
+    if (!route.path.includes('/login')) {
+      router.push('/login?session_expired=1')
+    }
+  })
+
+  if (token.value && isSessionExpired()) {
+    clearActivity()
+    clearToken()
+    if (!route.path.includes('/login')) {
+      router.push('/login?session_expired=1')
+    }
+    return
+  }
+
   if (token.value) {
     try {
       if (!utenteAttivo.value) {
@@ -669,14 +686,6 @@ onMounted(async () => {
       infortuniCount.value = Array.isArray(res.data) ? res.data.length : 0
     } catch { infortuniCount.value = 0 }
   }
-
-  initInactivityTracker(() => {
-    clearActivity()
-    clearToken()
-    if (!route.path.includes('/login')) {
-      router.push('/login?session_expired=1')
-    }
-  })
 })
 
 watch(societaAttiva, async (newVal) => {

@@ -18,6 +18,10 @@ export function isNativeApp() {
 
 export function recordActivity() {
   if (isNativeApp()) return
+  if (isSessionExpired()) {
+    if (typeof onTimeoutCallback === 'function') onTimeoutCallback()
+    return
+  }
   const now = Date.now()
   if (now - lastThrottleUpdate > 10000) {
     lastThrottleUpdate = now
@@ -86,6 +90,12 @@ export function initInactivityTracker(onTimeout) {
   // Se l'utente è loggato e non c'è ancora un timestamp, inizializzalo
   if (localStorage.getItem('token') && !localStorage.getItem(INACTIVITY_STORAGE_KEY)) {
     resetActivity()
+  }
+
+  // Verifica subito se la sessione è già scaduta
+  if (isSessionExpired()) {
+    if (typeof onTimeoutCallback === 'function') onTimeoutCallback()
+    return
   }
 
   if (!checkInterval) {
