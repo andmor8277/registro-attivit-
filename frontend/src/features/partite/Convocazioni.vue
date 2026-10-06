@@ -198,7 +198,20 @@
                 <div class="card-h"><h2>Dettagli gara</h2></div>
                 <ul class="info-dl">
                   <li><span class="k">Data</span><span class="v"><input type="date" v-model="garaAttiva.data" :min="convocazione.data_inizio" :max="convocazione.data_fine || convocazione.data_inizio" /></span></li>
-                  <li><span class="k">Campo</span><span class="v"><input v-model="garaAttiva.campo" placeholder="Comunale n.1" /></span></li>
+                  <li><span class="k">Campo</span><span class="v">
+                    <input
+                      v-model="garaAttiva.campo"
+                      placeholder="Comunale n.1"
+                      list="campi-sportivi-conv-list"
+                      @input="onCampoChangeGara"
+                      @change="onCampoChangeGara"
+                    />
+                    <datalist id="campi-sportivi-conv-list">
+                      <option v-for="cs in campiSportivi" :key="cs.id" :value="cs.nome">
+                        {{ cs.indirizzo ? cs.indirizzo : cs.nome }}
+                      </option>
+                    </datalist>
+                  </span></li>
                   <li><span class="k">Indirizzo</span><span class="v"><input v-model="garaAttiva.indirizzo" placeholder="&mdash;" /></span></li>
                   <li><span class="k">Orario Appuntamento</span><span class="v"><input v-model="garaAttiva.appuntamento" placeholder="13:45 &middot; spogliatoi" /></span></li>
                   <li><span class="k">Inizio gara</span><span class="v"><input v-model="garaAttiva.inizio_gara" placeholder="15:00" /></span></li>
@@ -503,6 +516,7 @@ import {
   getCategoriaResponsabili,
   getWeekend,
   getWeekendPartite,
+  getCampiSportivi,
   creaSegnalazioneScouting,
   getLocalDateStr,
   getConvocazioni,
@@ -532,6 +546,7 @@ const responsabili = ref([])
 const numPartite = ref(1)
 const registro = ref([])
 const weekendDisponibili = ref([])
+const campiSportivi = ref([])
 const pickerOpen = ref(false)
 const pickerGara = ref(null)
 const pickerPos = ref(null)
@@ -1433,6 +1448,28 @@ function rimuoviGara(idx) {
   activeGaraIdx.value = Math.max(0, idx - 1)
 }
 
+function onCampoChangeGara() {
+  if (!garaAttiva.value || !garaAttiva.value.campo) return
+  const cVal = garaAttiva.value.campo.trim().toLowerCase()
+  const match = campiSportivi.value.find(
+    cs => cs.nome && cs.nome.trim().toLowerCase() === cVal
+  )
+  if (match && match.indirizzo) {
+    garaAttiva.value.indirizzo = match.indirizzo
+  }
+}
+
+async function loadCampiSportivi() {
+  const societaId = societaAttiva.value?.id || null
+  try {
+    const res = await getCampiSportivi(societaId)
+    campiSportivi.value = res.data || []
+  } catch (e) {
+    console.error('Errore caricamento campi sportivi:', e)
+    campiSportivi.value = []
+  }
+}
+
 async function salva() {
   try {
     const payload = {
@@ -1468,6 +1505,7 @@ async function salva() {
       const res = await createConvocazione(payload)
       convocazioneId.value = res.data.id
     }
+    await loadCampiSportivi()
     await loadStorico()
     await loadWeekendDisponibili()
     if (convocazioneId.value) {
@@ -2034,6 +2072,7 @@ onMounted(async () => {
     await loadStorico()
     await loadMisters()
     await loadWeekendDisponibili()
+    await loadCampiSportivi()
     if (convocazioniAttive.value.length > 0) {
       await caricaConvocazione(convocazioniAttive.value[0].id)
     } else if (convocazioniStorico.value.length > 0) {
