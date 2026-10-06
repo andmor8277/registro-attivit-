@@ -1374,6 +1374,11 @@ def run_migrations():
                     FROM categorie c 
                     WHERE pe.societa_id IS NULL AND pe.categoria_id = c.id AND c.societa_id IS NOT NULL;
                 """))
+                conn.execute(text("""
+                    UPDATE presenze_allenatori pa SET societa_id = u.societa_id 
+                    FROM utenti u 
+                    WHERE pa.societa_id IS NULL AND pa.utente_id = u.id AND u.societa_id IS NOT NULL;
+                """))
                 conn.commit()
                 print("Migration: Backfilled missing societa_id across core tables")
             except Exception as e:
