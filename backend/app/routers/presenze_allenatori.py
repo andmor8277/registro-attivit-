@@ -29,7 +29,7 @@ class PresenzaAllenatoreOut(BaseModel):
     class Config:
         from_attributes = True
 
-@router.get("/mese/{anno}/{mese}")
+@router.get("/mese/{anno}/{mese}", response_model=list[PresenzaAllenatoreOut])
 def get_mese(anno: int, mese: int, societa_id: Optional[int] = Query(None), request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_staff_admin)):
     sid = get_societa_filter(current_user, societa_id, request)
     query = db.query(PresenzaAllenatore).filter(
@@ -37,7 +37,12 @@ def get_mese(anno: int, mese: int, societa_id: Optional[int] = Query(None), requ
         extract("month", PresenzaAllenatore.data) == mese
     )
     if sid:
-        query = query.filter(PresenzaAllenatore.societa_id == sid)
+        query = query.filter(
+            (PresenzaAllenatore.societa_id == sid) |
+            (PresenzaAllenatore.societa_id.is_(None) & PresenzaAllenatore.utente_id.in_(
+                db.query(Utente.id).filter(Utente.societa_id == sid)
+            ))
+        )
     return query.all()
 
 @router.post("/", response_model=PresenzaAllenatoreOut)

@@ -58,13 +58,23 @@
             </td>
             <td v-for="g in giorniMese" :key="g.num"
               class="cella"
-              :class="[getCodiceClasse(allenatore.id, g.num), { 'cella-disabled': !isAllenamentoGiorno(allenatore, g.dow) }]"
-              @click="isAllenamentoGiorno(allenatore, g.dow) && openEdit(allenatore, g.num)">
+              :class="[getCodiceClasse(allenatore.id, g.num), { 'cella-disabled': !isAllenamentoGiorno(allenatore, g.dow, g.num) }]"
+              @click="openEdit(allenatore, g.num)">
               {{ getCodice(allenatore.id, g.num) }}
             </td>
             <td class="td-tot td-pres">{{ totalePresenze(allenatore.id) }}</td>
           </tr>
         </tbody>
+        <tfoot v-if="allenatori.length > 0">
+          <tr class="riga-totale">
+            <td class="td-num"></td>
+            <td class="td-nome tot-label">Totale Presenti</td>
+            <td v-for="g in giorniMese" :key="g.num" class="tot-cell">
+              {{ totGiorno(g.num) }}
+            </td>
+            <td class="td-tot td-pres">{{ totaleComplessivo }}</td>
+          </tr>
+        </tfoot>
       </table>
 
       <div v-if="allenatori.length === 0" class="empty-state">
@@ -84,7 +94,7 @@
       <div v-if="editModal.show" class="modal-overlay" @click.self="editModal.show = false">
         <div class="modal modal-edit">
           <div class="modal-header">
-            <h3>{{ editModal.allenatore.cognome }}</h3>
+            <h3>{{ editModal.allenatore?.cognome }} {{ editModal.allenatore?.nome }}</h3>
             <span class="modal-date">{{ editModal.giorno }} {{ meseLabel }} {{ anno }}</span>
           </div>
           <div class="codici-grid">
@@ -106,7 +116,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue"
+import { ref, computed, onMounted, watch } from "vue"
 import { useRouter } from "vue-router"
 import { getCodici, getPresenzeAllenatoriMese, upsertPresenzaAllenatore, getMisterList } from "../../api/index.js"
 
@@ -146,12 +156,14 @@ const giorniMese = computed(() => {
 })
 
 function getCodice(utenteId, giorno) {
-  const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(giorno).padStart(2,"0")
-  const entry = presenze.value.find(r => r.utente_id === utenteId && r.data === d)
-  return entry ? entry.codice : ""
+  const d = `${anno.value}-${String(mese.value).padStart(2, "0")}-${String(giorno).padStart(2, "0")}`
+  const entry = presenze.value.find(r => r.utente_id === utenteId && (r.data === d || (r.data && String(r.data).substring(0, 10) === d)))
+  return entry ? (entry.codice || "") : ""
 }
 
-function isAllenamentoGiorno(allenatore, dow) {
+function isAllenamentoGiorno(allenatore, dow, giornoNum) {
+  if (giornoNum && getCodice(allenatore.id, giornoNum)) return true
+  if (!allenatore.giorni || allenatore.giorni.length === 0) return true
   return (allenatore.giorni || []).includes(dow)
 }
 
@@ -163,17 +175,31 @@ function getCodiceClasse(utenteId, giorno) {
 }
 
 function totalePresenze(utenteId) {
-  return presenze.value.filter(r => r.utente_id === utenteId && ["X","P","R"].includes(r.codice)).length
+  return presenze.value.filter(r => r.utente_id === utenteId && ["X","P","R"].includes((r.codice || "").toUpperCase().trim())).length
 }
+
+function totGiorno(giorno) {
+  const d = `${anno.value}-${String(mese.value).padStart(2, "0")}-${String(giorno).padStart(2, "0")}`
+  const count = presenze.value.filter(r => (r.data === d || (r.data && String(r.data).substring(0, 10) === d)) && ["X", "P", "R"].includes((r.codice || "").toUpperCase().trim())).length
+  return count || ""
+}
+
+const totaleComplessivo = computed(() => {
+  return presenze.value.filter(r => ["X", "P", "R"].includes((r.codice || "").toUpperCase().trim())).length || ""
+})
 
 function openEdit(allenatore, giorno) {
   editModal.value = { show: true, allenatore, giorno }
 }
 
 async function salvaPresenza(codice) {
-  const d = anno.value + "-" + String(mese.value).padStart(2,"0") + "-" + String(editModal.value.giorno).padStart(2,"0")
-  await upsertPresenzaAllenatore({ utente_id: editModal.value.allenatore.id, data: d, codice })
-  await loadPresenze()
+  const d = `${anno.value}-${String(mese.value).padStart(2, "0")}-${String(editModal.value.giorno).padStart(2, "0")}`
+  try {
+    await upsertPresenzaAllenatore({ utente_id: editModal.value.allenatore.id, data: d, codice })
+    await loadPresenze()
+  } catch (e) {
+    console.error('Errore salvataggio presenza:', e)
+  }
   editModal.value.show = false
 }
 
@@ -187,10 +213,25 @@ function nextMese() {
   else mese.value++
 }
 
+let currentFetchId = 0
 async function loadPresenze() {
-  const res = await getPresenzeAllenatoriMese(anno.value, mese.value)
-  presenze.value = res.data || []
+  const fetchId = ++currentFetchId
+  try {
+    const res = await getPresenzeAllenatoriMese(anno.value, mese.value)
+    if (fetchId === currentFetchId) {
+      presenze.value = res.data || []
+    }
+  } catch (e) {
+    if (fetchId === currentFetchId) {
+      console.error('Errore caricamento presenze:', e)
+      presenze.value = []
+    }
+  }
 }
+
+watch([anno, mese], async () => {
+  await loadPresenze()
+})
 
 async function loadAll() {
   try {
@@ -476,13 +517,31 @@ tbody td {
 }
 
 .cella-disabled {
-  opacity: 0.2;
-  cursor: default;
-  pointer-events: none;
+  opacity: 0.35;
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .td-tot {
   font-weight: 800;
+  font-family: var(--font-mono);
+  color: #10b981;
+}
+
+tfoot tr.riga-totale td {
+  border-top: 2px solid var(--color-border);
+  font-weight: 700;
+  background: var(--color-surface-elevated);
+}
+
+.tot-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.tot-cell {
+  font-weight: 700;
   font-family: var(--font-mono);
   color: #10b981;
 }
