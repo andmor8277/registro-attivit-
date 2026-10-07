@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useStore } from '../store.js'
 import { getMe } from './api/auth.js'
 import { isSessionExpired, clearActivity, recordActivity } from '../composables/useInactivity.js'
+import { checkAppVersion } from './versionCheck.js'
 
 const store = useStore()
 
@@ -137,5 +138,23 @@ router.beforeEach(async (to, from, next) => {
     if (user?.ruolo === 'scouting') return next('/scouting')
   }
 
+  // Controllo automatico nuova versione ad ogni cambio rotta
+  checkAppVersion()
+
   next()
 })
+
+// Gestione trasparente dei nuovi deploy (evita errori di chunk mancanti ricaricando l'app)
+router.onError((error, to) => {
+  const isChunkError = error?.message && (
+    error.message.includes('Failed to fetch dynamically imported module') ||
+    error.message.includes('Importing a module script failed') ||
+    error.message.includes('error loading dynamically imported module') ||
+    error.message.includes('Loading chunk')
+  )
+  if (isChunkError) {
+    console.warn('[THOF] Modulo non trovato a seguito di deploy. Ricarico la pagina...', error)
+    window.location.href = to.fullPath
+  }
+})
+

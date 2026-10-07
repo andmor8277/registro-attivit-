@@ -1,12 +1,37 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-// PWA disabled — Service Worker causing 404 on registerSW.js and aggressive caching
-// import { VitePWA } from 'vite-plugin-pwa'
+import fs from 'fs'
+import path from 'path'
+
+const appBuildTime = Date.now().toString()
+
+function versionPlugin() {
+  return {
+    name: 'generate-version-file',
+    configureServer(server) {
+      server.middlewares.use('/version.json', (req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+        res.end(JSON.stringify({ version: appBuildTime }))
+      })
+    },
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify({ version: appBuildTime })
+      })
+    }
+  }
+}
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(appBuildTime)
+  },
   plugins: [
     vue(),
-    // VitePWA({ ... }) — disabled
+    versionPlugin()
   ],
   server: {
     port: 5173,
