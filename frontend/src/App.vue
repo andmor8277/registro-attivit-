@@ -12,6 +12,25 @@
 
       <nav class="sidebar-nav">
         <div class="nav-label" v-if="!isSegreteria">Operativo</div>
+
+        <!-- Squadra attiva (selettore o badge) -->
+        <div v-if="userCategories.length > 0 && !isSegreteria" class="sidebar-cat-box">
+          <div class="sidebar-cat-header">
+            <span class="sidebar-cat-label">Squadra:</span>
+          </div>
+          <div v-if="userCategories.length > 1" class="cat-select-wrapper">
+            <select :value="categoriaAttiva?.id" @change="onCambiaCategoria($event.target.value)" class="cat-select">
+              <option v-for="c in userCategories" :key="c.id" :value="c.id">
+                {{ c.nome }} {{ c.anno ? '(' + c.anno + ')' : (c.is_portieri ? '(POR)' : '') }}
+              </option>
+            </select>
+          </div>
+          <div v-else class="cat-single-pill">
+            <span class="cat-dot" :class="{ portieri: userCategories[0].is_portieri }"></span>
+            <span class="cat-name">{{ userCategories[0].nome }} {{ userCategories[0].anno || '' }}</span>
+          </div>
+        </div>
+
         <router-link v-if="!isSegreteria" to="/" class="side-item" :class="{ active: isActive(['/']) }">
           <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
           <span>Panoramica</span>
@@ -44,6 +63,10 @@
           <svg viewBox="0 0 24 24"><path d="M12 2l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3 6.2 19.9l1.1-6.5L2.6 8.8l6.5-.9z"/></svg>
           <span>Valutazioni</span>
         </button>
+        <router-link v-if="canCertificati" to="/infermeria/certificati" class="side-item" :class="{ active: isActive(['/infermeria/certificati']) }">
+          <svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M9 15l2 2 4-4"/></svg>
+          <span>Certificati Medici</span>
+        </router-link>
         <router-link v-if="canScouting && !isSegreteria" to="/scouting" class="side-item" :class="{ active: isActive(['/scouting']) }">
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
           <span>Scouting</span>
@@ -202,6 +225,15 @@
           </span>
 
           <div class="mobile-menu-label" v-if="!isSegreteria">Operativo</div>
+          <div v-if="userCategories.length > 0 && !isSegreteria" class="mobile-cat-box">
+            <span class="mobile-cat-label">Squadra:</span>
+            <select v-if="userCategories.length > 1" :value="categoriaAttiva?.id" @change="onCambiaCategoria($event.target.value)" class="mobile-cat-select">
+              <option v-for="c in userCategories" :key="c.id" :value="c.id">
+                {{ c.nome }} {{ c.anno ? '(' + c.anno + ')' : (c.is_portieri ? '(POR)' : '') }}
+              </option>
+            </select>
+            <span v-else class="mobile-cat-single">{{ userCategories[0].nome }} {{ userCategories[0].anno || '' }}</span>
+          </div>
           <router-link v-if="!isSuperAdmin && !isSegreteria" to="/" class="mobile-menu-item" :class="{ active: route.path === '/' }" @click="mobileMenuOpen = false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
@@ -269,6 +301,13 @@
             </svg>
             Valutazioni
           </button>
+          <router-link v-if="canCertificati" to="/infermeria/certificati" class="mobile-menu-item" :class="{ active: isActive(['/infermeria/certificati']) }" @click="mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/>
+              <path d="M14 3v6h6M9 15l2 2 4-4"/>
+            </svg>
+            Certificati Medici
+          </router-link>
           <router-link v-if="canScouting && !isSegreteria" to="/scouting" class="mobile-menu-item" :class="{ active: isActive(['/scouting']) }" @click="mobileMenuOpen = false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="7"/>
@@ -470,14 +509,14 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStore } from './store.js'
 import { useRouter, useRoute } from 'vue-router'
-import { getStagioni, changePassword, getInfortuni, getMe, getSocietaById, getUploadUrl } from './api/index.js'
+import { getStagioni, changePassword, getInfortuni, getMe, getSocietaById, getUploadUrl, getCategorie } from './api/index.js'
 import { caricaUtente } from './core/router.js'
 import { App as CapApp } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { Capacitor } from '@capacitor/core'
 import { initInactivityTracker, clearActivity, isSessionExpired } from './composables/useInactivity.js'
 
-const { token, setToken, utenteAttivo, setUtenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva, hideTopbar, categoriaAttiva } = useStore()
+const { token, setToken, utenteAttivo, setUtenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva, hideTopbar, categoriaAttiva, setCategoria } = useStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -493,12 +532,69 @@ const isAdminUtente = computed(() => !!utenteAttivo.value?.is_admin)
 const isAdminSocieta = computed(() => isAdminUtente.value && !isSuperAdmin.value)
 const canSegreteria = computed(() => utenteAttivo.value?.ruolo === 'segreteria' || isAdminUtente.value || isSuperAdmin.value)
 const canInfermeria = computed(() => ['infermeria', 'admin', 'super_admin', 'segreteria'].includes(utenteAttivo.value?.ruolo))
+const canCertificati = computed(() => isMister.value || canInfermeria.value || canSegreteria.value)
 const canScouting = computed(() => ['scouting', 'admin', 'super_admin'].includes(utenteAttivo.value?.ruolo) || isAdminUtente.value || isSuperAdmin.value)
 const infortuniCount = ref(0)
+const userCategories = ref([])
 
-function vaiPaginaCategoria(base) {
-  if (categoriaAttiva.value?.id) router.push('/' + base + '/' + categoriaAttiva.value.id)
-  else router.push('/allenatori')
+async function loadUserCategories() {
+  if (!token.value) return
+  try {
+    const socId = societaAttiva.value?.id || utenteAttivo.value?.societa_id || null
+    const res = await getCategorie(socId)
+    userCategories.value = res.data || []
+    if (userCategories.value.length > 0) {
+      const exists = categoriaAttiva.value && userCategories.value.some(c => c.id === categoriaAttiva.value.id)
+      if (!exists) {
+        setCategoria(userCategories.value[0])
+      }
+    }
+  } catch (e) {
+    console.error('Errore caricamento categorie utente:', e)
+  }
+}
+
+function onCambiaCategoria(newId) {
+  const cat = userCategories.value.find(c => c.id === parseInt(newId))
+  if (cat) {
+    setCategoria(cat)
+    const categoryRoutes = ['registro', 'convocazioni', 'allenamenti', 'dati', 'reportistica', 'valutazioni', 'scheda-allenamento', 'liste-tornei', 'scelta']
+    const matched = categoryRoutes.find(r => route.path.startsWith('/' + r + '/'))
+    if (matched) {
+      router.push('/' + matched + '/' + cat.id)
+    }
+  }
+}
+
+async function vaiPaginaCategoria(base) {
+  let targetCat = categoriaAttiva.value
+  if (!targetCat?.id) {
+    if (userCategories.value.length > 0) {
+      targetCat = userCategories.value[0]
+      setCategoria(targetCat)
+    } else {
+      try {
+        const socId = societaAttiva.value?.id || utenteAttivo.value?.societa_id || null
+        const res = await getCategorie(socId)
+        const cats = res.data || []
+        if (cats.length > 0) {
+          userCategories.value = cats
+          targetCat = cats[0]
+          setCategoria(targetCat)
+        }
+      } catch (e) {
+        console.error('Errore getCategorie in vaiPaginaCategoria:', e)
+      }
+    }
+  }
+
+  if (targetCat?.id) {
+    router.push('/' + base + '/' + targetCat.id)
+  } else if (!isMister.value) {
+    router.push('/allenatori')
+  } else {
+    router.push('/')
+  }
 }
 const ruoloLabel = computed(() => {
   if (isSuperAdmin.value) return 'Super Admin'
@@ -672,6 +768,7 @@ onMounted(async () => {
         })
       }
       await loadStagione()
+      await loadUserCategories()
     } catch (e) {
       if (e?.response?.status === 401) {
         clearToken()
@@ -688,11 +785,17 @@ onMounted(async () => {
   }
 })
 
+watch(utenteAttivo, async () => {
+  await loadUserCategories()
+})
+
 watch(societaAttiva, async (newVal) => {
   if (newVal?.id) {
     await loadStagione()
+    await loadUserCategories()
   } else {
     setStagioneCorrente(null)
+    userCategories.value = []
   }
 })
 </script>
@@ -940,6 +1043,117 @@ watch(societaAttiva, async (newVal) => {
   text-transform: uppercase;
   color: var(--color-text-muted);
   padding: 12px 10px 6px;
+}
+
+.sidebar-cat-box {
+  margin: 2px 6px 10px;
+  padding: 8px 10px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.sidebar-cat-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sidebar-cat-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.cat-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.cat-select {
+  width: 100%;
+  padding: 5px 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.cat-select:focus {
+  border-color: var(--color-primary);
+}
+
+.cat-single-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.cat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.cat-dot.portieri {
+  background: var(--color-violet);
+}
+
+.cat-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-cat-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.mobile-cat-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.mobile-cat-select {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mobile-cat-single {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
 }
 
 .sidebar-nav {
