@@ -2,7 +2,7 @@
   <div class="cert-page">
     <header class="page-header">
       <div class="header-left">
-        <button class="btn-icon" @click="router.push('/infermeria')">
+        <button class="btn-icon" @click="router.push(isMister ? '/' : '/infermeria')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="19" y1="12" x2="5" y2="12"/>
             <polyline points="12 19 5 12 12 5"/>
@@ -226,20 +226,22 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useStore } from '../../store.js'
 import { getCategorie, getPersone, updateScadenzaCertificato, getLocalDateStr, saveOrSharePdf } from '../../api/index.js'
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 
 const router = useRouter()
+const route = useRoute()
 const { utenteAttivo, societaAttiva } = useStore()
 
+const isMister = computed(() => utenteAttivo.value?.ruolo === 'mister')
 const categorie = ref([])
 const persone = ref([])
 const search = ref('')
-const filtro = ref('tutti')
+const filtro = ref(route.query.filtro || 'tutti')
 const esportandoCatId = ref(null)
 const esportandoTutti = ref(false)
 
@@ -257,7 +259,15 @@ const editModal = ref({
 })
 
 const societaId = computed(() => {
-  return utenteAttivo.value?.societa_id || parseInt(localStorage.getItem('societa_id')) || 1
+  return societaAttiva.value?.id || utenteAttivo.value?.societa_id || parseInt(localStorage.getItem('societa_id')) || null
+})
+
+watch(() => route.query.filtro, (newFiltro) => {
+  if (newFiltro) filtro.value = newFiltro
+})
+
+watch(() => societaAttiva.value?.id, async () => {
+  await loadDati()
 })
 
 onMounted(async () => {
@@ -268,7 +278,8 @@ async function loadDati() {
   try {
     const res = await getCategorie(societaId.value)
     let cats = Array.isArray(res) ? res : (res?.data || [])
-    categorie.value = cats.filter(c => c.societa_id === societaId.value && !c.is_archiviata && c.parent_id !== null)
+    // Per i mister, getCategorie restituisce già solo le categorie assegnate
+    categorie.value = cats.filter(c => (!societaId.value || !c.societa_id || c.societa_id === societaId.value) && !c.is_archiviata && c.parent_id !== null)
     const validCatIds = new Set(categorie.value.map(c => c.id))
 
     const pRes = await getPersone(null, societaId.value)

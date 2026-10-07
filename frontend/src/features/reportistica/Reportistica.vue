@@ -110,12 +110,16 @@
 
     <div v-if="activeReport === 'doppie'" class="print-stats-only">
       <div class="print-stat-item">
-        <span class="print-stat-label">Casi rilevati</span>
+        <span class="print-stat-label">Giocatori Coinvolti</span>
+        <span class="print-stat-value">{{ doppieRiepilogoGiocatori.length }}</span>
+      </div>
+      <div class="print-stat-item">
+        <span class="print-stat-label">Casi Rilevati</span>
         <span class="print-stat-value">{{ convocatiPerGiornata.length }}</span>
       </div>
       <div class="print-stat-item">
         <span class="print-stat-label">Tipo</span>
-        <span class="print-stat-value">Convocazioni multiple</span>
+        <span class="print-stat-value">Stagionale Convocazioni Multiple</span>
       </div>
     </div>
 
@@ -392,8 +396,8 @@
                 <tr v-for="w in indivPlayerWeekend" :key="w.key">
                   <td>{{ w.data }}</td>
                   <td>{{ w.gara }}</td>
-                  <td :class="w.convocato ? 'cell-ok' : 'cell-danger'">
-                    {{ w.convocato ? (w.non_presente ? 'Convocato (non presente)' : 'Convocato') : 'Non convocato' }}
+                  <td :class="w.statoClass || (w.convocato ? 'cell-ok' : 'cell-danger')">
+                    {{ w.statoLabel || (w.convocato ? (w.non_presente ? 'Convocato (non presente)' : 'Convocato') : 'Non convocato') }}
                   </td>
                 </tr>
                 <tr v-if="indivPlayerWeekend.length === 0">
@@ -416,7 +420,7 @@
             <path d="M4 11l3-3"/>
             <path d="M20 7l-3-3"/>
           </svg>
-          Giocatori convocati in gare multiple nello stesso giorno
+          Convocazioni multiple (gare multiple nello stesso weekend o turno)
         </div>
         <div class="report-actions">
           <button class="btn-action" @click="printReport" title="Stampa">
@@ -437,28 +441,79 @@
           </button>
         </div>
       </div>
-      <div class="table-glass">
-        <table class="report-table">
-          <thead>
-            <tr>
-              <th>Cognome</th>
-              <th>Nome</th>
-              <th>Data</th>
-              <th>Gare</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in convocatiPerGiornata" :key="item.key">
-              <td>{{ item.cognome }}</td>
-              <td>{{ item.nome }}</td>
-              <td>{{ item.data }}</td>
-              <td class="cell-warning">{{ item.numGare }}</td>
-            </tr>
-            <tr v-if="convocatiPerGiornata.length === 0">
-              <td colspan="4" class="no-data">Nessuna convocazione multipla registrata</td>
-            </tr>
-          </tbody>
-        </table>
+
+      <!-- Riepilogo Giocatori -->
+      <div class="doppie-section">
+        <h3 class="doppie-section-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+            <path d="M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+          Riepilogo Stagionale Giocatori
+        </h3>
+        <div class="table-glass">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Cognome</th>
+                <th>Nome</th>
+                <th>Totale Doppie</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(p, idx) in doppieRiepilogoGiocatori" :key="p.id">
+                <td class="cell-num">{{ idx + 1 }}</td>
+                <td>{{ p.cognome }}</td>
+                <td>{{ p.nome }}</td>
+                <td class="cell-warning font-bold">{{ p.totaleDoppie }}</td>
+              </tr>
+              <tr v-if="doppieRiepilogoGiocatori.length === 0">
+                <td colspan="4" class="no-data">Nessuna doppia registrata per questa stagione</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Dettaglio Singole Doppie -->
+      <div class="doppie-section">
+        <h3 class="doppie-section-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Dettaglio Convocazioni Multiple nel Weekend / Turno
+        </h3>
+        <div class="table-glass">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>Cognome</th>
+                <th>Nome</th>
+                <th>Periodo / Data</th>
+                <th>Gare</th>
+                <th>Partite Disputate</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in convocatiPerGiornata" :key="item.key">
+                <td>{{ item.cognome }}</td>
+                <td>{{ item.nome }}</td>
+                <td>{{ item.data }}</td>
+                <td class="cell-warning">{{ item.numGare }}</td>
+                <td class="cell-gare-list">{{ item.gareText }}</td>
+              </tr>
+              <tr v-if="convocatiPerGiornata.length === 0">
+                <td colspan="5" class="no-data">Nessuna convocazione multipla registrata</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -486,6 +541,22 @@ const annoSelezionato = ref(new Date().getFullYear())
 const mesi = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
 const convocatiPerGiornata = ref([])
 const personeMap = ref(new Map())
+
+const doppieRiepilogoGiocatori = computed(() => {
+  const map = new Map()
+  for (const item of convocatiPerGiornata.value) {
+    if (!map.has(item.personaId)) {
+      map.set(item.personaId, {
+        id: item.personaId,
+        cognome: item.cognome,
+        nome: item.nome,
+        totaleDoppie: 0
+      })
+    }
+    map.get(item.personaId).totaleDoppie++
+  }
+  return Array.from(map.values()).sort((a, b) => b.totaleDoppie - a.totaleDoppie || a.cognome.localeCompare(b.cognome))
+})
 
 // Individuale report state
 const indivGiocatori = ref([])
@@ -516,7 +587,7 @@ const reportMeta = {
 const availableReports = [
   { key: 'mensile', title: 'Mensile', desc: 'Assenze dettagliate per mese', cardClass: 'card-blue' },
   { key: 'annuale', title: 'Annuale', desc: 'Assenze totali stagione', cardClass: 'card-red' },
-  { key: 'doppie', title: 'Doppie', desc: 'Giocatori in gare multiple stesso giorno', cardClass: 'card-yellow' },
+  { key: 'doppie', title: 'Doppie', desc: 'Giocatori in gare multiple stesso turno', cardClass: 'card-yellow' },
   { key: 'individuale', title: 'Individuale', desc: 'Report dettagliato per giocatore', cardClass: 'card-orange' }
 ]
 
@@ -639,48 +710,107 @@ function meseSuccessivo() {
 
 async function caricaConvocati() {
   try {
-    const convRes = await getConvocazioni(categoriaId)
-    const convsList = convRes.data || []
+    const convRes = await getConvocazioni()
+    const allConvs = convRes.data || []
 
-    const dataMap = new Map()
-
-    for (const conv of convsList) {
+    const details = []
+    for (const conv of allConvs) {
       try {
         const convDetailRes = await getConvocazione(conv.id)
-        const convDetail = convDetailRes.data
-        if (!convDetail || !convDetail.data_inizio) continue
-
-        for (const gara of convDetail.gare || []) {
-          const dataGara = gara.data
-          if (!dataGara) continue
-          if (!dataMap.has(dataGara)) dataMap.set(dataGara, new Map())
-          const map = dataMap.get(dataGara)
-          for (const g of gara.giocatori || []) {
-            if (!map.has(g.persona_id)) {
-              map.set(g.persona_id, { id: g.persona_id, cognome: g.cognome, nome: g.nome, numGare: 0 })
-            }
-            map.get(g.persona_id).numGare++
-          }
-        }
+        if (convDetailRes.data) details.push(convDetailRes.data)
       } catch (e) {}
     }
 
-    const risultato = []
-    for (const [data, players] of dataMap) {
-      for (const p of players.values()) {
-        if (p.numGare >= 2) {
-          risultato.push({
-            key: data + '_' + p.id,
-            data: formatData(data),
-            cognome: p.cognome,
-            nome: p.nome,
-            numGare: p.numGare
+    // Helper per determinare la chiave del turno/weekend
+    const getTurnoKey = (conv, garaData) => {
+      if (garaData) {
+        const [y, m, d] = garaData.split('-').map(Number)
+        const dt = new Date(y, m - 1, d)
+        const dow = dt.getDay()
+        if (dow === 6 || dow === 0) {
+          const sabDate = new Date(dt)
+          sabDate.setDate(dt.getDate() - (dow === 0 ? 1 : 0))
+          const sY = sabDate.getFullYear()
+          const sM = String(sabDate.getMonth() + 1).padStart(2, '0')
+          const sD = String(sabDate.getDate()).padStart(2, '0')
+          return `wk_${sY}-${sM}-${sD}`
+        }
+        return `day_${garaData}`
+      }
+      return `conv_${conv.id}`
+    }
+
+    const turniMap = new Map()
+
+    for (const conv of details) {
+      for (const gara of conv.gare || []) {
+        const garaData = gara.data || conv.data_inizio
+        if (!garaData) continue
+        const tKey = getTurnoKey(conv, garaData)
+        if (!turniMap.has(tKey)) {
+          turniMap.set(tKey, {
+            turnoKey: tKey,
+            dataRef: garaData,
+            convDataInizio: conv.data_inizio,
+            convDataFine: conv.data_fine,
+            players: new Map()
+          })
+        }
+        const turnoObj = turniMap.get(tKey)
+        for (const g of gara.giocatori || []) {
+          // Filtriamo solo i giocatori di questa categoria
+          if (!personeMap.value.has(g.persona_id)) continue
+          if (g.non_presente) continue
+
+          if (!turnoObj.players.has(g.persona_id)) {
+            turnoObj.players.set(g.persona_id, {
+              id: g.persona_id,
+              cognome: g.cognome,
+              nome: g.nome,
+              gare: []
+            })
+          }
+          turnoObj.players.get(g.persona_id).gare.push({
+            id: gara.id,
+            gara: gara.gara || 'Partita',
+            data: garaData
           })
         }
       }
     }
-    convocatiPerGiornata.value = risultato.sort((a, b) => a.data.localeCompare(b.data))
-  } catch (e) {}
+
+    const risultato = []
+    for (const [tKey, turnoObj] of turniMap) {
+      for (const [pid, pData] of turnoObj.players) {
+        if (pData.gare.length >= 2) {
+          const dates = Array.from(new Set(pData.gare.map(g => g.data))).sort()
+          let dateLabel = ''
+          if (dates.length === 1) {
+            dateLabel = formatData(dates[0])
+          } else {
+            dateLabel = `${formatData(dates[0])} — ${formatData(dates[dates.length - 1])}`
+          }
+
+          const nomiGare = pData.gare.map(g => g.gara)
+
+          risultato.push({
+            key: `${tKey}_${pid}`,
+            sortDate: dates[0],
+            personaId: pid,
+            cognome: pData.cognome,
+            nome: pData.nome,
+            data: dateLabel,
+            numGare: pData.gare.length,
+            gareText: nomiGare.join('; ')
+          })
+        }
+      }
+    }
+
+    convocatiPerGiornata.value = risultato.sort((a, b) => a.sortDate.localeCompare(b.sortDate) || a.cognome.localeCompare(b.cognome))
+  } catch (e) {
+    console.error('Errore caricaConvocati:', e)
+  }
 }
 
 // ── CSV & Print ──
@@ -699,8 +829,8 @@ function getReportData() {
   }
   if (activeReport.value === 'doppie') {
     return {
-      header: ['Cognome', 'Nome', 'Data', 'Gare'],
-      rows: convocatiPerGiornata.value.map(g => [g.cognome, g.nome, g.data, g.numGare])
+      header: ['Cognome', 'Nome', 'Periodo / Data', 'N. Gare', 'Partite'],
+      rows: convocatiPerGiornata.value.map(g => [g.cognome, g.nome, g.data, g.numGare, g.gareText || ''])
     }
   }
   return { header: [], rows: [] }
@@ -795,68 +925,106 @@ async function indivCalcolaStatsStagionali() {
 
 async function indivCalcolaDoppie() {
   const pid = indivSelectedPlayerId.value
-  try {
-    const convRes = await getConvocazioni(categoriaId)
-    const convsList = convRes.data || []
-    const dataMap = new Map()
-    for (const conv of convsList) {
-      try {
-        const convDetailRes = await getConvocazione(conv.id)
-        const convDetail = convDetailRes.data
-        if (!convDetail) continue
-        for (const gara of convDetail.gare || []) {
-          const dataGara = gara.data
-          if (!dataGara) continue
-          if (!dataMap.has(dataGara)) dataMap.set(dataGara, 0)
-          for (const g of gara.giocatori || []) {
-            if (g.persona_id === pid) {
-              dataMap.set(dataGara, dataMap.get(dataGara) + 1)
-            }
-          }
-        }
-      } catch (e) {}
-    }
-    const result = []
-    for (const [data, count] of dataMap) {
-      if (count >= 2) {
-        result.push({ key: data, data: formatData(data), numGare: count })
-      }
-    }
-    indivPlayerDoppie.value = result.sort((a, b) => a.data.localeCompare(b.data))
-    indivStats.value.doppie = result.length
-  } catch (e) {}
+  if (!pid) return
+  const playerDoppie = convocatiPerGiornata.value.filter(d => d.personaId === pid)
+  indivPlayerDoppie.value = playerDoppie
+  indivStats.value.doppie = playerDoppie.length
 }
 
 async function indivCalcolaWeekend() {
   const pid = indivSelectedPlayerId.value
+  if (!pid) return
   try {
-    const convRes = await getConvocazioni(categoriaId)
-    const convsList = convRes.data || []
+    const convRes = await getConvocazioni()
+    const allConvs = convRes.data || []
     const allGare = []
-    for (const conv of convsList) {
+    let weekendMancatiCount = 0
+
+    // Raggruppiamo le gare per weekend
+    const weekendMap = new Map()
+
+    for (const c of allConvs) {
+      if (c.categoria_id && c.categoria_id !== categoriaId) continue
+
+      let convDetail = null
       try {
-        const convDetailRes = await getConvocazione(conv.id)
-        const convDetail = convDetailRes.data
-        if (!convDetail) continue
-        for (const gara of convDetail.gare || []) {
-          if (!gara.data) continue
-          const giorno = new Date(gara.data).getDay()
-          if (giorno !== 0 && giorno !== 6) continue
-          const convocato = (gara.giocatori || []).some(g => g.persona_id === pid)
-          const nonPresente = (gara.giocatori || []).find(g => g.persona_id === pid)?.non_presente
-          allGare.push({
-            key: gara.data + '_' + gara.gara,
-            data: formatData(gara.data),
-            gara: gara.gara || 'Partita',
-            convocato,
-            non_presente: nonPresente || false
-          })
+        const dRes = await getConvocazione(c.id)
+        convDetail = dRes.data
+      } catch (e) { continue }
+      if (!convDetail) continue
+
+      for (const gara of convDetail.gare || []) {
+        if (!gara.data) continue
+        const [y, m, d] = gara.data.split('-').map(Number)
+        const dt = new Date(y, m - 1, d)
+        const dow = dt.getDay()
+        if (dow !== 0 && dow !== 6) continue
+
+        const sabDate = new Date(dt)
+        sabDate.setDate(dt.getDate() - (dow === 0 ? 1 : 0))
+        const sY = sabDate.getFullYear()
+        const sM = String(sabDate.getMonth() + 1).padStart(2, '0')
+        const sD = String(sabDate.getDate()).padStart(2, '0')
+        const wkKey = `${sY}-${sM}-${sD}`
+
+        if (!weekendMap.has(wkKey)) {
+          weekendMap.set(wkKey, [])
         }
-      } catch (e) {}
+        weekendMap.get(wkKey).push(gara)
+      }
     }
-    indivPlayerWeekend.value = allGare.sort((a, b) => a.data.localeCompare(b.data))
-    indivStats.value.weekendMancati = allGare.filter(g => !g.convocato).length
-  } catch (e) {}
+
+    for (const [wkKey, gareDelWeekend] of weekendMap) {
+      if (gareDelWeekend.length === 0) continue
+
+      const convocatoPresente = gareDelWeekend.some(g =>
+        (g.giocatori || []).some(gk => gk.persona_id === pid && !gk.non_presente)
+      )
+
+      if (!convocatoPresente) {
+        weekendMancatiCount++
+      }
+
+      for (const gara of gareDelWeekend) {
+        const gk = (gara.giocatori || []).find(p => p.persona_id === pid)
+        const convocato = !!gk
+        const nonPresente = !!gk?.non_presente
+
+        let statoLabel = 'Non convocato'
+        let statoClass = 'cell-danger'
+
+        if (convocato && !nonPresente) {
+          statoLabel = 'Convocato'
+          statoClass = 'cell-ok'
+        } else if (convocato && nonPresente) {
+          statoLabel = 'Convocato (non presente)'
+          statoClass = 'cell-danger'
+        } else if (!convocato && convocatoPresente) {
+          statoLabel = 'In rosa in altra gara'
+          statoClass = 'cell-neutral'
+        } else {
+          statoLabel = 'Non convocato'
+          statoClass = 'cell-danger'
+        }
+
+        allGare.push({
+          key: `${gara.id}_${gara.data}_${gara.gara}`,
+          sortDate: gara.data,
+          data: formatData(gara.data),
+          gara: gara.gara || 'Partita',
+          convocato,
+          non_presente: nonPresente,
+          statoLabel,
+          statoClass
+        })
+      }
+    }
+
+    indivPlayerWeekend.value = allGare.sort((a, b) => a.sortDate.localeCompare(b.sortDate))
+    indivStats.value.weekendMancati = weekendMancatiCount
+  } catch (e) {
+    console.error('Errore indivCalcolaWeekend:', e)
+  }
 }
 
 onMounted(async () => {
@@ -1287,6 +1455,17 @@ tr:last-child td { border-bottom: none; }
   font-family: var(--font-mono);
 }
 
+.cell-ok {
+  color: #22c55e;
+  font-weight: 700;
+}
+
+.cell-neutral {
+  color: var(--color-text-muted, #98a1ad);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
 .cell-pct {
   color: var(--color-text-muted);
   font-family: var(--font-mono);
@@ -1297,6 +1476,39 @@ tr:last-child td { border-bottom: none; }
   color: #fbbf24;
   font-weight: 700;
   font-family: var(--font-mono);
+}
+
+.font-bold {
+  font-weight: 800;
+}
+
+.cell-gare-list {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  max-width: 380px;
+}
+
+.doppie-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.doppie-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text, #141a24);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.doppie-section-title svg {
+  color: var(--color-warning, #f59e0b);
 }
 
 .no-data {
@@ -1746,15 +1958,16 @@ tr:last-child td { border-bottom: none; }
 
 .indiv-player-name {
   margin: 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #e4e4e4;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-text, #141a24);
 }
 
 .indiv-player-meta {
   margin: 0.25rem 0 0;
-  font-size: 0.8rem;
-  color: #666;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text-secondary, #5b6572);
 }
 
 .indiv-summary-cards {
@@ -1796,14 +2009,14 @@ tr:last-child td { border-bottom: none; }
 .indiv-card-value {
   font-size: 1.75rem;
   font-weight: 800;
-  color: #e4e4e4;
+  color: var(--color-text, #141a24);
   line-height: 1;
 }
 
 .indiv-card-label {
   font-size: 0.7rem;
   font-weight: 600;
-  color: #666;
+  color: var(--color-text-secondary, #5b6572);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -1821,13 +2034,13 @@ tr:last-child td { border-bottom: none; }
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: #aaa;
+  color: var(--color-text, #141a24);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 .indiv-section-title svg {
-  color: #555;
+  color: var(--color-primary);
 }
 
 @media (max-width: 768px) {

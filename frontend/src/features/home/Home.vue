@@ -139,7 +139,7 @@
               <span class="check-label"><strong>{{ infortuniCount }}</strong>&nbsp;{{ infortuniCount === 1 ? 'giocatore infortunato' : 'giocatori infortunati' }}</span>
               <svg class="check-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
             </button>
-            <button v-if="canSegreteria && (certScaduti > 0 || certSenza > 0)" class="check-row" @click="router.push('/infermeria/certificati')">
+            <button v-if="canSegreteria && (certScaduti > 0 || certSenza > 0)" class="check-row" @click="router.push('/infermeria/certificati?filtro=scaduti')">
               <span class="check-ic amber">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M9 15l2 2 4-4"/></svg>
               </span>
@@ -148,7 +148,14 @@
             </button>
             <p v-if="!((canInfermeria && infortuniCount > 0) || (canSegreteria && (certScaduti > 0 || certSenza > 0)))" class="empty-note">Tutto in ordine</p>
           </div>
-          <div v-else-if="isMister && allCategories.length" class="check-list">
+          <div v-else-if="isMister" class="check-list">
+            <button v-if="certScaduti > 0 || certSenza > 0" class="check-row" @click="router.push('/infermeria/certificati?filtro=scaduti')">
+              <span class="check-ic amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M9 15l2 2 4-4"/></svg>
+              </span>
+              <span class="check-label"><strong>{{ certScaduti + certSenza }}</strong>&nbsp;certificati da verificare ({{ certScaduti }} scaduti · {{ certSenza }} senza)</span>
+              <svg class="check-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
             <div v-for="cat in allCategories" :key="cat.id" class="check-row" @click="apriRegistro(cat)">
               <span class="check-ic" :class="cat.is_portieri ? 'violet' : 'green'">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
@@ -156,6 +163,7 @@
               <span class="check-label">{{ cat.nome }}<span class="check-sub">{{ cat.is_portieri ? 'Portieri' : cat.anno }}</span></span>
               <svg class="check-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
             </div>
+            <p v-if="allCategories.length === 0 && certScaduti === 0 && certSenza === 0" class="empty-note">Tutto in ordine</p>
           </div>
           <p v-else class="empty-note">Nessuna voce da controllare</p>
         </div>
@@ -198,6 +206,12 @@
               </span>
               <span>Infermeria</span>
             </button>
+            <button v-if="isMister" class="quick" @click="router.push('/infermeria/certificati')">
+              <span class="quick-ic amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M9 15l2 2 4-4"/></svg>
+              </span>
+              <span>Certificati medici</span>
+            </button>
           </div>
         </div>
       </section>
@@ -218,17 +232,29 @@
             >
               <span class="day-name">{{ giorno.nome }}<span v-if="isToday(giorno.val)" class="today-tag">oggi</span></span>
               <div class="chips">
-                <span
+                <div
                   v-for="cat in giorno.categorie"
                   :key="cat.id"
-                  class="cat-chip"
-                  :class="{ portieri: cat.is_portieri }"
-                  @click="apriRegistro(cat)"
+                  class="cat-schedule-item"
                 >
-                  <span class="chip-dot" :class="{ portieri: cat.is_portieri }"></span>
-                  {{ cat.nome }}
-                  <span class="chip-badge">{{ cat.is_portieri ? 'POR' : cat.anno }}</span>
-                </span>
+                  <span
+                    class="cat-chip"
+                    :class="{ portieri: cat.is_portieri }"
+                    @click="apriRegistro(cat)"
+                  >
+                    <span class="chip-dot" :class="{ portieri: cat.is_portieri }"></span>
+                    {{ cat.nome }}
+                    <span class="chip-badge">{{ cat.is_portieri ? 'POR' : cat.anno }}</span>
+                  </span>
+                  <span v-if="cat.spogliatoi && cat.spogliatoi.length" class="asseg-badge spogliatoio" :title="'Spogliatoio: ' + cat.spogliatoi.map(s => s.etichetta).join(', ')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                    <span>{{ cat.spogliatoi.map(s => s.etichetta).join(', ') }}</span>
+                  </span>
+                  <span v-if="cat.campi && cat.campi.length" class="asseg-badge campo" :title="'Campo: ' + cat.campi.map(c => c.etichetta + (c.metacampo ? ' (' + getMetacampoLabel(c.metacampo) + ')' : '')).join(', ')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10l4-4 4 4M8 14l4 4 4-4"/></svg>
+                    <span>{{ cat.campi.map(c => c.etichetta + (c.metacampo ? ' (' + getMetacampoLabel(c.metacampo) + ')' : '')).join(', ') }}</span>
+                  </span>
+                </div>
                 <span v-if="giorno.categorie.length === 0" class="no-cats">—</span>
               </div>
             </div>
@@ -243,7 +269,7 @@
 import { ref, computed, watch, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useStore } from "../../store.js"
-import { getSocieta, getCategorie, getInfortuni, getPartite, getPersone, getConvocazioni, getConvocazione, getLocalDateStr } from "../../api/index.js"
+import { getSocieta, getCategorie, getInfortuni, getPartite, getPersone, getConvocazioni, getConvocazione, getLocalDateStr, getSpogliatoi, getCampi, getAssegnazioniSettimana, getCampiAssegnazioniSettimana } from "../../api/index.js"
 
 const router = useRouter()
 const { utenteAttivo, societaAttiva, setSocietaAttiva } = useStore()
@@ -260,6 +286,119 @@ const certScaduti = ref(0)
 const certSenza = ref(0)
 const convocazioniUpcoming = ref([])
 
+// Assegnazioni spogliatoi e campi
+const spogliatoi = ref([])
+const campi = ref([])
+const assegSpogliatoioSettimanali = ref({})
+const assegSpogliatoioWeekly = ref({})
+const assegCampoSettimanali = ref({})
+const assegCampoWeekly = ref({})
+const assegnazioniCaricate = ref(false)
+
+function getSettimanaInizio() {
+  const oggi = new Date()
+  const giorno = oggi.getDay()
+  const diff = giorno === 0 ? -6 : 1 - giorno
+  const lun = new Date(oggi)
+  lun.setDate(oggi.getDate() + diff)
+  return `${lun.getFullYear()}-${String(lun.getMonth() + 1).padStart(2, '0')}-${String(lun.getDate()).padStart(2, '0')}`
+}
+
+function getDateForDow(dow) {
+  const lunStr = getSettimanaInizio()
+  const [y, m, d] = lunStr.split('-').map(Number)
+  const lunDate = new Date(y, m - 1, d)
+  const offset = dow === 0 ? 6 : dow - 1
+  const target = new Date(lunDate)
+  target.setDate(target.getDate() + offset)
+  return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`
+}
+
+async function loadSpogliatoiCampi() {
+  const socId = societaAttiva.value?.id || null
+  try {
+    const [spRes, caRes] = await Promise.all([
+      getSpogliatoi(socId),
+      getCampi(socId)
+    ])
+    spogliatoi.value = spRes.data || []
+    campi.value = caRes.data || []
+  } catch (e) {
+    console.error('Errore caricamento spogliatoi/campi:', e)
+  }
+}
+
+async function loadAssegnazioniSettimana() {
+  const dataInizio = getSettimanaInizio()
+  const socId = societaAttiva.value?.id || null
+  try {
+    const [spRes, caRes] = await Promise.all([
+      getAssegnazioniSettimana(dataInizio, socId),
+      getCampiAssegnazioniSettimana(dataInizio, socId)
+    ])
+    const spDict = {}
+    const spWeeklyDict = {}
+    ;(spRes.data || []).forEach(a => {
+      if (!a.data) {
+        spWeeklyDict[`${a.categoria_id}_${a.spogliatoio_id}`] = a
+        return
+      }
+      const key = `${a.categoria_id}_${a.spogliatoio_id}_${a.data}`
+      spDict[key] = a
+    })
+    assegSpogliatoioSettimanali.value = spDict
+    assegSpogliatoioWeekly.value = spWeeklyDict
+    const caDict = {}
+    const caWeeklyDict = {}
+    ;(caRes.data || []).forEach(a => {
+      if (!a.data) {
+        caWeeklyDict[`${a.categoria_id}_${a.campo_id}`] = a
+        return
+      }
+      const key = `${a.categoria_id}_${a.campo_id}_${a.data}`
+      caDict[key] = a
+    })
+    assegCampoSettimanali.value = caDict
+    assegCampoWeekly.value = caWeeklyDict
+    assegnazioniCaricate.value = true
+  } catch (e) {
+    console.error('Errore caricamento assegnazioni:', e)
+  }
+}
+
+function getSpogliatoioGiorno(catId, spId, dataStr) {
+  const key = `${catId}_${spId}_${dataStr}`
+  const keyWeekly = `${catId}_${spId}`
+  return !!(assegSpogliatoioSettimanali.value[key] || assegSpogliatoioWeekly.value[keyWeekly])
+}
+
+function getCampoGiorno(catId, campoId, dataStr) {
+  const key = `${catId}_${campoId}_${dataStr}`
+  const keyWeekly = `${catId}_${campoId}`
+  return assegCampoSettimanali.value[key] || assegCampoWeekly.value[keyWeekly] || null
+}
+
+function getSpogliatoiAssegnati(catId, dataStr) {
+  return spogliatoi.value.filter(sp => getSpogliatoioGiorno(catId, sp.id, dataStr))
+}
+
+function getCampiAssegnati(catId, dataStr) {
+  const risultati = []
+  campi.value.forEach(campo => {
+    const asseg = getCampoGiorno(catId, campo.id, dataStr)
+    if (asseg) {
+      risultati.push({ ...campo, metacampo: asseg.metacampo })
+    }
+  })
+  return risultati
+}
+
+function getMetacampoLabel(metacampo) {
+  if (metacampo === 'A') return 'Metà A'
+  if (metacampo === 'B') return 'Metà B'
+  return 'Tutto'
+}
+
 const m = new Date().getMonth() + 1
 const currentSeason = ref(`${m >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1}/${m >= 8 ? new Date().getFullYear() + 1 : new Date().getFullYear()}`)
 
@@ -275,12 +414,21 @@ const tuttiGiorni = [
 
 const planningSettimana = computed(() => {
   return tuttiGiorni.map(g => {
+    const dataGiorno = getDateForDow(g.val)
     const cats = allCategories.value.filter(c => {
       if (!c.giorni) return false
       const giorniCat = c.giorni.split(',').map(Number)
       return giorniCat.includes(g.val)
+    }).map(c => {
+      const spAssegnati = assegnazioniCaricate.value ? getSpogliatoiAssegnati(c.id, dataGiorno) : []
+      const caAssegnati = assegnazioniCaricate.value ? getCampiAssegnati(c.id, dataGiorno) : []
+      return {
+        ...c,
+        spogliatoi: spAssegnati,
+        campi: caAssegnati
+      }
     })
-    return { ...g, categorie: cats }
+    return { ...g, data: dataGiorno, categorie: cats }
   })
 })
 
@@ -357,9 +505,12 @@ function badgeLabel(p) {
 const prossimeGare = computed(() => {
   const today = todayStr()
   const activeSocId = societaAttiva.value?.id
+  const myCatIds = new Set(allCategories.value.map(c => c.id))
+
   const partiteFutureRaw = partite.value.filter(p => {
     if (!p.data_partite || p.risultato || p.data_partite < today) return false
     if (activeSocId && p.societa_id && p.societa_id !== activeSocId) return false
+    if (isMister.value && (!p.categoria_id || !myCatIds.has(p.categoria_id))) return false
     return true
   })
 
@@ -375,9 +526,10 @@ const prossimeGare = computed(() => {
     partiteFuture.push(p)
   }
 
-  const convFuture = convocazioniUpcoming.value.filter(c =>
-    c.data_fine ? c.data_fine >= today : (c.data_inizio && c.data_inizio >= today)
-  )
+  const convFuture = convocazioniUpcoming.value.filter(c => {
+    if (isMister.value && (!c.categoria_id || !myCatIds.has(c.categoria_id))) return false
+    return c.data_fine ? c.data_fine >= today : (c.data_inizio && c.data_inizio >= today)
+  })
 
   const events = []
   const matchedGareKeys = new Set()
@@ -611,7 +763,7 @@ async function loadInfortuni() {
 }
 
 async function loadCertificati() {
-  if (!canSegreteria.value) return
+  if (!canSegreteria.value && !isMister.value) return
   const societaId = societaAttiva.value?.id || null
   try {
     const res = await getPersone(null, societaId)
@@ -631,6 +783,8 @@ async function loadCertificati() {
 watch(() => societaAttiva.value?.id, async (newId, oldId) => {
   if (newId !== oldId) {
     await loadPlanning()
+    loadSpogliatoiCampi()
+    loadAssegnazioniSettimana()
     loadPartite()
     loadInfortuni()
     loadCertificati()
@@ -654,6 +808,8 @@ onMounted(async () => {
   }
 
   await loadPlanning()
+  loadSpogliatoiCampi()
+  loadAssegnazioniSettimana()
   loadPartite()
   loadInfortuni()
   loadCertificati()
@@ -1210,6 +1366,40 @@ onMounted(async () => {
   padding: 5px 11px;
   cursor: pointer;
   transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.cat-schedule-item {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.asseg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  line-height: 1.2;
+}
+
+.asseg-badge svg {
+  flex-shrink: 0;
+}
+
+.asseg-badge.spogliatoio {
+  background: var(--color-violet-soft, #f1ebfd);
+  color: var(--color-violet, #7c3aed);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+}
+
+.asseg-badge.campo {
+  background: var(--color-success-soft, #ebfbf3);
+  color: var(--color-success, #16a34a);
+  border: 1px solid rgba(22, 163, 74, 0.25);
 }
 
 .cat-chip:hover {
