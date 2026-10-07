@@ -944,7 +944,23 @@ async function indivCalcolaWeekend() {
   const pid = indivSelectedPlayerId.value
   if (!pid) return
   try {
-    const convRes = await getConvocazioni()
+    const cat = categoria.value
+    const dataInizio = stagioneInizio(cat)
+    const oggiStr = getLocalDateStr()
+    const now = new Date()
+    const oraCorrenteStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
+
+    const isGaraGiocata = (gara) => {
+      if (!gara?.data) return false
+      if (gara.data < oggiStr) return true
+      if (gara.data > oggiStr) return false
+      if (gara.inizio_gara) {
+        return oraCorrenteStr >= gara.inizio_gara
+      }
+      return false
+    }
+
+    const convRes = await getConvocazioni(categoriaId)
     const allConvs = convRes.data || []
     const allGare = []
     let weekendMancatiCount = 0
@@ -964,6 +980,8 @@ async function indivCalcolaWeekend() {
 
       for (const gara of convDetail.gare || []) {
         if (!gara.data) continue
+        if (dataInizio && gara.data < dataInizio) continue
+
         const [y, m, d] = gara.data.split('-').map(Number)
         const dt = new Date(y, m - 1, d)
         const dow = dt.getDay()
@@ -985,6 +1003,12 @@ async function indivCalcolaWeekend() {
 
     for (const [wkKey, gareDelWeekend] of weekendMap) {
       if (gareDelWeekend.length === 0) continue
+
+      // Non conteggiare i weekend con gare ancora da disputare per non sfalsare le statistiche
+      const isWeekendGiocato = gareDelWeekend.every(g => isGaraGiocata(g))
+      if (!isWeekendGiocato) {
+        continue
+      }
 
       const convocatoPresente = gareDelWeekend.some(g =>
         (g.giocatori || []).some(gk => gk.persona_id === pid && !gk.non_presente)
