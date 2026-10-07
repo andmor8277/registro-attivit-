@@ -1,6 +1,6 @@
 import { api } from './client'
 
-export const getConvocazioni = (categoriaId) => api.get('/convocazioni/?categoria_id=' + categoriaId)
+export const getConvocazioni = (categoriaId) => api.get('/convocazioni/' + (categoriaId ? '?categoria_id=' + categoriaId : ''))
 export const getConvocazione = (id) => api.get('/convocazioni/' + id)
 export const createConvocazione = (data) => api.post('/convocazioni/', data)
 export const updateConvocazione = (id, data) => api.put(`/convocazioni/${id}`, data)

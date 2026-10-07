@@ -5,13 +5,22 @@
 
     <header class="page-header">
       <div class="header-top">
-        <button class="btn-back-pill" @click="router.push('/scelta/' + categoriaId)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-            <line x1="19" y1="12" x2="5" y2="12"/>
-            <polyline points="12 19 5 12 12 5"/>
-          </svg>
-          <span>Indietro</span>
-        </button>
+        <div class="header-nav-btns">
+          <button class="btn-back-pill" @click="router.push('/scelta/' + categoriaId)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+            <span>Indietro</span>
+          </button>
+          <button class="btn-back-pill" @click="router.push('/')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            <span>Home</span>
+          </button>
+        </div>
       </div>
       <div class="header-main">
         <h1 class="page-title">
@@ -90,9 +99,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getPersone, getCategorie, getValutazioni, updateValutazione, createValutazione } from '../../api/index.js'
+import { useStore } from '../../store.js'
 
 const router = useRouter()
 const route = useRoute()
+const { setCategoria } = useStore()
 const categoriaId = computed(() => parseInt(route.params.id))
 const categoria = ref(null)
 const loading = ref(true)
@@ -122,6 +133,9 @@ async function loadCategoria() {
     const res = await getCategorie()
     const cats = Array.isArray(res) ? res : (res?.data || [])
     categoria.value = cats.find(c => c.id === categoriaId.value) || null
+    if (categoria.value) {
+      setCategoria(categoria.value)
+    }
   } catch (e) {
     console.error(e)
   }
@@ -261,6 +275,12 @@ async function setNote(row, value) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.25rem;
+}
+
+.header-nav-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .btn-back-pill {
