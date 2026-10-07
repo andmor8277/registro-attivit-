@@ -2589,7 +2589,7 @@ async function esportaPDFGiornaliero(dataGiorno, settore = 'tutti') {
   const g = giorniSettimana.value.find(d => d.data === dataGiorno)
   if (!g) return
 
-  const doc = new jsPDF({ orientation: 'portrait' })
+  const doc = new jsPDF({ orientation: 'landscape' })
   const nome = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Società'
   const settoreLabel = getSettoreLabel(settore)
   const settoreTitolo = settore !== 'tutti' ? ` — ${settoreLabel}` : ''
@@ -2628,14 +2628,14 @@ async function esportaPDFGiornaliero(dataGiorno, settore = 'tutti') {
     startY: 33,
     theme: 'grid',
     margin: { left: 14, right: 14 },
-    tableWidth: 182,
-    styles: { fontSize: 9, cellPadding: 3.5, halign: 'left', valign: 'middle' },
-    headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9.5 },
+    tableWidth: 269,
+    styles: { fontSize: 9.5, cellPadding: 3.5, halign: 'left', valign: 'middle' },
+    headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 10 },
     columnStyles: {
-      0: { cellWidth: 26, halign: 'center', fontStyle: 'bold' },
-      1: { cellWidth: 56 },
-      2: { cellWidth: 50 },
-      3: { cellWidth: 50 }
+      0: { cellWidth: 35, halign: 'center', fontStyle: 'bold' },
+      1: { cellWidth: 84 },
+      2: { cellWidth: 75 },
+      3: { cellWidth: 75 }
     }
   })
 
@@ -2647,7 +2647,7 @@ async function esportaPDFGiornaliero(dataGiorno, settore = 'tutti') {
 async function esportaPDFSettimanale(settore = 'tutti') {
   if (giorniSettimana.value.length === 0) return
 
-  const doc = new jsPDF({ orientation: 'portrait' })
+  const doc = new jsPDF({ orientation: 'landscape' })
   const nome = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Società'
   const settoreLabel = getSettoreLabel(settore)
   const settoreTitolo = settore !== 'tutti' ? ` — ${settoreLabel}` : ''
@@ -2657,7 +2657,7 @@ async function esportaPDFSettimanale(settore = 'tutti') {
 
   cinqueGiorni.forEach((g, idx) => {
     if (idx > 0) {
-      doc.addPage()
+      doc.addPage('a4', 'landscape')
     }
 
     const giornoTitolo = `${g.nomeLungo} ${g.giorno} (${formatDate(g.data)})`
@@ -2695,14 +2695,14 @@ async function esportaPDFSettimanale(settore = 'tutti') {
       startY: 33,
       theme: 'grid',
       margin: { left: 14, right: 14 },
-      tableWidth: 182,
-      styles: { fontSize: 9, cellPadding: 3.5, halign: 'left', valign: 'middle' },
-      headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9.5 },
+      tableWidth: 269,
+      styles: { fontSize: 9.5, cellPadding: 3.5, halign: 'left', valign: 'middle' },
+      headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 10 },
       columnStyles: {
-        0: { cellWidth: 26, halign: 'center', fontStyle: 'bold' },
-        1: { cellWidth: 56 },
-        2: { cellWidth: 50 },
-        3: { cellWidth: 50 }
+        0: { cellWidth: 35, halign: 'center', fontStyle: 'bold' },
+        1: { cellWidth: 84 },
+        2: { cellWidth: 75 },
+        3: { cellWidth: 75 }
       }
     })
   })
