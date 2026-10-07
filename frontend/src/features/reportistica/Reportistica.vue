@@ -149,13 +149,14 @@
           </button>
         </div>
         <div class="report-actions">
-          <button class="btn-action" @click="printReport" title="Stampa">
+          <button class="btn-action" @click="esportaPdfReport" title="Esporta PDF">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-              <polyline points="6 9 6 2 18 2 18 9"/>
-              <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
-              <rect x="6" y="14" width="12" height="8"/>
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <polyline points="9 15 12 18 15 15"/>
             </svg>
-            Stampa
+            Esporta PDF
           </button>
           <button class="btn-action" @click="downloadCSV" title="Scarica CSV">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -207,13 +208,14 @@
           {{ formatData(dataInizio) }} — {{ formatData(dataFine) }}
         </div>
         <div class="report-actions">
-          <button class="btn-action" @click="printReport" title="Stampa">
+          <button class="btn-action" @click="esportaPdfReport" title="Esporta PDF">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-              <polyline points="6 9 6 2 18 2 18 9"/>
-              <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
-              <rect x="6" y="14" width="12" height="8"/>
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <polyline points="9 15 12 18 15 15"/>
             </svg>
-            Stampa
+            Esporta PDF
           </button>
           <button class="btn-action" @click="downloadCSV" title="Scarica CSV">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -277,6 +279,17 @@
           <div class="indiv-player-info">
             <h2 class="indiv-player-name">{{ indivSelectedPlayer?.cognome }} {{ indivSelectedPlayer?.nome }}</h2>
             <p class="indiv-player-meta">{{ indivSelectedPlayer?.matricola ? 'Matricola: ' + indivSelectedPlayer.matricola : '' }}</p>
+          </div>
+          <div class="report-actions">
+            <button class="btn-action" @click="esportaPdfReport" title="Esporta PDF">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <polyline points="9 15 12 18 15 15"/>
+              </svg>
+              Esporta PDF
+            </button>
           </div>
         </div>
 
@@ -432,13 +445,14 @@
           Convocazioni multiple (gare multiple nello stesso weekend o turno)
         </div>
         <div class="report-actions">
-          <button class="btn-action" @click="printReport" title="Stampa">
+          <button class="btn-action" @click="esportaPdfReport" title="Esporta PDF">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-              <polyline points="6 9 6 2 18 2 18 9"/>
-              <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
-              <rect x="6" y="14" width="12" height="8"/>
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <polyline points="9 15 12 18 15 15"/>
             </svg>
-            Stampa
+            Esporta PDF
           </button>
           <button class="btn-action" @click="downloadCSV" title="Scarica CSV">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -532,7 +546,9 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useStore } from '../../store.js'
-import { getPersone, getRegistroMese, getConvocazioni, getConvocazione, getAllCategorie, getLocalDateStr, getUploadUrl, exportTextFile } from '../../api/index.js'
+import { getPersone, getRegistroMese, getConvocazioni, getConvocazione, getAllCategorie, getLocalDateStr, getUploadUrl, exportTextFile, saveOrSharePdf } from '../../api/index.js'
+import { jsPDF } from 'jspdf'
+import 'jspdf-autotable'
 
 const router = useRouter()
 const route = useRoute()
@@ -852,16 +868,319 @@ async function downloadCSV() {
   await exportTextFile(csv, filename, 'text/csv;charset=utf-8;', `Report ${activeReport.value}`)
 }
 
-function printReport() {
-  nextTick(() => {
-    const view = document.querySelector('.report-view')
-    if (view) {
-      const oggi = new Date()
-      const data = oggi.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      view.setAttribute('data-print-date', data)
-    }
-    setTimeout(() => window.print(), 150)
+async function esportaPdfReport() {
+  const societa = societaAttiva.value?.nome || 'The Home of Football'
+  const catNome = categoriaAttiva.value?.nome || categoria.value?.nome || 'Squadra'
+  const oggi = new Date()
+  const dataGenerazione = oggi.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const reportType = activeReport.value
+
+  const isLandscape = reportType === 'doppie'
+  const doc = new jsPDF({
+    orientation: isLandscape ? 'landscape' : 'portrait',
+    unit: 'mm',
+    format: 'a4'
   })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+
+  const addHeader = (titolo, sottotitolo) => {
+    doc.setFillColor(30, 41, 59)
+    doc.rect(14, 12, pageWidth - 28, 16, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    doc.text(titolo.toUpperCase(), 20, 22)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(203, 213, 225)
+    doc.text(`${catNome} — ${societa}`, pageWidth - 20, 22, { align: 'right' })
+
+    if (sottotitolo) {
+      doc.setTextColor(71, 85, 105)
+      doc.setFontSize(9)
+      doc.text(sottotitolo, 14, 34)
+    }
+  }
+
+  const addFooter = () => {
+    const totalPages = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      doc.setDrawColor(226, 232, 240)
+      doc.setLineWidth(0.3)
+      doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12)
+
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(148, 163, 184)
+      doc.text(`The Home of Football — ${societa} • Generato il ${dataGenerazione}`, 14, pageHeight - 7)
+      doc.text(`Pagina ${i} di ${totalPages}`, pageWidth - 14, pageHeight - 7, { align: 'right' })
+    }
+  }
+
+  let filename = ''
+  let shareTitle = ''
+
+  if (reportType === 'mensile') {
+    const meseNome = mesi[meseSelezionato.value - 1]
+    const anno = annoSelezionato.value
+    filename = `report_mensile_${meseNome}_${anno}_${catNome}.pdf`
+    shareTitle = `Report Mensile ${meseNome} ${anno} - ${catNome}`
+
+    addHeader(`Report Presenze e Assenze — ${meseNome} ${anno}`, `Riepilogo mensile allenamenti per atleta`)
+
+    const headers = [['#', 'Cognome', 'Nome', 'Assenze', '% Presenza']]
+    const rows = assenzeMensili.value.map((g, i) => [
+      i + 1,
+      g.cognome || '—',
+      g.nome || '—',
+      g.assenze,
+      `${g.percentuale}%`
+    ])
+
+    doc.autoTable({
+      head: headers,
+      body: rows.length > 0 ? rows : [['-', 'Nessun atleta trovato', '', '', '']],
+      startY: 38,
+      theme: 'grid',
+      margin: { left: 14, right: 14, bottom: 16 },
+      tableWidth: pageWidth - 28,
+      styles: { fontSize: 9, cellPadding: 3, valign: 'middle' },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center' },
+        1: { cellWidth: 'auto', fontStyle: 'bold' },
+        2: { cellWidth: 'auto' },
+        3: { cellWidth: 26, halign: 'center' },
+        4: { cellWidth: 30, halign: 'center', fontStyle: 'bold' }
+      },
+      didParseCell: function(data) {
+        if (data.section === 'body') {
+          if (data.column.index === 3 && Number(data.cell.raw) > 0) {
+            data.cell.styles.textColor = [220, 38, 38]
+          }
+          if (data.column.index === 4) {
+            const pct = parseInt(data.cell.raw)
+            if (pct >= 80) data.cell.styles.textColor = [16, 185, 129]
+            else if (pct < 60) data.cell.styles.textColor = [220, 38, 38]
+          }
+        }
+      }
+    })
+
+    addFooter()
+  } else if (reportType === 'annuale') {
+    filename = `report_annuale_${catNome}.pdf`
+    shareTitle = `Report Annuale Assenze - ${catNome}`
+
+    addHeader(`Report Annuale Assenze`, `Periodo: ${formatData(dataInizio.value)} — ${formatData(dataFine.value)}`)
+
+    const headers = [['#', 'Cognome', 'Nome', 'Assenze', '% Presenza']]
+    const rows = assenzePerGiocatore.value.map((g, i) => [
+      i + 1,
+      g.cognome || '—',
+      g.nome || '—',
+      g.assenze,
+      `${g.percentuale}%`
+    ])
+
+    doc.autoTable({
+      head: headers,
+      body: rows.length > 0 ? rows : [['-', 'Nessun atleta trovato', '', '', '']],
+      startY: 38,
+      theme: 'grid',
+      margin: { left: 14, right: 14, bottom: 16 },
+      tableWidth: pageWidth - 28,
+      styles: { fontSize: 9, cellPadding: 3, valign: 'middle' },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center' },
+        1: { cellWidth: 'auto', fontStyle: 'bold' },
+        2: { cellWidth: 'auto' },
+        3: { cellWidth: 26, halign: 'center' },
+        4: { cellWidth: 30, halign: 'center', fontStyle: 'bold' }
+      },
+      didParseCell: function(data) {
+        if (data.section === 'body') {
+          if (data.column.index === 3 && Number(data.cell.raw) > 0) {
+            data.cell.styles.textColor = [220, 38, 38]
+          }
+          if (data.column.index === 4) {
+            const pct = parseInt(data.cell.raw)
+            if (pct >= 80) data.cell.styles.textColor = [16, 185, 129]
+            else if (pct < 60) data.cell.styles.textColor = [220, 38, 38]
+          }
+        }
+      }
+    })
+
+    addFooter()
+  } else if (reportType === 'doppie') {
+    filename = `report_doppie_convocazioni_${catNome}.pdf`
+    shareTitle = `Report Doppie Convocazioni - ${catNome}`
+
+    addHeader(`Report Doppie Convocazioni`, `Atleti con convocazioni multiple nello stesso turno / weekend`)
+
+    const headers = [['#', 'Cognome', 'Nome', 'Periodo / Data', 'N. Gare', 'Partite Disputate']]
+    const rows = convocatiPerGiornata.value.map((g, i) => [
+      i + 1,
+      g.cognome || '—',
+      g.nome || '—',
+      g.data || '—',
+      g.numGare,
+      g.gareText || '—'
+    ])
+
+    doc.autoTable({
+      head: headers,
+      body: rows.length > 0 ? rows : [['-', 'Nessuna convocazione multipla registrata', '', '', '', '']],
+      startY: 38,
+      theme: 'grid',
+      margin: { left: 14, right: 14, bottom: 16 },
+      tableWidth: pageWidth - 28,
+      styles: { fontSize: 8.5, cellPadding: 2.5, valign: 'middle' },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 36, fontStyle: 'bold' },
+        2: { cellWidth: 34 },
+        3: { cellWidth: 44, halign: 'center' },
+        4: { cellWidth: 20, halign: 'center', fontStyle: 'bold', textColor: [217, 119, 6] },
+        5: { cellWidth: 'auto' }
+      }
+    })
+
+    addFooter()
+  } else if (reportType === 'individuale') {
+    const player = indivSelectedPlayer.value
+    if (!player) {
+      alert('Seleziona prima un giocatore.')
+      return
+    }
+    const nomeCompleto = `${player.cognome} ${player.nome}`
+    filename = `scheda_individuale_${player.cognome}_${player.nome}.pdf`
+    shareTitle = `Scheda Statistiche - ${nomeCompleto}`
+
+    addHeader(`Scheda Individuale — ${nomeCompleto}`, player.matricola ? `Matricola: ${player.matricola}` : '')
+
+    // KPI cards in PDF
+    const kpiY = 38
+    const kpiWidth = (pageWidth - 28 - 9) / 4
+    const kpis = [
+      { label: 'PRESENZE', value: String(indivStats.value.presenze), color: [16, 185, 129] },
+      { label: 'ASSENZE', value: String(indivStats.value.assenze), color: [220, 38, 38] },
+      { label: 'DOPPIE', value: String(indivStats.value.doppie), color: [217, 119, 6] },
+      { label: 'WEEKEND MANCATI', value: String(indivStats.value.weekendMancati), color: [59, 130, 246] }
+    ]
+
+    kpis.forEach((kpi, idx) => {
+      const kX = 14 + idx * (kpiWidth + 3)
+      doc.setFillColor(248, 250, 252)
+      doc.setDrawColor(226, 232, 240)
+      doc.roundedRect(kX, kpiY, kpiWidth, 18, 2, 2, 'FD')
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(14)
+      doc.setTextColor(kpi.color[0], kpi.color[1], kpi.color[2])
+      doc.text(kpi.value, kX + kpiWidth / 2, kpiY + 9, { align: 'center' })
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(6.5)
+      doc.setTextColor(100, 116, 139)
+      doc.text(kpi.label, kX + kpiWidth / 2, kpiY + 14, { align: 'center' })
+    })
+
+    let currentY = kpiY + 24
+
+    // Sezione 1: Dettaglio Mensile
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(30, 41, 59)
+    doc.text('Dettaglio Mensile Allenamenti', 14, currentY)
+    currentY += 4
+
+    const monthlyHeaders = [['Mese', 'Allenamenti Totali', 'Presenze', 'Assenze', '% Presenza']]
+    const monthlyRows = indivMonthlyData.value.map(m => [
+      m.mese,
+      m.totali,
+      m.presenze,
+      m.assenze,
+      `${m.percentuale}%`
+    ])
+
+    doc.autoTable({
+      head: monthlyHeaders,
+      body: monthlyRows.length > 0 ? monthlyRows : [['Nessun dato disponibile', '', '', '', '']],
+      startY: currentY,
+      theme: 'grid',
+      margin: { left: 14, right: 14, bottom: 16 },
+      tableWidth: pageWidth - 28,
+      styles: { fontSize: 8.5, cellPadding: 2.2, valign: 'middle' },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 35, halign: 'center' },
+        2: { cellWidth: 28, halign: 'center', textColor: [16, 185, 129], fontStyle: 'bold' },
+        3: { cellWidth: 28, halign: 'center', textColor: [220, 38, 38], fontStyle: 'bold' },
+        4: { cellWidth: 35, halign: 'center', fontStyle: 'bold' }
+      }
+    })
+
+    currentY = doc.lastAutoTable.finalY + 8
+
+    // Sezione 2: Partite Weekend
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(30, 41, 59)
+    doc.text('Partite Weekend Disputate', 14, currentY)
+    currentY += 4
+
+    const wkHeaders = [['Data', 'Partita', 'Stato']]
+    const wkRows = indivPlayerWeekend.value.map(w => [
+      w.data || '—',
+      w.gara || 'Partita',
+      w.statoLabel || (w.convocato ? 'Convocato' : 'Non convocato')
+    ])
+
+    doc.autoTable({
+      head: wkHeaders,
+      body: wkRows.length > 0 ? wkRows : [['Nessuna partita weekend registrata', '', '']],
+      startY: currentY,
+      theme: 'grid',
+      margin: { left: 14, right: 14, bottom: 16 },
+      tableWidth: pageWidth - 28,
+      styles: { fontSize: 8.5, cellPadding: 2.2, valign: 'middle' },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 30, halign: 'center' },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 55, halign: 'center', fontStyle: 'bold' }
+      },
+      didParseCell: function(data) {
+        if (data.section === 'body' && data.column.index === 2) {
+          const val = String(data.cell.raw || '')
+          if (val.startsWith('Convocato') && !val.includes('non presente')) {
+            data.cell.styles.textColor = [16, 185, 129]
+          } else if (val.includes('In rosa in altra gara')) {
+            data.cell.styles.textColor = [100, 116, 139]
+          } else {
+            data.cell.styles.textColor = [220, 38, 38]
+          }
+        }
+      }
+    })
+
+    addFooter()
+  }
+
+  await saveOrSharePdf(doc, filename, shareTitle)
 }
 
 // ── Individuale report functions ──
