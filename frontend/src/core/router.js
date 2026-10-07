@@ -8,6 +8,7 @@ const store = useStore()
 const RUOLI = {
   segreteria: ['segreteria', 'admin', 'super_admin'],
   infermeria: ['infermeria', 'segreteria', 'admin', 'super_admin'],
+  certificati: ['infermeria', 'segreteria', 'admin', 'super_admin', 'mister'],
   scouting: ['scouting', 'admin', 'super_admin'],
   responsabili: ['admin', 'super_admin'],
   gestioneSquadre: ['admin', 'super_admin'],
@@ -82,7 +83,7 @@ export const router = createRouter({
     { path: '/segreteria/:id', component: () => import('../features/segreteria/SegreteriaCategoria.vue'), name: 'segreteria-categoria', meta: { requiresAuth: true, roles: RUOLI.segreteria } },
     { path: '/valutazioni/:id', component: () => import('../features/segreteria/Valutazioni.vue'), name: 'valutazioni', meta: { requiresAuth: true } },
     { path: '/infermeria', component: () => import('../features/infermeria/Infermeria.vue'), name: 'infermeria', meta: { requiresAuth: true, roles: RUOLI.infermeria } },
-    { path: '/infermeria/certificati', component: () => import('../features/infermeria/CertificatoMedico.vue'), name: 'certificati', meta: { requiresAuth: true, roles: RUOLI.infermeria } },
+    { path: '/infermeria/certificati', component: () => import('../features/infermeria/CertificatoMedico.vue'), name: 'certificati', meta: { requiresAuth: true, roles: RUOLI.certificati } },
     { path: '/infermeria/infortunati', component: () => import('../features/infermeria/Infortunati.vue'), name: 'infortunati', meta: { requiresAuth: true, roles: RUOLI.infermeria } },
     { path: '/scouting', component: () => import('../features/scouting/Scouting.vue'), name: 'scouting', meta: { requiresAuth: true, roles: RUOLI.scouting } },
     { path: '/segreteria/openday', component: () => import('../features/segreteria/Openday.vue'), name: 'openday', meta: { requiresAuth: true, roles: RUOLI.segreteria } },

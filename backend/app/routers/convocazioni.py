@@ -44,18 +44,22 @@ class ConvocazioneIn(BaseModel):
     gare: List[GaraIn] = []
 
 @router.get("/")
-def lista(categoria_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def lista(categoria_id: Optional[int] = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     from sqlalchemy import text
     societa_id = get_societa_filter(current_user)
     where_soc = "AND c.societa_id = :sid" if societa_id else ""
-    params = {"cid": categoria_id}
+    params = {}
+    where_cat = ""
+    if categoria_id is not None:
+        where_cat = "AND c.categoria_id = :cid"
+        params["cid"] = categoria_id
     if societa_id:
         params["sid"] = societa_id
     res = db.execute(text(f"""
         SELECT c.id, c.weekend_id, c.data_inizio, c.data_fine, c.categoria_id, w.nome as weekend_nome
         FROM convocazioni c
         LEFT JOIN weekend w ON c.weekend_id = w.id
-        WHERE c.categoria_id = :cid {where_soc}
+        WHERE 1=1 {where_cat} {where_soc}
         ORDER BY c.data_inizio DESC
     """), params)
     rows = res.fetchall()
