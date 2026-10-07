@@ -445,37 +445,58 @@
           Convocazioni multiple (gare multiple nello stesso weekend o turno)
         </div>
         <div class="report-actions">
-          <button class="btn-action" @click="esportaPdfReport" title="Esporta PDF">
+          <button class="btn-action" @click="esportaPdfReport" title="Esporta PDF Completo">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
               <line x1="12" y1="18" x2="12" y2="12"/>
               <polyline points="9 15 12 18 15 15"/>
             </svg>
-            Esporta PDF
+            Esporta PDF Completo
           </button>
-          <button class="btn-action" @click="downloadCSV" title="Scarica CSV">
+          <button class="btn-action" @click="downloadCSV" title="Scarica CSV Completo">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            CSV
+            CSV Completo
           </button>
         </div>
       </div>
 
       <!-- Riepilogo Giocatori -->
       <div class="doppie-section">
-        <h3 class="doppie-section-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-            <path d="M16 3.13a4 4 0 010 7.75"/>
-          </svg>
-          Riepilogo Stagionale Giocatori
-        </h3>
+        <div class="doppie-section-header">
+          <h3 class="doppie-section-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+              <path d="M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+            Riepilogo Stagionale Giocatori
+          </h3>
+          <div class="report-actions">
+            <button class="btn-action" @click="esportaPdfRiepilogoDoppie" title="Esporta PDF Riepilogo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <polyline points="9 15 12 18 15 15"/>
+              </svg>
+              Esporta PDF
+            </button>
+            <button class="btn-action" @click="downloadCsvRiepilogoDoppie" title="Scarica CSV Riepilogo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              CSV
+            </button>
+          </div>
+        </div>
         <div class="table-glass">
           <table class="report-table">
             <thead>
@@ -503,15 +524,36 @@
 
       <!-- Dettaglio Singole Doppie -->
       <div class="doppie-section">
-        <h3 class="doppie-section-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          Dettaglio Convocazioni Multiple nel Weekend / Turno
-        </h3>
+        <div class="doppie-section-header">
+          <h3 class="doppie-section-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Dettaglio Convocazioni Multiple nel Weekend / Turno
+          </h3>
+          <div class="report-actions">
+            <button class="btn-action" @click="esportaPdfDettaglioDoppie" title="Esporta PDF Dettaglio">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <polyline points="9 15 12 18 15 15"/>
+              </svg>
+              Esporta PDF
+            </button>
+            <button class="btn-action" @click="downloadCsvDettaglioDoppie" title="Scarica CSV Dettaglio">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              CSV
+            </button>
+          </div>
+        </div>
         <div class="table-glass">
           <table class="report-table">
             <thead>
@@ -862,10 +904,48 @@ function getReportData() {
 }
 
 async function downloadCSV() {
+  if (activeReport.value === 'doppie') {
+    const catNome = categoriaAttiva.value?.nome || categoria.value?.nome || ''
+    const lines = [
+      'RIEPILOGO STAGIONALE GIOCATORI',
+      '#,Cognome,Nome,Totale Doppie',
+      ...doppieRiepilogoGiocatori.value.map((p, i) => `${i + 1},"${(p.cognome || '').replace(/"/g, '""')}","${(p.nome || '').replace(/"/g, '""')}",${p.totaleDoppie}`),
+      '',
+      'DETTAGLIO CONVOCAZIONI MULTIPLE',
+      '#,Cognome,Nome,Periodo / Data,N. Gare,Partite Disputate',
+      ...convocatiPerGiornata.value.map((g, i) => `${i + 1},"${(g.cognome || '').replace(/"/g, '""')}","${(g.nome || '').replace(/"/g, '""')}","${(g.data || '').replace(/"/g, '""')}",${g.numGare},"${(g.gareText || '').replace(/"/g, '""')}"`)
+    ]
+    const csv = '\uFEFF' + lines.join('\n')
+    const filename = `report_doppie_completo_${catNome}_${new Date().toISOString().slice(0, 10)}.csv`
+    await exportTextFile(csv, filename, 'text/csv;charset=utf-8;', 'Report Doppie Convocazioni Completo')
+    return
+  }
   const { header, rows } = getReportData()
   const csv = '\uFEFF' + [header.join(','), ...rows.map(r => r.join(','))].join('\n')
   const filename = `report_${activeReport.value}_${categoriaAttiva.value?.nome || ''}_${new Date().toISOString().slice(0,10)}.csv`
   await exportTextFile(csv, filename, 'text/csv;charset=utf-8;', `Report ${activeReport.value}`)
+}
+
+async function downloadCsvRiepilogoDoppie() {
+  const catNome = categoriaAttiva.value?.nome || categoria.value?.nome || ''
+  const lines = [
+    '#,Cognome,Nome,Totale Doppie',
+    ...doppieRiepilogoGiocatori.value.map((p, i) => `${i + 1},"${(p.cognome || '').replace(/"/g, '""')}","${(p.nome || '').replace(/"/g, '""')}",${p.totaleDoppie}`)
+  ]
+  const csv = '\uFEFF' + lines.join('\n')
+  const filename = `report_doppie_riepilogo_${catNome}_${new Date().toISOString().slice(0, 10)}.csv`
+  await exportTextFile(csv, filename, 'text/csv;charset=utf-8;', 'Riepilogo Doppie Convocazioni')
+}
+
+async function downloadCsvDettaglioDoppie() {
+  const catNome = categoriaAttiva.value?.nome || categoria.value?.nome || ''
+  const lines = [
+    '#,Cognome,Nome,Periodo / Data,N. Gare,Partite Disputate',
+    ...convocatiPerGiornata.value.map((g, i) => `${i + 1},"${(g.cognome || '').replace(/"/g, '""')}","${(g.nome || '').replace(/"/g, '""')}","${(g.data || '').replace(/"/g, '""')}",${g.numGare},"${(g.gareText || '').replace(/"/g, '""')}"`)
+  ]
+  const csv = '\uFEFF' + lines.join('\n')
+  const filename = `report_doppie_dettaglio_${catNome}_${new Date().toISOString().slice(0, 10)}.csv`
+  await exportTextFile(csv, filename, 'text/csv;charset=utf-8;', 'Dettaglio Doppie Convocazioni')
 }
 
 async function esportaPdfReport() {
@@ -1020,13 +1100,57 @@ async function esportaPdfReport() {
 
     addFooter()
   } else if (reportType === 'doppie') {
-    filename = `report_doppie_convocazioni_${catNome}.pdf`
+    filename = `report_doppie_completo_${catNome}.pdf`
     shareTitle = `Report Doppie Convocazioni - ${catNome}`
 
-    addHeader(`Report Doppie Convocazioni`, `Atleti con convocazioni multiple nello stesso turno / weekend`)
+    addHeader(`Report Doppie Convocazioni`, `Riepilogo stagionale e dettaglio convocazioni multiple nello stesso turno / weekend`)
 
-    const headers = [['#', 'Cognome', 'Nome', 'Periodo / Data', 'N. Gare', 'Partite Disputate']]
-    const rows = convocatiPerGiornata.value.map((g, i) => [
+    // Sezione 1: Riepilogo Stagionale Giocatori
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(30, 41, 59)
+    doc.text('1. Riepilogo Stagionale Giocatori', 14, 38)
+
+    const sumHeaders = [['#', 'Cognome', 'Nome', 'Totale Doppie']]
+    const sumRows = doppieRiepilogoGiocatori.value.map((p, i) => [
+      i + 1,
+      p.cognome || '—',
+      p.nome || '—',
+      p.totaleDoppie
+    ])
+
+    doc.autoTable({
+      head: sumHeaders,
+      body: sumRows.length > 0 ? sumRows : [['-', 'Nessuna doppia registrata per questa stagione', '', '']],
+      startY: 42,
+      theme: 'grid',
+      margin: { left: 14, right: 14, top: 20, bottom: 16 },
+      tableWidth: pageWidth - 28,
+      styles: { fontSize: 8.5, cellPadding: 2.5, valign: 'middle' },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 14, halign: 'center' },
+        1: { fontStyle: 'bold' },
+        3: { cellWidth: 45, halign: 'center', fontStyle: 'bold', textColor: [217, 119, 6] }
+      }
+    })
+
+    let currentY = doc.lastAutoTable.finalY + 12
+    if (currentY + 30 > pageHeight - 16) {
+      doc.addPage()
+      currentY = 20
+    }
+
+    // Sezione 2: Dettaglio Convocazioni Multiple
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(30, 41, 59)
+    doc.text('2. Dettaglio Convocazioni Multiple nel Weekend / Turno', 14, currentY)
+    currentY += 4
+
+    const detHeaders = [['#', 'Cognome', 'Nome', 'Periodo / Data', 'N. Gare', 'Partite Disputate']]
+    const detRows = convocatiPerGiornata.value.map((g, i) => [
       i + 1,
       g.cognome || '—',
       g.nome || '—',
@@ -1036,11 +1160,11 @@ async function esportaPdfReport() {
     ])
 
     doc.autoTable({
-      head: headers,
-      body: rows.length > 0 ? rows : [['-', 'Nessuna convocazione multipla registrata', '', '', '', '']],
-      startY: 38,
+      head: detHeaders,
+      body: detRows.length > 0 ? detRows : [['-', 'Nessuna convocazione multipla registrata', '', '', '', '']],
+      startY: currentY,
       theme: 'grid',
-      margin: { left: 14, right: 14, bottom: 16 },
+      margin: { left: 14, right: 14, top: 20, bottom: 16 },
       tableWidth: pageWidth - 28,
       styles: { fontSize: 8.5, cellPadding: 2.5, valign: 'middle' },
       headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', halign: 'center' },
@@ -1180,6 +1304,164 @@ async function esportaPdfReport() {
     addFooter()
   }
 
+  await saveOrSharePdf(doc, filename, shareTitle)
+}
+
+async function esportaPdfRiepilogoDoppie() {
+  const societa = societaAttiva.value?.nome || 'The Home of Football'
+  const catNome = categoriaAttiva.value?.nome || categoria.value?.nome || 'Squadra'
+  const oggi = new Date()
+  const dataGenerazione = oggi.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+
+  // Header
+  doc.setFillColor(30, 41, 59)
+  doc.rect(14, 12, pageWidth - 28, 16, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.text('REPORT DOPPIE CONVOCAZIONI', 20, 22)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(203, 213, 225)
+  doc.text(`${catNome} — ${societa}`, pageWidth - 20, 22, { align: 'right' })
+
+  doc.setTextColor(71, 85, 105)
+  doc.setFontSize(9)
+  doc.text('Riepilogo Stagionale Giocatori — Convocazioni multiple nello stesso turno / weekend', 14, 34)
+
+  const headers = [['#', 'Cognome', 'Nome', 'Totale Doppie']]
+  const rows = doppieRiepilogoGiocatori.value.map((p, i) => [
+    i + 1,
+    p.cognome || '—',
+    p.nome || '—',
+    p.totaleDoppie
+  ])
+
+  doc.autoTable({
+    head: headers,
+    body: rows.length > 0 ? rows : [['-', 'Nessuna doppia registrata per questa stagione', '', '']],
+    startY: 38,
+    theme: 'grid',
+    margin: { left: 14, right: 14, top: 20, bottom: 16 },
+    tableWidth: pageWidth - 28,
+    styles: { fontSize: 9, cellPadding: 3, valign: 'middle' },
+    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', halign: 'center' },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: {
+      0: { cellWidth: 14, halign: 'center' },
+      1: { cellWidth: 65, fontStyle: 'bold' },
+      2: { cellWidth: 65 },
+      3: { cellWidth: 38, halign: 'center', fontStyle: 'bold', textColor: [217, 119, 6] }
+    }
+  })
+
+  // Footer
+  const totalPages = doc.getNumberOfPages()
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.setDrawColor(226, 232, 240)
+    doc.setLineWidth(0.3)
+    doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12)
+
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(148, 163, 184)
+    doc.text(`The Home of Football — ${societa} • Generato il ${dataGenerazione}`, 14, pageHeight - 7)
+    doc.text(`Pagina ${i} di ${totalPages}`, pageWidth - 14, pageHeight - 7, { align: 'right' })
+  }
+
+  const filename = `report_doppie_riepilogo_${catNome}.pdf`
+  const shareTitle = `Riepilogo Doppie Convocazioni - ${catNome}`
+  await saveOrSharePdf(doc, filename, shareTitle)
+}
+
+async function esportaPdfDettaglioDoppie() {
+  const societa = societaAttiva.value?.nome || 'The Home of Football'
+  const catNome = categoriaAttiva.value?.nome || categoria.value?.nome || 'Squadra'
+  const oggi = new Date()
+  const dataGenerazione = oggi.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4'
+  })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+
+  // Header
+  doc.setFillColor(30, 41, 59)
+  doc.rect(14, 12, pageWidth - 28, 16, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.text('REPORT DOPPIE CONVOCAZIONI', 20, 22)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(203, 213, 225)
+  doc.text(`${catNome} — ${societa}`, pageWidth - 20, 22, { align: 'right' })
+
+  doc.setTextColor(71, 85, 105)
+  doc.setFontSize(9)
+  doc.text('Dettaglio Convocazioni Multiple nel Weekend / Turno', 14, 34)
+
+  const headers = [['#', 'Cognome', 'Nome', 'Periodo / Data', 'N. Gare', 'Partite Disputate']]
+  const rows = convocatiPerGiornata.value.map((g, i) => [
+    i + 1,
+    g.cognome || '—',
+    g.nome || '—',
+    g.data || '—',
+    g.numGare,
+    g.gareText || '—'
+  ])
+
+  doc.autoTable({
+    head: headers,
+    body: rows.length > 0 ? rows : [['-', 'Nessuna convocazione multipla registrata', '', '', '', '']],
+    startY: 38,
+    theme: 'grid',
+    margin: { left: 14, right: 14, top: 20, bottom: 16 },
+    tableWidth: pageWidth - 28,
+    styles: { fontSize: 8.5, cellPadding: 2.5, valign: 'middle' },
+    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', halign: 'center' },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: {
+      0: { cellWidth: 10, halign: 'center' },
+      1: { cellWidth: 36, fontStyle: 'bold' },
+      2: { cellWidth: 34 },
+      3: { cellWidth: 44, halign: 'center' },
+      4: { cellWidth: 20, halign: 'center', fontStyle: 'bold', textColor: [217, 119, 6] },
+      5: { cellWidth: 'auto' }
+    }
+  })
+
+  // Footer
+  const totalPages = doc.getNumberOfPages()
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.setDrawColor(226, 232, 240)
+    doc.setLineWidth(0.3)
+    doc.line(14, pageHeight - 12, pageWidth - 14, pageHeight - 12)
+
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(148, 163, 184)
+    doc.text(`The Home of Football — ${societa} • Generato il ${dataGenerazione}`, 14, pageHeight - 7)
+    doc.text(`Pagina ${i} di ${totalPages}`, pageWidth - 14, pageHeight - 7, { align: 'right' })
+  }
+
+  const filename = `report_doppie_dettaglio_${catNome}.pdf`
+  const shareTitle = `Dettaglio Doppie Convocazioni - ${catNome}`
   await saveOrSharePdf(doc, filename, shareTitle)
 }
 
@@ -1851,6 +2133,14 @@ tr:last-child td { border-bottom: none; }
   flex-direction: column;
   gap: 0.75rem;
   margin-bottom: 2rem;
+}
+
+.doppie-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .doppie-section-title {
