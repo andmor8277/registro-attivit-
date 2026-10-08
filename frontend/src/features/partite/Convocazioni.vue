@@ -132,9 +132,9 @@
           </div>
 
           <!-- GARE TABS -->
-          <div class="gara-tabs-container" v-if="convocazione.gare.length > 0">
+          <div class="gara-tabs-container" v-if="convocazione && convocazione.gare && convocazione.gare.length > 0">
             <div class="gara-tabs">
-              <button v-for="(g, gi) in convocazione.gare" :key="'t-' + gi" :class="['gtab', { active: gi === activeGaraIdx }]" @click="activeGaraIdx = gi">
+              <button v-for="(g, gi) in (convocazione.gare || [])" :key="'t-' + gi" :class="['gtab', { active: gi === activeGaraIdx }]" @click="activeGaraIdx = gi">
                 Gara {{ gi + 1 }}<span v-if="g.gara" class="gtab-label"> &middot; {{ g.gara }}</span>
                 <span v-if="g.livello" class="gtab-livello-badge" :title="'Livello avversario: ' + g.livello">{{ g.livello }}</span>
               </button>
@@ -159,7 +159,7 @@
                 </div>
                 <div class="card-header-actions">
                   <span class="conv-count">{{ countAssigned(garaAttiva) }} convocati</span>
-                  <button v-if="convocazione.gare.length > 1" class="btn-remove-gara" @click="rimuoviGara(activeGaraIdx)" title="Rimuovi questa partita dal weekend">Rimuovi Gara</button>
+                  <button v-if="convocazione?.gare?.length > 1" class="btn-remove-gara" @click="rimuoviGara(activeGaraIdx)" title="Rimuovi questa partita dal weekend">Rimuovi Gara</button>
                 </div>
               </div>
               <ul class="roster">
@@ -1368,43 +1368,47 @@ async function caricaPartiteEsistenti() {
 async function caricaConvocazione(id) {
   convocazioneId.value = id
   const res = await getConvocazione(id)
-  const d = res.data
+  const d = res?.data || {}
+  const rawGare = Array.isArray(d.gare) ? d.gare : []
+  const gareMappate = rawGare.map((g, idx) => {
+    const giocatoriArr = (g.giocatori || []).sort((a, b) => a.posizione - b.posizione)
+    const nonPresenti = new Set(giocatoriArr.filter(x => x.non_presente).map(x => x.persona_id))
+    return {
+      ...g,
+      partita_id: g.partita_id || null,
+      numero: g.numero || idx + 1,
+      data: g.data || '',
+      livello: g.livello || '',
+      allenatori: inferisciAllenatori(g),
+      allenatori_dettagli: g.allenatori_dettagli || [],
+      giocatori: padGiocatori(giocatoriArr.map(x => x.persona_id)),
+      nonPresenti
+    }
+  })
   convocazione.value = {
     weekend_id: d.weekend_id || null,
     weekend_nome: d.weekend_nome || '',
-    data_inizio: d.data_inizio, data_fine: d.data_fine || '', esclusioni: d.esclusioni || [],
+    data_inizio: d.data_inizio || '',
+    data_fine: d.data_fine || '',
+    esclusioni: d.esclusioni || [],
     note: d.note || '',
-    gare: d.gare.map((g, idx) => {
-      const giocatoriArr = (g.giocatori || []).sort((a, b) => a.posizione - b.posizione)
-      const nonPresenti = new Set(giocatoriArr.filter(x => x.non_presente).map(x => x.persona_id))
-      return {
-        ...g,
-        partita_id: g.partita_id || null,
-        numero: g.numero || idx + 1,
-        data: g.data || '',
-        livello: g.livello || '',
-        allenatori: inferisciAllenatori(g),
-        allenatori_dettagli: g.allenatori_dettagli || [],
-        giocatori: padGiocatori(giocatoriArr.map(x => x.persona_id)),
-        nonPresenti
-      }
-    })
-  }
+    gare: gareMappate
+  };
   // Integra eventuali mister dai dettagli della gara nei responsabili noti
-  (convocazione.value.gare || []).forEach(g => {
+  for (const g of gareMappate) {
     if (Array.isArray(g.allenatori_dettagli)) {
-      g.allenatori_dettagli.forEach(ad => {
+      for (const ad of g.allenatori_dettagli) {
         if (ad && ad.id && !responsabili.value.some(r => r.id === ad.id)) {
           responsabili.value.push(ad)
         }
-      })
+      }
     }
-  })
+  }
   // Allinea con il programma gare del responsabile se ci sono stati aggiornamenti
   await allineaConProgrammaGare(false)
-  numPartite.value = convocazione.value.gare.length
+  numPartite.value = (convocazione.value?.gare || []).length
   activeGaraIdx.value = 0
-  const referenceDates = [...new Set([d.data_inizio, ...(convocazione.value.gare || []).map(g => g.data)].filter(Boolean))]
+  const referenceDates = [...new Set([d.data_inizio, ...gareMappate.map(g => g.data)].filter(Boolean))]
   for (const referenceDate of referenceDates) {
     await ensureRegistroPerData(referenceDate)
   }
