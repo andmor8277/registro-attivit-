@@ -116,6 +116,9 @@
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                       {{ g.campo }}
                     </span>
+                    <span v-if="g.livello" class="meta-item livello-badge">
+                      Livello: {{ g.livello }}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -151,6 +154,9 @@
                     <span v-if="g.campo" class="meta-item">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                       {{ g.campo }}
+                    </span>
+                    <span v-if="g.livello" class="meta-item livello-badge">
+                      Livello: {{ g.livello }}
                     </span>
                   </div>
                 </div>
@@ -1253,6 +1259,13 @@ onMounted(async () => {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-text-secondary);
+}
+
+.meta-item.livello-badge {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
 }
 
 /* ── Da controllare ── */

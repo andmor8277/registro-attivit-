@@ -1446,6 +1446,14 @@ def run_migrations():
                 print(f"Migration warning (populate campi_sportivi table): {e}")
                 conn.rollback()
 
+            try:
+                conn.execute(text("ALTER TABLE convocazione_gare ADD COLUMN IF NOT EXISTS livello VARCHAR(50)"))
+                conn.commit()
+                print("Migration: Added livello to convocazione_gare")
+            except Exception as e:
+                print(f"Migration warning (convocazione_gare livello): {e}")
+                conn.rollback()
+
         finally:
             if has_lock:
                 try:

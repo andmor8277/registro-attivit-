@@ -32,6 +32,7 @@ class GaraIn(BaseModel):
     inizio_gara: Optional[str] = None
     allenatore: Optional[str] = None
     allenatori: Optional[List[int]] = None
+    livello: Optional[str] = None
     giocatori: List[GiocatoreIn] = []
 
 class ConvocazioneIn(BaseModel):
@@ -82,10 +83,16 @@ def dettaglio(cid: int, db: Session = Depends(get_db), current_user: Utente = De
         for gk in giocatori:
             p = db.query(Persona).filter(Persona.id == gk.persona_id).first()
             persone.append({"persona_id": gk.persona_id, "posizione": gk.posizione, "nome": p.nome if p else "", "cognome": p.cognome if p else "", "non_presente": bool(gk.non_presente)})
+        livello_val = getattr(g, 'livello', None)
+        if not livello_val and g.partita_id:
+            p_row = db.execute(text("SELECT livello FROM partite WHERE id = :pid"), {"pid": g.partita_id}).fetchone()
+            if p_row and p_row[0]:
+                livello_val = p_row[0]
         result_gare.append({
             "id": g.id, "partita_id": g.partita_id, "numero": g.numero, "gara": g.gara, "data": g.data,
             "campo": g.campo, "indirizzo": g.indirizzo, "appuntamento": g.appuntamento,
-            "inizio_gara": g.inizio_gara, "allenatore": g.allenatore, "allenatori": g.allenatori or [], "giocatori": persone
+            "inizio_gara": g.inizio_gara, "allenatore": g.allenatore, "allenatori": g.allenatori or [],
+            "livello": livello_val or "", "giocatori": persone
         })
     w_row = db.execute(text("SELECT nome FROM weekend WHERE id = :wid"), {"wid": c.weekend_id}).fetchone() if c.weekend_id else None
     weekend_nome = w_row[0] if w_row else None
@@ -175,15 +182,22 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
             except Exception as e:
                 pass
 
+        p_livello = None
+        if partita_id:
+            p_row = db.execute(text("SELECT livello FROM partite WHERE id = :pid"), {"pid": partita_id}).fetchone()
+            if p_row and p_row[0]:
+                p_livello = p_row[0]
+        g_livello = g.livello or p_livello
+
         if not partita_id and weekend_id:
             # Nuova partita aggiunta dal mister al weekend del responsabile: registrala in partite
             res_p = db.execute(text("""
                 INSERT INTO partite (
                     categoria_id, data_partite, ora, ora_presentazione,
-                    avversario, campo, indirizzo, casa_fuori, societa_id, weekend_id
+                    avversario, campo, indirizzo, casa_fuori, societa_id, weekend_id, livello
                 ) VALUES (
                     :cid, :data, :ora, :appunt,
-                    :avv, :campo, :indirizzo, :cf, :sid, :wid
+                    :avv, :campo, :indirizzo, :cf, :sid, :wid, :livello
                 ) RETURNING id
             """), {
                 "cid": data.categoria_id,
@@ -195,7 +209,8 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
                 "indirizzo": g_indirizzo,
                 "cf": "casa",
                 "sid": societa_id,
-                "wid": weekend_id
+                "wid": weekend_id,
+                "livello": g_livello
             })
             partita_id = res_p.scalar()
             if partita_id:
@@ -206,19 +221,22 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
                     ora = COALESCE(:ora, ora),
                     ora_presentazione = COALESCE(:appunt, ora_presentazione),
                     campo = COALESCE(:campo, campo),
-                    indirizzo = COALESCE(:indirizzo, indirizzo)
+                    indirizzo = COALESCE(:indirizzo, indirizzo),
+                    livello = COALESCE(:livello, livello)
                 WHERE id = :pid
             """), {
                 "pid": partita_id,
                 "ora": ora_short,
                 "appunt": appunt_time,
                 "campo": g_campo if g_campo else None,
-                "indirizzo": g_indirizzo if g_indirizzo else None
+                "indirizzo": g_indirizzo if g_indirizzo else None,
+                "livello": g.livello if g.livello else None
             })
 
         gara = ConvocazioneGara(convocazione_id=c.id, partita_id=partita_id, numero=g.numero, gara=g.gara, data=dt,
             campo=g_campo, indirizzo=g_indirizzo, appuntamento=g.appuntamento,
-            inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [])
+            inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [],
+            livello=g_livello)
         db.add(gara)
         db.flush()
         for gk in g.giocatori:
@@ -319,15 +337,22 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
             except Exception as e:
                 pass
 
+        p_livello = None
+        if partita_id:
+            p_row = db.execute(text("SELECT livello FROM partite WHERE id = :pid"), {"pid": partita_id}).fetchone()
+            if p_row and p_row[0]:
+                p_livello = p_row[0]
+        g_livello = g.livello or p_livello
+
         if not partita_id and weekend_id:
             # Nuova partita aggiunta dal mister al weekend del responsabile: registrala in partite
             res_p = db.execute(text("""
                 INSERT INTO partite (
                     categoria_id, data_partite, ora, ora_presentazione,
-                    avversario, campo, indirizzo, casa_fuori, societa_id, weekend_id
+                    avversario, campo, indirizzo, casa_fuori, societa_id, weekend_id, livello
                 ) VALUES (
                     :cid, :data, :ora, :appunt,
-                    :avv, :campo, :indirizzo, :cf, :sid, :wid
+                    :avv, :campo, :indirizzo, :cf, :sid, :wid, :livello
                 ) RETURNING id
             """), {
                 "cid": c.categoria_id,
@@ -339,7 +364,8 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
                 "indirizzo": g_indirizzo,
                 "cf": "casa",
                 "sid": c.societa_id,
-                "wid": weekend_id
+                "wid": weekend_id,
+                "livello": g_livello
             })
             partita_id = res_p.scalar()
             if partita_id:
@@ -350,19 +376,22 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
                     ora = COALESCE(:ora, ora),
                     ora_presentazione = COALESCE(:appunt, ora_presentazione),
                     campo = COALESCE(:campo, campo),
-                    indirizzo = COALESCE(:indirizzo, indirizzo)
+                    indirizzo = COALESCE(:indirizzo, indirizzo),
+                    livello = COALESCE(:livello, livello)
                 WHERE id = :pid
             """), {
                 "pid": partita_id,
                 "ora": ora_short,
                 "appunt": appunt_time,
                 "campo": g_campo if g_campo else None,
-                "indirizzo": g_indirizzo if g_indirizzo else None
+                "indirizzo": g_indirizzo if g_indirizzo else None,
+                "livello": g.livello if g.livello else None
             })
 
         gara = ConvocazioneGara(convocazione_id=cid, partita_id=partita_id, numero=g.numero, gara=g.gara, data=dt,
             campo=g_campo, indirizzo=g_indirizzo, appuntamento=g.appuntamento,
-            inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [])
+            inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [],
+            livello=g_livello)
         db.add(gara)
         db.flush()
         for gk in g.giocatori:
