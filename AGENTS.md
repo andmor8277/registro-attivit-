@@ -170,7 +170,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - Frontend port: `0.0.0.0:3000:80` — **NEVER `127.0.0.1:3000:80`** (502 error).
 - Backend port: `0.0.0.0:8000:8000` — must be `0.0.0.0`.
 - Frontend changes require **full rebuild** (`docker compose build --no-cache`).
-- Service Worker caches aggressively — users may need hard refresh (Ctrl+Shift+R).
+- Version Checker automatico attivo (`versionCheck.js` + `version.json` generato da Vite): ricarica automatica al cambio versione senza bisogno di refresh manuale né Service Worker (i vecchi SW vengono deregistrati automaticamente).
 
 ## Conventions
 - Italian language in UI and code.
