@@ -29,7 +29,7 @@
           <button v-for="c in convocazioniAttive" :key="'a-' + c.id" :class="['wk', { active: convocazioneId === c.id }]" @click="caricaConvocazione(c.id)">
             {{ c.weekend_nome ? c.weekend_nome + ' · ' : '' }}{{ formatDataShort(c.data_inizio) }}{{ c.data_fine ? ' \u2013 ' + formatDataShort(c.data_fine) : '' }}
           </button>
-          <button v-for="w in weekendDisponibili" :key="'w-' + w.id" class="wk wk-new" @click="creaConvocazioneDaWeekend(w)" :title="'Crea convocazione per ' + (w.nome || 'weekend')">
+          <button v-for="w in weekendDisponibili" :key="'w-' + w.id" class="wk wk-new" @click="creaConvocazioneDaWeekend(w)" :title="'Crea convocazione per ' + (w.nome || 'weekend') + (w.partite && w.partite.length ? ' (' + w.partite.map(p => (p.avversario || 'Gara') + (p.livello ? ' [' + p.livello + ']' : '')).join(', ') + ')' : '')">
             + {{ w.nome || (formatDataShort(w.data_inizio) + ' \u2013 ' + formatDataShort(w.data_fine)) }}
           </button>
           <span v-if="convocazioniAttive.length === 0 && weekendDisponibili.length === 0" class="no-weekend-text">
@@ -136,6 +136,7 @@
             <div class="gara-tabs">
               <button v-for="(g, gi) in convocazione.gare" :key="'t-' + gi" :class="['gtab', { active: gi === activeGaraIdx }]" @click="activeGaraIdx = gi">
                 Gara {{ gi + 1 }}<span v-if="g.gara" class="gtab-label"> &middot; {{ g.gara }}</span>
+                <span v-if="g.livello" class="gtab-livello-badge" :title="'Livello avversario: ' + g.livello">{{ g.livello }}</span>
               </button>
             </div>
             <button class="btn-add-gara" @click="aggiungiNuovaGara" title="Aggiungi una nuova partita a questo weekend">
@@ -147,7 +148,15 @@
           <div class="conv-grid" v-if="garaAttiva">
             <div class="card">
               <div class="card-h">
-                <h2><input v-model="garaAttiva.gara" class="gara-title-inline" :placeholder="nomeSocieta + ' vs Avversario'" /></h2>
+                <div class="gara-title-row">
+                  <h2><input v-model="garaAttiva.gara" class="gara-title-inline" :placeholder="nomeSocieta + ' vs Avversario'" /></h2>
+                  <span v-if="garaAttiva.livello" class="livello-badge" :title="'Livello avversario: ' + garaAttiva.livello">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                    Livello: {{ garaAttiva.livello }}
+                  </span>
+                </div>
                 <div class="card-header-actions">
                   <span class="conv-count">{{ countAssigned(garaAttiva) }} convocati</span>
                   <button v-if="convocazione.gare.length > 1" class="btn-remove-gara" @click="rimuoviGara(activeGaraIdx)" title="Rimuovi questa partita dal weekend">Rimuovi Gara</button>
@@ -198,6 +207,19 @@
                 <div class="card-h"><h2>Dettagli gara</h2></div>
                 <ul class="info-dl">
                   <li><span class="k">Data</span><span class="v"><input type="date" v-model="garaAttiva.data" :min="convocazione.data_inizio" :max="convocazione.data_fine || convocazione.data_inizio" /></span></li>
+                  <li>
+                    <span class="k">Livello avversario</span>
+                    <span class="v">
+                      <select v-model="garaAttiva.livello" class="livello-select">
+                        <option value="">— Non specificato —</option>
+                        <option value="Alto">Alto</option>
+                        <option value="Medio Alto">Medio Alto</option>
+                        <option value="Medio">Medio</option>
+                        <option value="Medio Basso">Medio Basso</option>
+                        <option value="Basso">Basso</option>
+                      </select>
+                    </span>
+                  </li>
                   <li><span class="k">Campo</span><span class="v">
                     <input
                       v-model="garaAttiva.campo"
@@ -1136,7 +1158,7 @@ function formatDataShort(d) {
 }
 
 function garaVuota(numero) {
-  return { partita_id: null, numero, gara: '', data: '', campo: '', indirizzo: '', appuntamento: '', inizio_gara: '', allenatore: '', allenatori: [], giocatori: Array(10).fill(null), nonPresenti: new Set() }
+  return { partita_id: null, numero, gara: '', data: '', campo: '', indirizzo: '', appuntamento: '', inizio_gara: '', allenatore: '', allenatori: [], giocatori: Array(10).fill(null), nonPresenti: new Set(), livello: '' }
 }
 
 async function caricaPartiteWeekend(dataInizio, dataFine) {
@@ -1225,7 +1247,8 @@ async function popolaConvocazione(dataInizio, dataFine, weekendId = null) {
     allenatore: getMisterCognome(p.mister_id),
     allenatori: p.mister_id ? [p.mister_id] : [],
     giocatori: Array(10).fill(null),
-    nonPresenti: new Set()
+    nonPresenti: new Set(),
+    livello: p.livello || ''
   })) : [garaVuota(1)]
   numPartite.value = gare.length
   activeGaraIdx.value = 0
@@ -1272,6 +1295,7 @@ async function allineaConProgrammaGare(manualAlert = false) {
 
       if (targetGara) {
         targetGara.partita_id = p.id
+        if (p.livello && (!targetGara.livello || manualAlert)) targetGara.livello = p.livello
         if (!targetGara.data) targetGara.data = p.data_partite
         if (oraP && (!targetGara.inizio_gara || manualAlert)) targetGara.inizio_gara = oraP
         if (p.campo && (!targetGara.campo || manualAlert)) targetGara.campo = p.campo
@@ -1295,7 +1319,8 @@ async function allineaConProgrammaGare(manualAlert = false) {
           allenatore: getMisterCognome(p.mister_id),
           allenatori: p.mister_id ? [p.mister_id] : [],
           giocatori: Array(10).fill(null),
-          nonPresenti: new Set()
+          nonPresenti: new Set(),
+          livello: p.livello || ''
         })
       }
     })
@@ -1332,6 +1357,7 @@ async function caricaConvocazione(id) {
         partita_id: g.partita_id || null,
         numero: g.numero || idx + 1,
         data: g.data || '',
+        livello: g.livello || '',
         allenatori: inferisciAllenatori(g),
         giocatori: padGiocatori(giocatoriArr.map(x => x.persona_id)),
         nonPresenti
@@ -1395,7 +1421,8 @@ async function creaConvocazioneDaWeekend(weekend) {
     allenatore: getMisterCognome(p.mister_id),
     allenatori: p.mister_id ? [p.mister_id] : [],
     giocatori: Array(10).fill(null),
-    nonPresenti: new Set()
+    nonPresenti: new Set(),
+    livello: p.livello || ''
   }))
   const gareIniziali = gare.length ? gare : [garaVuota(1)]
   if (!gareIniziali[0].data) gareIniziali[0].data = dataInizio
@@ -1502,6 +1529,7 @@ async function salva() {
           inizio_gara: g.inizio_gara,
           allenatore: allenatoriNomi.length ? allenatoriNomi.join(', ') : (g.allenatore || ''),
           allenatori,
+          livello: g.livello || null,
           giocatori: g.giocatori.map((pid, i) => pid ? { persona_id: pid, posizione: i + 1, non_presente: g.nonPresenti?.has(pid) || false } : null).filter(Boolean)
         }
       })
@@ -2526,6 +2554,20 @@ onMounted(async () => {
 .gtab:hover { border-color: var(--color-text); color: var(--color-text); }
 .gtab.active { background: #dc2626; border-color: #dc2626; color: #fff; }
 .gtab-label { font-weight: 500; opacity: 0.85; }
+.gtab-livello-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+.gtab.active .gtab-livello-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
 
 /* ---- CONV GRID + CARD (demo) ---- */
 .conv-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; align-items: start; }
@@ -2544,7 +2586,34 @@ onMounted(async () => {
   padding: 13px 18px;
   border-bottom: 1px solid var(--color-border-light);
 }
-.card-h h2 { font-size: 0.95rem; font-weight: 800; letter-spacing: -0.01em; min-width: 0; flex: 1; }
+.gara-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.gara-title-row h2 { font-size: 0.95rem; font-weight: 800; letter-spacing: -0.01em; min-width: 0; flex: 1; margin: 0; }
+
+.livello-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  color: #2563eb;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.livello-badge svg {
+  color: #2563eb;
+}
 
 .gara-title-inline {
   width: 100%;
