@@ -282,6 +282,7 @@ def get_categoria_responsabili(categoria_id: int, db: Session = Depends(get_db),
         if u and u.ruolo in RUOLI_RESPONSABILI:
             result.append({
                 "id": u.id,
+                "nome": u.nome,
                 "cognome": u.cognome,
                 "cellulare": u.cellulare,
                 "ruolo": u.ruolo

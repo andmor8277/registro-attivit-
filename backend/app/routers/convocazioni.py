@@ -88,10 +88,41 @@ def dettaglio(cid: int, db: Session = Depends(get_db), current_user: Utente = De
             p_row = db.execute(text("SELECT livello FROM partite WHERE id = :pid"), {"pid": g.partita_id}).fetchone()
             if p_row and p_row[0]:
                 livello_val = p_row[0]
+        allenatori_dettagli = []
+        allenatori_ids = list(g.allenatori or [])
+        if not allenatori_ids and g.partita_id:
+            p_row = db.execute(text("SELECT mister_id FROM partite WHERE id = :pid"), {"pid": g.partita_id}).fetchone()
+            if p_row and p_row[0]:
+                allenatori_ids = [p_row[0]]
+        for aid in allenatori_ids:
+            u = db.query(Utente).filter(Utente.id == aid).first()
+            if u:
+                allenatori_dettagli.append({
+                    "id": u.id,
+                    "nome": u.nome,
+                    "cognome": u.cognome,
+                    "cellulare": u.cellulare or ""
+                })
+        if not allenatori_dettagli and g.allenatore:
+            for part in str(g.allenatore).split(','):
+                part_clean = part.strip()
+                if part_clean:
+                    u = db.query(Utente).filter(
+                        Utente.societa_id == c.societa_id,
+                        Utente.cognome.ilike(part_clean)
+                    ).first()
+                    if u:
+                        allenatori_dettagli.append({
+                            "id": u.id,
+                            "nome": u.nome,
+                            "cognome": u.cognome,
+                            "cellulare": u.cellulare or ""
+                        })
         result_gare.append({
             "id": g.id, "partita_id": g.partita_id, "numero": g.numero, "gara": g.gara, "data": g.data,
             "campo": g.campo, "indirizzo": g.indirizzo, "appuntamento": g.appuntamento,
             "inizio_gara": g.inizio_gara, "allenatore": g.allenatore, "allenatori": g.allenatori or [],
+            "allenatori_dettagli": allenatori_dettagli,
             "livello": livello_val or "", "giocatori": persone
         })
     w_row = db.execute(text("SELECT nome FROM weekend WHERE id = :wid"), {"wid": c.weekend_id}).fetchone() if c.weekend_id else None
