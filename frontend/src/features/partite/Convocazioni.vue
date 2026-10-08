@@ -1176,17 +1176,23 @@ function getMisterCognome(misterId) {
 }
 
 function trovaResponsabileDaNome(nome) {
-  const clean = String(nome || '').trim().toLowerCase()
+  const clean = String(nome || '').replace(/\(.*\)/g, '').replace(/[0-9]/g, '').trim().toLowerCase()
   if (!clean) return null
-  return responsabili.value.find(r =>
-    r.cognome?.toLowerCase() === clean ||
-    `${r.cognome} ${r.nome}`.trim().toLowerCase() === clean ||
-    `${r.nome} ${r.cognome}`.trim().toLowerCase() === clean
-  ) || null
+  return responsabili.value.find(r => {
+    const c = (r.cognome || '').toLowerCase()
+    const n = (r.nome || '').toLowerCase()
+    return c === clean ||
+      (n && `${c} ${n}`.trim() === clean) ||
+      (n && `${n} ${c}`.trim() === clean) ||
+      (clean.length >= 3 && (c.includes(clean) || clean.includes(c)))
+  }) || null
 }
 
 function inferisciAllenatori(gara) {
   if (Array.isArray(gara?.allenatori) && gara.allenatori.length) return gara.allenatori
+  if (Array.isArray(gara?.allenatori_dettagli) && gara.allenatori_dettagli.length) {
+    return gara.allenatori_dettagli.map(d => d.id).filter(Boolean)
+  }
   if (!gara?.allenatore) return []
   return gara.allenatore
     .split(',')
@@ -1195,6 +1201,16 @@ function inferisciAllenatori(gara) {
 }
 
 function getAllenatoriLabel(gara) {
+  // 1. Dettagli direttamente allegati alla gara (da backend)
+  if (Array.isArray(gara?.allenatori_dettagli) && gara.allenatori_dettagli.length) {
+    const label = gara.allenatori_dettagli
+      .map(m => m.cellulare ? `${m.cognome} (${m.cellulare})` : m.cognome)
+      .filter(Boolean)
+      .join(', ')
+    if (label) return label
+  }
+
+  // 2. Tramite ID in responsabili
   const ids = inferisciAllenatori(gara)
   if (ids.length) {
     const label = ids
@@ -1207,19 +1223,28 @@ function getAllenatoriLabel(gara) {
       .join(', ')
     if (label) return label
   }
-  return gara?.allenatore || ''
+
+  // 3. Fallback sulla stringa gara.allenatore
+  if (gara?.allenatore) {
+    if (/\d{6,}/.test(gara.allenatore)) {
+      return gara.allenatore
+    }
+    const parti = gara.allenatore.split(',').map(s => s.trim()).filter(Boolean)
+    const arricchiti = parti.map(p => {
+      const resp = trovaResponsabileDaNome(p)
+      if (resp && resp.cellulare) {
+        return `${resp.cognome || p} (${resp.cellulare})`
+      }
+      return p
+    })
+    return arricchiti.join(', ')
+  }
+
+  return ''
 }
 
 function getAllenatoriLabelCompatta(gara) {
-  const ids = inferisciAllenatori(gara)
-  if (ids.length) {
-    const label = ids
-      .map(id => responsabili.value.find(r => r.id === id)?.cognome)
-      .filter(Boolean)
-      .join(', ')
-    if (label) return label
-  }
-  return gara?.allenatore || ''
+  return getAllenatoriLabel(gara)
 }
 
 async function nuovaConvocazione() {
@@ -1359,11 +1384,22 @@ async function caricaConvocazione(id) {
         data: g.data || '',
         livello: g.livello || '',
         allenatori: inferisciAllenatori(g),
+        allenatori_dettagli: g.allenatori_dettagli || [],
         giocatori: padGiocatori(giocatoriArr.map(x => x.persona_id)),
         nonPresenti
       }
     })
   }
+  // Integra eventuali mister dai dettagli della gara nei responsabili noti
+  (convocazione.value.gare || []).forEach(g => {
+    if (Array.isArray(g.allenatori_dettagli)) {
+      g.allenatori_dettagli.forEach(ad => {
+        if (ad && ad.id && !responsabili.value.some(r => r.id === ad.id)) {
+          responsabili.value.push(ad)
+        }
+      })
+    }
+  })
   // Allinea con il programma gare del responsabile se ci sono stati aggiornamenti
   await allineaConProgrammaGare(false)
   numPartite.value = convocazione.value.gare.length
@@ -1713,7 +1749,7 @@ async function esportaPDF() {
             ['Campo', gara.campo || '—'],
             ['Indirizzo', gara.indirizzo || '—'],
             ['Appuntamento', gara.appuntamento || '—'],
-            ['Allenatore', (ultra ? getAllenatoriLabelCompatta(gara) : getAllenatoriLabel(gara)) || '—']
+            ['Allenatore', getAllenatoriLabel(gara) || '—']
           ],
           theme: 'grid',
           styles: { font: 'helvetica', fontSize: ultra ? 6 : 6.3, cellPadding: ultra ? 0.5 : 0.6, lineColor: line, lineWidth: 0.15, textColor: dark },
@@ -1739,8 +1775,8 @@ async function esportaPDF() {
         columnStyles: {
           0: { cellWidth: 24, fontStyle: 'bold', fillColor: light, textColor: gray },
           1: { cellWidth: width / 2 - 24 },
-          2: { cellWidth: 30, fontStyle: 'bold', fillColor: light, textColor: gray },
-          3: { cellWidth: width / 2 - 30 }
+          2: { cellWidth: 22, fontStyle: 'bold', fillColor: light, textColor: gray },
+          3: { cellWidth: width / 2 - 22 }
         },
         pageBreak: 'avoid'
       })
