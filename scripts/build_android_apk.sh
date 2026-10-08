@@ -46,6 +46,11 @@ $CONTAINER_BIN run --rm $USERNS_FLAGS \
     -e GRADLE_USER_HOME=/tmp/.gradle \
     thof-android-builder bash -c "./gradlew assembleDebug -PcustomVersionCode=$VERSION_CODE -PcustomVersionName=$VERSION_NAME --no-daemon"
 
+# Ripristina la proprietà dei file all'utente host (evita conflitti EACCES al prossimo cap sync)
+if [ "$CONTAINER_BIN" = "docker" ]; then
+    $CONTAINER_BIN run --rm -v "$ROOT_DIR/frontend/android:/android" alpine chown -R $(id -u):$(id -g) /android 2>/dev/null || true
+fi
+
 OUTPUT_APK="$ROOT_DIR/frontend/android/app/build/outputs/apk/debug/app-debug.apk"
 DEST_DIR="$ROOT_DIR/releases/apk"
 DEST_APK="$DEST_DIR/thof.apk"
