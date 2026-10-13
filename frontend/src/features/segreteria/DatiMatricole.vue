@@ -13,7 +13,7 @@
           Indietro
         </button>
         <div class="header-actions">
-          <button v-if="utenteAttivo?.is_admin || ['mister','segreteria','infermeria'].includes(utenteAttivo?.ruolo)" class="btn-icon-pill" @click="gdprModal.show = true" :title="gdprSbloccato ? 'Dati sbloccati' : 'Sblocca Dati Sensibili'" :class="{ 'gdpr-unlocked': gdprSbloccato }">
+          <button v-if="utenteAttivo?.is_admin || ['mister','segreteria','infermeria'].includes(utenteAttivo?.ruolo)" class="btn-icon-pill" @click="apriSbloccoGdpr" :title="gdprSbloccato ? 'Dati sbloccati' : 'Sblocca Dati Sensibili'" :class="{ 'gdpr-unlocked': gdprSbloccato }">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -70,7 +70,7 @@
               <th v-if="gdprSbloccato">Matricola</th>
               <th v-if="gdprSbloccato">Scad. Cert.</th>
               <th v-if="!isDirigente">Gruppo</th>
-              <th v-if="!gdprSbloccato"></th>
+              <th class="cell-action-th"></th>
             </tr>
           </thead>
           <tbody>
@@ -91,9 +91,9 @@
               </td>
               <template v-if="gdprSbloccato">
                 <td>{{ formatData(p.data_nascita) }}</td>
-                <td class="cell-cf">{{ gdprSbloccato ? (p.codice_fiscale || '-') : '••••••••••••' }}</td>
-                <td>{{ gdprSbloccato ? (p.tel_papa || '-') : '••••' }}</td>
-                <td>{{ gdprSbloccato ? (p.tel_mamma || '-') : '••••' }}</td>
+                <td class="cell-cf">{{ p.codice_fiscale || '-' }}</td>
+                <td>{{ p.tel_papa || '-' }}</td>
+                <td>{{ p.tel_mamma || '-' }}</td>
                 <td class="cell-matricola">{{ p.matricola || '-' }}</td>
                 <td class="cell-scadenza" :class="{ 'scad-rossa': isScaduta(p.scadenza_certificato) }">
                   {{ formatData(p.scadenza_certificato) }}
@@ -110,7 +110,7 @@
               </td>
             </tr>
             <tr v-if="filteredPersone.length === 0">
-              <td :colspan="isDirigente ? (gdprSbloccato ? 11 : 6) : (gdprSbloccato ? 13 : 8)" class="no-data">Nessun giocatore trovato</td>
+              <td :colspan="isDirigente ? (gdprSbloccato ? 12 : 6) : (gdprSbloccato ? 13 : 7)" class="no-data">Nessun giocatore trovato</td>
             </tr>
           </tbody>
         </table>
@@ -316,7 +316,12 @@ const gdprModal = ref({ show: false, password: '', errore: '' })
 const modal = ref({ show: false, isNuovo: false, id: null, cognome: '', nome: '', numero_maglia: '', data_nascita: '', sesso: '', comune_nato: '', codice_fiscale: '', cfGenerato: false, tel_papa: '', tel_mamma: '', matricola: '', scadenza_certificato: '', residenza: '', indirizzo: '', gruppo_id: 1 })
 
 function apriSbloccoGdpr() {
-  gdprModal.value = { show: true, password: '', errore: '' }
+  if (gdprSbloccato.value) {
+    gdprSbloccato.value = false
+    sessionStorage.removeItem('gdpr_sbloccato')
+  } else {
+    gdprModal.value = { show: true, password: '', errore: '' }
+  }
 }
 
 async function verificaPasswordGdpr() {
@@ -328,8 +333,10 @@ async function verificaPasswordGdpr() {
   try {
     await verifyGdpr(gdprModal.value.password, categoriaId)
     gdprSbloccato.value = true
+    sessionStorage.setItem('gdpr_sbloccato', 'true')
     gdprModal.value.show = false
     gdprModal.value.password = ''
+    await reloadData()
   } catch (e) {
     gdprModal.value.errore = e.response?.data?.detail || 'Codice fiscale non valido'
   }
@@ -589,6 +596,7 @@ async function reloadData() {
 }
 
 onMounted(async () => {
+  gdprSbloccato.value = sessionStorage.getItem('gdpr_sbloccato') === 'true'
   await loadGruppi()
   const res = await getPersone(categoriaId)
   persone.value = res.data.sort((a, b) => a.cognome.localeCompare(b.cognome))

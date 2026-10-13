@@ -6,7 +6,7 @@ from .. import models, schemas
 from ..database import get_db
 from ..routers.auth import get_current_user, get_super_admin
 from ..core.security import get_persona_staff, get_persona_admin
-from ..models import Utente
+from ..models import Utente, UtenteCategoria
 from ..rate_limit import limiter
 from ..utils.codice_fiscale import genera_codice_fiscale
 from ..core import encryption
@@ -46,6 +46,15 @@ def get_persone(
 
     cat_label = ", CASE WHEN pc.anno IS NOT NULL THEN pc.nome || ' ' || pc.anno::text ELSE pc.nome END as categoria_nome" if is_portieri else ""
 
+    can_see_sensitive = is_admin or current_user.ruolo == 'infermeria'
+    if not can_see_sensitive and current_user.ruolo == 'mister' and categoria_id:
+        assegnato = db.query(UtenteCategoria).filter(
+            UtenteCategoria.utente_id == current_user.id,
+            UtenteCategoria.categoria_id == categoria_id
+        ).first()
+        if assegnato:
+            can_see_sensitive = True
+
     if is_admin:
         query = f"""
             SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id,
@@ -58,6 +67,21 @@ def get_persone(
                     p.pagamenti_in_regola,
                     p.tel_ragazzo, p.tel_nonni, p.societa_provenienza, p.scadenza_certificato_2,
                     p.ricevuta_preiscrizione, p.ricevuta_iscrizione, p.ricevuta_saldo,
+                    p.safeguarding_accettato, p.regole_accettate, p.dotazione_materiale
+                    {cat_label}
+            FROM persone p
+            LEFT JOIN categorie pc ON p.categoria_id = pc.id
+        """
+    elif can_see_sensitive:
+        query = f"""
+            SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id,
+                    p.data_nascita, p.sesso, p.codice_fiscale, p.matricola,
+                    p.numero_maglia, p.scadenza_certificato, p.societa_id,
+                    p.residenza, p.indirizzo, p.cittadinanza, p.tel_papa, p.tel_mamma,
+                    p.email1, p.email2, p.prof_papa, p.prof_mamma, p.nome_papa, p.nome_mamma, p.comune_nato,
+                    p.anamnesi, p.taglia, p.note,
+                    p.pagamenti_in_regola,
+                    p.tel_ragazzo, p.tel_nonni, p.societa_provenienza, p.scadenza_certificato_2,
                     p.safeguarding_accettato, p.regole_accettate, p.dotazione_materiale
                     {cat_label}
             FROM persone p
@@ -101,7 +125,7 @@ def get_persone(
 
     results = []
     for row in rows:
-        if is_admin:
+        if can_see_sensitive:
             r = decrypt_row(db, row)
         else:
             r = dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
