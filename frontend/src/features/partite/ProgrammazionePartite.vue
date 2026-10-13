@@ -146,12 +146,12 @@
                     </svg>
                     {{ partita.campo }}{{ partita.indirizzo ? ' - ' + partita.indirizzo : '' }}
                   </span>
-                  <span v-if="partita.mister_id" class="meta-item mister-badge">
+                  <span v-if="partita.mister_id || (partita.mister_manuale && partita.mister_manuale.trim())" class="meta-item mister-badge">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                       <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
                       <circle cx="12" cy="7" r="4"/>
                     </svg>
-                    {{ getMisterName(partita.categoria_id, partita.mister_id) }}
+                    {{ getMisterName(partita.categoria_id, partita.mister_id, partita.mister_manuale) }}
                   </span>
                   <span v-if="partita.livello" class="meta-item livello-badge">
                     Livello: {{ partita.livello }}
@@ -295,12 +295,21 @@
               </div>
               <div class="form-group">
                 <label>Mister</label>
-                <select v-model="modal.mister_id">
-                  <option :value="null">— Seleziona —</option>
-                  <option v-for="m in getMisterPerCategoria(modal.categoria_id)" :key="m.id" :value="m.id">
-                    {{ m.cognome }} - {{ m.cellulare }}
+                <select v-model="misterSelection" @change="onMisterSelectionChange">
+                  <option value="">— Nessuno / Predefinito —</option>
+                  <option v-for="m in getMisterPerCategoria(modal.categoria_id)" :key="m.id" :value="String(m.id)">
+                    {{ m.cognome }} {{ m.cellulare ? '(' + m.cellulare + ')' : '' }}
                   </option>
+                  <option value="__manuale__">✏️ Inserisci manualmente (non censito)...</option>
                 </select>
+                <div v-if="misterSelection === '__manuale__'" class="mister-manuale-box">
+                  <input
+                    type="text"
+                    v-model="modal.mister_manuale"
+                    placeholder="Nome e cognome mister non censito (es. Mario Rossi)"
+                    class="mister-manuale-input"
+                  />
+                </div>
               </div>
             </div>
             <div class="form-row">
@@ -392,6 +401,7 @@ const modal = ref({
   indirizzo: "",
   casa_fuori: "casa",
   mister_id: null,
+  mister_manuale: "",
   risultato: "",
   goal_punti: 0,
   goal_contro: 0,
@@ -399,6 +409,20 @@ const modal = ref({
   weekend_id: null,
   livello: ""
 })
+
+const misterSelection = ref("")
+
+function onMisterSelectionChange() {
+  if (misterSelection.value === '__manuale__') {
+    modal.value.mister_id = null
+  } else if (misterSelection.value) {
+    modal.value.mister_id = parseInt(misterSelection.value)
+    modal.value.mister_manuale = ""
+  } else {
+    modal.value.mister_id = null
+    modal.value.mister_manuale = ""
+  }
+}
 
 const weekendModal = ref({
   show: false,
@@ -457,13 +481,17 @@ function getGiornoSettimana(dataStr) {
   return giorni[d.getDay()]
 }
 
-function getMisterName(catId, misterId) {
+function getMisterName(catId, misterId, misterManuale = null) {
+  if (misterManuale && misterManuale.trim()) return misterManuale.trim()
   const lista = misterPerCategoria.value[catId] || []
   const m = lista.find(r => r.id === misterId)
   return m ? m.cognome : 'N/D'
 }
 
-function getMisterDisplay(catId, misterId, withPhone = false) {
+function getMisterDisplay(catId, misterId, misterManuale = null, withPhone = false) {
+  if (misterManuale && misterManuale.trim()) {
+    return misterManuale.trim()
+  }
   const lista = (misterPerCategoria.value[catId] || []).filter(r => r.ruolo !== 'dirigente')
   if (misterId) {
     const m = lista.find(r => r.id === misterId)
@@ -500,6 +528,13 @@ function getMisterPerCategoria(catId) {
 
 function apriModal(partita, defaultCatId, defaultWeekendId) {
   if (partita) {
+    let initialMisterSel = ""
+    if (partita.mister_manuale && partita.mister_manuale.trim()) {
+      initialMisterSel = "__manuale__"
+    } else if (partita.mister_id) {
+      initialMisterSel = String(partita.mister_id)
+    }
+    misterSelection.value = initialMisterSel
     modal.value = {
       show: true,
       id: partita.id,
@@ -511,6 +546,7 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
       indirizzo: partita.indirizzo || "",
       casa_fuori: partita.casa_fuori || "casa",
       mister_id: partita.mister_id || null,
+      mister_manuale: partita.mister_manuale || "",
       risultato: partita.risultato || "",
       goal_punti: partita.goal_punti || 0,
       goal_contro: partita.goal_contro || 0,
@@ -519,6 +555,7 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
       livello: partita.livello || ""
     }
   } else {
+    misterSelection.value = ""
     const defaultData = weekendSelezionato.value?.data_inizio || ""
     modal.value = {
       show: true,
@@ -531,6 +568,7 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
       indirizzo: "",
       casa_fuori: "casa",
       mister_id: null,
+      mister_manuale: "",
       risultato: "",
       goal_punti: 0,
       goal_contro: 0,
@@ -576,6 +614,16 @@ async function salvaPartita() {
   if (!modal.value.data_partite) {
     alert('Inserisci la data della partita')
     return
+  }
+  if (misterSelection.value === '__manuale__') {
+    modal.value.mister_id = null
+    modal.value.mister_manuale = (modal.value.mister_manuale || '').trim()
+  } else if (misterSelection.value) {
+    modal.value.mister_id = parseInt(misterSelection.value)
+    modal.value.mister_manuale = ""
+  } else {
+    modal.value.mister_id = null
+    modal.value.mister_manuale = ""
   }
   const payload = {
     ...modal.value,
@@ -735,7 +783,7 @@ async function stampaWeekend() {
       const cf = p.casa_fuori === 'fuori' ? '✈️ Trasferta' : '🏠 Casa'
       const campo = esc(p.campo || '-')
       const indirizzo = esc(p.indirizzo || '-')
-      const mister = esc(getMisterDisplay(p.categoria_id, p.mister_id, false))
+      const mister = esc(getMisterDisplay(p.categoria_id, p.mister_id, p.mister_manuale, false))
       const aversario = esc(p.avversario || '-')
       rows.push(`<tr>
         <td>${data}</td><td>${ora}</td><td>${cf}</td><td>${aversario}</td><td>${campo}</td><td>${indirizzo}</td><td>${mister}</td>
@@ -822,7 +870,7 @@ async function esportaPDFWeekend() {
       const cf = p.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa'
       const campo = p.campo || '-'
       const indirizzo = p.indirizzo || '-'
-      const mister = getMisterDisplay(p.categoria_id, p.mister_id, false)
+      const mister = getMisterDisplay(p.categoria_id, p.mister_id, p.mister_manuale, false)
       const aversario = p.avversario || '-'
       const livello = p.livello || '-'
       body.push([data, ora, cf, aversario, livello, campo, indirizzo, mister])
@@ -904,7 +952,7 @@ async function esportaPDFGenitori(group = null) {
       const cf = p.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa'
       const campo = p.campo || '-'
       const indirizzo = p.indirizzo || '-'
-      const mister = getMisterDisplay(p.categoria_id, p.mister_id, true)
+      const mister = getMisterDisplay(p.categoria_id, p.mister_id, p.mister_manuale, true)
       const aversario = p.avversario || '-'
       body.push([data, ora, cf, aversario, campo, indirizzo, mister])
     })
@@ -1552,6 +1600,27 @@ watch(weekendSelezionato, (newVal) => {
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
+  border-color: var(--color-primary);
+}
+
+.mister-manuale-box {
+  margin-top: 0.5rem;
+}
+
+.mister-manuale-input {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  background: var(--color-bg);
+  border: 1px dashed var(--color-primary);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  transition: border-color var(--transition-fast);
+}
+
+.mister-manuale-input:focus {
+  outline: none;
+  border-style: solid;
   border-color: var(--color-primary);
 }
 

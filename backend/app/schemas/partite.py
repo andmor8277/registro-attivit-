@@ -12,6 +12,7 @@ class PartitaCreate(BaseModel):
     indirizzo: Optional[str] = None
     casa_fuori: Optional[str] = None
     mister_id: Optional[int] = None
+    mister_manuale: Optional[str] = None
     risultato: Optional[str] = None
     goal_punti: Optional[int] = 0
     goal_contro: Optional[int] = 0
@@ -31,6 +32,7 @@ class PartitaUpdate(BaseModel):
     indirizzo: Optional[str] = None
     casa_fuori: Optional[str] = None
     mister_id: Optional[int] = None
+    mister_manuale: Optional[str] = None
     risultato: Optional[str] = None
     goal_punti: Optional[int] = 0
     goal_contro: Optional[int] = 0
