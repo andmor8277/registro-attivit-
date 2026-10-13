@@ -451,6 +451,37 @@ function getMisterName(catId, misterId) {
   return m ? m.cognome : 'N/D'
 }
 
+function getMisterDisplay(catId, misterId, withPhone = false) {
+  const lista = (misterPerCategoria.value[catId] || []).filter(r => r.ruolo !== 'dirigente')
+  if (misterId) {
+    const m = lista.find(r => r.id === misterId)
+    if (m) {
+      if (withPhone && m.cellulare) {
+        return `${m.cognome} (${m.cellulare})`
+      }
+      return m.cognome || `${m.nome} ${m.cognome}`
+    }
+  }
+  if (lista.length) {
+    return lista.map(m => {
+      if (withPhone && m.cellulare) {
+        return `${m.cognome} (${m.cellulare})`
+      }
+      return m.cognome
+    }).join(', ')
+  }
+  return '-'
+}
+
+function getMisterHeaderLabel(catId) {
+  const lista = (misterPerCategoria.value[catId] || []).filter(r => r.ruolo !== 'dirigente')
+  if (!lista.length) return ''
+  return lista.map(m => {
+    const nomeCompleto = [m.cognome, m.nome].filter(Boolean).join(' ')
+    return m.cellulare ? `${nomeCompleto} (${m.cellulare})` : nomeCompleto
+  }).join('  •  ')
+}
+
 function getMisterPerCategoria(catId) {
   return misterPerCategoria.value[catId] || []
 }
@@ -692,7 +723,7 @@ async function stampaWeekend() {
       const cf = p.casa_fuori === 'fuori' ? '✈️ Trasferta' : '🏠 Casa'
       const campo = esc(p.campo || '-')
       const indirizzo = esc(p.indirizzo || '-')
-      const mister = esc(p.mister_id ? getMisterName(p.categoria_id, p.mister_id) : '-')
+      const mister = esc(getMisterDisplay(p.categoria_id, p.mister_id, false))
       const aversario = esc(p.avversario || '-')
       rows.push(`<tr>
         <td>${data}</td><td>${ora}</td><td>${cf}</td><td>${aversario}</td><td>${campo}</td><td>${indirizzo}</td><td>${mister}</td>
@@ -779,7 +810,7 @@ async function esportaPDFWeekend() {
       const cf = p.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa'
       const campo = p.campo || '-'
       const indirizzo = p.indirizzo || '-'
-      const mister = p.mister_id ? getMisterName(p.categoria_id, p.mister_id) : '-'
+      const mister = getMisterDisplay(p.categoria_id, p.mister_id, false)
       const aversario = p.avversario || '-'
       const livello = p.livello || '-'
       body.push([data, ora, cf, aversario, livello, campo, indirizzo, mister])
@@ -837,16 +868,38 @@ async function esportaPDFGenitori(group) {
   const doc = new jsPDF({ orientation: 'portrait' })
   const nome = societaNome.value
   const catLabel = `${group.cat.anno} - ${group.cat.nome}`
+  const mistersHeader = getMisterHeaderLabel(group.cat.id)
 
   doc.setFontSize(16)
   doc.text(`${nome}`, 14, 15)
   doc.setFontSize(12)
   doc.setFont(undefined, 'bold')
   doc.text(`Programmazione Gare — ${catLabel}`, 14, 23)
-  doc.setFont(undefined, 'normal')
-  doc.setFontSize(9)
-  doc.setTextColor(100)
-  doc.text(`${weekendSelezionato.value.nome} (${formatDate(weekendSelezionato.value.data_inizio)} - ${formatDate(weekendSelezionato.value.data_fine)}) | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 30)
+
+  let startTableY = 36
+  if (mistersHeader) {
+    doc.setFontSize(9.5)
+    doc.setFont(undefined, 'bold')
+    doc.setTextColor(220, 38, 38)
+    doc.text('Mister: ', 14, 29)
+    const misterPrefixW = doc.getTextWidth('Mister: ')
+    doc.setFont(undefined, 'normal')
+    doc.setTextColor(30, 41, 59)
+    const headerLines = doc.splitTextToSize(mistersHeader, 182 - misterPrefixW)
+    doc.text(headerLines, 14 + misterPrefixW, 29)
+    const headerExtraH = (headerLines.length - 1) * 4
+
+    doc.setFontSize(8.5)
+    doc.setTextColor(100)
+    doc.text(`${weekendSelezionato.value.nome} (${formatDate(weekendSelezionato.value.data_inizio)} - ${formatDate(weekendSelezionato.value.data_fine)}) | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 35 + headerExtraH)
+    startTableY = 40 + headerExtraH
+  } else {
+    doc.setFont(undefined, 'normal')
+    doc.setFontSize(9)
+    doc.setTextColor(100)
+    doc.text(`${weekendSelezionato.value.nome} (${formatDate(weekendSelezionato.value.data_inizio)} - ${formatDate(weekendSelezionato.value.data_fine)}) | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 30)
+    startTableY = 36
+  }
   doc.setTextColor(0)
 
   const sorted = (group.partite || []).slice().sort((a, b) => (a.data_partite || '').localeCompare(b.data_partite || '') || (a.ora || '').localeCompare(b.ora || ''))
@@ -859,14 +912,14 @@ async function esportaPDFGenitori(group) {
     const aversario = p.avversario || '-'
     const campo = p.campo || '-'
     const indirizzo = p.indirizzo || '-'
-    const mister = p.mister_id ? getMisterName(p.categoria_id, p.mister_id) : '-'
+    const mister = getMisterDisplay(p.categoria_id, p.mister_id, true)
     return [data, ora, cf, aversario, campo, indirizzo, mister]
   })
 
   doc.autoTable({
     head: headers,
     body: body,
-    startY: 36,
+    startY: startTableY,
     theme: 'grid',
     margin: { left: 14, right: 14 },
     tableWidth: 182,
