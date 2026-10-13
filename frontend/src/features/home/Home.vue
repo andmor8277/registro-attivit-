@@ -267,7 +267,7 @@
 import { ref, computed, watch, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useStore } from "../../store.js"
-import { getSocieta, getCategorie, getAllCategorie, getInfortuni, getPartite, getPersone, getConvocazioni, getConvocazione, getLocalDateStr, getSpogliatoi, getCampi, getAssegnazioniSettimana, getCampiAssegnazioniSettimana } from "../../api/index.js"
+import { getSocieta, getCategorie, getAllCategorie, getInfortuni, getPartite, getPersone, getConvocazioni, getConvocazione, getLocalDateStr, getSpogliatoi, getCampi, getAssegnazioniSettimana, getCampiAssegnazioniSettimana, isParentCategory } from "../../api/index.js"
 import { catAllenaGiorno, oraPerGiorno } from "../../composables/categoriaOrari.js"
 
 const router = useRouter()
@@ -751,8 +751,10 @@ async function loadPlanning() {
       getCategorie(societaId),
       getAllCategorie(societaId)
     ])
-    allCategories.value = userRes.data || []
-    tutteCategorieSocieta.value = tutteRes.data || []
+    const rawUserCats = userRes.data || []
+    const rawTutteCats = tutteRes.data || []
+    allCategories.value = rawUserCats.filter(c => !isParentCategory(c, rawUserCats))
+    tutteCategorieSocieta.value = rawTutteCats.filter(c => !isParentCategory(c, rawTutteCats))
 
     // Se mister e nessuna categoria attiva impostata, imposta la prima assegnata
     if (isMister.value && allCategories.value.length > 0) {

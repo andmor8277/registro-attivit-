@@ -509,7 +509,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStore } from './store.js'
 import { useRouter, useRoute } from 'vue-router'
-import { getStagioni, changePassword, getInfortuni, getMe, getSocietaById, getUploadUrl, getCategorie } from './api/index.js'
+import { getStagioni, changePassword, getInfortuni, getMe, getSocietaById, getUploadUrl, getCategorie, isParentCategory } from './api/index.js'
 import { caricaUtente } from './core/router.js'
 import { App as CapApp } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
@@ -542,12 +542,15 @@ async function loadUserCategories() {
   try {
     const socId = societaAttiva.value?.id || utenteAttivo.value?.societa_id || null
     const res = await getCategorie(socId)
-    userCategories.value = res.data || []
+    const rawCats = res.data || []
+    userCategories.value = rawCats.filter(c => !isParentCategory(c, rawCats))
     if (userCategories.value.length > 0) {
       const exists = categoriaAttiva.value && userCategories.value.some(c => c.id === categoriaAttiva.value.id)
       if (!exists) {
         setCategoria(userCategories.value[0])
       }
+    } else {
+      setCategoria(null)
     }
   } catch (e) {
     console.error('Errore caricamento categorie utente:', e)
@@ -568,7 +571,7 @@ function onCambiaCategoria(newId) {
 
 async function vaiPaginaCategoria(base) {
   let targetCat = categoriaAttiva.value
-  if (!targetCat?.id) {
+  if (!targetCat?.id || isParentCategory(targetCat, userCategories.value)) {
     if (userCategories.value.length > 0) {
       targetCat = userCategories.value[0]
       setCategoria(targetCat)
@@ -576,7 +579,7 @@ async function vaiPaginaCategoria(base) {
       try {
         const socId = societaAttiva.value?.id || utenteAttivo.value?.societa_id || null
         const res = await getCategorie(socId)
-        const cats = res.data || []
+        const cats = (res.data || []).filter(c => !isParentCategory(c, res.data))
         if (cats.length > 0) {
           userCategories.value = cats
           targetCat = cats[0]
@@ -588,7 +591,7 @@ async function vaiPaginaCategoria(base) {
     }
   }
 
-  if (targetCat?.id) {
+  if (targetCat?.id && !isParentCategory(targetCat, userCategories.value)) {
     router.push('/' + base + '/' + targetCat.id)
   } else if (!isMister.value) {
     router.push('/allenatori')
