@@ -45,6 +45,15 @@
             </svg>
             Esporta PDF
           </button>
+          <button class="btn-secondary-sm" @click="esportaPDFGenitori()" title="Esporta PDF per genitori">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <polyline points="9 15 12 18 15 15"/>
+            </svg>
+            PDF Genitori
+          </button>
           <button class="btn-add-sm" @click="apriModal(null, null, weekendSelezionato.id)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
               <line x1="12" y1="5" x2="12" y2="19"/>
@@ -258,7 +267,7 @@
               <div class="form-group">
                 <label>Categoria</label>
                 <select v-model="modal.categoria_id">
-                  <option v-for="cat in categorie" :key="cat.id" :value="cat.id">{{ cat.anno }} - {{ cat.nome }}</option>
+                  <option v-for="cat in categorieOperative" :key="cat.id" :value="cat.id">{{ cat.anno }} - {{ cat.nome }}</option>
                 </select>
               </div>
               <div class="form-group">
@@ -353,7 +362,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue"
 import { useRouter } from "vue-router"
-import { getAllCategorie, getCategoriaResponsabili, getCampiSportivi, creaPartita, aggiornaPartita, eliminaPartita as eliminaPartitaApi, getWeekend, getWeekendPartite, creaWeekend, aggiornaWeekend, eliminaWeekend as eliminaWeekendApi, exportPdf } from "../../api/index.js"
+import { getAllCategorie, getCategoriaResponsabili, getCampiSportivi, creaPartita, aggiornaPartita, eliminaPartita as eliminaPartitaApi, getWeekend, getWeekendPartite, creaWeekend, aggiornaWeekend, eliminaWeekend as eliminaWeekendApi, exportPdf, isParentCategory } from "../../api/index.js"
 import { useStore } from "../../store.js"
 import { jsPDF } from "jspdf"
 import "jspdf-autotable"
@@ -363,6 +372,9 @@ const { societaAttiva } = useStore()
 const societaNome = computed(() => societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Società')
 
 const categorie = ref([])
+const categorieOperative = computed(() => {
+  return (categorie.value || []).filter(c => !isParentCategory(c, categorie.value))
+})
 const misterPerCategoria = ref({})
 const weekend = ref([])
 const weekendSelezionato = ref(null)
@@ -403,7 +415,7 @@ const weekendPartiteGrouped = computed(() => {
     catMap[p.categoria_id].push(p)
   })
   const sortedCats = categorie.value
-    .filter(c => catMap[c.id])
+    .filter(c => catMap[c.id] && !isParentCategory(c, categorie.value))
     .sort((a, b) => (a.anno || 9999) - (b.anno || 9999))
   return sortedCats.map(cat => ({
     cat,
@@ -511,7 +523,7 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
     modal.value = {
       show: true,
       id: null,
-      categoria_id: defaultCatId || categorie.value[0]?.id || null,
+      categoria_id: defaultCatId || categorieOperative.value[0]?.id || null,
       data_partite: defaultData,
       ora: "",
       avversario: "",
@@ -863,71 +875,53 @@ async function esportaPDFWeekend() {
   await exportPdf(doc, filename, `Partite ${weekendSelezionato.value.nome}`)
 }
 
-async function esportaPDFGenitori(group) {
-  if (!weekendSelezionato.value || !group) return
-  const doc = new jsPDF({ orientation: 'portrait' })
+async function esportaPDFGenitori(group = null) {
+  if (!weekendSelezionato.value) return
+  const doc = new jsPDF({ orientation: 'landscape' })
   const nome = societaNome.value
-  const catLabel = `${group.cat.anno} - ${group.cat.nome}`
-  const mistersHeader = getMisterHeaderLabel(group.cat.id)
-
   doc.setFontSize(16)
-  doc.text(`${nome}`, 14, 15)
-  doc.setFontSize(12)
-  doc.setFont(undefined, 'bold')
-  doc.text(`Programmazione Gare — ${catLabel}`, 14, 23)
-
-  let startTableY = 36
-  if (mistersHeader) {
-    doc.setFontSize(9.5)
-    doc.setFont(undefined, 'bold')
-    doc.setTextColor(220, 38, 38)
-    doc.text('Mister: ', 14, 29)
-    const misterPrefixW = doc.getTextWidth('Mister: ')
-    doc.setFont(undefined, 'normal')
-    doc.setTextColor(30, 41, 59)
-    const headerLines = doc.splitTextToSize(mistersHeader, 182 - misterPrefixW)
-    doc.text(headerLines, 14 + misterPrefixW, 29)
-    const headerExtraH = (headerLines.length - 1) * 4
-
-    doc.setFontSize(8.5)
-    doc.setTextColor(100)
-    doc.text(`${weekendSelezionato.value.nome} (${formatDate(weekendSelezionato.value.data_inizio)} - ${formatDate(weekendSelezionato.value.data_fine)}) | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 35 + headerExtraH)
-    startTableY = 40 + headerExtraH
-  } else {
-    doc.setFont(undefined, 'normal')
-    doc.setFontSize(9)
-    doc.setTextColor(100)
-    doc.text(`${weekendSelezionato.value.nome} (${formatDate(weekendSelezionato.value.data_inizio)} - ${formatDate(weekendSelezionato.value.data_fine)}) | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 30)
-    startTableY = 36
-  }
+  doc.text(`${weekendSelezionato.value.nome} - ${nome}`, 14, 15)
+  doc.setFontSize(9)
+  doc.setTextColor(100)
+  doc.text(`${formatDate(weekendSelezionato.value.data_inizio)} - ${formatDate(weekendSelezionato.value.data_fine)} | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 22)
   doc.setTextColor(0)
 
-  const sorted = (group.partite || []).slice().sort((a, b) => (a.data_partite || '').localeCompare(b.data_partite || '') || (a.ora || '').localeCompare(b.ora || ''))
+  const groupsToExport = group ? [group] : weekendPartiteGrouped.value
+  const sorted = groupsToExport.map(g => ({
+    cat: g.cat,
+    partite: (g.partite || []).slice().sort((a, b) => (a.data_partite || '').localeCompare(b.data_partite || '') || (a.ora || '').localeCompare(b.ora || ''))
+  }))
+
   const headers = [['Data', 'Ora', 'C/T', 'Avversario', 'Campo', 'Indirizzo', 'Mister']]
-  const body = sorted.map(p => {
-    const isDom = isDomenica(p.data_partite)
-    const data = formatDate(p.data_partite) + (isDom ? ' (DOM)' : '')
-    const ora = p.ora ? p.ora.slice(0, 5) : '-'
-    const cf = p.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa'
-    const aversario = p.avversario || '-'
-    const campo = p.campo || '-'
-    const indirizzo = p.indirizzo || '-'
-    const mister = getMisterDisplay(p.categoria_id, p.mister_id, true)
-    return [data, ora, cf, aversario, campo, indirizzo, mister]
+  const body = []
+  sorted.forEach(g => {
+    const catLabel = `${g.cat.anno} - ${g.cat.nome}`
+    body.push([{ content: catLabel, colSpan: 7 }])
+    g.partite.forEach(p => {
+      const isDom = isDomenica(p.data_partite)
+      const data = formatDate(p.data_partite) + (isDom ? ' (DOM)' : '')
+      const ora = p.ora ? p.ora.slice(0, 5) : '-'
+      const cf = p.casa_fuori === 'fuori' ? 'Trasferta' : 'Casa'
+      const campo = p.campo || '-'
+      const indirizzo = p.indirizzo || '-'
+      const mister = getMisterDisplay(p.categoria_id, p.mister_id, true)
+      const aversario = p.avversario || '-'
+      body.push([data, ora, cf, aversario, campo, indirizzo, mister])
+    })
   })
 
   doc.autoTable({
     head: headers,
     body: body,
-    startY: startTableY,
+    startY: 28,
     theme: 'grid',
     margin: { left: 14, right: 14 },
-    tableWidth: 182,
-    styles: { fontSize: 8.5, cellPadding: 3.5, halign: 'left', valign: 'middle' },
+    tableWidth: 260,
+    styles: { fontSize: 8.5, cellPadding: 3, halign: 'left', valign: 'middle' },
     headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9 },
     columnStyles: {
       0: { cellWidth: 26, halign: 'center' },
-      1: { cellWidth: 16, halign: 'center' },
+      1: { cellWidth: 15, halign: 'center' },
       2: { cellWidth: 26, halign: 'center' },
       3: { cellWidth: 'wrap' },
       4: { cellWidth: 'wrap' },
@@ -935,7 +929,16 @@ async function esportaPDFGenitori(group) {
       6: { cellWidth: 'wrap' }
     },
     didParseCell: function(d) {
-      if (d.section === 'body' && d.cell) {
+      if (d.section === 'body' && d.raw && d.raw.colSpan) {
+        d.cell.colSpan = d.raw.colSpan
+        d.cell.raw = d.raw.content
+        d.cell.styles.fillColor = [220, 38, 38]
+        d.cell.styles.textColor = [255, 255, 255]
+        d.cell.styles.fontStyle = 'bold'
+        d.cell.styles.fontSize = 11
+        d.cell.styles.halign = 'left'
+        d.cell.styles.cellPadding = { top: 5, bottom: 5, left: 6, right: 6 }
+      } else if (d.section === 'body' && d.cell && !d.raw?.colSpan) {
         if (d.column.index === 0 && d.cell.raw && String(d.cell.raw).includes('(DOM)')) {
           d.cell.styles.textColor = [217, 119, 6]
           d.cell.styles.fontStyle = 'bold'
@@ -950,8 +953,13 @@ async function esportaPDFGenitori(group) {
     }
   })
 
-  const filename = `gare_${catLabel.replace(/[\s\/-]+/g, '_').toLowerCase()}_genitori.pdf`
-  await exportPdf(doc, filename, `Gare ${catLabel} - Genitori`)
+  const filename = group
+    ? `gare_${(group.cat.anno + '_' + group.cat.nome).replace(/[\s\/-]+/g, '_').toLowerCase()}_genitori.pdf`
+    : `${weekendSelezionato.value.nome.replace(/\s+/g, '_').toLowerCase()}_${nome.replace(/\s+/g, '_').toLowerCase()}_genitori.pdf`
+  const title = group
+    ? `Gare ${group.cat.anno} - ${group.cat.nome} - Genitori`
+    : `Partite ${weekendSelezionato.value.nome} - Genitori`
+  await exportPdf(doc, filename, title)
 }
 
 onMounted(() => {
