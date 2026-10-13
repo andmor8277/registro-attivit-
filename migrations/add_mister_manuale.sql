@@ -1,0 +1,1 @@
+ALTER TABLE partite ADD COLUMN IF NOT EXISTS mister_manuale VARCHAR(100);

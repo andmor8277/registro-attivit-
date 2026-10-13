@@ -101,6 +101,7 @@ def crea_partita(data: PartitaCreate, request: Request = None, db=Depends(get_db
     indirizzo = _clean_str(data.indirizzo)
     casa_fuori = _clean_str(data.casa_fuori) or "casa"
     mister_id = _clean_int(data.mister_id)
+    mister_manuale = _clean_str(data.mister_manuale)
     risultato = _clean_str(data.risultato)
     note = _clean_str(data.note)
     weekend_id = _clean_int(data.weekend_id)
@@ -117,8 +118,8 @@ def crea_partita(data: PartitaCreate, request: Request = None, db=Depends(get_db
 
     res = db.execute(
         text("""
-            INSERT INTO partite (categoria_id, data_partite, ora, ora_presentazione, avversario, campo, indirizzo, casa_fuori, mister_id, risultato, goal_punti, goal_contro, note, societa_id, weekend_id, livello)
-            VALUES (:categoria_id, :data_partite, :ora, :ora_presentazione, :avversario, :campo, :indirizzo, :casa_fuori, :mister_id, :risultato, :goal_punti, :goal_contro, :note, :societa_id, :weekend_id, :livello)
+            INSERT INTO partite (categoria_id, data_partite, ora, ora_presentazione, avversario, campo, indirizzo, casa_fuori, mister_id, mister_manuale, risultato, goal_punti, goal_contro, note, societa_id, weekend_id, livello)
+            VALUES (:categoria_id, :data_partite, :ora, :ora_presentazione, :avversario, :campo, :indirizzo, :casa_fuori, :mister_id, :mister_manuale, :risultato, :goal_punti, :goal_contro, :note, :societa_id, :weekend_id, :livello)
             RETURNING *
         """),
         {
@@ -131,6 +132,7 @@ def crea_partita(data: PartitaCreate, request: Request = None, db=Depends(get_db
             "indirizzo": indirizzo,
             "casa_fuori": casa_fuori,
             "mister_id": mister_id,
+            "mister_manuale": mister_manuale,
             "risultato": risultato,
             "goal_punti": data.goal_punti or 0,
             "goal_contro": data.goal_contro or 0,
@@ -192,6 +194,7 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
     indirizzo = _clean_str(data.indirizzo)
     casa_fuori = _clean_str(data.casa_fuori) or "casa"
     mister_id = _clean_int(data.mister_id)
+    mister_manuale = _clean_str(data.mister_manuale)
     risultato = _clean_str(data.risultato)
     note = _clean_str(data.note)
     weekend_id = _clean_int(data.weekend_id)
@@ -222,6 +225,7 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
                 indirizzo = :indirizzo,
                 casa_fuori = :casa_fuori,
                 mister_id = :mister_id,
+                mister_manuale = :mister_manuale,
                 risultato = :risultato,
                 goal_punti = :goal_punti,
                 goal_contro = :goal_contro,
@@ -242,6 +246,7 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
             "indirizzo": indirizzo,
             "casa_fuori": casa_fuori,
             "mister_id": mister_id,
+            "mister_manuale": mister_manuale,
             "risultato": risultato,
             "goal_punti": data.goal_punti or 0,
             "goal_contro": data.goal_contro or 0,

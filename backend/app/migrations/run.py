@@ -1329,6 +1329,14 @@ def run_migrations():
                 conn.rollback()
 
             try:
+                conn.execute(text("ALTER TABLE partite ADD COLUMN IF NOT EXISTS mister_manuale VARCHAR(100)"))
+                conn.commit()
+                print("Migration: Added mister_manuale to partite")
+            except Exception as e:
+                print(f"Migration warning (partite mister_manuale): {e}")
+                conn.rollback()
+
+            try:
                 conn.execute(text("ALTER TABLE spogliatoi_assegnazioni ADD COLUMN IF NOT EXISTS partita_id INTEGER REFERENCES partite(id) ON DELETE CASCADE"))
                 conn.execute(text("ALTER TABLE campi_assegnazioni ADD COLUMN IF NOT EXISTS partita_id INTEGER REFERENCES partite(id) ON DELETE CASCADE"))
                 conn.commit()
