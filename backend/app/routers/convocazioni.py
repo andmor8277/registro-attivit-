@@ -31,6 +31,7 @@ class GaraIn(BaseModel):
     appuntamento: Optional[str] = None
     inizio_gara: Optional[str] = None
     allenatore: Optional[str] = None
+    mister_manuale: Optional[str] = None
     allenatori: Optional[List[int]] = None
     livello: Optional[str] = None
     giocatori: List[GiocatoreIn] = []
@@ -118,10 +119,20 @@ def dettaglio(cid: int, db: Session = Depends(get_db), current_user: Utente = De
                             "cognome": u.cognome,
                             "cellulare": u.cellulare or ""
                         })
+        allenatore_val = g.allenatore
+        mister_manuale_val = None
+        if g.partita_id:
+            p_man = db.execute(text("SELECT mister_manuale FROM partite WHERE id = :pid"), {"pid": g.partita_id}).fetchone()
+            if p_man and p_man[0]:
+                mister_manuale_val = p_man[0]
+                if not allenatore_val:
+                    allenatore_val = mister_manuale_val
+
         result_gare.append({
             "id": g.id, "partita_id": g.partita_id, "numero": g.numero, "gara": g.gara, "data": g.data,
             "campo": g.campo, "indirizzo": g.indirizzo, "appuntamento": g.appuntamento,
-            "inizio_gara": g.inizio_gara, "allenatore": g.allenatore, "allenatori": g.allenatori or [],
+            "inizio_gara": g.inizio_gara, "allenatore": allenatore_val, "allenatori": g.allenatori or [],
+            "mister_manuale": mister_manuale_val,
             "allenatori_dettagli": allenatori_dettagli,
             "livello": livello_val or "", "giocatori": persone
         })
@@ -264,9 +275,17 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
                 "livello": g.livello if g.livello else None
             })
 
+        g_allenatore = g.allenatore or g.mister_manuale
+        if not g_allenatore and partita_id:
+            p_man = db.execute(text("SELECT mister_manuale FROM partite WHERE id = :pid"), {"pid": partita_id}).fetchone()
+            if p_man and p_man[0]:
+                g_allenatore = p_man[0]
+        if partita_id and g.mister_manuale and not (g.allenatori and len(g.allenatori) > 0):
+            db.execute(text("UPDATE partite SET mister_manuale = :man WHERE id = :pid"), {"man": g.mister_manuale.strip(), "pid": partita_id})
+
         gara = ConvocazioneGara(convocazione_id=c.id, partita_id=partita_id, numero=g.numero, gara=g.gara, data=dt,
             campo=g_campo, indirizzo=g_indirizzo, appuntamento=g.appuntamento,
-            inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [],
+            inizio_gara=g.inizio_gara, allenatore=g_allenatore, allenatori=g.allenatori or [],
             livello=g_livello)
         db.add(gara)
         db.flush()
@@ -419,9 +438,17 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
                 "livello": g.livello if g.livello else None
             })
 
+        g_allenatore = g.allenatore or g.mister_manuale
+        if not g_allenatore and partita_id:
+            p_man = db.execute(text("SELECT mister_manuale FROM partite WHERE id = :pid"), {"pid": partita_id}).fetchone()
+            if p_man and p_man[0]:
+                g_allenatore = p_man[0]
+        if partita_id and g.mister_manuale and not (g.allenatori and len(g.allenatori) > 0):
+            db.execute(text("UPDATE partite SET mister_manuale = :man WHERE id = :pid"), {"man": g.mister_manuale.strip(), "pid": partita_id})
+
         gara = ConvocazioneGara(convocazione_id=cid, partita_id=partita_id, numero=g.numero, gara=g.gara, data=dt,
             campo=g_campo, indirizzo=g_indirizzo, appuntamento=g.appuntamento,
-            inizio_gara=g.inizio_gara, allenatore=g.allenatore, allenatori=g.allenatori or [],
+            inizio_gara=g.inizio_gara, allenatore=g_allenatore, allenatori=g.allenatori or [],
             livello=g_livello)
         db.add(gara)
         db.flush()

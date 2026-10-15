@@ -127,167 +127,196 @@
     </div>
 
     <!-- Modal sblocco GDPR -->
-    <div v-if="gdprModal.show" class="modal-overlay" @click.self="gdprModal.show = false">
-      <div class="modal modal-small">
-        <h3>🔒 Sblocco Dati Sensibili</h3>
-        <p class="gdpr-info">Per sbloccare i dati sensibili (CF, telefoni) inserisci il tuo codice fiscale:</p>
-        <input v-model="gdprModal.password" @keyup.enter="verificaPasswordGdpr" class="gdpr-cf-input" placeholder="Codice fiscale" maxlength="16" autocomplete="off" />
-        <p v-if="gdprModal.errore" class="error-msg">{{ gdprModal.errore }}</p>
-        <div class="modal-actions">
-          <button class="btn-annulla" @click="gdprModal.show = false">Annulla</button>
-          <button class="btn-salva" @click="verificaPasswordGdpr">Sblocca</button>
+    <Teleport to="body">
+      <div v-if="gdprModal.show" class="modal-overlay" @click.self="gdprModal.show = false">
+        <div class="modal modal-small">
+          <div class="modal-header">
+            <h3>🔒 Sblocco Dati Sensibili</h3>
+            <button class="modal-close" @click="gdprModal.show = false" title="Chiudi">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="gdpr-info">Per sbloccare i dati sensibili (CF, telefoni) inserisci il tuo codice fiscale:</p>
+            <input v-model="gdprModal.password" @keyup.enter="verificaPasswordGdpr" class="gdpr-cf-input" placeholder="Codice fiscale" maxlength="16" autocomplete="off" />
+            <p v-if="gdprModal.errore" class="error-msg">{{ gdprModal.errore }}</p>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-annulla" @click="gdprModal.show = false">Annulla</button>
+            <button class="btn-salva" @click="verificaPasswordGdpr">Sblocca</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
 
-    <div v-if="modal.show" class="modal-overlay" @click.self="modal.show = false">
-      <div class="modal">
-        <h3>{{ modal.isNuovo ? 'Nuovo Giocatore' : 'Modifica Giocatore' }}</h3>
-        <div class="form-grid">
-          <div class="form-field">
-            <label>Cognome</label>
-            <input v-model="modal.cognome" />
+    <!-- Modal Giocatore (Nuovo / Modifica) -->
+    <Teleport to="body">
+      <div v-if="modal.show" class="modal-overlay" @click.self="modal.show = false">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>{{ modal.isNuovo ? 'Nuovo Giocatore' : 'Modifica Giocatore' }}</h3>
+            <button class="modal-close" @click="modal.show = false" title="Chiudi">&times;</button>
           </div>
-          <div class="form-field">
-            <label>Nome</label>
-            <input v-model="modal.nome" />
-          </div>
-          <div class="form-field">
-            <label>Nr. Maglia</label>
-            <input v-model="modal.numero_maglia" type="number" min="1" max="99" />
-          </div>
-          <div class="form-field">
-            <label>Data Nascita</label>
-            <input v-model="modal.data_nascita" type="date" />
-          </div>
-          <div class="form-field">
-            <label>Sesso</label>
-            <select v-model="modal.sesso">
-              <option value="">-</option>
-              <option value="M">Maschio</option>
-              <option value="F">Femmina</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label>Comune di Nascita</label>
-            <input v-model="modal.comune_nato" placeholder="es. Milano" />
-          </div>
-          <div class="form-field">
-            <label>Codice Fiscale</label>
-            <div class="cf-input-row">
-              <input v-model="modal.codice_fiscale" maxlength="16" placeholder="Genera o inserisci" />
-              <button class="btn-genera-cf" type="button" @click="generaCf" title="Genera CF da nome, cognome, data nascita, sesso e comune">Genera</button>
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-field">
+                <label>Cognome</label>
+                <input v-model="modal.cognome" />
+              </div>
+              <div class="form-field">
+                <label>Nome</label>
+                <input v-model="modal.nome" />
+              </div>
+              <div class="form-field">
+                <label>Nr. Maglia</label>
+                <input v-model="modal.numero_maglia" type="number" min="1" max="99" />
+              </div>
+              <div class="form-field">
+                <label>Data Nascita</label>
+                <input v-model="modal.data_nascita" type="date" />
+              </div>
+              <div class="form-field">
+                <label>Sesso</label>
+                <select v-model="modal.sesso">
+                  <option value="">-</option>
+                  <option value="M">Maschio</option>
+                  <option value="F">Femmina</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Comune di Nascita</label>
+                <input v-model="modal.comune_nato" placeholder="es. Milano" />
+              </div>
+              <div class="form-field">
+                <label>Codice Fiscale</label>
+                <div class="cf-input-row">
+                  <input v-model="modal.codice_fiscale" maxlength="16" placeholder="Genera o inserisci" />
+                  <button class="btn-genera-cf" type="button" @click="generaCf" title="Genera CF da nome, cognome, data nascita, sesso e comune">Genera</button>
+                </div>
+              </div>
+              <div class="form-field">
+                <label>Residenza</label>
+                <input v-model="modal.residenza" placeholder="Comune di residenza" />
+              </div>
+              <div class="form-field">
+                <label>Via</label>
+                <input v-model="modal.indirizzo" placeholder="Via / civico" />
+              </div>
+              <div class="form-field">
+                <label>Tel. Papà</label>
+                <input v-model="modal.tel_papa" />
+              </div>
+              <div class="form-field">
+                <label>Tel. Mamma</label>
+                <input v-model="modal.tel_mamma" />
+              </div>
+              <div class="form-field">
+                <label>Matricola</label>
+                <input v-model="modal.matricola" />
+              </div>
+              <div class="form-field">
+                <label>Scad. Certificato</label>
+                <input v-model="modal.scadenza_certificato" type="date" />
+              </div>
+              <div v-if="!isDirigente" class="form-field">
+                <label>Gruppo</label>
+                <select v-model="modal.gruppo_id">
+                  <option v-for="g in gruppiList" :key="g.id" :value="g.id">{{ g.nome }}</option>
+                </select>
+              </div>
             </div>
           </div>
-          <div class="form-field">
-            <label>Residenza</label>
-            <input v-model="modal.residenza" placeholder="Comune di residenza" />
-          </div>
-          <div class="form-field">
-            <label>Via</label>
-            <input v-model="modal.indirizzo" placeholder="Via / civico" />
-          </div>
-          <div class="form-field">
-            <label>Tel. Papà</label>
-            <input v-model="modal.tel_papa" />
-          </div>
-          <div class="form-field">
-            <label>Tel. Mamma</label>
-            <input v-model="modal.tel_mamma" />
-          </div>
-          <div class="form-field">
-            <label>Matricola</label>
-            <input v-model="modal.matricola" />
-          </div>
-          <div class="form-field">
-            <label>Scad. Certificato</label>
-            <input v-model="modal.scadenza_certificato" type="date" />
-          </div>
-          <div v-if="!isDirigente" class="form-field">
-            <label>Gruppo</label>
-            <select v-model="modal.gruppo_id">
-              <option v-for="g in gruppiList" :key="g.id" :value="g.id">{{ g.nome }}</option>
-            </select>
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button v-if="!modal.isNuovo" class="btn-elimina" @click="elimina">🗑 Elimina</button>
-          <div class="modal-actions-right">
-            <button class="btn-annulla" @click="modal.show = false">Annulla</button>
-            <button class="btn-salva" @click="salva">{{ modal.isNuovo ? 'Aggiungi' : 'Salva' }}</button>
+          <div class="modal-actions">
+            <button v-if="!modal.isNuovo" class="btn-elimina" @click="elimina">🗑 Elimina</button>
+            <div class="modal-actions-right">
+              <button class="btn-annulla" @click="modal.show = false">Annulla</button>
+              <button class="btn-salva" @click="salva">{{ modal.isNuovo ? 'Aggiungi' : 'Salva' }}</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Modal Gestione Gruppi -->
-    <div v-if="gruppiModal.show" class="modal-overlay" @click.self="gruppiModal.show = false">
-      <div class="modal gruppi-modal">
-        <h3>Gestione Gruppi</h3>
-        <div class="gruppi-list">
-          <div v-for="g in gruppiList" :key="g.id" class="gruppo-row">
-            <div class="gruppo-info">
-              <span class="gruppo-nome">{{ g.nome }}</span>
-              <span v-if="g.is_misto" class="badge-misto">MISTO</span>
+    <Teleport to="body">
+      <div v-if="gruppiModal.show" class="modal-overlay" @click.self="gruppiModal.show = false">
+        <div class="modal gruppi-modal">
+          <div class="modal-header">
+            <h3>Gestione Gruppi</h3>
+            <button class="modal-close" @click="gruppiModal.show = false" title="Chiudi">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="gruppi-list">
+              <div v-for="g in gruppiList" :key="g.id" class="gruppo-row">
+                <div class="gruppo-info">
+                  <span class="gruppo-nome">{{ g.nome }}</span>
+                  <span v-if="g.is_misto" class="badge-misto">MISTO</span>
+                </div>
+                <div class="gruppo-row-actions">
+                  <label class="checkbox-misto" @click.stop>
+                    <input type="checkbox" :checked="g.is_misto" @change="toggleMisto(g)" />
+                    <span>Misto</span>
+                  </label>
+                  <button class="btn-gruppo-edit" @click="apriModificaGruppo(g)" title="Modifica">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button class="btn-gruppo-delete" @click="eliminaGruppo(g)" title="Elimina">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div v-if="gruppiList.length === 0" class="no-gruppi">Nessun gruppo configurato</div>
             </div>
-            <div class="gruppo-row-actions">
-              <label class="checkbox-misto" @click.stop>
-                <input type="checkbox" :checked="g.is_misto" @change="toggleMisto(g)" />
-                <span>Misto</span>
-              </label>
-              <button class="btn-gruppo-edit" @click="apriModificaGruppo(g)" title="Modifica">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            <div class="gruppi-add-row">
+              <button class="btn-gruppo-add" @click="creaGruppo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
-              </button>
-              <button class="btn-gruppo-delete" @click="eliminaGruppo(g)" title="Elimina">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                </svg>
+                Aggiungi Gruppo
               </button>
             </div>
           </div>
-          <div v-if="gruppiList.length === 0" class="no-gruppi">Nessun gruppo configurato</div>
-        </div>
-        <div class="gruppi-add-row">
-          <button class="btn-gruppo-add" @click="creaGruppo">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Aggiungi Gruppo
-          </button>
-        </div>
-        <div class="modal-actions">
-          <div class="modal-actions-right" style="width:100%;justify-content:flex-end;">
-            <button class="btn-annulla" @click="gruppiModal.show = false">Chiudi</button>
+          <div class="modal-actions">
+            <div class="modal-actions-right" style="width:100%;justify-content:flex-end;">
+              <button class="btn-annulla" @click="gruppiModal.show = false">Chiudi</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Modal Modifica Gruppo -->
-    <div v-if="gruppoEditModal.show" class="modal-overlay" @click.self="gruppoEditModal.show = false">
-      <div class="modal modal-small">
-        <h3>Modifica Gruppo</h3>
-        <div class="form-field">
-          <label>Nome</label>
-          <input v-model="gruppoEditModal.nome" @keyup.enter="salvaModificaGruppo" />
-        </div>
-        <div class="form-field">
-          <label class="checkbox-misto">
-            <input type="checkbox" v-model="gruppoEditModal.is_misto" />
-            <span>Gruppo Misto</span>
-          </label>
-        </div>
-        <div class="modal-actions">
-          <button class="btn-annulla" @click="gruppoEditModal.show = false">Annulla</button>
-          <button class="btn-salva" @click="salvaModificaGruppo">Salva</button>
+    <Teleport to="body">
+      <div v-if="gruppoEditModal.show" class="modal-overlay" @click.self="gruppoEditModal.show = false">
+        <div class="modal modal-small">
+          <div class="modal-header">
+            <h3>Modifica Gruppo</h3>
+            <button class="modal-close" @click="gruppoEditModal.show = false" title="Chiudi">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-field">
+              <label>Nome</label>
+              <input v-model="gruppoEditModal.nome" @keyup.enter="salvaModificaGruppo" />
+            </div>
+            <div class="form-field" style="margin-top: 0.75rem;">
+              <label class="checkbox-misto">
+                <input type="checkbox" v-model="gruppoEditModal.is_misto" />
+                <span>Gruppo Misto</span>
+              </label>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-annulla" @click="gruppoEditModal.show = false">Annulla</button>
+            <button class="btn-salva" @click="salvaModificaGruppo">Salva</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -610,7 +639,7 @@ onMounted(async () => {
   padding: 2rem 2rem 4rem;
   max-width: 1400px;
   margin: 0 auto;
-  overflow: hidden;
+  box-sizing: border-box;
   min-height: 100vh;
 }
 
@@ -660,6 +689,8 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .btn-back-pill {
@@ -697,6 +728,7 @@ onMounted(async () => {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .btn-icon-pill {
@@ -806,10 +838,14 @@ onMounted(async () => {
   display: flex;
   gap: 0.75rem;
   margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .search-input {
-  flex: 1;
+  flex: 1 1 200px;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 0.625rem 1rem;
   border: 1px solid var(--color-border);
   border-radius: 12px;
@@ -829,6 +865,10 @@ onMounted(async () => {
 }
 
 .gruppo-filter {
+  flex: 0 1 auto;
+  min-width: 150px;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 0.625rem 1rem;
   border: 1px solid var(--color-border);
   border-radius: 12px;
@@ -843,6 +883,11 @@ onMounted(async () => {
 .gruppo-filter:focus {
   outline: none;
   border-color: rgba(234, 179, 8, 0.4);
+}
+
+.gruppo-filter option {
+  background: var(--color-surface, #1e1e1e);
+  color: var(--color-text, #f1f5f9);
 }
 
 /* ── Table ── */
@@ -1062,23 +1107,63 @@ tr:last-child td { border-bottom: none; }
   background: rgba(30, 30, 30, 0.95);
   backdrop-filter: blur(20px);
   border: 1px solid var(--color-border);
-  border-radius: 24px;
-  width: 90%;
-  max-width: 500px;
+  border-radius: 20px;
+  width: 95%;
+  max-width: 520px;
+  max-height: 90vh;
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
   color: var(--color-text);
-  padding: 2rem;
+  padding: 1.5rem;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
   animation: scaleIn 0.3s ease-out;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
-.modal h3 {
-  margin: 0 0 1.25rem;
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+}
+
+.modal-header h3 {
+  margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--color-text);
 }
 
-.modal-small { max-width: 380px; }
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 1;
+  border-radius: 6px;
+  transition: all var(--transition-fast);
+}
+
+.modal-close:hover {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.375rem;
+  margin-right: -0.375rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-small { max-width: 400px; }
 
 .gdpr-info {
   font-size: 0.875rem;
@@ -1107,11 +1192,12 @@ tr:last-child td { border-bottom: none; }
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 0.875rem;
 }
 
 .form-field {
   margin-bottom: 0;
+  min-width: 0;
 }
 
 .form-field label {
@@ -1127,6 +1213,7 @@ tr:last-child td { border-bottom: none; }
 .form-field input,
 .form-field select {
   width: 100%;
+  max-width: 100%;
   padding: 0.625rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: 10px;
@@ -1135,6 +1222,16 @@ tr:last-child td { border-bottom: none; }
   background: var(--color-surface);
   color: var(--color-text);
   transition: all var(--transition-fast);
+}
+
+.form-field select {
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+.form-field select option {
+  background: var(--color-surface, #1e1e1e);
+  color: var(--color-text, #f1f5f9);
 }
 
 .form-field input:focus,
@@ -1177,9 +1274,12 @@ tr:last-child td { border-bottom: none; }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
   border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .modal-actions-right {
@@ -1400,12 +1500,25 @@ tr:last-child td { border-bottom: none; }
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .dati-page {
-    padding: 1.5rem 1rem 3rem;
+    padding: 1.25rem 0.875rem 3rem;
   }
   .header-top {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 0.75rem;
+  }
+  .header-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-input,
+  .gruppo-filter {
+    width: 100%;
+    flex: 1 1 auto;
   }
   .form-grid {
     grid-template-columns: 1fr;
@@ -1415,9 +1528,6 @@ tr:last-child td { border-bottom: none; }
 @media (max-width: 480px) {
   .category-name {
     font-size: 1.75rem;
-  }
-  .filters {
-    flex-direction: column;
   }
 }
 
