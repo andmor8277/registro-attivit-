@@ -233,13 +233,23 @@
                   <li><span class="k">Orario Appuntamento</span><span class="v"><input v-model="garaAttiva.appuntamento" placeholder="13:45 &middot; spogliatoi" /></span></li>
                   <li><span class="k">Inizio gara</span><span class="v"><input v-model="garaAttiva.inizio_gara" placeholder="15:00" /></span></li>
                   <li><span class="k">Mister</span>
-                    <span class="v">
+                    <span class="v mister-v">
                       <div class="mister-checkboxes">
                         <label class="mister-option" v-for="r in responsabili" :key="r.id">
                           <input type="checkbox" :checked="garaAttiva.allenatori.includes(r.id)" @change="toggleAllenatore(garaAttiva, r.id)" />
                           <span>{{ r.cognome }} &middot; {{ r.cellulare }}</span>
                         </label>
                         <span v-if="responsabili.length === 0" class="mister-empty">&mdash;</span>
+                      </div>
+                      <div class="mister-manuale-box">
+                        <span class="mister-manuale-tag" v-if="garaAttiva.mister_manuale" title="Mister non censito inserito dal Responsabile o manuale">
+                          Non censito:
+                        </span>
+                        <input
+                          v-model="garaAttiva.mister_manuale"
+                          placeholder="Mister non censito (es. Mario Rossi)"
+                          class="mister-manuale-input"
+                        />
                       </div>
                     </span>
                   </li>
@@ -1158,7 +1168,7 @@ function formatDataShort(d) {
 }
 
 function garaVuota(numero) {
-  return { partita_id: null, numero, gara: '', data: '', campo: '', indirizzo: '', appuntamento: '', inizio_gara: '', allenatore: '', allenatori: [], giocatori: Array(10).fill(null), nonPresenti: new Set(), livello: '' }
+  return { partita_id: null, numero, gara: '', data: '', campo: '', indirizzo: '', appuntamento: '', inizio_gara: '', allenatore: '', mister_manuale: '', allenatori: [], giocatori: Array(10).fill(null), nonPresenti: new Set(), livello: '' }
 }
 
 async function caricaPartiteWeekend(dataInizio, dataFine) {
@@ -1201,36 +1211,41 @@ function inferisciAllenatori(gara) {
 }
 
 function getAllenatoriLabel(gara) {
+  const parts = []
+
   // 1. Dettagli direttamente allegati alla gara (da backend)
   if (Array.isArray(gara?.allenatori_dettagli) && gara.allenatori_dettagli.length) {
-    const label = gara.allenatori_dettagli
-      .map(m => m.cellulare ? `${m.cognome} (${m.cellulare})` : m.cognome)
-      .filter(Boolean)
-      .join(', ')
-    if (label) return label
+    gara.allenatori_dettagli.forEach(m => {
+      const s = m.cellulare ? `${m.cognome} (${m.cellulare})` : m.cognome
+      if (s && !parts.includes(s)) parts.push(s)
+    })
   }
 
   // 2. Tramite ID in responsabili
   const ids = inferisciAllenatori(gara)
   if (ids.length) {
-    const label = ids
-      .map(id => {
-        const m = responsabili.value.find(r => r.id === id)
-        if (!m) return ''
-        return m.cellulare ? `${m.cognome} (${m.cellulare})` : m.cognome
-      })
-      .filter(Boolean)
-      .join(', ')
-    if (label) return label
+    ids.forEach(id => {
+      const m = responsabili.value.find(r => r.id === id)
+      if (m) {
+        const s = m.cellulare ? `${m.cognome} (${m.cellulare})` : m.cognome
+        if (s && !parts.includes(s)) parts.push(s)
+      }
+    })
   }
 
-  // 3. Fallback sulla stringa gara.allenatore
-  if (gara?.allenatore) {
+  // 3. Mister manuale / non censito
+  const manuale = (gara?.mister_manuale || '').trim()
+  if (manuale && !parts.some(p => p.toLowerCase().includes(manuale.toLowerCase()))) {
+    parts.push(manuale)
+  }
+
+  // 4. Fallback sulla stringa gara.allenatore se parts e vuoto
+  if (parts.length === 0 && gara?.allenatore) {
     if (/\d{6,}/.test(gara.allenatore)) {
       return gara.allenatore
     }
-    const parti = gara.allenatore.split(',').map(s => s.trim()).filter(Boolean)
-    const arricchiti = parti.map(p => {
+    const tokenParti = gara.allenatore.split(',').map(s => s.trim()).filter(Boolean)
+    const arricchiti = tokenParti.map(p => {
       const resp = trovaResponsabileDaNome(p)
       if (resp && resp.cellulare) {
         return `${resp.cognome || p} (${resp.cellulare})`
@@ -1240,7 +1255,7 @@ function getAllenatoriLabel(gara) {
     return arricchiti.join(', ')
   }
 
-  return ''
+  return parts.join(', ')
 }
 
 function getAllenatoriLabelCompatta(gara) {
@@ -1260,21 +1275,26 @@ async function nuovaConvocazione() {
 async function popolaConvocazione(dataInizio, dataFine, weekendId = null) {
   const partite = await caricaPartiteWeekend(dataInizio, dataFine)
   const nomeSocieta = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Noi'
-  const gare = partite.length > 0 ? partite.map((p, idx) => ({
-    partita_id: p.id,
-    numero: idx + 1,
-    gara: p.casa_fuori === 'fuori' ? `${p.avversario || 'TBD'} vs ${nomeSocieta}` : `${nomeSocieta} vs ${p.avversario || 'TBD'}`,
-    data: p.data_partite,
-    campo: p.campo || '',
-    indirizzo: p.indirizzo || '',
-    appuntamento: p.ora_presentazione || '',
-    inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
-    allenatore: getMisterCognome(p.mister_id),
-    allenatori: p.mister_id ? [p.mister_id] : [],
-    giocatori: Array(10).fill(null),
-    nonPresenti: new Set(),
-    livello: p.livello || ''
-  })) : [garaVuota(1)]
+  const gare = partite.length > 0 ? partite.map((p, idx) => {
+    const misterManuale = (p.mister_manuale && p.mister_manuale.trim()) ? p.mister_manuale.trim() : ''
+    const misterCognome = getMisterCognome(p.mister_id)
+    return {
+      partita_id: p.id,
+      numero: idx + 1,
+      gara: p.casa_fuori === 'fuori' ? `${p.avversario || 'TBD'} vs ${nomeSocieta}` : `${nomeSocieta} vs ${p.avversario || 'TBD'}`,
+      data: p.data_partite,
+      campo: p.campo || '',
+      indirizzo: p.indirizzo || '',
+      appuntamento: p.ora_presentazione || '',
+      inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
+      allenatore: misterManuale || misterCognome,
+      mister_manuale: misterManuale,
+      allenatori: p.mister_id ? [p.mister_id] : [],
+      giocatori: Array(10).fill(null),
+      nonPresenti: new Set(),
+      livello: p.livello || ''
+    }
+  }) : [garaVuota(1)]
   numPartite.value = gare.length
   activeGaraIdx.value = 0
   convocazione.value = {
@@ -1327,11 +1347,18 @@ async function allineaConProgrammaGare(manualAlert = false) {
         if (p.indirizzo && (!targetGara.indirizzo || manualAlert)) targetGara.indirizzo = p.indirizzo
         if (p.avversario && (!targetGara.gara || manualAlert)) targetGara.gara = title
         if (p.ora_presentazione && !targetGara.appuntamento) targetGara.appuntamento = p.ora_presentazione
-        if (p.mister_id && (!targetGara.allenatori || !targetGara.allenatori.length)) {
+        if (p.mister_id && (!targetGara.allenatori || !targetGara.allenatori.length || manualAlert)) {
           targetGara.allenatori = [p.mister_id]
           targetGara.allenatore = getMisterCognome(p.mister_id)
+          targetGara.mister_manuale = ''
+        } else if (p.mister_manuale && p.mister_manuale.trim() && (!targetGara.mister_manuale || manualAlert)) {
+          targetGara.mister_manuale = p.mister_manuale.trim()
+          targetGara.allenatore = p.mister_manuale.trim()
+          if (!targetGara.allenatori) targetGara.allenatori = []
         }
       } else {
+        const misterManuale = (p.mister_manuale && p.mister_manuale.trim()) ? p.mister_manuale.trim() : ''
+        const misterCognome = getMisterCognome(p.mister_id)
         gare.push({
           partita_id: p.id,
           numero: gare.length + 1,
@@ -1341,7 +1368,8 @@ async function allineaConProgrammaGare(manualAlert = false) {
           indirizzo: p.indirizzo || '',
           appuntamento: p.ora_presentazione || '',
           inizio_gara: oraP,
-          allenatore: getMisterCognome(p.mister_id),
+          allenatore: misterManuale || misterCognome,
+          mister_manuale: misterManuale,
           allenatori: p.mister_id ? [p.mister_id] : [],
           giocatori: Array(10).fill(null),
           nonPresenti: new Set(),
@@ -1373,13 +1401,25 @@ async function caricaConvocazione(id) {
   const gareMappate = rawGare.map((g, idx) => {
     const giocatoriArr = (g.giocatori || []).sort((a, b) => a.posizione - b.posizione)
     const nonPresenti = new Set(giocatoriArr.filter(x => x.non_presente).map(x => x.persona_id))
+    const ids = inferisciAllenatori(g)
+    let misterManuale = (g.mister_manuale || '').trim()
+    if (!misterManuale && g.allenatore) {
+      const censitiNomi = responsabili.value.map(r => (r.cognome || '').toLowerCase())
+      const parti = g.allenatore.split(',').map(s => s.trim()).filter(Boolean)
+      const nonCensiti = parti.filter(p => !censitiNomi.includes(p.toLowerCase()))
+      if (nonCensiti.length > 0) {
+        misterManuale = nonCensiti.join(', ')
+      }
+    }
     return {
       ...g,
       partita_id: g.partita_id || null,
       numero: g.numero || idx + 1,
       data: g.data || '',
       livello: g.livello || '',
-      allenatori: inferisciAllenatori(g),
+      allenatore: g.allenatore || '',
+      mister_manuale: misterManuale,
+      allenatori: ids,
       allenatori_dettagli: g.allenatori_dettagli || [],
       giocatori: padGiocatori(giocatoriArr.map(x => x.persona_id)),
       nonPresenti
@@ -1449,21 +1489,26 @@ async function creaConvocazioneDaWeekend(weekend) {
   const dataInizio = weekend.data_inizio
   const dataFine = weekend.data_fine || dataInizio
   const nomeSocieta = societaAttiva.value?.nome || societaAttiva.value?.nome_breve || 'Noi'
-  const gare = (weekend.partite || []).map((p, idx) => ({
-    partita_id: p.id,
-    numero: idx + 1,
-    gara: p.casa_fuori === 'fuori' ? `${p.avversario || 'TBD'} vs ${nomeSocieta}` : `${nomeSocieta} vs ${p.avversario || 'TBD'}`,
-    data: p.data_partite,
-    campo: p.campo || '',
-    indirizzo: p.indirizzo || '',
-    appuntamento: p.ora_presentazione || '',
-    inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
-    allenatore: getMisterCognome(p.mister_id),
-    allenatori: p.mister_id ? [p.mister_id] : [],
-    giocatori: Array(10).fill(null),
-    nonPresenti: new Set(),
-    livello: p.livello || ''
-  }))
+  const gare = (weekend.partite || []).map((p, idx) => {
+    const misterManuale = (p.mister_manuale && p.mister_manuale.trim()) ? p.mister_manuale.trim() : ''
+    const misterCognome = getMisterCognome(p.mister_id)
+    return {
+      partita_id: p.id,
+      numero: idx + 1,
+      gara: p.casa_fuori === 'fuori' ? `${p.avversario || 'TBD'} vs ${nomeSocieta}` : `${nomeSocieta} vs ${p.avversario || 'TBD'}`,
+      data: p.data_partite,
+      campo: p.campo || '',
+      indirizzo: p.indirizzo || '',
+      appuntamento: p.ora_presentazione || '',
+      inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
+      allenatore: misterManuale || misterCognome,
+      mister_manuale: misterManuale,
+      allenatori: p.mister_id ? [p.mister_id] : [],
+      giocatori: Array(10).fill(null),
+      nonPresenti: new Set(),
+      livello: p.livello || ''
+    }
+  })
   const gareIniziali = gare.length ? gare : [garaVuota(1)]
   if (!gareIniziali[0].data) gareIniziali[0].data = dataInizio
   numPartite.value = gareIniziali.length
@@ -1558,6 +1603,11 @@ async function salva() {
         const allenatoriNomi = allenatori
           .map(id => responsabili.value.find(r => r.id === id)?.cognome)
           .filter(Boolean)
+        const misterMan = (g.mister_manuale || '').trim()
+        if (misterMan && !allenatoriNomi.some(n => n.toLowerCase() === misterMan.toLowerCase())) {
+          allenatoriNomi.push(misterMan)
+        }
+        const finalAllenatore = allenatoriNomi.length ? allenatoriNomi.join(', ') : (g.allenatore || '')
         return {
           partita_id: g.partita_id || null,
           numero: gi + 1,
@@ -1567,7 +1617,8 @@ async function salva() {
           indirizzo: g.indirizzo,
           appuntamento: g.appuntamento,
           inizio_gara: g.inizio_gara,
-          allenatore: allenatoriNomi.length ? allenatoriNomi.join(', ') : (g.allenatore || ''),
+          allenatore: finalAllenatore,
+          mister_manuale: misterMan || null,
           allenatori,
           livello: g.livello || null,
           giocatori: g.giocatori.map((pid, i) => pid ? { persona_id: pid, posizione: i + 1, non_presente: g.nonPresenti?.has(pid) || false } : null).filter(Boolean)
@@ -2911,6 +2962,44 @@ li.off .pnum { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
 }
 .info-dl .v .mister-empty {
   color: var(--color-text-muted);
+}
+.info-dl .v.mister-v {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.mister-manuale-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  box-sizing: border-box;
+}
+.mister-manuale-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fbbf24;
+  white-space: nowrap;
+}
+.mister-manuale-input {
+  flex: 1;
+  min-width: 0;
+  max-width: 100% !important;
+  border: none !important;
+  border-bottom: 1px dashed transparent !important;
+  background: transparent !important;
+  color: var(--color-text) !important;
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  text-align: left !important;
+  padding: 2px 4px !important;
+}
+.mister-manuale-input:focus {
+  outline: none;
+  border-bottom: 1px dashed #dc2626 !important;
 }
 
 .note-card { margin-top: 0; }
