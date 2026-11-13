@@ -6,14 +6,14 @@
 #   cd /run/media/TUO_UTENTE/.../registro_presenze
 #   ./scripts/clone_from_usb.sh [cartella_destinazione]
 # Esempio:
-#   ./scripts/clone_from_usb.sh ~/registro_presenze
+#   ./scripts/clone_from_usb.sh ~/Documenti/opencode-project/registro_presenze
 # ==============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 USB_PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-DEST_DIR="${1:-$HOME/registro_presenze}"
+DEST_DIR="${1:-$HOME/Documenti/opencode-project/registro_presenze}"
 
 # Colori output
 if [ -t 1 ]; then

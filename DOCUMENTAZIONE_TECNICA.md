@@ -1502,7 +1502,7 @@ set -e
 echo "=== Avvio Ambiente Dev ==="
 
 # Carica variabili d'ambiente
-set -a && source /home/andrea/registro_presenze/.env && set +a
+set -a && source /home/andrea/Documenti/opencode-project/registro_presenze/.env && set +a
 
 # 1. Avvia PostgreSQL se non è già in esecuzione
 if ! pg_isready -h /tmp/pgsocket -p 5433 > /dev/null 2>&1; then

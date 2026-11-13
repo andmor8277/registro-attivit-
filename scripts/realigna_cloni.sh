@@ -59,11 +59,20 @@ for env in "${TARGETS[@]}"; do
     fi
 
     if [ "$DRY_RUN" -eq 1 ]; then
+        head_now="$("${ssh_cmd[@]}" "cd $REMOTE_PATH && git rev-parse HEAD")"
         "${ssh_cmd[@]}" "cd $REMOTE_PATH && \
             echo '  HEAD attuale : '\$(git rev-parse --short HEAD) && \
             echo '  origin/master: '\$(git rev-parse --short origin/master 2>/dev/null || echo '(nessuno)') && \
             echo '  modifiche locali non committate: '\$(git status --porcelain | wc -l) && \
             echo '  commit che contengono il keystore: '\$(git log --all --oneline -- $KEYSTORE_PATH | wc -l)"
+        # Il confronto con la storia attesa va fatto anche qui: senza, il dry-run
+        # dichiarerebbe "allineato" un clone fermo a SHA non piu' esistenti.
+        if [ "$head_now" = "$EXPECTED" ]; then
+            echo "  ✓ HEAD = ${head_now:0:7}  (coincide)"
+        else
+            echo "  ✗ NON allineato: HEAD = ${head_now:0:7}  atteso ${EXPECTED:0:7}"
+            rc_totale=1
+        fi
         echo "  (dry-run: nessuna modifica applicata)"
         echo
         continue
