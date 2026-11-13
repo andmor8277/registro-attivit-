@@ -111,7 +111,8 @@ mkdir -p releases/v$NEW_VERSION/.github
 cp -r .github/workflows releases/v$NEW_VERSION/.github/ 2>/dev/null || true
 
 # Commit della release
-git add -f releases/v$NEW_VERSION
+# NOTA: lo snapshot in releases/ NON viene committato (e' in .gitignore): resta solo
+# su disco e sulla chiavetta USB. Il rollback di una release si fa con il tag git.
 git add CHANGELOG.md
 git commit -m "Release v$NEW_VERSION - $MESSAGE"
 
