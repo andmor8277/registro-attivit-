@@ -162,6 +162,8 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - **SchedaAllenamento charts**: Chart.js, dark theme, destroyed on unmount.
 
 ## Security
+- Firma APK: credenziali in `frontend/android/keystore.properties` (gitignored; template `keystore.properties.example`) o env `THOF_KEYSTORE_*`. Mai in chiaro in `build.gradle`. Senza credenziali il debug usa il keystore standard di Gradle, `assembleRelease` fallisce di proposito.
+- `deploy_dev.sh` e `frontend/.dockerignore` escludono keystore, `.env*`, `.local/`, `client_secret_*.json`: non devono mai finire su DEV né dentro l'immagine frontend.
 - `slowapi` limits are **per-worker** (4 workers = 4× effective limit).
 - Public PII endpoints: `5/minute` rate limit + Pydantic validation.
 - File uploads: magic bytes validation, max 5MB, controlled extensions.
