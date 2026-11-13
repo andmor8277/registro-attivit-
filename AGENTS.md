@@ -16,7 +16,8 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 ./deploy_dev.sh                    # Dev (192.168.178.133): sync + build + test su DEV prima di prod
 ./deploy.sh                        # Prod (192.168.178.132): SOLO dopo aver testato su dev: git fetch → build --no-cache → up
 ./release.sh minor "desc"          # Tag + commit + copy to releases/vX.X.X/
-./scripts/build_android_apk.sh      # Compila l'APK Android (Capacitor + Docker) in releases/apk/
+./scripts/build_android_apk.sh      # Compila l'APK Android (Capacitor + Docker) in releases/apk/ (a build riuscita pubblica su GitHub; --no-publish per saltarla)
+./scripts/publish_android_apk.sh    # Pubblica l'APK su GitHub Releases (andmor8277/thof-releases): da lì l'app legge l'avviso di aggiornamento
 ./scripts/backup_offsite_github.sh  # Backup offsite cifrato AES-256 (DB + uploads) su GitHub privato
 ./scripts/restore_offsite_github.sh # Disaster Recovery / ripristino da backup GitHub
 ./scripts/setup_backup_cron.sh      # Installa cron job automatico notturno (ore 03:00)
@@ -44,6 +45,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - `frontend/src/core/router.js` — router, auth guard, all route registrations
 - `frontend/src/store.js` — Global state (token, user, societa, categoria as Vue refs)
 - `frontend/src/api/index.js` — barrel re-export of `frontend/src/core/api/*`
+- `frontend/src/core/appUpdate.js` — update checker dell'APK (GitHub Releases + fallback `version.json`); UI in `frontend/src/components/AppUpdateNotice.vue`, montato in `App.vue`. Solo nativo: il web usa `versionCheck.js`
 
 ## Backend Structure
 - `backend/app/core/` — `security.py`, `encryption.py`, `naming.py`, `deps.py`
@@ -148,6 +150,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - **Autenticazione**: HTTPS + token, memorizzato in `~/.git-credentials` (chmod 600, `credential.helper store`). **Mai** incorporare token negli URL dei remote (vedi hardening).
 - L'accesso SSH verso GitHub (porte 22/443) è **bloccato** dalla rete: usare HTTPS+token.
 - Remote `origin` punta a `github.com/andmor8277/registro-attivit-.git` ed è l'unico remoto (il duplicato `github` è stato rimosso perché non veniva mai aggiornato). `master` traccia `origin/master`: `deploy.sh` (prod) e i push partono da lì.
+- **Rilasci Android**: repo pubblico `github.com/andmor8277/thof-releases` (non questo repo). L'app legge le sue Release API, con fallback su `version.json` raw quando le API sono in rate limit (60 req/ora per IP). Lo scrive solo `scripts/publish_android_apk.sh`: non modificarlo a mano. Il `versionCode` è il numero di commit, il `versionName` il tag: a parità di tag è il `versionCode` a decidere se l'app chiede l'aggiornamento.
 - **Storia riscritta il 2026-11-13** con `git filter-repo`: rimossi da tutti i commit `frontend/android/app/thof-release.keystore`, `frontend/mock-server.js` e la password di firma in chiaro. Gli SHA precedenti non esistono piu: i cloni vecchi (DEV, PROD, altre postazioni) vanno riallineati con `git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*' && git reset --hard origin/master` o ri-clonati. Backup della storia pre-riscrittura in `.local/backup-pre-history-rewrite/`.
 - **Keystore di firma esposto, rischio accettato dal titolare (2026-11-13)**: la chiave e' rimasta pubblica dal 25/09 al 13/11 e **non viene ruotata**, per non rompere gli aggiornamenti in place degli APK gia installati. Non re-introdurla mai in git: credenziali solo in `frontend/android/keystore.properties` (ignorato) o env `THOF_KEYSTORE_*`. Copia di sicurezza in `.local/backup-pre-history-rewrite/`.
 

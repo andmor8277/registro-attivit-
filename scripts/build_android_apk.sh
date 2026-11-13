@@ -5,6 +5,16 @@ set -e
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# Di default, a build riuscita, l'APK viene pubblicato su GitHub Releases (è da lì che
+# l'app legge l'avviso di aggiornamento). --no-publish per compilare senza rilasciare.
+PUBLISH=1
+for arg in "$@"; do
+    case "$arg" in
+        --no-publish) PUBLISH=0 ;;
+        *) echo "Argomento non valido: $arg" >&2; echo "Uso: $0 [--no-publish]" >&2; exit 2 ;;
+    esac
+done
+
 echo "=== 1. Compilazione Web App & Sync Capacitor ==="
 cd frontend
 VITE_API_URL=https://thof.crickethouse.mywire.org/api npm run cap:sync
@@ -78,4 +88,12 @@ if [ -f "$OUTPUT_APK" ]; then
     done
     echo "=========================================================="
     echo "Puoi trasferire questo file sul tuo smartphone Android e installarlo."
+
+    if [ "${PUBLISH}" -eq 1 ]; then
+        echo ""
+        "${ROOT_DIR}/scripts/publish_android_apk.sh" \
+            || echo "⚠ Pubblicazione su GitHub non riuscita: l'APK resta in ${DEST_APK}, riprova con ./scripts/publish_android_apk.sh"
+    else
+        echo "Pubblicazione su GitHub saltata (--no-publish). Per rilasciare: ./scripts/publish_android_apk.sh"
+    fi
 fi

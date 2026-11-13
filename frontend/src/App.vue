@@ -502,6 +502,8 @@
         </div>
       </div>
     </Teleport>
+
+    <AppUpdateNotice />
   </div>
 </template>
 
@@ -515,6 +517,7 @@ import { App as CapApp } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { Capacitor } from '@capacitor/core'
 import { initInactivityTracker, clearActivity, isSessionExpired } from './composables/useInactivity.js'
+import AppUpdateNotice from './components/AppUpdateNotice.vue'
 
 const { token, setToken, utenteAttivo, setUtenteAttivo, clearToken, setStagioneCorrente, stagioneCorrente, societaAttiva, setSocietaAttiva, hideTopbar, categoriaAttiva, setCategoria } = useStore()
 const router = useRouter()
