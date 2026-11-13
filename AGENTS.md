@@ -147,6 +147,8 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - **Autenticazione**: HTTPS + token, memorizzato in `~/.git-credentials` (chmod 600, `credential.helper store`). **Mai** incorporare token negli URL dei remote (vedi hardening).
 - L'accesso SSH verso GitHub (porte 22/443) è **bloccato** dalla rete: usare HTTPS+token.
 - Remote `origin` punta a `github.com/andmor8277/registro-attivit-.git` ed è l'unico remoto (il duplicato `github` è stato rimosso perché non veniva mai aggiornato). `master` traccia `origin/master`: `deploy.sh` (prod) e i push partono da lì.
+- **Storia riscritta il 2026-11-13** con `git filter-repo`: rimossi da tutti i commit `frontend/android/app/thof-release.keystore`, `frontend/mock-server.js` e la password di firma in chiaro. Gli SHA precedenti non esistono piu: i cloni vecchi (DEV, PROD, altre postazioni) vanno riallineati con `git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*' && git reset --hard origin/master` o ri-clonati. Backup della storia pre-riscrittura in `.local/backup-pre-history-rewrite/`.
+- **Il keystore e la password sono considerati esposti** (repo pubblico dal 25/09 al 13/11): ruotarlo richiede nuovo keystore + reinstallazione degli APK gia installati.
 
 ## Migrations
 - **NO Alembic.** All migrations in `backend/app/migrations/run.py:run_migrations()`, run on backend startup.
