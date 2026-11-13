@@ -52,7 +52,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - `backend/app/services/` — `email.py`, `invitations.py`, `oauth_google.py`
 - `backend/app/routers/` — router flat, prefix API invariati
 
-## Backend Routers (21)
+## Backend Routers (23)
 | Router | Prefix | Auth |
 |--------|--------|------|
 | `auth.py` | `/auth` | vari (login pubblico, resto JWT) |
@@ -76,6 +76,8 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 | `planning_eventi.py` | `/planning-eventi` | login |
 | `schede_allenamento.py` | `/schede-allenamento` | login |
 | `scouting.py` | `/scouting` | login (creazione: mister/admin; valutazione/stato: scouting/admin) |
+| `inviti.py` | `/inviti` | admin (creazione/lista/elimina/rinvia); `GET /verifica/{token}` pubblico |
+| `liste_tornei.py` | `/liste-torneo` | login |
 
 ## Frontend Structure
 - `frontend/src/core/router.js` — route e guard
@@ -110,12 +112,14 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 /allenamenti/:id                  → Allenamenti.vue (tactical board, catalog)
 /scheda-allenamento/:id           → SchedaAllenamento.vue (GPS metrics dashboard + table)
 /convocazioni/:id                 → Convocazioni.vue
+/liste-tornei/:id                 → ListeTornei.vue
 /dati/:id                         → DatiMatricole.vue
 /reportistica/:id                 → Reportistica.vue
 /segreteria                       → Segreteria.vue
 /segreteria/scheda/:id            → SchedaGiocatore.vue (player detail)
 /segreteria/:id                   → SegreteriaCategoria.vue
 /segreteria/openday               → Openday.vue
+/segreteria/presenze              → PresenzeSegreteria.vue
 /valutazioni/:id                  → Valutazioni.vue
 /infermeria                       → Infermeria.vue (hub)
 /infermeria/certificati           → CertificatoMedico.vue
@@ -124,6 +128,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 /admin                            → Admin.vue
 /admin/societa                    → Societa.vue
 /form-iscrizione                  → FormOnlineIscrizione.vue (public, no auth)
+/registrazione                    → Registrazione.vue (public, no auth)
 ```
 **CRITICAL**: `/segreteria/scheda/:id` MUST be BEFORE `/segreteria/:id` in `frontend/src/core/router.js`.
 **CRITICAL**: `/infermeria/infortunati` routes to `Infortunati.vue` (not `Infermeria.vue`).
@@ -141,7 +146,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 ## Git & GitHub
 - **Autenticazione**: HTTPS + token, memorizzato in `~/.git-credentials` (chmod 600, `credential.helper store`). **Mai** incorporare token negli URL dei remote (vedi hardening).
 - L'accesso SSH verso GitHub (porte 22/443) è **bloccato** dalla rete: usare HTTPS+token.
-- Remote `origin` e `github` puntano entrambi a `github.com/andmor8277/registro-attivit-.git`. `deploy.sh` (prod) e i push partono da `origin/master`.
+- Remote `origin` punta a `github.com/andmor8277/registro-attivit-.git` ed è l'unico remoto (il duplicato `github` è stato rimosso perché non veniva mai aggiornato). `master` traccia `origin/master`: `deploy.sh` (prod) e i push partono da lì.
 
 ## Migrations
 - **NO Alembic.** All migrations in `backend/app/migrations/run.py:run_migrations()`, run on backend startup.
