@@ -14,7 +14,8 @@ frontend/.env
 frontend/.env.local
 
 # Docker
-.dockerignore
+# NOTA: .dockerignore va versionato (serve in PROD dove il codice arriva da git),
+# quindi NON va messo tra gli ignore.
 .docker/
 
 # IDE
@@ -56,7 +57,8 @@ client_secret_*.json
 # Secret scan list per il pre-commit hook (mai committare)
 scripts/git-hooks/secrets.lst
 
-# File di sessione e appunti locali (mai committare)
+# File di sessione, appunti e segreti locali (mai committare)
+.local/
 SESSION_SUMMARY.md
 session-ses_*.md
 SECURITY_TODO.json

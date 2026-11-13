@@ -18,12 +18,24 @@ tar -cz \
   --exclude='dist' \
   --exclude='__pycache__' \
   --exclude='.env' \
+  --exclude='.env.dev' \
+  --exclude='.env.prod' \
+  --exclude='.env.local' \
+  --exclude='.env.production' \
+  --exclude='.local' \
   --exclude='uploads' \
   --exclude='.git' \
   --exclude='*.pyc' \
   --exclude='session-ses_*.md' \
   --exclude='SESSION_SUMMARY.md' \
+  --exclude='SECURITY_TODO.json' \
   --exclude='AGENTS.md' \
+  --exclude='backups' \
+  --exclude='releases' \
+  --exclude='frontend/android' \
+  --exclude='*.keystore' \
+  --exclude='keystore.properties' \
+  --exclude='client_secret_*.json' \
   -C "$PROJECT_ROOT" . | $SSH $REMOTE "tar -xzf - -C $REMOTE_PATH"
 
 # Run database migrations

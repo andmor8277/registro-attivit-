@@ -1,0 +1,26 @@
+# Contesto di build Docker del frontend: tiene fuori tutto cio' che non serve a
+# `npm run build`. Senza questo file la `COPY . .` del Dockerfile si portava dentro
+# l'immagine anche android/ (keystore e credenziali di firma inclusi) e node_modules/.
+node_modules
+dist
+.git
+.github
+.vscode
+.idea
+*.log
+*.md
+
+# Progetto nativo Android: non serve alla build web e contiene segreti di firma
+android
+capacitor.config.ts
+capacitor.config.json
+
+# Segreti e file locali
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+keystore.properties
+client_secret_*.json
+.local
