@@ -1,14 +1,35 @@
 apply plugin: 'com.android.application'
 
+// ---------------------------------------------------------------------------
+// Credenziali di firma: MAI in chiaro in questo file. Vengono lette da
+// frontend/android/keystore.properties (non committato) o, in alternativa, dalle
+// variabili d'ambiente THOF_KEYSTORE_*. Template: keystore.properties.example
+// ---------------------------------------------------------------------------
+def keystoreProps = new Properties()
+def keystorePropsFile = rootProject.file('keystore.properties')
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+def signingProp = { String key, String envVar ->
+    keystoreProps.getProperty(key) ?: System.getenv(envVar) ?: project.findProperty(key)
+}
+def signingStoreFile = signingProp('storeFile', 'THOF_KEYSTORE_FILE') ?: 'thof-release.keystore'
+def signingStorePassword = signingProp('storePassword', 'THOF_KEYSTORE_PASSWORD')
+def signingKeyAlias = signingProp('keyAlias', 'THOF_KEYSTORE_ALIAS') ?: 'thof'
+def signingKeyPassword = signingProp('keyPassword', 'THOF_KEYSTORE_KEY_PASSWORD') ?: signingStorePassword
+def hasSigningConfig = signingStorePassword != null
+
 android {
     namespace = "it.thof.app"
     compileSdk = rootProject.ext.compileSdkVersion
     signingConfigs {
         release {
-            storeFile file('thof-release.keystore')
-            storePassword '***REMOVED-SIGNING-PASSWORD***'
-            keyAlias 'thof'
-            keyPassword '***REMOVED-SIGNING-PASSWORD***'
+            if (hasSigningConfig) {
+                storeFile file(signingStoreFile)
+                storePassword signingStorePassword
+                keyAlias signingKeyAlias
+                keyPassword signingKeyPassword
+            }
         }
     }
     defaultConfig {
@@ -26,9 +47,15 @@ android {
     }
     buildTypes {
         debug {
-            signingConfig signingConfigs.release
+            // Senza keystore THOF si usa il debug keystore standard di Gradle.
+            if (hasSigningConfig) {
+                signingConfig signingConfigs.release
+            }
         }
         release {
+            if (!hasSigningConfig) {
+                throw new GradleException("Firma release non configurata: copia frontend/android/keystore.properties.example in keystore.properties inserendo le credenziali (oppure esporta THOF_KEYSTORE_PASSWORD).")
+            }
             signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
