@@ -23,6 +23,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 ./sync_to_usb.sh                    # Sincronizza il progetto sulla chiavetta USB (anche auto al commit)
 ./aggiorna_progetto.sh              # Aggiorna il progetto all'ultimo commit (da GitHub o da USB se offline)
 ./scripts/clone_from_usb.sh         # Inizializza/clona il progetto da USB su una nuova postazione
+./scripts/realigna_cloni.sh         # Riallinea i cloni DEV/PROD alla storia git riscritta (fetch forzato + reset + gc)
 ```
 
 ## Flusso di Lavoro Obbligatorio (Dev-First)
