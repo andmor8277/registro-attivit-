@@ -8,10 +8,16 @@ unset GIT_DIR GIT_INDEX_FILE GIT_PREFIX GIT_WORK_TREE
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 if [ -f "$ROOT/scripts/sync_to_usb.sh" ]; then
-    # Esegue la sincronizzazione silenziosa verso USB se presente
-    if "$ROOT/scripts/sync_to_usb.sh" --quiet 2>/dev/null; then
-        echo -e "\033[1;32m[THOF]\033[0m 💾 Chiavetta USB aggiornata all'ultimo commit!"
-    fi
+    # Esegue la sincronizzazione silenziosa verso USB se presente.
+    # 0 = sincronizzato, 3 = nessuna chiavetta (silenzio, non e' un errore),
+    # altri = errore reale della sincronizzazione.
+    "$ROOT/scripts/sync_to_usb.sh" --quiet 2>/dev/null
+    rc_usb=$?
+    case "$rc_usb" in
+        0) echo -e "\033[1;32m[THOF]\033[0m 💾 Chiavetta USB aggiornata all'ultimo commit!" ;;
+        3) ;;
+        *) echo -e "\033[1;33m[THOF]\033[0m ⚠ Sincronizzazione USB fallita (rc=$rc_usb). Riprova con: ./sync_to_usb.sh" ;;
+    esac
 fi
 
 exit 0

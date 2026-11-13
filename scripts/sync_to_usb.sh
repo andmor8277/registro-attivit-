@@ -98,7 +98,10 @@ USB_ROOT="$(detect_usb "${1:-}")" || {
         log_warn "Nessuna chiavetta USB rilevata con permessi di scrittura."
         log_info "Collega la chiavetta USB e riprova, oppure specifica il percorso: $0 /percorso/usb"
     fi
-    exit 0
+    # 3 = "nessuna chiavetta": non e' un errore, ma non e' nemmeno una sincronizzazione
+    # avvenuta. Uscire 0 qui faceva dire all'hook post-commit "USB aggiornata" anche a
+    # chiavetta assente. Chi chiama deve distinguere 0 (sincronizzato) da 3 (niente USB).
+    exit 3
 }
 
 TARGET_DIR="${USB_ROOT}/registro_presenze"
