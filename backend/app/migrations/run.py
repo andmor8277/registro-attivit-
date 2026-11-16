@@ -1476,6 +1476,28 @@ def run_migrations():
                 print(f"Migration warning (persone public_token): {e}")
                 conn.rollback()
 
+            try:
+                # Contatore dei tentativi di login per username. Il limiter slowapi conta per IP,
+                # ma openresty sul router accorpa X-Forwarded-For invece di sostituirlo: chi attacca
+                # si attribuisce un IP diverso a ogni richiesta e il conteggio non lo ferma. Qui si
+                # conta sull'username, che chi prova a indovinare una password non puo' cambiare.
+                # Vedi core/login_guard.py.
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS login_bloccaggi (
+                        chiave TEXT PRIMARY KEY,
+                        tentativi INTEGER NOT NULL DEFAULT 0,
+                        primo_tentativo TIMESTAMP WITH TIME ZONE,
+                        ultimo_tentativo TIMESTAMP WITH TIME ZONE,
+                        bloccato_sino TIMESTAMP WITH TIME ZONE
+                    )
+                """))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_login_bloccaggi_bloccato ON login_bloccaggi(bloccato_sino)"))
+                conn.commit()
+                print("Migration: Created login_bloccaggi")
+            except Exception as e:
+                print(f"Migration warning (login_bloccaggi): {e}")
+                conn.rollback()
+
         finally:
             if has_lock:
                 try:

@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 from ..database import get_db
 from ..models import Utente, UtenteCategoria, Categoria, Invito, Societa
 from ..rate_limit import limiter
+from ..core import login_guard
 from ..core.security import (
     SECRET_KEY,
     DEFAULT_PASSWORD,
@@ -74,11 +75,22 @@ class PasswordChange(BaseModel):
 @router.post("/token")
 @limiter.limit("10/minute")
 def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # Il limiter qui sopra conta per indirizzo, ma openresty sul router accorpa X-Forwarded-For
+    # invece di sostituirlo: quell'indirizzo e' deciso da chi attacca, quindi il conteggio non lo
+    # ferma. Questo invece conta sull'username. Vedi core/login_guard.py per il perche' e per il
+    # rischio che si accetta in cambio (lockout di un utente legittimo).
+    login_guard.verifica_non_bloccato(db, form.username)
+
     user = db.query(Utente).filter(Utente.username == form.username).first()
     if not user or not user.password_hash or not verify_password(form.password, user.password_hash):
         if not user:
+            # si verifica comunque un hash fasullo per non far capire, dal tempo di risposta,
+            # se l'username esiste o no
             verify_password(form.password, "$2b$12$260mdxWoPqJ9blHKaB4fKuiJbLr7WbMYw6K78Q3vGHxRRz8xZzqEi")
+        login_guard.registra_tentativo_fallito(db, form.username)
         raise HTTPException(status_code=401, detail="Credenziali errate")
+
+    login_guard.login_avvenuto(db, form.username)
     token = create_token({"sub": user.username, "is_admin": user.is_admin, "societa_id": user.societa_id, "is_super_admin": user.is_super_admin})
     return {"access_token": token, "token_type": "bearer"}
 
