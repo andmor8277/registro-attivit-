@@ -128,12 +128,20 @@ function buildInfoFromRelease(releaseData, installed) {
   const latestVersion = normalizeVersion(tagName)
   const asset = pickApkAsset(releaseData.assets)
 
+  // La Release API di GitHub non espone nessun versionCode. Senza, due APK diversi
+  // sotto lo stesso tag sarebbero indistinguibili e la più recente non verrebbe mai
+  // proposta. publish_android_apk.sh lo scrive come commento HTML nel body: invisibile
+  // sulla pagina renderizzata, leggibile dall'API.
+  const bodyBuild =
+    typeof releaseData.body === 'string' ? (releaseData.body.match(/thof-versionCode:\s*(\d+)/i) || [])[1] : undefined
+  const remoteBuild = releaseData.versionCode ?? bodyBuild
+
   return {
-    hasUpdate: hasNewerRelease(installed.version, installed.build, latestVersion, releaseData.versionCode),
+    hasUpdate: hasNewerRelease(installed.version, installed.build, latestVersion, remoteBuild),
     currentVersion: installed.version,
     currentBuild: installed.build,
     latestVersion,
-    latestBuild: releaseData.versionCode ? String(releaseData.versionCode) : null,
+    latestBuild: remoteBuild ? String(remoteBuild) : null,
     tagName,
     releaseName: releaseData.name ? String(releaseData.name) : `The Home of Football ${tagName}`,
     releaseNotes:
@@ -220,6 +228,19 @@ export async function checkForAppUpdate(options = {}) {
   let info = null
   if (releaseData && releaseData.tag_name) {
     info = buildInfoFromRelease(releaseData, installed)
+
+    // Caso stretto: il tag remoto è uguale a quello installato e la release non porta
+    // il versionCode (la Release API non ce l'ha, e il body potrebbe non averlo se la
+    // release è vecchia). Senza il build number non possiamo accorgerci di una rebuild
+    // ripubblicata sotto lo stesso tag: lo chiediamo al manifest, che è l'unico che lo
+    // scrive. Si paga una richiesta in più solo qui, non nel caso normale.
+    if (info && !info.hasUpdate && !info.latestBuild && !isNewerVersion(installed.version, info.latestVersion) &&
+        !isNewerVersion(info.latestVersion, installed.version)) {
+      const manifest = await fetchJsonWithTimeout(`${DEFAULT_MANIFEST_URL}?t=${Date.now()}`, {})
+      if (manifest && manifest.versionCode && normalizeVersion(String(manifest.version)) === info.latestVersion) {
+        info = buildInfoFromManifest(manifest, installed)
+      }
+    }
   } else {
     // 3. Fallback su version.json nel branch: non consuma il rate limit delle API
     const manifest = await fetchJsonWithTimeout(`${DEFAULT_MANIFEST_URL}?t=${Date.now()}`, {})

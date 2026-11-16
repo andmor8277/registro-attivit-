@@ -69,6 +69,9 @@ if [ -f "$OUTPUT_APK" ]; then
     mkdir -p "$DEST_DIR"
     cp "$OUTPUT_APK" "$DEST_APK"
     chmod 644 "$DEST_APK"
+    # Sidecar con il numero di build impresso nell'APK: publish_android_apk.sh lo legge
+    # per pubblicare lo stesso versionCode, anche se si committa dopo la build.
+    echo "${VERSION_CODE}" > "${DEST_APK}.build"
     echo ""
     echo "=========================================================="
     echo "✅ APK Android compilato con successo!"

@@ -92,6 +92,20 @@ if [ "${APK_SIZE_BYTES}" -lt 1048576 ]; then
     exit 1
 fi
 
+# Il versionCode pubblicato deve essere quello impresso DENTRO l'APK, non quello di HEAD
+# adesso: se si committa tra la build e la pubblicazione, i due divergono e il telefono
+# si ritroverebbe con un build number più alto di quello dichiarato, senza mai chiedere
+# l'aggiornamento. build_android_apk.sh lo scrive in un sidecar accanto all'APK.
+BUILD_SIDECAR="${APK_PATH}.build"
+if [ -f "${BUILD_SIDECAR}" ]; then
+    BUILT_CODE=$(tr -dc '0-9' < "${BUILD_SIDECAR}")
+    if [ -n "${BUILT_CODE}" ] && [ "${BUILT_CODE}" != "${VERSION_CODE}" ]; then
+        echo "⚠ [ATTENZIONE] L'APK è stato compilato alla build ${BUILT_CODE}, HEAD è a ${VERSION_CODE}." >&2
+        echo "   Pubblico ${BUILT_CODE} (quello vero nell'APK). Se hai committato dopo la build, ricompilala." >&2
+        VERSION_CODE="${BUILT_CODE}"
+    fi
+fi
+
 # ------------------------------------------------------------------ note di rilascio
 if [ -z "${NOTES}" ]; then
     PREV_TAG=$(git describe --tags --abbrev=0 "HEAD^" 2>/dev/null || echo "")
@@ -108,6 +122,11 @@ if [ -z "${NOTES}" ]; then
 fi
 
 RELEASE_NAME="The Home of Football ${TAG_NAME}"
+
+# Il numero di build finisce nel body della release come commento HTML: GitHub non lo
+# mostra sulla pagina, ma l'API Release lo restituisce e così l'app può decidere a
+# parità di tag. La Release API non ha un campo versionCode proprio.
+RELEASE_BODY="${NOTES}"$'\n\n<!-- thof-versionCode: '"${VERSION_CODE}"' -->'
 
 echo "=========================================================="
 echo "📦 THOF - Pubblicazione APK su GitHub Releases"
@@ -229,7 +248,7 @@ if [ -z "${RELEASE_ID}" ]; then
     payload=$(python3 -c "
 import json,sys
 print(json.dumps({'tag_name':'${TAG_NAME}','name':sys.argv[1],'body':sys.argv[2],'draft':False,'prerelease':False}))
-" "${RELEASE_NAME}" "${NOTES}")
+" "${RELEASE_NAME}" "${RELEASE_BODY}")
     split_response "$(gh_api POST "/repos/${REPO_OWNER}/${REPO_NAME}/releases" "${payload}")"
     if [ "${RESP_STATUS}" != "201" ]; then
         echo "❌ [ERRORE] Creazione release fallita (${RESP_STATUS}): $(json_get "${RESP_BODY}" 'message')" >&2
@@ -243,7 +262,7 @@ else
     payload=$(python3 -c "
 import json,sys
 print(json.dumps({'name':sys.argv[1],'body':sys.argv[2]}))
-" "${RELEASE_NAME}" "${NOTES}")
+" "${RELEASE_NAME}" "${RELEASE_BODY}")
     split_response "$(gh_api PATCH "/repos/${REPO_OWNER}/${REPO_NAME}/releases/${RELEASE_ID}" "${payload}")"
     echo "✓ Release ${TAG_NAME} aggiornata"
 fi
