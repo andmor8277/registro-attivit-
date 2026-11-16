@@ -25,6 +25,10 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 ./aggiorna_progetto.sh              # Aggiorna il progetto all'ultimo commit (da GitHub o da USB se offline)
 ./scripts/clone_from_usb.sh         # Inizializza/clona il progetto da USB su una nuova postazione
 ./scripts/realigna_cloni.sh         # Riallinea i cloni DEV/PROD alla storia git riscritta (fetch forzato + reset + gc)
+./scripts/ops/ruota_segreti.sh dev|prod  # Ruota SECRET_KEY + DEFAULT_PASSWORD con prova prima/dopo (vuole il backup del .env gia' fatto)
+./scripts/ops/gen_passphrase.sh     # Passphrase comunicabile per DEFAULT_PASSWORD (5 parole + 3 cifre, ~44 bit)
+./scripts/ops/confronta_env.sh      # Confronta i segreti DEV<->PROD per hash, senza stamparli
+./scripts/ops/run_suite_dev.sh      # Esegue tutta la suite DEV e somma le asserzioni
 ```
 
 ## Flusso di Lavoro Obbligatorio (Dev-First)
@@ -182,7 +186,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - **`--forwarded-allow-ips` non deve essere `*`**: con `*` uvicorn crede a `X-Forwarded-For` da chiunque. openresty (sul router) **accorpa** l'header invece di sostituirlo, quindi l'attaccante si attribuisce un IP fittizio a ogni richiesta e aggira ogni rate limit. Fidati solo di `127.0.0.1,172.16.0.0/12`. Questo chiude il percorso diretto su `:8000`; il percorso proxy resta aggirabile finche' openresty non fa `proxy_set_header X-Forwarded-For $remote_addr` (sostituzione) — oppure finche' il login non ha un blocco per username indipendente dall'IP.
 - **Documentazione API disattivata** in `main.py` (`docs_url=None, redoc_url=None, openapi_url=None`): prima `/api/docs`, `/api/openapi.json` e `/api/redoc` rispondevano 200 pubblici, cioe' la mappa completa dell'API a internet.
 - **APK**: `network_security_config.xml` fida solo le CA di sistema e vieta il cleartext (`"cleartext": false` in `capacitor.config.json`). Non riabilitare `src="user"`: espone l'HTTPS (JWT e anagrafiche dei minori) a qualsiasi certificato radice installato sul telefono.
-- **`ENCRYPTION_KEY` NON si ruota a mano**: e' la chiave pgcrypto di CF e telefoni; cambiarla rende illeggibili i dati gia' cifrati. Usare `POST /persone/reencrypt` con `reencrypt=True` (solo super_admin). `SECRET_KEY` e `DEFAULT_PASSWORD` si possono invece ruotare (sloggano solo le sessioni).
+- **`ENCRYPTION_KEY` NON si ruota a mano**: e' la chiave pgcrypto di CF e telefoni; cambiarla rende illeggibili i dati gia' cifrati. Usare `POST /persone/reencrypt` con `reencrypt=True` (solo super_admin). `SECRET_KEY` e `DEFAULT_PASSWORD` si possono invece ruotare (sloggano solo le sessioni) con `scripts/ops/ruota_segreti.sh dev|prod`: genera i valori **sul server**, non li stampa e si rifiuta di partire senza backup del `.env` gia' esistente. Dopo la modifica del `.env` serve **`docker compose up -d`**, non basta `restart`: la compose passa le variabili con `environment: ${VAR}`, quindi il valore viene fissato alla **creazione** del container. Su PROD la compose va invocata con **`-f docker-compose.yml -f docker-compose.prod.yml`**, altrimenti si rialza con i settings sbagliati. `SECRET_KEY` **non deve mai essere lo stesso valore su DEV e PROD**: condividendo la chiave, un JWT coniato su DEV e' accettato da PROD. Verifica con `scripts/ops/confronta_env.sh`
 - **`authlib` rimossa** da `requirements.txt`: era dichiarata ma mai importata, e portava ~20 CVE nell'immagine.
 - Public PII endpoints: `5/minute` rate limit + Pydantic validation.
 - File uploads: magic bytes validation, max 5MB, controlled extensions.
