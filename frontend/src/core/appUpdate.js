@@ -123,6 +123,17 @@ function pickApkAsset(assets) {
   )
 }
 
+/**
+ * Note di rilascio pronte da mostrare: toglie i commenti HTML e, se non resta nulla,
+ * usa il testo di default. Il marcatore thof-versionCode vive nel body come commento
+ * (invisibile sulla pagina GitHub), ma qui il body viene reso come testo e mostrerebbe
+ * una riga `<!-- ... -->` dentro l'avviso.
+ */
+function sanitizeNotes(rawBody) {
+  const clean = String(rawBody ?? '').replace(/<!--[\s\S]*?-->/g, '').trim()
+  return clean.length > 0 ? clean : RELEASE_NOTIES_FALLBACK
+}
+
 function buildInfoFromRelease(releaseData, installed) {
   const tagName = String(releaseData.tag_name)
   const latestVersion = normalizeVersion(tagName)
@@ -144,10 +155,7 @@ function buildInfoFromRelease(releaseData, installed) {
     latestBuild: remoteBuild ? String(remoteBuild) : null,
     tagName,
     releaseName: releaseData.name ? String(releaseData.name) : `The Home of Football ${tagName}`,
-    releaseNotes:
-      typeof releaseData.body === 'string' && releaseData.body.trim().length > 0
-        ? releaseData.body.trim()
-        : RELEASE_NOTIES_FALLBACK,
+    releaseNotes: sanitizeNotes(releaseData.body),
     publishedAt: releaseData.published_at ? String(releaseData.published_at) : undefined,
     apkDownloadUrl: asset?.browser_download_url || DEFAULT_APK_URL,
     apkSizeMb: typeof asset?.size === 'number' && asset.size > 0 ? (asset.size / 1048576).toFixed(1) : undefined,
@@ -165,10 +173,7 @@ function buildInfoFromManifest(manifest, installed) {
     latestBuild: manifest.versionCode ? String(manifest.versionCode) : null,
     tagName: manifest.tagName ? String(manifest.tagName) : `v${latestVersion}`,
     releaseName: manifest.releaseName ? String(manifest.releaseName) : `The Home of Football v${latestVersion}`,
-    releaseNotes:
-      typeof manifest.releaseNotes === 'string' && manifest.releaseNotes.trim().length > 0
-        ? manifest.releaseNotes.trim()
-        : RELEASE_NOTIES_FALLBACK,
+    releaseNotes: sanitizeNotes(manifest.releaseNotes),
     publishedAt: manifest.publishedAt ? String(manifest.publishedAt) : undefined,
     apkDownloadUrl: manifest.apkDownloadUrl ? String(manifest.apkDownloadUrl) : DEFAULT_APK_URL,
     apkSizeMb: manifest.apkSizeMb ? String(manifest.apkSizeMb) : undefined,

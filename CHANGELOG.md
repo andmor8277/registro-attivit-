@@ -211,3 +211,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - L'update check non riconosceva il numero di build: la Release API di GitHub non espone un campo versionCode, quindi una rebuild ripubblicata sotto lo stesso tag non veniva mai proposta. Il numero di build passa nel body della release come commento HTML e, in assenza, viene letto dal manifest version.json
 - build_android_apk.sh scrive il numero di build in un sidecar accanto all'APK e publish_android_apk.sh lo usa: pubblicare dopo un nuovo commit non dichiara piu un build number diverso da quello impresso nell'APK
+
+## [7.5.2] - 2026-11-16
+
+### Fixed
+- Le note dell'avviso di aggiornamento mostravano anche il commento HTML `<!-- thof-versionCode: NNN -->`: il body della release viene renderizzato come testo, quindi il marcatore va rimosso prima di mostrarlo
