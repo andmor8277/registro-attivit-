@@ -1,5 +1,7 @@
 #!/bin/bash
-# Ruota SECRET_KEY e DEFAULT_PASSWORD su un server, con prova prima/dopo.
+# Ruota SECRET_KEY (e per compatibilita' anche DEFAULT_PASSWORD, che pero' dal 2026-11-16 non e'
+# piu' usata dall'applicazione: i reset generano una password casuale per il singolo utente).
+# Con prova prima/dopo.
 #
 # Uso: ruota_segreti.sh dev|prod
 #
@@ -29,7 +31,10 @@ q() { $SSH "docker exec -i \$(docker ps -qf name=db) psql -U registro_user -d re
 pass=0; fail=0
 ck() { if [ "$2" = "$3" ]; then pass=$((pass+1)); echo "  ok   $1"; else fail=$((fail+1)); echo "  FAIL $1 -> '$2' (atteso '$3')"; fi }
 cod() { curl -s -o /dev/null -w '%{http_code}' --max-time 25 "$@"; }
-tok() { curl -s --max-time 25 -X POST "$D/auth/token" -d "username=$1&password=$2" \
+# --data-urlencode perche' le password temporanee generate dal reset contengono &, % e #:
+# passarle grezze in un body form fa arrivare al server una password troncata
+tok() { curl -s --max-time 25 -X POST "$D/auth/token" \
+          --data-urlencode "username=$1" --data-urlencode "password=$2" \
         | python3 -c "import sys,json;print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null; }
 leggi() { timeout 60 $SSH "sed -n 's/^$1=//p' $2" 2>/dev/null | head -1 | tr -d '\r\n'; }
 hashof() { printf '%s' "$1" | sha256sum | cut -c1-16; }
@@ -140,16 +145,26 @@ TOK_NEW=$(tok "$VM" "$PWVM")
 ck "  la password dell'utente funziona ancora (hash in DB intatto)" "$([ -n "$TOK_NEW" ] && echo si)" "si"
 ck "  e il token nuovo funziona" "$(cod "$D/auth/me" -H "Authorization: Bearer $TOK_NEW")" "200"
 
-echo "--- il reset usa la NUOVA DEFAULT_PASSWORD ---"
+echo "--- il reset NON usa piu' la password condivisa ---"
+# Questa era la prova "il reset usa la NUOVA DEFAULT_PASSWORD". Dal 2026-11-16 il reset non usa
+# piu' la DEFAULT_PASSWORD: genera una password casuale per quel singolo utente, con cambio
+# obbligatorio al primo accesso. Le asserzioni sotto sono il guardaregia contro il ritorno di
+# quella scorciatoia, che era il buco per cui chiunque conoscesse la default entrava in qualunque
+# account appena resettato.
 TOK_ADM=$(tok "$AM" "$PWAM")
 ck "login admin -> token" "$([ -n "$TOK_ADM" ] && echo si)" "si"
-ck "reset password utente -> 200" \
-   "$(cod -X PUT "$D/auth/utenti/$UID_VM/reset-password" -H "Authorization: Bearer $TOK_ADM")" "200"
+RESP=$(curl -s -w '\n%{http_code}' --max-time 25 -X PUT "$D/auth/utenti/$UID_VM/reset-password" -H "Authorization: Bearer $TOK_ADM")
+CODICE=${RESP##*$'\n'}
+R=${RESP%$'\n'*}
+ck "reset password utente -> 200" "$CODICE" "200"
+TMP=$(echo "$R" | python3 -c "import sys,json;print(json.load(sys.stdin).get('password_temporanea',''))" 2>/dev/null)
 ND=$(leggi DEFAULT_PASSWORD $ENVF)
-ck "la vecchia default e' stata letta dal backup (altrimenti il confronto sotto e' vuoto)" "$([ -n "$DP_VECCHIA" ] && echo si)" "si"
-ck "  e non coincide con la nuova" "$([ "$DP_VECCHIA" != "$ND" ] && echo si)" "si"
-ck "dopo il reset l'utente entra con la NUOVA default" "$([ -n "$(tok "$VM" "$ND")" ] && echo si)" "si"
-ck "  e NON entra con la vecchia default" "$([ -z "$(tok "$VM" "$DP_VECCHIA")" ] && echo si)" "si"
+ck "  il reset restituisce una password temporanea propria" "$([ -n "$TMP" ] && echo si)" "si"
+ck "  e NON e' la DEFAULT_PASSWORD di questo ambiente" "$([ -n "$ND" ] && [ "$TMP" != "$ND" ] && echo si)" "si"
+ck "  e NON e' la vecchia default condivisa" "$([ -n "$DP_VECCHIA" ] && [ "$TMP" != "$DP_VECCHIA" ] && echo si)" "si"
+ck "l'utente entra con la temporanea" "$([ -n "$(tok "$VM" "$TMP")" ] && echo si)" "si"
+ck "  e NON entra con la DEFAULT_PASSWORD dell'ambiente" "$([ -z "$(tok "$VM" "$ND")" ] && echo si)" "si"
+ck "  e NON entra con la vecchia default condivisa" "$([ -z "$(tok "$VM" "$DP_VECCHIA")" ] && echo si)" "si"
 
 echo "--- pulizia ---"
 # Si cancellano ANCHE le righe in login_bloccaggi lasciate dai login falliti di questi utenti

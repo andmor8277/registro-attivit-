@@ -471,11 +471,11 @@
     </nav>
 
     <Teleport to="body">
-      <div v-if="showPasswordModal" class="modal-overlay" @click.self="showPasswordModal = false">
+      <div v-if="showPasswordModal" class="modal-overlay" @click.self="chiudiModalPassword">
         <div class="modal">
           <div class="modal-header">
-            <h3>Cambia Password</h3>
-            <button class="modal-close" @click="showPasswordModal = false">
+            <h3>{{ passwordObbligatorio ? 'Cambio password obbligatorio' : 'Cambia Password' }}</h3>
+            <button v-if="!passwordObbligatorio" class="modal-close" @click="showPasswordModal = false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"/>
                 <line x1="6" y1="6" x2="18" y2="18"/>
@@ -483,6 +483,11 @@
             </button>
           </div>
           <div class="modal-body">
+            <!-- Quando la password e' quella temporanea del reset non e' un suggerimento:
+                 finche' non viene sostituita il backend risponde 403 a qualsiasi altra rotta -->
+            <p v-if="passwordObbligatorio" class="errore-msg">
+              La tua password e' temporanea e va cambiata prima di continuare.
+            </p>
             <div class="form-group">
               <label>Password Attuale</label>
               <input v-model="passwordForm.attuale" type="password" placeholder="Inserisci password attuale" />
@@ -499,7 +504,7 @@
             <p v-if="passwordSuccess" class="success-msg">{{ passwordSuccess }}</p>
           </div>
           <div class="modal-footer">
-            <button class="btn-secondary" @click="showPasswordModal = false">Annulla</button>
+            <button v-if="!passwordObbligatorio" class="btn-secondary" @click="showPasswordModal = false">Annulla</button>
             <button class="btn-primary" @click="cambiaPassword" :disabled="passwordLoading">
               <span v-if="passwordLoading" class="spinner-small"></span>
               <template v-else>Salva</template>
@@ -534,6 +539,23 @@ const passwordForm = ref({ attuale: '', nuova: '', conferma: '' })
 const passwordErrore = ref('')
 const passwordSuccess = ref('')
 const passwordLoading = ref(false)
+// Il backend lo decide: finche' e' vero ogni altra rotta risponde 403, quindi il modal non deve
+// potersi chiudere. Aprire il modal e' la comodita', non la sicurezza.
+const passwordObbligatorio = computed(() => !!utenteAttivo.value?.deve_cambiare_password)
+
+function chiudiModalPassword() {
+  if (passwordObbligatorio.value) return
+  showPasswordModal.value = false
+}
+
+// immediate: true perche' dopo un refresh della pagina l'utente riparte da /me, non dal login
+watch(() => utenteAttivo.value?.deve_cambiare_password, (v) => {
+  if (v) {
+    showPasswordModal.value = true
+    passwordErrore.value = ''
+    passwordSuccess.value = ''
+  }
+}, { immediate: true })
 const isSuperAdmin = computed(() => utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'super_admin')
 const isMister = computed(() => utenteAttivo.value?.ruolo === 'mister')
 const isSegreteria = computed(() => utenteAttivo.value?.ruolo === 'segreteria')
@@ -642,19 +664,31 @@ async function cambiaPassword() {
     return
   }
   
-  if (passwordForm.value.nuova.length < 4) {
-    passwordErrore.value = 'La password deve essere di almeno 4 caratteri'
-    return
-  }
-  
+  // Allineato a validate_password del backend: prima qui si accettavano 4 caratteri e la
+  // richiesta veniva rifiutata solo dopo, con un messaggio che sembrava un errore del server
+  const nuova = passwordForm.value.nuova
+  if (nuova.length < 8) { passwordErrore.value = 'La password deve avere almeno 8 caratteri'; return }
+  if (!/[A-Z]/.test(nuova)) { passwordErrore.value = 'Serve almeno un carattere maiuscolo'; return }
+  if (!/[a-z]/.test(nuova)) { passwordErrore.value = 'Serve almeno un carattere minuscolo'; return }
+  if (!/\d/.test(nuova)) { passwordErrore.value = 'Serve almeno un numero'; return }
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(nuova)) { passwordErrore.value = 'Serve almeno un carattere speciale'; return }
+
   passwordLoading.value = true
   
   try {
     await changePassword(utenteAttivo.value.id, passwordForm.value.attuale, passwordForm.value.nuova)
     passwordSuccess.value = 'Password cambiata con successo!'
     passwordForm.value = { attuale: '', nuova: '', conferma: '' }
+    // Si rilegge /me: e' li' che vive il flag di cambio obbligatorio, e finche' resta vero il
+    // modal non si chiude (chiudere il modal non chiude il vincolo, lo chiude il backend)
+    try {
+      const me = await getMe()
+      setUtenteAttivo(me.data)
+    } catch (meErr) {
+      console.warn('Errore refresh profilo dopo cambio password:', meErr)
+    }
     setTimeout(() => {
-      showPasswordModal.value = false
+      if (!passwordObbligatorio.value) showPasswordModal.value = false
       passwordSuccess.value = ''
     }, 2000)
   } catch (e) {
@@ -725,6 +759,17 @@ async function handleDeepUrl(urlStr) {
 }
 
 onMounted(async () => {
+  // Il client segnala questo evento quando il backend risponde 403 PASSWORD_DA_CAMBIARE: si
+  // rilegge il profilo, il flag si aggiorna e il watcher qui sopra apre il modal. Serve perche'
+  // chi aveva la sessione gia' aperta prima del reset ha un profilo in memoria senza il flag.
+  window.addEventListener('thof:password-da-cambiare', async () => {
+    try {
+      const me = await getMe()
+      setUtenteAttivo(me.data)
+    } catch (e) {
+      showPasswordModal.value = true
+    }
+  })
   if (Capacitor.isNativePlatform()) {
     CapApp.addListener('appUrlOpen', (event) => {
       if (event?.url) handleDeepUrl(event.url)
@@ -734,7 +779,8 @@ onMounted(async () => {
     }).catch(() => {})
     CapApp.addListener('backButton', () => {
       if (showPasswordModal.value) {
-        showPasswordModal.value = false
+        // il tasto indietro non deve poter chiudere il cambio imposto
+        if (!passwordObbligatorio.value) showPasswordModal.value = false
         return
       }
       if (mobileMenuOpen.value) {

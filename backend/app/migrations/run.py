@@ -1046,6 +1046,30 @@ def run_migrations():
                 print(f"Migration warning (google_sub normalize): {e}")
                 conn.rollback()
 
+            # Password temporanee: chi riceve un reset deve cambiarla prima di usare l'app
+            try:
+                conn.execute(text(
+                    "ALTER TABLE utenti ADD COLUMN IF NOT EXISTS deve_cambiare_password "
+                    "BOOLEAN NOT NULL DEFAULT FALSE"
+                ))
+                conn.commit()
+                print("Migration: Added deve_cambiare_password column to utenti")
+            except Exception as e:
+                print(f"Migration warning (deve_cambiare_password): {e}")
+                conn.rollback()
+
+            # Gli account senza password_hash non hanno mai avuto una via locale: se qualcuno
+            # ne avesse una con il flag gia' attivo la si toglie, perche' il flag senza
+            # password non vuol dire niente e lasciarlo vero bloccherebbe l'accesso Google.
+            try:
+                conn.execute(text(
+                    "UPDATE utenti SET deve_cambiare_password = FALSE WHERE password_hash IS NULL"
+                ))
+                conn.commit()
+            except Exception as e:
+                print(f"Migration warning (deve_cambiare_password normalize): {e}")
+                conn.rollback()
+
             # Consolidate portiere attendance into the active Portieri category
             try:
                 rows = conn.execute(text("""

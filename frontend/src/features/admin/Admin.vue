@@ -172,12 +172,22 @@
             <span><strong>Nato:</strong> {{ formatData(u.data_nascita) }}</span>
           </div>
           <div class="user-actions">
-            <button class="btn-reset" @click="resetsPassword(u.id)" title="Reset Password">
+            <!-- Account Google-only: non c'e' nessuna password da reimpostare, e un admin non puo'
+                 crearla (solo il super_admin puo' attribuire una via locale volontariamente) -->
+            <span v-if="!u.accesso_locale" class="badge-google" title="Accede solo con Google: nessun accesso locale">Google</span>
+            <button v-if="u.accesso_locale || isSuperAdmin" class="btn-reset" @click="resetsPassword(u)"
+                    :title="u.accesso_locale ? 'Genera una password temporanea, da cambiare al primo accesso' : 'Attribuisce una password locale a un account Google (solo super admin)'">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
               </svg>
               Reset
             </button>
+            <span v-if="resetEsito && resetEsito.id === u.id" class="reset-esito">
+              Password temporanea <code>{{ resetEsito.password }}</code>
+              <button class="btn-copy" @click="copiaPasswordReset">Copia</button>
+              <small>Comunicala all'utente: al primo accesso sara' obbligato a cambiarla.</small>
+            </span>
+            <span v-if="resetErrore && resetErrore.id === u.id" class="reset-esito error">{{ resetErrore.testo }}</span>
             <button class="btn-delete" @click="eliminaUtente(u.id)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6"/>
@@ -460,11 +470,31 @@ async function eliminaUtente(id) {
   await load()
 }
 
-async function resetsPassword(id) {
-  if (!confirm('Resettare la password?')) return
-  await resetPassword(id)
-  alert('Password resettata!')
-  await load()
+const resetEsito = ref(null)
+const resetErrore = ref(null)
+
+async function resetsPassword(u) {
+  resetEsito.value = null
+  resetErrore.value = null
+  const avviso = u.accesso_locale
+    ? `Generare una password temporanea per ${u.username}? Verra' mostrata una volta sola e l'utente sara' obbligato a cambiarla al primo accesso.`
+    : `${u.username} oggi accede solo con Google. Assegnandogli una password locale si apre anche l'accesso con username e password. Continuare?`
+  if (!confirm(avviso)) return
+  // Prima non c'era try/catch: se il backend rispondeva 403 l'admin vedeva comunque il vecchio
+  // alert "Password resettata!" e credeva che avesse funzionato
+  try {
+    const res = await resetPassword(u.id)
+    resetEsito.value = { id: u.id, username: u.username, password: res.data.password_temporanea }
+    await load()
+  } catch (e) {
+    const d = e.response?.data?.detail
+    resetErrore.value = { id: u.id, testo: typeof d === 'string' ? d : 'Errore nel reset della password' }
+  }
+}
+
+function copiaPasswordReset() {
+  if (!resetEsito.value?.password) return
+  navigator.clipboard?.writeText(resetEsito.value.password).catch(() => {})
 }
 
 onMounted(() => {
@@ -973,6 +1003,68 @@ onMounted(() => {
 .btn-reset svg {
   width: 16px;
   height: 16px;
+}
+
+/* Badge per gli account che entrano solo con Google: spiega perche' il pulsante Reset manca */
+.badge-google {
+  align-self: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-md);
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* La password temporanea esiste una volta sola: va mostrata bene, non in un alert che la
+   perde al click e non si puo' selezionare su Android */
+.reset-esito {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--radius-md);
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  color: #eab308;
+  font-size: 0.75rem;
+}
+
+.reset-esito code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fde68a;
+  user-select: all;
+}
+
+.reset-esito small {
+  flex-basis: 100%;
+  color: #a3a3a3;
+  font-size: 0.6875rem;
+}
+
+.reset-esito.error {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
+.btn-copy {
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: inherit;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .categorie-assegna {

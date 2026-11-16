@@ -51,6 +51,16 @@ api.interceptors.response.use(
         window.location.href = '/login'
       }
     }
+    // Il backend blocca ogni rotta con 403 finche' la password temporanea non e' sostituita.
+    // Due motivi per gestirlo qui e non pagina per pagina: le schermate che mostrano
+    // e.response.data.detail stamperebbero "[object Object]", e il modal dovrebbe aprirsi solo
+    // se il flag era gia' nel profilo caricato, cosa che non succede a chi aveva la sessione
+    // aperta prima del reset.
+    const dettaglio = error.response?.status === 403 ? error.response.data?.detail : null
+    if (dettaglio && dettaglio.code === 'PASSWORD_DA_CAMBIARE') {
+      error.response.data.detail = dettaglio.message || 'Devi cambiare la password prima di continuare.'
+      window.dispatchEvent(new CustomEvent('thof:password-da-cambiare'))
+    }
     return Promise.reject(error)
   }
 )

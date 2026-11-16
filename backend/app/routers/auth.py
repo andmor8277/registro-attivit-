@@ -15,7 +15,6 @@ from ..rate_limit import limiter
 from ..core import login_guard
 from ..core.security import (
     SECRET_KEY,
-    DEFAULT_PASSWORD,
     ALGORITHM,
     ACCESS_TOKEN_EXPIRE_MINUTES,
     pwd_context,
@@ -23,6 +22,7 @@ from ..core.security import (
     verify_password,
     hash_password,
     validate_password,
+    genera_password_temporanea,
     create_token,
     get_current_user,
     get_admin,
@@ -92,7 +92,10 @@ def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: Ses
 
     login_guard.login_avvenuto(db, form.username)
     token = create_token({"sub": user.username, "is_admin": user.is_admin, "societa_id": user.societa_id, "is_super_admin": user.is_super_admin})
-    return {"access_token": token, "token_type": "bearer"}
+    # Il frontend usa questo flag per aprire subito la finestra di cambio password: da solo non
+    # e' sufficiente, l'applicazione vera del vincolo sta in get_current_user
+    return {"access_token": token, "token_type": "bearer",
+            "deve_cambiare_password": bool(getattr(user, "deve_cambiare_password", False))}
 
 @router.get("/me")
 def me(current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -117,7 +120,10 @@ def me(current_user: Utente = Depends(get_current_user), db: Session = Depends(g
         "data_nascita": current_user.data_nascita,
         "cellulare": current_user.cellulare,
         "tesserino": current_user.tesserino,
-        "ruolo": current_user.ruolo
+        "ruolo": current_user.ruolo,
+        # Serve anche qui, non solo nella risposta del login: dopo un refresh della pagina il
+        # frontend riparte da /me e l'obbligo di cambio password non deve perdersi
+        "deve_cambiare_password": bool(getattr(current_user, "deve_cambiare_password", False))
     }
 
 @router.post("/utenti")
@@ -141,6 +147,11 @@ def crea_utente(data: UtenteCreate, current_user: Utente = Depends(get_admin), d
     utente = Utente(
         username=data.username,
         password_hash=hash_password(data.password),
+        # La password la sta scegliendo l'admin, quindi l'utente non e' l'unico a conoscerla:
+        # senza questo flag l'admin potrebbe entrare con l'account appena creato. Resta una
+        # finestra finche' l'utente non la cambia (chiuderla del tutto vorrebbe dire inviarglia
+        # via mail invece di mostrarla all'admin).
+        deve_cambiare_password=True,
         is_admin=is_admin,
         is_super_admin=is_super,
         societa_id=data.societa_id,
@@ -233,7 +244,11 @@ def lista_utenti(
             "data_nascita": u.data_nascita,
             "cellulare": u.cellulare,
             "tesserino": u.tesserino,
-            "ruolo": u.ruolo
+            "ruolo": u.ruolo,
+            # Non si espone password_hash, ma serve dirlo alla UI: un account Google-only non ha
+            # un pulsante di reset da mostrare, e l'admin deve capire perche'
+            "accesso_locale": u.password_hash is not None,
+            "deve_cambiare_password": bool(getattr(u, "deve_cambiare_password", False))
         })
     return result
 
@@ -293,24 +308,42 @@ def reset_password(request: Request, uid: int, current_user: Utente = Depends(ge
     # Non super_admin non può resettare super_admin
     if utente.is_super_admin and not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="Non autorizzato a resettare super admin")
-    utente.password_hash = hash_password(DEFAULT_PASSWORD)
+    # Un account senza password_hash entra solo con Google: non ha niente da "reimpostare".
+    # Lasciarlo fare significava creare di nascosto una via locale con una password nota a
+    # tutti gli admin (verificato in esecuzione: reset + login locale = anagrafiche lette).
+    # Solo il super_admin puo' attribuire volontariamente una password locale a questi account.
+    if not utente.password_hash and not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail=(
+            "L'utente accede con Google e non ha una password locale da resettare. "
+            "Solo un super admin puo' attribuirgliela."))
+    # Prima era hash_password(DEFAULT_PASSWORD), unica e condivisa: chiunque la conoscesse
+    # poteva entrare in qualunque account appena resettato. Qui il valore e' proprio, monouso
+    # e non viene salvato da nessuna parte: esce una volta sola da questa risposta.
+    password_temporanea = genera_password_temporanea()
+    utente.password_hash = hash_password(password_temporanea)
+    utente.deve_cambiare_password = True
     db.commit()
-    return {"ok": True, "message": "Password reimpostata"}
+    return {"ok": True, "password_temporanea": password_temporanea,
+            "message": "Password reimpostata: comunicala all'utente, dovra' cambiarla al primo accesso"}
 
 @router.put("/utenti/{uid}/password")
 def cambia_password(uid: int, data: PasswordChange, current_user: Utente = Depends(get_current_user), db: Session = Depends(get_db)):
     validate_password(data.nuova)
-    if not current_user.is_admin and current_user.id != uid:
-        raise HTTPException(status_code=403, detail="Non autorizzato")
-    utente = db.query(Utente).filter(Utente.id == uid).first()
-    if not utente:
-        raise HTTPException(status_code=404, detail="Utente non trovato")
-    if not current_user.is_admin:
-        if not data.vecchia or not verify_password(data.vecchia, utente.password_hash):
-            raise HTTPException(status_code=400, detail="Password attuale errata")
-    elif not current_user.is_super_admin and utente.societa_id != current_user.societa_id:
-        raise HTTPException(status_code=403, detail="Non autorizzato a operare su utenti di altre società")
-    utente.password_hash = hash_password(data.nuova)
+    # Prima il controllo era `if not current_user.is_admin and current_user.id != uid`, e nel
+    # ramo admin la password vecchia non veniva mai chiesta: un admin qualsiasi poteva
+    # impostarne una a sua scelta su un utente della propria societa' ed entrare con quel nome
+    # utente (verificato in esecuzione, anagrafiche lette col token ottenuto cosi').
+    # Cambiare la password e' un atto del titolare. Per dare accesso a qualcuno c'e' il reset,
+    # che genera una password monouso con cambio obbligatorio al primo accesso.
+    if current_user.id != uid:
+        raise HTTPException(status_code=403, detail="Puoi cambiare solo la tua password")
+    if not current_user.password_hash:
+        raise HTTPException(status_code=400, detail="L'account non ha una password locale: accedi con Google")
+    if not data.vecchia or not verify_password(data.vecchia, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Password attuale errata")
+    current_user.password_hash = hash_password(data.nuova)
+    # chi ha scelto la propria password non deve piu' cambiarla in forza
+    current_user.deve_cambiare_password = False
     db.commit()
     return {"ok": True}
 @router.post("/verify-gdpr")
@@ -429,7 +462,11 @@ async def google_callback(
 
     google_email = google_user.get("email", "").lower()
     google_name = google_user.get("name", "")
-    google_sub = google_user.get("sub", "")
+    # L'endpoint userinfo (vedi services/oauth_google.py) restituisce l'identificativo stabile
+    # nel campo "id", non "sub": "sub" e' il nome usato nell'id_token, che qui non viene mai
+    # letto. Leggere solo "sub" lo lasciava sempre vuoto, quindi il match "per google_sub" piu'
+    # sotto non e' mai stato eseguito e il riconoscimento dipendeva solo dal confronto email.
+    google_sub = google_user.get("id") or google_user.get("sub") or ""
     email_verified = google_user.get("verified_email", False)
 
     if not google_email:

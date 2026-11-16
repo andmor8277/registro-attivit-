@@ -9,6 +9,10 @@ class Utente(Base):
     username = Column(String(100), unique=True, nullable=False)
     password_hash = Column(String(200), nullable=True)
     google_sub = Column(String(255), nullable=True)
+    # Verita' su chi puo' entrare con username+password: NULL in password_hash significa
+    # "account Google, nessuna password locale", questo flag significa "ha una password ma
+    # e' temporanea e va sostituita prima di poter usare l'app"
+    deve_cambiare_password = Column(Boolean, nullable=False, default=False, server_default=text("FALSE"))
     is_admin = Column(Integer, default=0)
     is_super_admin = Column(Integer, default=0)
     nome = Column(String(100), nullable=False)
