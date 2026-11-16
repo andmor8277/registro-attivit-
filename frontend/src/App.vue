@@ -394,7 +394,13 @@
     </div>
 
     <main class="main-content">
-      <router-view />
+      <!-- :key forza il rimontaggio al cambio rotta. Senza, Vue riusa lo stesso componente quando
+           cambia solo il parametro (da /registro/5 a /registro/7): lo stato della categoria
+           precedente resta in memoria e le scritture di presenze possono finire sulla squadra
+           sbagliata. Si usa path e non fullPath perche' alcuni form riscrivono la propria query
+           stringa con router.replace, e un rimontaggio in quel momento cancellerebbe la conferma
+           "salvato" appena mostrata. -->
+      <router-view :key="$route.path" />
     </main>
     </div>
 

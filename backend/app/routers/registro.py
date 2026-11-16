@@ -85,10 +85,37 @@ def get_mese(categoria_id: int, anno: int, mese: int, db: Session = Depends(get_
 def upsert_registro(entry: schemas.RegistroEntry, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     societa_id = get_societa_filter(current_user) or current_user.societa_id
 
+    # La persona deve appartenere alla societa' dell'utente. persona_id arriva dalla richiesta e
+    # fin qui non veniva mai controllato: si potevano scrivere presenze per tesserati di un'altra
+    # societa'. Il super_admin va escluso esplicitamente perche' qui sopra si usa il
+    # get_societa_filter LOCALE di questo modulo, che per lui torna None e lascia quindi
+    # societa_id = societa_id propria: senza l'esclusione gli si bloccherebbe l'accesso alle
+    # altre societa', che e' invece previsto.
+    p_row = db.execute(text("SELECT societa_id FROM persone WHERE id = :pid"), {"pid": entry.persona_id}).first()
+    if not p_row:
+        raise HTTPException(status_code=404, detail="Persona non trovata")
+    if not current_user.is_super_admin and p_row.societa_id != societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato su questa persona")
+
     # Se la categoria corrente NON è Portieri ma la persona è un portiere, reindirizza alla categoria Portieri
     target_categoria_id = entry.categoria_id
     if target_categoria_id:
         cat_row = db.execute(text("SELECT is_portieri, societa_id FROM categorie WHERE id = :id"), {"id": target_categoria_id}).first()
+        if not cat_row:
+            raise HTTPException(status_code=404, detail="Categoria non trovata")
+        # Anche la categoria deve essere della societa' dell'utente: senza questo filtro, la
+        # DELETE qui sotto (che usa categoria_id controllato dal client) poteva cancellare la
+        # riga di presenza reale di un'altra societa'.
+        if not current_user.is_super_admin and cat_row.societa_id != societa_id:
+            raise HTTPException(status_code=403, detail="Non autorizzato su questa categoria")
+        # NOTA (scelta del titolare, 2026-11-16): qui NON si applica il controllo di
+        # assegnazione categorie (utente_categorie) che invece allenamenti.py fa. Il perche':
+        # la lista che il mister clicca in Scelta.vue arriva da GET /categorie/by-stagione,
+        # che filtra solo per societa' e non per assegnazione, quindi oggi i mister vedono e
+        # usano legittimamente tutte le categorie della propria societa' pur avendo in media
+        # una sola riga in utente_categorie. Aggiungerlo qui li bloccherebbe fuori dal registro.
+        # Se in futuro si vuole stringere, prima vanno completate le assegnazioni in Admin e
+        # allineato anche by-stagione, poi si riattiva questo controllo.
         if cat_row:
             if not societa_id:
                 societa_id = cat_row.societa_id
@@ -118,9 +145,17 @@ def upsert_registro(entry: schemas.RegistroEntry, db: Session = Depends(get_db),
     db.execute(stmt)
     db.commit()
     if target_categoria_id is not None and target_categoria_id != entry.categoria_id:
+        # categoria_id arriva dal client: senza il filtro di societa' questa DELETE poteva
+        # colpire la riga di presenza reale di un'altra societa' (persona_id, data e
+        # categoria_id sono tutti enumerabili). Il super_admin resta escluso, come sopra.
+        extra = ""
+        params = {"pid": entry.persona_id, "data": entry.data, "cid": entry.categoria_id}
+        if not current_user.is_super_admin:
+            extra = " AND societa_id = :sid"
+            params["sid"] = societa_id
         db.execute(
-            text("DELETE FROM registro WHERE persona_id = :pid AND data = :data AND categoria_id = :cid"),
-            {"pid": entry.persona_id, "data": entry.data, "cid": entry.categoria_id}
+            text(f"DELETE FROM registro WHERE persona_id = :pid AND data = :data AND categoria_id = :cid{extra}"),
+            params
         )
         db.commit()
     r = db.query(models.Registro).filter(
