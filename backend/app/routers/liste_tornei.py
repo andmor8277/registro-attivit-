@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
 from typing import Optional, List
-from app.models import Utente, ListaTorneo, ListaTorneoGiocatore
+from app.models import Utente, UtenteCategoria, ListaTorneo, ListaTorneoGiocatore
 from app.database import get_db
 from app.routers.auth import get_current_user
 from app.core.encryption import safe_decrypt
@@ -60,6 +60,23 @@ def get_giocatori_lista(lista_id: int, db: Session = Depends(get_db), current_us
     societa_id = get_societa_filter(current_user)
     if societa_id and lista.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
+
+    # Chi puo' vedere CF, telefoni, email, data di nascita e scadenza certificato: la stessa
+    # policy gia' usata da GET /persone e da POST /auth/verify-gdpr (admin, segreteria,
+    # infermeria; il mister solo se assegnato alla categoria della lista).
+    # Perche': in ListeTornei.vue queste colonne sono dietro un lucchetto che chiede il codice
+    # fiscale dell'operatore, ma la risposta conteneva comunque i valori gia' decifrati. Il
+    # lucchetto era solo visivo: bastavano gli strumenti del browser per leggere i dati
+    # anagrafici dei minori senza inserire nulla, e lista_id e' sequenziale.
+    is_admin = current_user.is_admin or current_user.is_super_admin or current_user.ruolo == 'segreteria'
+    puo_vedere_sensibili = is_admin or current_user.ruolo == 'infermeria'
+    if not puo_vedere_sensibili and current_user.ruolo == 'mister':
+        assegnato = db.query(UtenteCategoria).filter(
+            UtenteCategoria.utente_id == current_user.id,
+            UtenteCategoria.categoria_id == lista.categoria_id
+        ).first()
+        puo_vedere_sensibili = bool(assegnato)
+
     result = db.execute(text("""
         SELECT p.id as persona_id, p.nome, p.cognome, p.data_nascita, p.sesso,
                p.comune_nato, p.residenza, p.indirizzo, p.codice_fiscale,
@@ -76,18 +93,18 @@ def get_giocatori_lista(lista_id: int, db: Session = Depends(get_db), current_us
     return [{
         "id": r.id, "persona_id": r.persona_id,
         "nome": r.nome, "cognome": r.cognome,
-        "data_nascita": str(r.data_nascita) if r.data_nascita else None,
+        "data_nascita": str(r.data_nascita) if (r.data_nascita and puo_vedere_sensibili) else None,
         "sesso": r.sesso,
         "comune_nato": r.comune_nato,
         "residenza": r.residenza,
         "indirizzo": r.indirizzo,
-        "codice_fiscale": safe_decrypt(db, r.codice_fiscale),
+        "codice_fiscale": safe_decrypt(db, r.codice_fiscale) if puo_vedere_sensibili else None,
         "matricola": r.matricola,
         "numero_maglia": r.numero_maglia,
-        "scadenza_certificato": str(r.scadenza_certificato) if r.scadenza_certificato else None,
-        "tel_papa": safe_decrypt(db, r.tel_papa),
-        "tel_mamma": safe_decrypt(db, r.tel_mamma),
-        "email1": r.email1,
+        "scadenza_certificato": str(r.scadenza_certificato) if (r.scadenza_certificato and puo_vedere_sensibili) else None,
+        "tel_papa": safe_decrypt(db, r.tel_papa) if puo_vedere_sensibili else None,
+        "tel_mamma": safe_decrypt(db, r.tel_mamma) if puo_vedere_sensibili else None,
+        "email1": r.email1 if puo_vedere_sensibili else None,
         "gruppo_nome": r.gruppo_nome,
         "gruppo_is_misto": r.gruppo_is_misto,
         "ordine": r.ordine

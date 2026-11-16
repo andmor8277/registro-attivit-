@@ -69,6 +69,13 @@ def lista_infortuni(
     """
 
     rows = db.execute(text(query), params).fetchall()
+
+    # Le note dell'infortunio sono descrizioni cliniche in testo libero: le vede solo chi se ne
+    # occupa (infermeria, e chi amministra). Nessun'altra pagina della UI le usa: Scelta.vue
+    # mostra il tipo, Registro.vue solo le date, Home.vue il conteggio.
+    is_admin = current_user.is_admin or current_user.is_super_admin or current_user.ruolo == 'segreteria'
+    puo_vedere_note = is_admin or current_user.ruolo == 'infermeria'
+
     result = []
     for r in rows:
         d = dict(r._mapping)
@@ -78,6 +85,8 @@ def lista_infortuni(
             d['data_fine'] = d['data_fine'].isoformat()
         if isinstance(d.get('creato_il'), (date,)):
             d['creato_il'] = d['creato_il'].isoformat()
+        if not puo_vedere_note:
+            d['note'] = None
         d['attivo'] = d['data_fine'] is None or d['data_fine'] >= date.today().isoformat()
         result.append(d)
     return result
