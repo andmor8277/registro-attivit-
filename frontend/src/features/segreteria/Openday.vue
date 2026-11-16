@@ -408,10 +408,12 @@ async function elimina(entry) {
   if (!confirm(`Eliminare ${entry.cognome} ${entry.nome}?`)) return
   try {
     await eliminaOpenday(entry.id)
-    await carica()
   } catch (e) {
     console.error('Errore eliminazione:', e)
+    alert(e.response?.data?.detail || 'Errore durante l\'eliminazione')
+    return
   }
+  await carica()
 }
 
 async function toggleIscritto(entry) {

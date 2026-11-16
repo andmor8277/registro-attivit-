@@ -290,6 +290,18 @@
             </div>
             <div class="form-row">
               <div class="form-group">
+                <label>Ora Presentazione</label>
+                <input
+                  type="time"
+                  v-model="modal.ora_presentazione"
+                  @input="presentazioneModificata = true"
+                  title="Precompilata automaticamente: 45 minuti prima in casa, 60 in trasferta. Modificabile liberamente."
+                />
+                <p class="field-hint">{{ hintPresentazione }}</p>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
                 <label>Avversario</label>
                 <input type="text" v-model="modal.avversario" placeholder="Nome squadra" />
               </div>
@@ -526,6 +538,35 @@ function getMisterPerCategoria(catId) {
   return misterPerCategoria.value[catId] || []
 }
 
+// Presentazione precompilata dall'orario gara: 45' prima in casa, 60' in trasferta.
+// Resta un campo libero del form: la ricalcoliamo solo finche' non viene toccata a mano,
+// perche' altrimenti cambiare l'orario gara schiaccerebbe la scelta fatta dal Responsabile.
+const MINUTI_PRESENTAZIONE = { casa: 45, fuori: 60 }
+const presentazioneModificata = ref(false)
+
+function calcolaPresentazione(ora, casaFuori) {
+  const m = String(ora || '').match(/^(\d{1,2}):(\d{2})/)
+  if (!m) return ''
+  const h = parseInt(m[1], 10)
+  const mi = parseInt(m[2], 10)
+  if (h > 23 || mi > 59) return ''
+  const taglio = MINUTI_PRESENTAZIONE[casaFuori === 'fuori' ? 'fuori' : 'casa']
+  let totale = h * 60 + mi - taglio
+  if (totale < 0) totale = 0
+  return String(Math.floor(totale / 60)).padStart(2, '0') + ':' + String(totale % 60).padStart(2, '0')
+}
+
+const hintPresentazione = computed(() => {
+  if (!modal.value.ora) return "Inserisci l'orario gara: la presentazione viene calcolata da quello"
+  const taglio = modal.value.casa_fuori === 'fuori' ? MINUTI_PRESENTAZIONE.fuori : MINUTI_PRESENTAZIONE.casa
+  return `Predefinita ${taglio} minuti prima dell'inizio, comunque modificabile`
+})
+
+watch(() => [modal.value.ora, modal.value.casa_fuori], ([ora, casaFuori]) => {
+  if (presentazioneModificata.value) return
+  modal.value.ora_presentazione = calcolaPresentazione(ora, casaFuori)
+})
+
 function apriModal(partita, defaultCatId, defaultWeekendId) {
   if (partita) {
     let initialMisterSel = ""
@@ -535,12 +576,17 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
       initialMisterSel = String(partita.mister_id)
     }
     misterSelection.value = initialMisterSel
+    // Se la partita ha gia' una presentazione e' una scelta fatta: non va ricalcolata.
+    presentazioneModificata.value = !!(partita.ora_presentazione && String(partita.ora_presentazione).trim())
     modal.value = {
       show: true,
       id: partita.id,
       categoria_id: partita.categoria_id,
       data_partite: partita.data_partite || "",
       ora: partita.ora ? partita.ora.slice(0, 5) : "",
+      // Prima qui il campo mancava del tutto: non finiva nel payload e il PUT della rotta,
+      // che riscrive tutta la riga, lo azzerava a ogni salvataggio.
+      ora_presentazione: partita.ora_presentazione ? String(partita.ora_presentazione).slice(0, 5) : "",
       avversario: partita.avversario || "",
       campo: partita.campo || "",
       indirizzo: partita.indirizzo || "",
@@ -556,6 +602,7 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
     }
   } else {
     misterSelection.value = ""
+    presentazioneModificata.value = false
     const defaultData = weekendSelezionato.value?.data_inizio || ""
     modal.value = {
       show: true,
@@ -563,6 +610,7 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
       categoria_id: defaultCatId || categorieOperative.value[0]?.id || null,
       data_partite: defaultData,
       ora: "",
+      ora_presentazione: "",
       avversario: "",
       campo: "",
       indirizzo: "",
@@ -628,6 +676,9 @@ async function salvaPartita() {
   const payload = {
     ...modal.value,
     ora: modal.value.ora ? modal.value.ora.slice(0, 5) : null,
+    // mandato sempre, anche quando e' vuoto: svuotare il campo deve essere una scelta
+    // espressa del Responsabile, non un effetto collaterale del form
+    ora_presentazione: modal.value.ora_presentazione ? modal.value.ora_presentazione.slice(0, 5) : null,
     societa_id: societaAttiva.value?.id || null
   }
   try {
@@ -650,7 +701,13 @@ async function salvaPartita() {
 
 async function eliminaPartita(id) {
   if (!confirm('Eliminare questa partita?')) return
-  await eliminaPartitaApi(id)
+  try {
+    await eliminaPartitaApi(id)
+  } catch (e) {
+    console.error('Errore eliminazione partita:', e)
+    alert(e.response?.data?.detail || 'Errore durante l\'eliminazione della partita')
+    return
+  }
   if (weekendSelezionato.value) {
     await caricaWeekendPartite(weekendSelezionato.value.id)
   }
@@ -751,7 +808,13 @@ async function salvaWeekend() {
 
 async function eliminaWeekendFn(id) {
   if (!confirm('Eliminare questo weekend?')) return
-  await eliminaWeekendApi(id)
+  try {
+    await eliminaWeekendApi(id)
+  } catch (e) {
+    console.error('Errore eliminazione weekend:', e)
+    alert(e.response?.data?.detail || 'Errore durante l\'eliminazione del weekend')
+    return
+  }
   if (weekendSelezionato.value && weekendSelezionato.value.id === id) {
     weekendSelezionato.value = null
   }
@@ -1581,6 +1644,12 @@ watch(weekendSelezionato, (newVal) => {
   margin-bottom: 0.375rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.field-hint {
+  margin: 0.3rem 0 0;
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
 }
 
 .form-group input,

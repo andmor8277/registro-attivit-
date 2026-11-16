@@ -2442,11 +2442,20 @@ async function salvaModal() {
 
 async function eliminaFn(id, tipo) {
   if (!confirm('Eliminare questo elemento e le sue assegnazioni?')) return
+  try {
+    if (tipo === 'spogliatoi') {
+      await eliminaSpogliatoio(id)
+    } else {
+      await eliminaCampo(id)
+    }
+  } catch (e) {
+    console.error('Errore eliminazione:', e)
+    alert(e.response?.data?.detail || 'Errore durante l\'eliminazione')
+    return
+  }
   if (tipo === 'spogliatoi') {
-    await eliminaSpogliatoio(id)
     await loadSpogliatoi()
   } else {
-    await eliminaCampo(id)
     await loadCampi()
   }
 }

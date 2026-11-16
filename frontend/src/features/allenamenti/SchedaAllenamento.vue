@@ -906,11 +906,13 @@ async function eliminaScheda(id) {
   if (!confirm('Eliminare questa scheda?')) return
   try {
     await eliminaSchedaAllenamento(id)
-    await loadSchede()
-    await loadDashboardData()
   } catch (e) {
     console.error('Errore eliminazione:', e)
+    alert(e.response?.data?.detail || 'Errore durante l\'eliminazione della scheda')
+    return
   }
+  await loadSchede()
+  await loadDashboardData()
 }
 
 watch(dataSelezionata, loadSchede)

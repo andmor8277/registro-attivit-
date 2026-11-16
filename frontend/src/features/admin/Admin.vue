@@ -450,7 +450,13 @@ async function load() {
 
 async function eliminaUtente(id) {
   if (!confirm('Eliminare utente?')) return
-  await deleteUtente(id)
+  try {
+    await deleteUtente(id)
+  } catch (e) {
+    console.error('Errore eliminazione utente:', e)
+    alert(e.response?.data?.detail || "Errore durante l'eliminazione dell'utente")
+    return
+  }
   await load()
 }
 

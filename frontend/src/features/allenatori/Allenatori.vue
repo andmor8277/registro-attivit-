@@ -710,7 +710,13 @@ async function importaGiocatori() {
 
 async function eliminaCategoria(id) {
   if (!confirm("Eliminare questa categoria e tutte le presenze?")) return
-  await deleteCategoria(id)
+  try {
+    await deleteCategoria(id)
+  } catch (e) {
+    console.error('Errore eliminazione categoria:', e)
+    alert(e.response?.data?.detail || 'Errore durante l\'eliminazione della categoria')
+    return
+  }
   await loadCategorie()
 }
 

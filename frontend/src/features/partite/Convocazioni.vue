@@ -2113,7 +2113,13 @@ async function esportaPDF() {
 async function elimina() {
   if (!convocazioneId.value) return
   if (!confirm('Eliminare questa convocazione?')) return
-  await deleteConvocazione(convocazioneId.value)
+  try {
+    await deleteConvocazione(convocazioneId.value)
+  } catch (e) {
+    console.error('Errore eliminazione convocazione:', e)
+    alert(e.response?.data?.detail || 'Errore durante l\'eliminazione della convocazione')
+    return
+  }
   convocazione.value = null
   convocazioneId.value = null
   await loadStorico()

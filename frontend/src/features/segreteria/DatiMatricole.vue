@@ -598,7 +598,13 @@ async function salvaModificaGruppo() {
 
 async function eliminaGruppo(g) {
   if (!confirm('Eliminare il gruppo "' + g.nome + '"?')) return
-  await deleteGruppo(g.id)
+  try {
+    await deleteGruppo(g.id)
+  } catch (e) {
+    console.error('Errore eliminazione gruppo:', e)
+    alert(e.response?.data?.detail || 'Errore durante l\'eliminazione del gruppo')
+    return
+  }
   await loadGruppi()
 }
 

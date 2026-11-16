@@ -170,9 +170,16 @@ def update_persona(persona_id: int, p: schemas.PersonaCreate, db: Session = Depe
     societa_id = get_societa_filter(current_user)
     if societa_id and persona.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
-    data = p.dict(exclude_none=True)
-    if "cognome" in data: data["cognome"] = format_cognome(data["cognome"])
-    if "nome" in data: data["nome"] = format_nome(data["nome"])
+    # Solo i campi davvero presenti nel payload, None compreso. Prima si usava
+    # p.dict(exclude_none=True), che rendeva impossibile svuotare un campo: la segreteria
+    # cancellava un telefono o un codice fiscale sbagliato nel form, salvava, e il valore
+    # restava li'. Non si puo' semplicemente togliere exclude_none perche' questa rotta e'
+    # chiamata anche con payload parziali ({rata1: null}, {pagamenti_in_regola: value}) e
+    # cosi' si azzererebbero nome, codice fiscale e telefoni a ogni modifica di una rata.
+    presenti = p.model_fields_set
+    data = {k: v for k, v in p.dict().items() if k in presenti}
+    if data.get("cognome"): data["cognome"] = format_cognome(data["cognome"])
+    if data.get("nome"): data["nome"] = format_nome(data["nome"])
 
     if data.get("codice_fiscale"):
         data["codice_fiscale"] = safe_encrypt(db, data["codice_fiscale"])

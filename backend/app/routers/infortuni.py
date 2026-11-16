@@ -136,7 +136,9 @@ def aggiorna_infortunio(
     societa_id = get_societa_filter(current_user)
     if societa_id:
         check = db.execute(text("SELECT societa_id FROM infortuni WHERE id = :id"), {"id": infortunio_id}).first()
-        if not check or check.societa_id != societa_id:
+        if not check:
+            raise HTTPException(status_code=404, detail="Infortunio non trovato")
+        if check.societa_id != societa_id:
             raise HTTPException(status_code=403, detail="Non autorizzato")
 
     existing = db.execute(text("SELECT * FROM infortuni WHERE id = :id"), {"id": infortunio_id}).first()
@@ -146,30 +148,42 @@ def aggiorna_infortunio(
     updates = []
     params = {"id": infortunio_id}
 
-    if data.data_inizio is not None:
-        updates.append("data_inizio = :di")
-        params["di"] = date.fromisoformat(data.data_inizio)
+    # Si usa model_fields_set e non "if x is not None": con il secondo, un campo mandato vuoto
+    # non veniva applicato e l'infermiere non riusciva piu' a svuotare giorni_assenza ne' a
+    # cancellare le note. Si applica cio' che il client ha davvero mandato, vuoto compreso.
+    campi = data.model_fields_set
 
-    if data.giorni_assenza is not None:
+    def _a_data(valore):
+        return date.fromisoformat(valore) if valore else None
+
+    if "data_inizio" in campi:
+        updates.append("data_inizio = :di")
+        params["di"] = _a_data(data.data_inizio)
+
+    if "giorni_assenza" in campi:
         updates.append("giorni_assenza = :ga")
         params["ga"] = data.giorni_assenza
 
-        new_di = date.fromisoformat(data.data_inizio) if data.data_inizio else existing.data_inizio
-        new_df = (new_di + timedelta(days=data.giorni_assenza)).isoformat() if data.giorni_assenza > 0 else None
-        updates.append("data_fine = :df")
-        params["df"] = new_df
-
-    if data.data_fine is not None and data.giorni_assenza is None:
-        updates.append("data_fine = :df")
-        params["df"] = date.fromisoformat(data.data_fine) if data.data_fine else None
-
-    if data.tipo_infortunio is not None:
+    if "tipo_infortunio" in campi:
         updates.append("tipo_infortunio = :ti")
         params["ti"] = data.tipo_infortunio
 
-    if data.note is not None:
+    if "note" in campi:
         updates.append("note = :n")
         params["n"] = data.note
+
+    # data_fine deve restare coerente con data_inizio + giorni_assenza. Prima veniva ricalcolata
+    # solo quando arrivava giorni_assenza, e una data_fine esplicita era accettata solo in assenza
+    # di giorni: cambiando da sola la data di inizio, la data fine restava quella vecchia e la
+    # scheda mostrava un periodo che non tornava.
+    if "data_fine" in campi and "giorni_assenza" not in campi:
+        updates.append("data_fine = :df")
+        params["df"] = _a_data(data.data_fine)
+    elif "data_inizio" in campi or "giorni_assenza" in campi:
+        inizio = _a_data(data.data_inizio) if "data_inizio" in campi else existing.data_inizio
+        giorni = data.giorni_assenza if "giorni_assenza" in campi else existing.giorni_assenza
+        updates.append("data_fine = :df")
+        params["df"] = (inizio + timedelta(days=giorni)).isoformat() if (inizio and giorni and giorni > 0) else None
 
     if not updates:
         return {"ok": True}
@@ -196,7 +210,9 @@ def elimina_infortunio(
     societa_id = get_societa_filter(current_user)
     if societa_id:
         check = db.execute(text("SELECT societa_id FROM infortuni WHERE id = :id"), {"id": infortunio_id}).first()
-        if not check or check.societa_id != societa_id:
+        if not check:
+            raise HTTPException(status_code=404, detail="Infortunio non trovato")
+        if check.societa_id != societa_id:
             raise HTTPException(status_code=403, detail="Non autorizzato")
 
     db.execute(text("DELETE FROM infortuni WHERE id = :id"), {"id": infortunio_id})
@@ -212,7 +228,9 @@ def chiudi_infortunio(
     societa_id = get_societa_filter(current_user)
     if societa_id:
         check = db.execute(text("SELECT societa_id FROM infortuni WHERE id = :id"), {"id": infortunio_id}).first()
-        if not check or check.societa_id != societa_id:
+        if not check:
+            raise HTTPException(status_code=404, detail="Infortunio non trovato")
+        if check.societa_id != societa_id:
             raise HTTPException(status_code=403, detail="Non autorizzato")
 
     res = db.execute(

@@ -199,6 +199,10 @@ async function salvaPresenza(codice) {
     await loadPresenze()
   } catch (e) {
     console.error('Errore salvataggio presenza:', e)
+    // Il modal resta aperto e si avvisa: prima la chiusura stava fuori dal catch, quindi su
+    // errore si chiudeva comunque e la presenza risultava registrata senza esserlo.
+    alert(e.response?.data?.detail || 'Errore durante il salvataggio della presenza')
+    return
   }
   editModal.value.show = false
 }

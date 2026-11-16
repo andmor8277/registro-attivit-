@@ -328,12 +328,16 @@ async function eliminaLista(lista) {
   if (!confirm(`Eliminare la lista "${lista.nome}"?`)) return
   try {
     await eliminaListaTorneo(lista.id)
-    if (selectedListaId.value === lista.id) {
-      selectedListaId.value = null
-      giocatoriLista.value = []
-    }
-    await loadListe()
-  } catch(e) { console.error(e) }
+  } catch (e) {
+    console.error('Errore eliminazione lista:', e)
+    alert(e.response?.data?.detail || 'Errore durante l\'eliminazione della lista')
+    return
+  }
+  if (selectedListaId.value === lista.id) {
+    selectedListaId.value = null
+    giocatoriLista.value = []
+  }
+  await loadListe()
 }
 
 async function aggiungiGiocatore(personaId) {

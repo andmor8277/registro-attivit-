@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy import text
+import re
 from typing import Optional
 from ..database import get_db
 from ..routers.auth import get_current_user, check_societa
@@ -83,6 +84,33 @@ def _clean_int(val):
     except (ValueError, TypeError):
         return None
 
+
+# Anticipo dell'ora di presentazione rispetto all'inizio gara, in minuti.
+# E' una precompilazione: il Responsabile la vede nel form e la puo' sempre cambiare.
+MINUTI_PRESENTAZIONE = {"casa": 45, "fuori": 60}
+
+
+def _default_ora_presentazione(ora, casa_fuori):
+    """Calcola l'ora di presentazione: 45' prima in casa, 60' in trasferta.
+
+    Restituisce None se l'ora gara non e' impostata o non e' leggibile, cosi' il
+    campo resta vuoto invece di riempirsi di un valore inventato.
+    """
+    if not ora:
+        return None
+    m = re.match(r"^\s*(\d{1,2}):(\d{2})", str(ora))
+    if not m:
+        return None
+    h, mi = int(m.group(1)), int(m.group(2))
+    if h > 23 or mi > 59:
+        return None
+    taglio = MINUTI_PRESENTAZIONE["fuori" if str(casa_fuori or "").strip().lower() == "fuori" else "casa"]
+    totale = h * 60 + mi - taglio
+    if totale < 0:
+        # una gara poco dopo mezzanotte non puo' produrre un'ora negativa: si resta a mezzanotte
+        totale = 0
+    return "%02d:%02d" % (totale // 60, totale % 60)
+
 @router.post("/")
 def crea_partita(data: PartitaCreate, request: Request = None, db=Depends(get_db), user=Depends(get_staff_admin)):
     societa_id = resolve_tenant_societa_id(user, data.societa_id, request, categoria_id=data.categoria_id, db=db)
@@ -96,6 +124,10 @@ def crea_partita(data: PartitaCreate, request: Request = None, db=Depends(get_db
 
     ora = _clean_str(data.ora)
     ora_pres = _clean_str(data.ora_presentazione)
+    if ora_pres is None:
+        # In creazione la presentazione viene precompilata dall'orario gara (45' casa, 60'
+        # trasferta). Non e' un vincolo: il Responsabile la modifica dal form quando serve.
+        ora_pres = _default_ora_presentazione(ora, data.casa_fuori)
     avversario = _clean_str(data.avversario)
     campo = _clean_str(data.campo)
     indirizzo = _clean_str(data.indirizzo)
@@ -188,7 +220,12 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
     check_categoria(db, user, data.categoria_id)
 
     ora = _clean_str(data.ora)
-    ora_pres = _clean_str(data.ora_presentazione)
+    # "non mandato" e "mandato vuoto" sono due cose diverse qui: questa rotta riscrive tutta la
+    # riga, quindi un client che non include il campo lo scriverebbe NULL. E' esattamente cosi'
+    # che l'ora di presentazione spariva salvando dalla pagina Programmazione Gare, il cui form
+    # non lo prevede. Si conserva il valore gia' a posto quando il campo non arriva.
+    ora_pres_inviato = "ora_presentazione" in data.model_fields_set
+    ora_pres = _clean_str(data.ora_presentazione) if ora_pres_inviato else None
     avversario = _clean_str(data.avversario)
     campo = _clean_str(data.campo)
     indirizzo = _clean_str(data.indirizzo)
@@ -201,8 +238,15 @@ def aggiorna_partita(partita_id: int, data: PartitaUpdate, db=Depends(get_db), u
     livello = _clean_str(data.livello)
     data_partite = _clean_str(data.data_partite)
 
-    res_soc = db.execute(text("SELECT societa_id FROM partite WHERE id = :id"), {"id": partita_id}).fetchone()
+    res_soc = db.execute(text("SELECT societa_id, ora_presentazione FROM partite WHERE id = :id"), {"id": partita_id}).fetchone()
     soc_id = res_soc[0] if res_soc else user.societa_id
+
+    if not ora_pres_inviato:
+        # Il campo non e' nel payload: si riporta quello gia' salvato (il tipo TIME arriva come
+        # datetime.time, si riduce a HH:MM). Se la riga non ce l'ha proprio, si precompila.
+        ora_pres = str(res_soc[1])[:5] if res_soc and res_soc[1] else None
+        if ora_pres is None:
+            ora_pres = _default_ora_presentazione(ora, casa_fuori)
 
     # Se il campo è specificato ma l'indirizzo è vuoto, recupera l'indirizzo memorizzato
     if campo and not indirizzo:

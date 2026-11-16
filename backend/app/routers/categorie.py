@@ -255,6 +255,28 @@ def get_categoria_utenti(categoria_id: int, db: Session = Depends(get_db), curre
 
 @router.put("/{categoria_id}/utenti")
 def assegna_utenti_categoria(categoria_id: int, data: AssegnaUtenti, db: Session = Depends(get_db), current_user: Utente = Depends(get_admin)):
+    # None solo per il super_admin, che opera legittimamente su tutte le societa'
+    societa_id = get_societa_filter(current_user)
+
+    # La categoria deve essere della societa' dell'admin. Qui sotto si cancellano TUTTE le
+    # assegnazioni esistenti: senza questo controllo un admin della societa' A poteva svuotare
+    # quelle della societa' B, e dato che GET /categorie filtra per assegnazione i mister di B
+    # non avrebbero piu' visto la squadra.
+    cat = db.query(models.Categoria).filter(models.Categoria.id == categoria_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Categoria non trovata")
+    if societa_id and cat.societa_id != societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato su questa categoria")
+
+    # Anche gli utenti da assegnare devono essere della stessa societa': altrimenti si da' a un
+    # tesserato di un'altra societa' l'accesso a una categoria che non gli compete.
+    # Si valida tutto prima di toccare le assegnazioni esistenti.
+    if societa_id and data.utente_ids:
+        for uid in data.utente_ids:
+            u = db.query(Utente).filter(Utente.id == uid).first()
+            if u and u.societa_id != societa_id:
+                raise HTTPException(status_code=403, detail="Non autorizzato su un utente di un'altra societa'")
+
     # Remove ALL existing assignments for this category
     db.query(UtenteCategoria).filter(
         UtenteCategoria.categoria_id == categoria_id
@@ -294,11 +316,19 @@ def importa_giocatori(nuova_categoria_id: int, db: Session = Depends(get_db), cu
     nuova_cat = db.query(models.Categoria).filter(models.Categoria.id == nuova_categoria_id).first()
     if not nuova_cat:
         raise HTTPException(status_code=404, detail="Categoria non trovata")
-    
+
+    # None solo per il super_admin. Sotto si copiano nome, cognome e gruppo dei tesserati:
+    # senza questi due filtri un admin poteva importare nella propria categoria i dati dei
+    # tesserati di un'altra societa' (le "vecchie" categorie non erano filtrate per societa').
+    societa_id = get_societa_filter(current_user)
+    if societa_id and nuova_cat.societa_id != societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato su questa categoria")
+
     if nuova_cat.is_portieri:
         vecchie = db.query(models.Categoria).filter(
             models.Categoria.is_portieri == 1,
             models.Categoria.is_archiviata == 1,
+            models.Categoria.societa_id == nuova_cat.societa_id,
             models.Categoria.id != nuova_categoria_id
         ).all()
     else:
@@ -306,6 +336,7 @@ def importa_giocatori(nuova_categoria_id: int, db: Session = Depends(get_db), cu
             models.Categoria.anno == nuova_cat.anno,
             models.Categoria.is_portieri == 0,
             models.Categoria.is_archiviata == 1,
+            models.Categoria.societa_id == nuova_cat.societa_id,
             models.Categoria.id != nuova_categoria_id
         ).all()
     

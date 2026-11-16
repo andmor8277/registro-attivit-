@@ -271,7 +271,13 @@ async function salva() {
 
 async function elimina(id) {
   if (!confirm('Eliminare questa società? Attenzione: tutti i dati associati verranno eliminati!')) return
-  await deleteSocieta(id)
+  try {
+    await deleteSocieta(id)
+  } catch (e) {
+    console.error('Errore eliminazione società:', e)
+    alert(e.response?.data?.detail || 'Errore durante l\'eliminazione della società')
+    return
+  }
   await load()
 }
 
