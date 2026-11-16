@@ -385,8 +385,15 @@ async function salvaPreiscrizione() {
       nome: preiscrizioneModal.value.nome,
       categoria_id: catId.value
     })
-    const newId = res.data.id
-    preiscrizioneModal.value.link = `${window.location.origin}/form-iscrizione?id=${newId}`
+    const token = res.data.token
+    if (!token) {
+      preiscrizioneModal.value.link = ''
+      alert('La preiscrizione e stata creata ma il link non e disponibile: avvisa la segreteria.')
+      return
+    }
+    // Il link porta il token di possesso: prima conteneva l'ID della persona (?id=123), che
+    // essendo sequenziale permetteva a chiunque di leggere e modificare le anagrafiche.
+    preiscrizioneModal.value.link = `${window.location.origin}/form-iscrizione?t=${token}`
   } catch(e) {
     console.error('Errore preiscrizione:', e)
   }

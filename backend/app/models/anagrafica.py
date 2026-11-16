@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Boolean, Float, Text
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Boolean, Float, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from ..database import Base
 
@@ -58,6 +58,10 @@ class Persona(Base):
     nome_papa = Column(String(100), nullable=True)
     nome_mamma = Column(String(100), nullable=True)
     comune_nato = Column(String(100), nullable=True)
+    # Credenziale del form d'iscrizione pubblico: 32 byte casuali, con scadenza. Sostituisce
+    # l'ID come prova di possesso (vedi routers/persone.py, endpoint /public/by-token/).
+    public_token = Column(String(64), nullable=True)
+    public_token_scadenza = Column(DateTime, nullable=True)
     totale_da_pagare = Column(Float, nullable=True)
     rata_iscrizione = Column(Float, nullable=True)
     rata1 = Column(Float, nullable=True)

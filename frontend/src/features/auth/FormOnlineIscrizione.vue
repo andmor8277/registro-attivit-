@@ -144,7 +144,7 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPublicPersona, updatePublicPersona, createPublicPersona, getPublicCategoria } from '../../api'
+import { getPublicPersonaByToken, updatePublicPersonaByToken, createPublicPersona, getPublicCategoria } from '../../api'
 
 const route = useRoute()
 const router = useRouter()
@@ -181,7 +181,8 @@ const form = reactive({
 const taglie = ['XXXS', 'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL']
 
 onMounted(async () => {
-  const id = route.query.id
+  // Il link del form porta il token di possesso (?t=...), non piu' l'ID della persona.
+  const t = route.query.t
   const catId = route.query.categoria_id
   if (catId) {
     isNew.value = true
@@ -193,14 +194,14 @@ onMounted(async () => {
     loading.value = false
     return
   }
-  if (!id) {
+  if (!t) {
     loading.value = false
-    error.value = 'ID giocatore non trovato.'
+    error.value = 'Link non valido: manca il codice di accesso. Chiedi un nuovo link alla segreteria.'
     return
   }
 
   try {
-    const res = await getPublicPersona(id)
+    const res = await getPublicPersonaByToken(t)
     const data = res.data
     form.cognome = data.cognome || ''
     form.nome = data.nome || ''
@@ -258,12 +259,21 @@ async function salvaDati() {
     const payload = cleanForm()
     if (isNew.value) {
       const res = await createPublicPersona(payload)
-      const newId = res.data.id
-      router.replace({ query: { id: newId, categoria_id: '' } })
+      // La creazione restituisce il token: da qui in poi il form salva con la PUT, che lo richiede.
+      const nuovoToken = res.data.token
+      if (!nuovoToken) {
+        error.value = 'Creazione riuscita ma link non disponibile: avvisa la segreteria.'
+        return
+      }
+      router.replace({ query: { t: nuovoToken, categoria_id: '' } })
       isNew.value = false
     } else {
-      const id = route.query.id
-      await updatePublicPersona(id, payload)
+      const t = route.query.t
+      if (!t) {
+        error.value = 'Link non valido: manca il codice di accesso.'
+        return
+      }
+      await updatePublicPersonaByToken(t, payload)
     }
     saved.value = true
     setTimeout(() => { saved.value = false }, 4000)

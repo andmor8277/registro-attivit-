@@ -1,3 +1,7 @@
+import os
+import secrets
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -262,9 +266,61 @@ def get_public_categoria(categoria_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Categoria non trovata")
     return dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
 
-@router.get("/public/{persona_id}")
-@limiter.limit("5/minute")
-def get_public_persona(request: Request, persona_id: int, db: Session = Depends(get_db)):
+TOKEN_PUBBICO_GIORNI = int(os.environ.get("PUBLIC_LINK_GIORNI", "30"))
+
+
+def _adesso_utc():
+    """Naive UTC: la colonna e' TIMESTAMP senza fuso, confrontare con un valore tz-aware
+    darebbe errori di confronto o confronti silenziosamente sbagliati."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _persona_da_token(db: Session, token: str):
+    """Il token di possesso e' l'unica credenziale del form pubblico: 32 byte casuali, con
+    scadenza, revocabile rigenerandolo. Non basta piu' conoscere l'ID della persona, che e'
+    sequenziale e quindi enumerabile da chiunque.
+    """
+    if not token or len(token) < 16:
+        raise HTTPException(status_code=404, detail="Link non valido")
+    persona = db.query(models.Persona).filter(models.Persona.public_token == token).first()
+    if not persona:
+        raise HTTPException(status_code=404, detail="Link non valido")
+    if persona.public_token_scadenza and persona.public_token_scadenza < _adesso_utc():
+        raise HTTPException(status_code=410, detail="Link scaduto: chiedi un nuovo link alla segreteria")
+    return persona
+
+
+@router.post("/{persona_id}/public-link")
+def genera_link_pubblico(
+    persona_id: int,
+    db: Session = Depends(get_db),
+    current_user: Utente = Depends(get_persona_staff)
+):
+    """Conia (o rigenera) il link del form d'iscrizione per una persona. Ogni chiamata invalida
+    il link precedente, quindi e' anche lo strumento di revoca.
+    """
+    persona = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona non trovata")
+    sid = get_societa_filter(current_user)
+    if sid and persona.societa_id != sid:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    persona.public_token = secrets.token_urlsafe(32)
+    persona.public_token_scadenza = _adesso_utc() + timedelta(days=TOKEN_PUBBICO_GIORNI)
+    db.commit()
+    return {
+        "token": persona.public_token,
+        "scadenza": persona.public_token_scadenza.isoformat(),
+        "giorni": TOKEN_PUBBICO_GIORNI,
+    }
+
+
+@router.get("/public/by-token/{token}")
+@limiter.limit("10/minute")
+def get_public_persona_by_token(request: Request, token: str, db: Session = Depends(get_db)):
+    persona = _persona_da_token(db, token)
+    # Stesse colonne di prima: nessun campo cifrato (codice fiscale e telefoni) esce da qui,
+    # quindi il token non amplia l'esposizione oltre quello che il form gia' mostrava.
     query = """
         SELECT p.id, p.nome, p.cognome, p.gruppo_id, p.categoria_id,
                 p.data_nascita, p.matricola,
@@ -275,7 +331,7 @@ def get_public_persona(request: Request, persona_id: int, db: Session = Depends(
         FROM persone p
         WHERE p.id = :id
     """
-    row = db.execute(text(query), {"id": persona_id}).first()
+    row = db.execute(text(query), {"id": persona.id}).first()
     if not row:
         raise HTTPException(status_code=404, detail="Persona non trovata")
     result = dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
@@ -283,12 +339,10 @@ def get_public_persona(request: Request, persona_id: int, db: Session = Depends(
     result["gruppo_nome"] = gruppo.nome if gruppo else None
     return result
 
-@router.put("/public/{persona_id}")
-@limiter.limit("5/minute")
-def update_public_persona(request: Request, persona_id: int, p: schemas.PersonaCreate, db: Session = Depends(get_db)):
-    persona = db.query(models.Persona).filter(models.Persona.id == persona_id).first()
-    if not persona:
-        raise HTTPException(status_code=404, detail="Persona non trovata")
+@router.put("/public/by-token/{token}")
+@limiter.limit("10/minute")
+def update_public_persona_by_token(request: Request, token: str, p: schemas.PersonaCreate, db: Session = Depends(get_db)):
+    persona = _persona_da_token(db, token)
     allowed_fields = {"nome", "cognome", "residenza", "indirizzo", "cittadinanza", "email1", "email2", "tel_papa", "tel_mamma", "anamnesi", "taglia", "note"}
     data = {k: v for k, v in p.dict(exclude_none=True).items() if k in allowed_fields}
     if "cognome" in data: data["cognome"] = format_cognome(data["cognome"])
@@ -322,8 +376,12 @@ def create_public_persona(request: Request, p: schemas.PersonaCreate, db: Sessio
     if data.get("tel_mamma"):
         data["tel_mamma"] = safe_encrypt(db, data["tel_mamma"])
     persona = models.Persona(**data)
+    persona.public_token = secrets.token_urlsafe(32)
+    persona.public_token_scadenza = _adesso_utc() + timedelta(days=TOKEN_PUBBICO_GIORNI)
     db.add(persona); db.commit(); db.refresh(persona)
-    return {"id": persona.id, "ok": True}
+    # Il token torna subito: dopo la creazione il form continua a salvare con la PUT, che ormai
+    # richiede il token. Senza restituirlo, il secondo salvataggio non avrebbe come autenticarsi.
+    return {"id": persona.id, "token": persona.public_token, "ok": True}
 
 @router.put("/encryption-key")
 def update_encryption_key(

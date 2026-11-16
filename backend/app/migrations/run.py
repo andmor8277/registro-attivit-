@@ -1462,6 +1462,20 @@ def run_migrations():
                 print(f"Migration warning (convocazione_gare livello): {e}")
                 conn.rollback()
 
+            try:
+                # Token di possesso per il form d'iscrizione pubblico. Prima l'unica "prova" era
+                # l'ID della persona nell'URL (/form-iscrizione?id=123): essendo sequenziale,
+                # chiunque da internet leggeva e sovrascriveva anagrafiche, indirizzi, email e
+                # anamnesi di qualsiasi tesserato. Ora serve un token casuale con scadenza.
+                conn.execute(text("ALTER TABLE persone ADD COLUMN IF NOT EXISTS public_token VARCHAR(64)"))
+                conn.execute(text("ALTER TABLE persone ADD COLUMN IF NOT EXISTS public_token_scadenza TIMESTAMP"))
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_persone_public_token ON persone(public_token) WHERE public_token IS NOT NULL"))
+                conn.commit()
+                print("Migration: Added public_token to persone")
+            except Exception as e:
+                print(f"Migration warning (persone public_token): {e}")
+                conn.rollback()
+
         finally:
             if has_lock:
                 try:

@@ -229,3 +229,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentato
 - Regola sull'ordine dei decorator del limiter e sul perché `--forwarded-allow-ips` non deve essere `*`, nel capitolo Security di AGENTS.md
+
+### Security
+- **Chiuso l'accesso anonimo alle anagrafiche nel form d'iscrizione**: `GET`/`PUT /persone/public/{id}` chiedevano come unica credenziale l'ID della persona, che e' sequenziale. Da internet bastava scorrere gli ID per leggere e sovrascrivere anagrafiche, indirizzi, email e anamnesi di qualsiasi tesserato (verificato: `PUT /api/persone/public/3` senza token rispondeva `{"ok":true}`). Gli endpoint sono sostituiti da `/persone/public/by-token/{token}`, dove il token e' coniato dalla segreteria con `POST /persone/{id}/public-link`: 32 byte casuali, scadenza a 30 giorni (`PUBLIC_LINK_GIORNI`), revocabile rigenerandolo. Il link del form passa da `?id=123` a `?t=<token>`. Testato end-to-end: 20/20
