@@ -172,11 +172,12 @@
             <span><strong>Nato:</strong> {{ formatData(u.data_nascita) }}</span>
           </div>
           <div class="user-actions">
-            <!-- Account Google-only: non c'e' nessuna password da reimpostare, e un admin non puo'
-                 crearla (solo il super_admin puo' attribuire una via locale volontariamente) -->
-            <span v-if="!u.accesso_locale" class="badge-google" title="Accede solo con Google: nessun accesso locale">Google</span>
-            <button v-if="u.accesso_locale || isSuperAdmin" class="btn-reset" @click="resetsPassword(u)"
-                    :title="u.accesso_locale ? 'Genera una password temporanea, da cambiare al primo accesso' : 'Attribuisce una password locale a un account Google (solo super admin)'">
+            <!-- Gli account Google-only non hanno il pulsante: non esiste una password da
+                 reimpostare, e nessun ruolo (super_admin incluso) puo' crearne una. La via per
+                 dare accesso locale a uno di loro e' disattivarlo e rifargli l'invito -->
+            <span v-if="!u.accesso_locale" class="badge-google" title="Accede solo con Google: nessun accesso locale, e non e' possibile dargliene uno">Google</span>
+            <button v-if="u.accesso_locale" class="btn-reset" @click="resetsPassword(u)"
+                    title="Genera una password temporanea, da cambiare al primo accesso">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
               </svg>
@@ -476,10 +477,9 @@ const resetErrore = ref(null)
 async function resetsPassword(u) {
   resetEsito.value = null
   resetErrore.value = null
-  const avviso = u.accesso_locale
-    ? `Generare una password temporanea per ${u.username}? Verra' mostrata una volta sola e l'utente sara' obbligato a cambiarla al primo accesso.`
-    : `${u.username} oggi accede solo con Google. Assegnandogli una password locale si apre anche l'accesso con username e password. Continuare?`
-  if (!confirm(avviso)) return
+  // Il pulsante non viene nemmeno reso per gli account Google-only, quindi qui si arriva solo
+  // su account con una via locale gia' esistente
+  if (!confirm(`Generare una password temporanea per ${u.username}? Verra' mostrata una volta sola e l'utente sara' obbligato a cambiarla al primo accesso.`)) return
   // Prima non c'era try/catch: se il backend rispondeva 403 l'admin vedeva comunque il vecchio
   // alert "Password resettata!" e credeva che avesse funzionato
   try {

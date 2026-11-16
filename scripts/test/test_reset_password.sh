@@ -173,21 +173,32 @@ ck "cambiare la propria password SENZA la vecchia -> 400" \
    "$(cod -X PUT "$D/auth/utenti/$ID_LOC/password" -H "Authorization: Bearer $TOK_N" \
         -H "Content-Type: application/json" -d '{"nuova":"Debole"}')" "400"
 
-echo "--- 7. eccezione voluta: il super_admin puo' dare una via locale a un account Google ---"
+echo "--- 7. nemmeno il super_admin puo' dare una via locale a un account Google ---"
+# Decisione del titolare 2026-11-16, dopo aver visto il pulsante comparire su un account Google
+# in quanto super_admin: non deve esistere nessuna strada, nemmeno quella deliberata, che
+# trasformi un account Google in un account con password
 RESP=$(curl -s -w '\n%{http_code}' --max-time 25 -X PUT "$D/auth/utenti/$ID_GOO/reset-password" -H "Authorization: Bearer $TOK_SUP")
 CODICE=${RESP##*$'\n'}
 R=${RESP%$'\n'*}
-ck "super_admin resetta l'utente Google-only -> 200" "$CODICE" "200"
-T3=$(echo "$R" | python3 -c "import sys,json;print(json.load(sys.stdin).get('password_temporanea',''))" 2>/dev/null)
-ck "  riceve una password temporanea" "$([ -n "$T3" ] && echo si)" "si"
-ck "  e dovra' cambiarla anche lui" \
-   "$(cod "$D/persone/" -H "Authorization: Bearer $(tok "$U_GOO" "$T3")")" "403"
+ck "super_admin resetta l'utente Google-only -> 403" "$CODICE" "403"
+ck "  e il motivo dice di rifargli l'invito" "$(echo "$R" | grep -ci "invito")" "1"
+ck "  l'utente NON ha ricevuto nessuna password" \
+   "$(q "SELECT count(*) FROM utenti WHERE username='$U_GOO' AND password_hash IS NOT NULL")" "0"
 
 echo "--- 8. il login espone il flag, per aprire il modal al primo accesso ---"
 ck "login normale: deve_cambiare_password false" \
    "$(loginraw "$U_ADM" "$P_ADM" | grep -c '"deve_cambiare_password": *false')" "1"
-ck "login con temporanea: deve_cambiare_password true" \
-   "$(loginraw "$U_GOO" "$T3" | grep -c '"deve_cambiare_password": *true')" "1"
+# Il flag si mette da SQL invece che con un altro reset per due motivi: la rotta del reset ha
+# @limiter.limit("5/minute") e siamo gia' al limite, e qui cio' che va provato e' che il login
+# LO ESPONGA, non che il reset lo imposti (quella parte e' gia' in sezione 4)
+q "UPDATE utenti SET deve_cambiare_password = TRUE WHERE username='$U_LOC';" >/dev/null
+ck "login con il flag attivo: deve_cambiare_password true" \
+   "$(loginraw "$U_LOC" "$NUOVA" | grep -c '"deve_cambiare_password": *true')" "1"
+ck "  e con il flag attivo ogni altra rotta e' bloccata" \
+   "$(cod "$D/persone/" -H "Authorization: Bearer $(tok "$U_LOC" "$NUOVA")")" "403"
+q "UPDATE utenti SET deve_cambiare_password = FALSE WHERE username='$U_LOC';" >/dev/null
+ck "  e tolto il flag la rotta torna disponibile" \
+   "$(cod "$D/persone/" -H "Authorization: Bearer $(tok "$U_LOC" "$NUOVA")")" "200"
 
 echo "--- 9. la lista utenti dice alla UI quali account hanno una via locale ---"
 L=$(body "$D/auth/utenti" -H "Authorization: Bearer $TOK_ADM")

@@ -310,12 +310,14 @@ def reset_password(request: Request, uid: int, current_user: Utente = Depends(ge
         raise HTTPException(status_code=403, detail="Non autorizzato a resettare super admin")
     # Un account senza password_hash entra solo con Google: non ha niente da "reimpostare".
     # Lasciarlo fare significava creare di nascosto una via locale con una password nota a
-    # tutti gli admin (verificato in esecuzione: reset + login locale = anagrafiche lette).
-    # Solo il super_admin puo' attribuire volontariamente una password locale a questi account.
-    if not utente.password_hash and not current_user.is_super_admin:
+    # chi la conosce (verificato in esecuzione: reset + login locale = anagrafiche lette).
+    # Vale anche per il super_admin, su decisione del titolare 2026-11-16: non deve esistere
+    # nessuna strada, nemmeno quella deliberata, che trasformi un account Google in un account
+    # con password. Se un utente perde l'accesso Google si disattiva e gli si rifà l'invito.
+    if not utente.password_hash:
         raise HTTPException(status_code=403, detail=(
             "L'utente accede con Google e non ha una password locale da resettare. "
-            "Solo un super admin puo' attribuirgliela."))
+            "Per dargli accesso disattivalo e rifagli l'invito."))
     # Prima era hash_password(DEFAULT_PASSWORD), unica e condivisa: chiunque la conoscesse
     # poteva entrare in qualunque account appena resettato. Qui il valore e' proprio, monouso
     # e non viene salvato da nessuna parte: esce una volta sola da questa risposta.
