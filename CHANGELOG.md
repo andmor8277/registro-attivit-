@@ -216,3 +216,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Le note dell'avviso di aggiornamento mostravano anche il commento HTML `<!-- thof-versionCode: NNN -->`: il body della release viene renderizzato come testo, quindi il marcatore va rimosso prima di mostrarlo
+
+## [Unreleased] - 2026-11-16
+
+### Security
+- **Il rate limit del login non è mai stato attivo**: con `@limiter.limit` sopra `@router.post` FastAPI registrava nella rotta la funzione non avvolta dal limiter. 30 tentativi di password producevano zero 429. Corretto l'ordine anche sul reset password
+- **Ogni rate limit era aggirabile con un header**: `--forwarded-allow-ips=*` faceva accettare `X-Forwarded-For` da chiunque, e openresty accorpa l'header invece di sostituirlo. Ora ci si fida solo dei proxy Docker
+- **Documentazione API esposta**: `/docs`, `/redoc` e `/openapi.json` rispondevano 200 pubblici, con la mappa completa dell'API. Disattivati
+- **APK esposto a intercettazione**: `network_security_config.xml` si fidava delle CA installate dall'utente (`src="user"`) e permetteva il traffico in chiaro. Ora solo CA di sistema, cleartext vietato
+- **`authlib` rimossa** da `requirements.txt`: mai importata da nessuna parte, portava ~20 CVE nell'immagine
+- **`.env` protetti**: portati da 0644 a 600 sui server (contengono `DEFAULT_PASSWORD`)
+
+### Documentato
+- Regola sull'ordine dei decorator del limiter e sul perché `--forwarded-allow-ips` non deve essere `*`, nel capitolo Security di AGENTS.md
