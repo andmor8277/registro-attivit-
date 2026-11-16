@@ -31,6 +31,37 @@ def costruisci_email_invito(societa_nome: str, ruolo: str, invite_link: str, cat
     """
 
 
+def costruisci_email_password_iniziale(nome: str, cognome: str, societa_nome: str,
+                                       username: str, password: str, url_login: str) -> str:
+    """Email con la password iniziale di un account a accesso locale.
+
+    La password viaggia in mail e non viene mai mostrata all'admin che ha creato l'utente:
+    e' il motivo per cui questa funzione esiste. Se un admin poteva scegliere o vedere la
+    password di un altro account, poteva entrarci (era cosi' prima del 2026-11-16).
+    """
+    return f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Il tuo accesso a {societa_nome}</h2>
+        <p>Ciao {nome}, un amministratore di <strong>{societa_nome}</strong> ha creato il tuo account.</p>
+        <p>
+            <strong>Nome utente:</strong> {username}<br>
+            <strong>Password iniziale:</strong> <code style="font-size: 16px; letter-spacing: 1px;">{password}</code>
+        </p>
+        <p>
+            <a href="{url_login}" style="background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Accedi
+            </a>
+        </p>
+        <p style="color: #666; font-size: 14px;">
+            Al primo accesso ti verra' chiesto di cambiarla: fino a quel momento l'applicazione
+            non ti mostrera' nessun dato.
+        </p>
+    </body>
+    </html>
+    """
+
+
 def get_invitation(db, token: str):
     return db.query(Invito).filter(Invito.token == token).first()
 

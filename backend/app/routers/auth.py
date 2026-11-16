@@ -31,14 +31,26 @@ from ..core.security import (
 )
 from ..core.naming import format_nome, format_cognome
 from ..services.oauth_google import get_google_config, get_google_authorize_url, exchange_google_code
-from ..services.invitations import get_invitation, is_invitation_used, is_invitation_expired
+from ..services.invitations import (
+    FRONTEND_URL,
+    get_invitation,
+    is_invitation_used,
+    is_invitation_expired,
+    costruisci_email_password_iniziale,
+)
+from ..services.email import send_email
 import secrets
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 class UtenteCreate(BaseModel):
     username: str
-    password: str
+    # Il campo password qui non c'e' piu', e non e' un dettaglio estetico: finche' chi crea un
+    # account poteva sceglierla, quell'admin conosceva una credenziale valida per quell'account
+    # e poteva entrarci. La password viene generata in crea_utente e consegnata via mail
+    # all'interessato. Un client che la invia comunque viene scartato da Pydantic, che ignora
+    # i campi non dichiarati (verificato in test: login con quel valore -> 401)
+    email: Optional[str] = None
     is_admin: Optional[int] = 0
     is_super_admin: Optional[int] = 0
     societa_id: Optional[int] = None
@@ -128,29 +140,43 @@ def me(current_user: Utente = Depends(get_current_user), db: Session = Depends(g
 
 @router.post("/utenti")
 def crea_utente(data: UtenteCreate, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
-    validate_password(data.password)
     if db.query(Utente).filter(Utente.username == data.username).first():
         raise HTTPException(status_code=400, detail="Username già esistente")
-    
+
     # Se il ruolo è super_admin, imposta is_super_admin = 1 e is_admin = 1
     is_super = 1 if data.ruolo == 'super_admin' else 0
     is_admin = 1 if data.ruolo in ('super_admin', 'admin') else 0
-    
+
     # Solo super_admin può creare super_admin
     if is_super and not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="Non autorizzato a creare super admin")
-    
+
     # Admin locale può creare utenti solo per la propria società
     if not current_user.is_super_admin and data.societa_id != current_user.societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato a creare utenti per altre società")
-    
+
+    # Destinatario della password: il campo email, oppure lo username quando e' gia' un indirizzo
+    # (e' il caso degli account creati con l'email come username). Stesso criterio usato in
+    # inviti.py per validare l'indirizzo dell'invito: due regole diverse per la stessa cosa
+    # vorrebbe dire account creabili ma non raggiungibili
+    destinatario = (data.email or "").strip()
+    if not destinatario and "@" in (data.username or "") and "." in (data.username or ""):
+        destinatario = data.username.strip()
+    if not destinatario or "@" not in destinatario or "." not in destinatario:
+        raise HTTPException(status_code=400, detail=(
+            "Serve un indirizzo email valido per consegnare la password iniziale. "
+            "L'amministratore non puo' ne' sceglierla ne' vederla."))
+
+    societa = db.query(Societa).filter(Societa.id == data.societa_id).first()
+    societa_nome = societa.nome if societa else str(data.societa_id)
+
+    # La password non viene mai mostrata all'admin: esce solo da questa mail. Il flag
+    # deve_cambiare_password chiude anche la finestra in cui il valore generato fosse finito in
+    # una mail letta da altri: finche' l'interessato non la sostituisce, l'app risponde 403
+    password_iniziale = genera_password_temporanea()
     utente = Utente(
         username=data.username,
-        password_hash=hash_password(data.password),
-        # La password la sta scegliendo l'admin, quindi l'utente non e' l'unico a conoscerla:
-        # senza questo flag l'admin potrebbe entrare con l'account appena creato. Resta una
-        # finestra finche' l'utente non la cambia (chiuderla del tutto vorrebbe dire inviarglia
-        # via mail invece di mostrarla all'admin).
+        password_hash=hash_password(password_iniziale),
         deve_cambiare_password=True,
         is_admin=is_admin,
         is_super_admin=is_super,
@@ -165,7 +191,24 @@ def crea_utente(data: UtenteCreate, current_user: Utente = Depends(get_admin), d
     )
     db.add(utente)
     db.commit()
-    return {"ok": True}
+
+    body_html = costruisci_email_password_iniziale(
+        nome=utente.nome, cognome=utente.cognome, societa_nome=societa_nome,
+        username=utente.username, password=password_iniziale,
+        url_login=f"{FRONTEND_URL}/login"
+    )
+    email_ok = send_email(destinatario, f"Le tue credenziali per {societa_nome}", body_html)
+
+    # Mai rimandare la password al client, nemmeno a chi ha appena fatto la richiesta: la
+    # risposta finisce nei log del browser e di nginx
+    risultato = {"ok": True, "id": utente.id, "username": utente.username,
+                 "email_inviata": email_ok}
+    if not email_ok:
+        risultato["avviso"] = (
+            f"Account creato ma la mail a {destinatario} non e' partita. L'utente non ha ancora "
+            "una password utilizzabile: usa Reset Password per generarne una da comunicargli a voce."
+        )
+    return risultato
 
 @router.put("/utenti/{uid}")
 def modifica_utente(uid: int, data: UtenteUpdate, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
