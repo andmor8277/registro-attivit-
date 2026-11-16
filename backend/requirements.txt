@@ -9,5 +9,7 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 python-multipart==0.0.20
 slowapi==0.1.9
-authlib==1.3.2
+# authlib rimossa (2026-11-16): era dichiarata ma mai importata da nessuna parte, e portava
+# ~20 CVE aperti nell'immagine. Il login Google usa httpx verso gli endpoint di Google, non
+# authlib. Verificato con grep su tutto il progetto prima di rimuoverla.
 httpx==0.28.1

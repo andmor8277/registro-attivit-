@@ -172,6 +172,18 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - Firma APK: credenziali in `frontend/android/keystore.properties` (gitignored; template `keystore.properties.example`) o env `THOF_KEYSTORE_*`. Mai in chiaro in `build.gradle`. Senza credenziali il debug usa il keystore standard di Gradle, `assembleRelease` fallisce di proposito.
 - `deploy_dev.sh` e `frontend/.dockerignore` escludono keystore, `.env*`, `.local/`, `client_secret_*.json`: non devono mai finire su DEV né dentro l'immagine frontend.
 - `slowapi` limits are **per-worker** (4 workers = 4× effective limit).
+- **Ordine decorator del limiter (NON invertire)**: `@router.get(...)` deve stare FUORI, `@limiter.limit(...)` VICINO alla funzione.
+  ```python
+  @router.post("/token")        # esterno: registra nella rotta la funzione GIA' avvolta
+  @limiter.limit("10/minute")   # interno
+  def login(request: Request, ...):
+  ```
+  Con `@limiter.limit` sopra, i decorator si applicano dal basso e FastAPI registra nella rotta la funzione **non avvolta**: il limite non viene mai eseguito, in silenzio. Succedeva davvero su `auth.py` login e reset-password (verificato: 30 POST su `/auth/token`, zero 429; persone.py era invece corretto e lì il 429 arrivava). Dimostrato con test isolato nelle stesse versioni di produzione.
+- **`--forwarded-allow-ips` non deve essere `*`**: con `*` uvicorn crede a `X-Forwarded-For` da chiunque. openresty (sul router) **accorpa** l'header invece di sostituirlo, quindi l'attaccante si attribuisce un IP fittizio a ogni richiesta e aggira ogni rate limit. Fidati solo di `127.0.0.1,172.16.0.0/12`. Questo chiude il percorso diretto su `:8000`; il percorso proxy resta aggirabile finche' openresty non fa `proxy_set_header X-Forwarded-For $remote_addr` (sostituzione) — oppure finche' il login non ha un blocco per username indipendente dall'IP.
+- **Documentazione API disattivata** in `main.py` (`docs_url=None, redoc_url=None, openapi_url=None`): prima `/api/docs`, `/api/openapi.json` e `/api/redoc` rispondevano 200 pubblici, cioe' la mappa completa dell'API a internet.
+- **APK**: `network_security_config.xml` fida solo le CA di sistema e vieta il cleartext (`"cleartext": false` in `capacitor.config.json`). Non riabilitare `src="user"`: espone l'HTTPS (JWT e anagrafiche dei minori) a qualsiasi certificato radice installato sul telefono.
+- **`ENCRYPTION_KEY` NON si ruota a mano**: e' la chiave pgcrypto di CF e telefoni; cambiarla rende illeggibili i dati gia' cifrati. Usare `POST /persone/reencrypt` con `reencrypt=True` (solo super_admin). `SECRET_KEY` e `DEFAULT_PASSWORD` si possono invece ruotare (sloggano solo le sessioni).
+- **`authlib` rimossa** da `requirements.txt`: era dichiarata ma mai importata, e portava ~20 CVE nell'immagine.
 - Public PII endpoints: `5/minute` rate limit + Pydantic validation.
 - File uploads: magic bytes validation, max 5MB, controlled extensions.
 - CORS: `thof.crickethouse.mywire.org`, `localhost:5173`, `localhost:3000`.

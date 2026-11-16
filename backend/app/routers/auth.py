@@ -67,8 +67,12 @@ class PasswordChange(BaseModel):
     vecchia: Optional[str] = None
     nuova: str
 
-@limiter.limit("10/minute")
+# Il decorator della rotta deve stare FUORI, il limiter VICINO alla funzione: i decorator
+# si applicano dal basso, quindi con @limiter.limit sopra FastAPI registrava nella rotta la
+# funzione NON avvolta e il limite non veniva mai eseguito (verificato: 30 POST su /auth/token,
+# zero 429). Stesso ordine usato correttamente in persone.py, dove infatti il 429 arriva.
 @router.post("/token")
+@limiter.limit("10/minute")
 def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(Utente).filter(Utente.username == form.username).first()
     if not user or not user.password_hash or not verify_password(form.password, user.password_hash):
@@ -263,8 +267,10 @@ def elimina_utente(uid: int, current_user: Utente = Depends(get_admin), db: Sess
         )
     return {"ok": True}
 
-@limiter.limit("5/minute")
+# Ordine decorator: vedi la nota su login(). Con @limiter.limit sopra, il reset password
+# non era mai limitato.
 @router.put("/utenti/{uid}/reset-password")
+@limiter.limit("5/minute")
 def reset_password(request: Request, uid: int, current_user: Utente = Depends(get_admin), db: Session = Depends(get_db)):
     utente = db.query(Utente).filter(Utente.id == uid).first()
     if not utente:

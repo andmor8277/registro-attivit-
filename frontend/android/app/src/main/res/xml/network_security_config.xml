@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Configurazione di rete dell'APK THOF.
+
+  Perché le CA utente sono escluse: con <certificates src="user" /> la WebView si fidava anche
+  delle certificati radice installati dall'utente, quindi qualsiasi app con i permessi di root o
+  un certificato importato a mano poteva intercettare l'HTTPS dell'app (JWT e anagrafiche dei
+  minori in chiaro per chi sta sulla rete). Si accettano solo le CA di sistema.
+
+  Perché cleartextTrafficPermitted="false": l'app non ha nessun endpoint in chiaro. Le API sono
+  su https://thof.crickethouse.mywire.org e gli asset della WebView sono serviti in HTTPS da
+  Capacitor ("androidScheme": "https" in capacitor.config.json). Gli unici http:// rimasti nel
+  bundle sono namespace XML e attribuzioni di libreria, non URL contattati.
+
+  Se in futuro servisse debuggare il traffico, non riaprire qui: usare un build type dedicato.
+-->
 <network-security-config>
-    <base-config cleartextTrafficPermitted="true">
+    <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
-            <certificates src="user" />
         </trust-anchors>
     </base-config>
 </network-security-config>

@@ -15,7 +15,10 @@ from .routers.inviti import router as inviti_router
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
 
-app = FastAPI(title="Registro Presenze API")
+# docs/redoc/openapi disattivati: rispondevano 200 pubblici su https://thof.crickethouse.mywire.org
+# (/docs, /redoc, /openapi.json e gli equivalenti /api/*), esponendo a internet la mappa completa
+# dell'API, inclusi tutti gli endpoint e gli schemi. Nessun codice del frontend legge openapi.json.
+app = FastAPI(title="Registro Presenze API", docs_url=None, redoc_url=None, openapi_url=None)
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 
