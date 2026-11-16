@@ -200,3 +200,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - App Android nativa (APK), Convocazioni avanzate (box non convocati, filtri gruppo, PDF 1 pagina) e workflow Dev-First
+
+## [7.5.0] - 2026-11-16
+
+### Added
+- Avviso di aggiornamento APK dentro l'app (GitHub Releases) e correzioni UI: testi invisibili sui menu a tendina
