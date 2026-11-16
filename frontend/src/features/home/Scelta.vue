@@ -1600,7 +1600,9 @@ function selezionaCategoria(cat) {
 .infortunato-name {
   font-weight: 600;
   font-size: 0.88rem;
-  color: #e5e7eb;
+  /* Era #e5e7eb su .infortunato-card (fondo rgba(239,68,68,0.06) su pagina chiara):
+     contrasto ~1:1, i nomi non si leggevano. Avanzo del vecchio tema scuro. */
+  color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

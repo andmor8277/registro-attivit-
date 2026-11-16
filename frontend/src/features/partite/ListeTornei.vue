@@ -48,7 +48,7 @@
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
                 </svg>
               </button>
-              <div class="colonne-dropdown" @click="colonneMenu = !colonneMenu">
+              <div class="colonne-dropdown" ref="colonneWrap" @click="colonneMenu = !colonneMenu">
                 <button class="btn-colonne-trigger">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
                     <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
@@ -156,7 +156,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPersone, getCategorie, getListeTorneo, creaListaTorneo, eliminaListaTorneo, getGiocatoriLista, aggiungiGiocatoreLista, rimuoviGiocatoreLista, verifyGdpr, saveOrSharePdf } from '../../api/index.js'
 import { jsPDF } from 'jspdf'
@@ -177,6 +177,27 @@ const nuovaListaModal = ref({ show: false, nome: '' })
 const gdprSbloccato = ref(false)
 const gdprModal = ref({ show: false, password: '', errore: '' })
 const colonneMenu = ref(false)
+const colonneWrap = ref(null)
+
+// Il menu si apriva col click sul contenitore ma non si chiudeva mai: cliccando altrove
+// restava aperto. Si chiude anche su Escape, che su tastino e desktop è il gesto atteso.
+function chiudiColonneSeFuori(e) {
+  if (colonneMenu.value && colonneWrap.value && !colonneWrap.value.contains(e.target)) {
+    colonneMenu.value = false
+  }
+}
+function chiudiColonneConEscape(e) {
+  if (e.key === 'Escape') colonneMenu.value = false
+}
+
+onMounted(() => {
+  document.addEventListener('click', chiudiColonneSeFuori)
+  document.addEventListener('keydown', chiudiColonneConEscape)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', chiudiColonneSeFuori)
+  document.removeEventListener('keydown', chiudiColonneConEscape)
+})
 
 const colonneDisponibili = [
   { key: 'data_nascita', label: 'Data Nascita', gdpr: true },

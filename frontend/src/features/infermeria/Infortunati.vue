@@ -583,14 +583,22 @@ async function confirmDelete(item) {
 
 .select-input {
   width: 100%;
-  padding: 0.625rem 1rem 0.625rem 2.25rem;
+  padding: 0.625rem 2.5rem 0.625rem 2.25rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-text);
   font-size: 0.875rem;
   appearance: none;
+  -webkit-appearance: none;
   cursor: pointer;
+  /* L'icona a sinistra non basta: senza freccia a destra il campo sembra una casella
+     di testo e non si capisce che si apre. Data-URI duplicato di proposito: una utility
+     globale perderebbe contro lo shorthand "background" di questa regola scoped. */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6572' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
 }
 
 .select-input:focus {

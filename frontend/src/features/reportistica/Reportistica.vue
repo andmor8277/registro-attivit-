@@ -2533,17 +2533,26 @@ tr:last-child td { border-bottom: none; }
 .selector-dropdown {
   width: 100%;
   max-width: 400px;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 2.5rem 0.75rem 1rem;
   border-radius: 10px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
-  color: #e4e4e4;
+  /* Era #e4e4e4: testo quasi bianco su --color-surface (#ffffff), il nome del
+     giocatore selezionato non si vedeva. Avanzo del vecchio tema scuro. */
+  color: var(--color-text);
   font-size: 0.95rem;
   font-weight: 500;
   outline: none;
   transition: all 0.2s;
   appearance: none;
+  -webkit-appearance: none;
   cursor: pointer;
+  /* appearance:none toglie la freccia nativa: senza nessuno capisce che e' un menu.
+     Viene dopo lo shorthand "background", altrimenti lo shorthand la azzera. */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6572' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
 }
 
 .selector-dropdown:focus {
