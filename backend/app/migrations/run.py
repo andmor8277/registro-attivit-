@@ -1609,15 +1609,16 @@ def run_migrations():
                     "ALTER TABLE liste_torneo ADD COLUMN IF NOT EXISTS torneo_id INTEGER "
                     "REFERENCES tornei(id) ON DELETE SET NULL"
                 ))
-                # Un torneo produce una sola lista, che e' IL file da consegnare: senza vincolo,
-                # due click creerebbero due "liste bloccate" diverse per lo stesso torneo e
-                # l'organizzatore non saprebbe quale PDF e' quello giusto. E' un UNIQUE parziale
-                # perche' in Postgres i NULL non collidono: le liste create a mano (torneo_id
-                # NULL, quelle gia' esistenti) restano libere di essere quante se ne vuole.
-                conn.execute(text(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS ux_liste_torneo_torneo "
-                    "ON liste_torneo(torneo_id) WHERE torneo_id IS NOT NULL"
-                ))
+                # QUI prima c'era anche `CREATE UNIQUE INDEX ux_liste_torneo_torneo ON
+                # liste_torneo(torneo_id)`, l'idea vecchia di "un torneo produce una sola lista".
+                # Non va piu' creata qui, per due motivi. Il primo e' il modello: il vincolo giusto e'
+                # (torneo_id, categoria_id) e lo crea il blocco sotto, che infatti questo indice lo
+                # DROPPA subito dopo averlo creato. Il secondo e' concreto: su PROD "WINTER CUP" ha
+                # QUATTRO fogli, uno per categoria iscritta, quindi questa CREATE falliva
+                # UniqueViolation a OGNI avvio, stampando un warning che sembra un guasto grosso e
+                # invece e' rumore. Peggio: la CREATE fallita finiva nello stesso try della ADD
+                # COLUMN, e il `conn.rollback()` di quel try si sarebbe portato via anche la colonna
+                # appena aggiunta (oggi non si vede perche' la colonna esiste gia').
                 conn.commit()
                 print("Migration: Added liste_torneo.torneo_id")
             except Exception as e:
