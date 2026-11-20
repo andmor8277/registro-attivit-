@@ -283,8 +283,10 @@ const LEGGI = `(() => {
     return null
   }
 
-  // le cognome vere dei giocatori, prese dalla STESSA API che l'export usa: se il PDF le contiene,
-  // il foglio e' stato davvero caricato e stampato
+  // I cognomi veri dei giocatori, letti dalla STESSA API che usa il foglio di Liste Tornei. Qui
+  // servono al contrario: il PDF dei tornei NON deve contenerne nemmeno uno. Prenderli dall'API e non
+  // scriverli a mano e' cio' che tiene viva l'asserzione quando il titolare aggiunge un ragazzo al
+  // foglio: un roster che trapelasse lo vede da solo, senza toccare il test
   const attese = await evalJS(`(async () => {
     const tk = localStorage.getItem('token')
     const ts = await (await fetch('/api/tornei/', {headers:{Authorization:'Bearer '+tk}})).json()
@@ -331,16 +333,19 @@ const LEGGI = `(() => {
     // Il punto delicato dell'export per categoria: se trapelassero le gare dell'altra categoria, il
     // documento consegnato all'organizzatore sarebbe plausibile e falso
     ck('NON contiene le gare dei Pulcini', /Real Junior|Atletico Sud/.test(pdfSezione), false)
-    ck('dichiara il foglio assente, non lo tace', /Foglio giocatori assente/.test(pdfSezione), true)
+    ck('non parla di foglio giocatori: quel documento si stampa da Liste Tornei',
+       /Foglio giocatori/i.test(pdfSezione), false)
     ck('nomina le orfane invece di dimenticarle',
        /Gare senza categoria \(1\)/.test(piatto(pdfSezione)) && /assegnare a una categoria/.test(piatto(pdfSezione)), true)
     ck('e stampa la gara orfana', /Amichevole fuori calendario/.test(pdfSezione), true)
     ck('dichiara il mister mancante nella sua colonna, invece di omettere la riga', /non assegnato/.test(piatto(pdfSezione)), true)
     ck('non stampa colonne GDPR (data di nascita, CF, telefoni)',
        /Data Nascita|Codice fiscale|Telefono/i.test(pdfSezione), false)
-    // Qui il foglio NON c'e' (e' stato distaccato di proposito): una tabella del roster vuota sarebbe
-    // peggio della frase che dichiara l'assenza
-    ck('e non stampa una tabella giocatori vuota', /Cognome/.test(pdfSezione), false)
+    // Il roster non appartiene a questo documento, punto: niente colonne Cognome/Nome e nessun nome
+    // dei ragazzi. Le colonne del calendario parlano di avversari, non di tesserati
+    ck('e non ha la tabella del roster, nemmeno vuota', /Cognome/.test(pdfSezione), false)
+    ck('e nessun giocatore del foglio dei Pulcini compare nel calendario',
+       attese.cognomi.length > 0 && !attese.cognomi.some(c => pdfSezione.includes(c)), true)
   }
 
   const pdfTutti = await scarica(PDF_SOCIETA, btnTutti)
@@ -353,10 +358,13 @@ const LEGGI = `(() => {
     ck('contiene entrambe le sezioni', /2015 - Esordienti/.test(pdfTutti) && /2016 - Pulcini/.test(pdfTutti), true)
     ck('contiene le gare di entrambe',
        /Vecchia Guardia/.test(pdfTutti) && /Real Junior/.test(pdfTutti) && /Atletico Sud/.test(pdfTutti), true)
-    ck('contiene i giocatori veri del foglio dei Pulcini',
-       attese.cognomi.length > 0 && attese.cognomi.every(c => pdfTutti.includes(c)), true)
-    ck('il foglio ha le sue colonne, e niente di piu\'', /Cognome/.test(pdfTutti) && /Nome/.test(pdfTutti), true)
-    ck('nomina il foglio con il suo nome completo', piatto(pdfTutti).includes(attese.nomeFoglio || '###'), true)
+    // IL PUNTO DELLA RICHIESTA DEL TITOLARE: il PDF dei tornei e' solo calendario. `attese.cognomi
+    // .length > 0` non e' decorazione: senza giocatori sul foglio, "non c'e' nessun nome" sarebbe
+    // verde anche con un PDF vuoto, e il test non misurerebbe piu' niente
+    ck('NON contiene nemmeno un giocatore del foglio dei Pulcini',
+       attese.cognomi.length > 0 && !attese.cognomi.some(c => pdfTutti.includes(c)), true)
+    ck('non ha le colonne del roster (Cognome / Nome)', /Cognome/.test(piatto(pdfTutti)), false)
+    ck('e non nomina nessun foglio giocatori', occorrenze(piatto(pdfTutti), 'Foglio giocatori'), 0)
     // Le orfane sono dello stesso torneo: in "tutte le categorie" vanno stampate una volta sola
     ck('la gara orfana compare UNA volta sola, non una per sezione', occorrenze(pdfTutti, 'Amichevole fuori calendario'), 1)
     ck('anche l\'intestazione orfane compare una volta sola', occorrenze(piatto(pdfTutti), 'Gare senza categoria'), 1)
@@ -384,7 +392,8 @@ const LEGGI = `(() => {
     ck('ha le sue due gare dei Pulcini', /Real Junior/.test(pdfCard) && /Atletico Sud/.test(pdfCard), true)
     ck('NON ha la gara dell\'altra categoria dello stesso torneo', /Vecchia Guardia/.test(pdfCard), false)
     ck('NON ha nemmeno l\'intestazione dell\'altra categoria', /2015 - Esordienti/.test(pdfCard), false)
-    ck('ha il foglio giocatori di quella categoria', attese.cognomi.every(c => pdfCard.includes(c)), true)
+    ck('NON ha i giocatori della sua categoria: e\' solo il calendario',
+       attese.cognomi.length > 0 && !attese.cognomi.some(c => pdfCard.includes(c)), true)
     ck('e l\'appuntamento, che e\' la colonna che si spezzava', /08:45/.test(pdfCard), true)
   }
 
@@ -691,7 +700,8 @@ const LEGGI = `(() => {
     ck('e dice quale filtro lo ha prodotto', /categoria 2016 - Pulcini/.test(pdfSelezione), true)
     ck('ha la categoria chiesta', /2016 - Pulcini/.test(pdfSelezione), true)
     ck('NON ha l\'altra categoria, che a schermo non c\'e\'', /2015 - Esordienti/.test(pdfSelezione), false)
-    ck('e ha i suoi giocatori', attese.cognomi.length > 0 && attese.cognomi.every(c => pdfSelezione.includes(c)), true)
+    ck('e nemmeno i suoi giocatori',
+       attese.cognomi.length > 0 && !attese.cognomi.some(c => pdfSelezione.includes(c)), true)
   }
 
   // Il punto della richiesta: con lo schermo filtrato, "tutti i tornei" deve restare completo. E'
@@ -701,7 +711,8 @@ const LEGGI = `(() => {
   if (pdfSocietaFiltrato) {
     ck('e dentro ci sta ANCHE la categoria che a schermo e\' nascosta',
        /2015 - Esordienti/.test(pdfSocietaFiltrato) && /Vecchia Guardia/.test(pdfSocietaFiltrato), true)
-    ck('ci sta anche il foglio assente degli Esordienti', /Foglio giocatori assente/.test(pdfSocietaFiltrato), true)
+    ck('ma il foglio assente non lo dichiara lui: lo dice la card a schermo',
+       /Foglio giocatori/i.test(pdfSocietaFiltrato), false)
     ck('e non si spaccia per una selezione', /solo la selezione a schermo/.test(pdfSocietaFiltrato), false)
   }
 
@@ -748,7 +759,8 @@ const LEGGI = `(() => {
     ck('con entrambe le categorie', /2015 - Esordienti/.test(pdfSchermoVuoto) && /2016 - Pulcini/.test(pdfSchermoVuoto), true)
     ck('con le gare di entrambe, che a schermo non c\'erano piu\'',
        /Vecchia Guardia/.test(pdfSchermoVuoto) && /Real Junior/.test(pdfSchermoVuoto) && /Atletico Sud/.test(pdfSchermoVuoto), true)
-    ck('con i giocatori del foglio', attese.cognomi.length > 0 && attese.cognomi.every(c => pdfSchermoVuoto.includes(c)), true)
+    ck('e senza i giocatori del foglio',
+       attese.cognomi.length > 0 && !attese.cognomi.some(c => pdfSchermoVuoto.includes(c)), true)
     ck('e senza l\'avviso da sottoinsieme, perche\' sottoinsieme non e\'',
        /solo la selezione a schermo/.test(pdfSchermoVuoto), false)
   }

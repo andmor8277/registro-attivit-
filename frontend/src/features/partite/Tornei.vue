@@ -14,7 +14,7 @@
            si ricarica la lista: un documento che si chiama "i tornei della societa'" e ha dentro solo
            i Pulcini perche' qualcuno aveva il filtro su e' plausibile e falso -->
       <button class="btn-esporta" :disabled="esportazione" @click="esportaTutti()"
-              title="Esporta il PDF di TUTTI i tornei della società: calendario e foglio giocatori di ogni categoria, senza farsi condizionare dai filtri">
+              title="Esporta il PDF di TUTTI i tornei della società: solo i calendari, senza farsi condizionare dai filtri. I giocatori si stampano da Liste Tornei">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
           <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
@@ -82,7 +82,7 @@
         {{ sez.titolo }}
         <span class="conteggio-sezione">{{ sez.tornei.length }} {{ sez.tornei.length === 1 ? 'torneo' : 'tornei' }}</span>
         <button class="btn-esporta" :disabled="esportazione" @click="esportaPDF(sez)"
-                :title="'Esporta il PDF di ' + sez.titolo + ': calendario e foglio giocatori di ogni torneo'">
+                :title="'Esporta il PDF di ' + sez.titolo + ': solo i calendari dei tornei di questa categoria. I giocatori si stampano da Liste Tornei'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
@@ -159,7 +159,7 @@
                della giornata: un PDF con dentro anche l'altra categoria e' un documento che va
                tagliato a mano prima di essere inviato -->
           <button class="btn-esporta" :disabled="esportazione" @click="esportaPDF(sez, t)"
-                  :title="'Esporta il PDF di ' + t.nome + ' per ' + etichettaCategoria(sez) + ': calendario e foglio giocatori'">
+                  :title="'Esporta il PDF di ' + t.nome + ' per ' + etichettaCategoria(sez) + ': solo il calendario. I giocatori si stampano da Liste Tornei'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
@@ -451,7 +451,7 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   getTornei, getTorneo, creaTorneo, aggiornaTorneo, eliminaTorneo,
   aggiungiGaraTorneo, modificaGaraTorneo, eliminaGaraTorneo, getAllCategorie, isParentCategory,
-  iscriviCategoriaTorneo, rimuoviCategoriaTorneo, getGiocatoriLista, saveOrSharePdf,
+  iscriviCategoriaTorneo, rimuoviCategoriaTorneo, saveOrSharePdf,
   getCategoriaResponsabili
 } from '../../api/index.js'
 import { jsPDF } from 'jspdf'
@@ -1156,7 +1156,11 @@ function testoMisterPdf(t) {
 
 /**
  * Il PDF dei tornei, in quattro varianti che sono la stessa funzione: tutte le categorie della
- * societa', la selezione a schermo, una categoria, un torneo con il suo foglio.
+ * societa', la selezione a schermo, una categoria, un singolo torneo.
+ *
+ * **Solo il calendario, mai i giocatori.** Il roster esce soltanto da Liste Tornei, dove chi stampa
+ * ha verificato il codice fiscale: un PDF dei tornei con dentro i nomi dei ragazzi sarebbe il modo
+ * piu' semplice di portarli fuori, perche' quel file viaggia in chat verso gli organizzatori.
  *
  * La forma e' quella del weekend (vedi core/utils/pdfTHOF.js): intestazione con il nome della
  * societa', tabelle col tema rosso, le barre di categoria e di torneo come RIGHE colSpan dentro il
@@ -1164,10 +1168,10 @@ function testoMisterPdf(t) {
  * assomigliare al calendario che la societa' gia' stampa il venerdi', altrimenti in chat arrivano due
  * documenti che sembrano di due associazioni diverse.
  *
- * Perche' UNA tabella per torneo e non una tabella sola come nel weekend: qui ogni blocco ha un suo
- * foglio giocatori da stampare subito sotto, e un foglio solo costringerebbe a leggersi tutti i
- * calendari e poi a cercare i roster in fondo. La barra della categoria esce una volta sola per
- * gruppo, quando cambia: ripetuta sotto ogni torneo direbbe niente.
+ * Perche' UNA tabella per torneo e non una tabella sola come nel weekend: ogni torneo ha la sua barra
+ * con nome, periodo, luogo e organizzatore, e mischiarli in un'unica tabella perderebbe il confine fra
+ * un impegno e l'altro. La barra della categoria esce una volta sola per gruppo, quando cambia:
+ * ripetuta sotto ogni torneo direbbe niente.
  */
 async function esportaPDF(sez = null, torneo = null, opts = {}) {
   const sezioni = opts.sezioni || (sez ? [sez] : sezioniPerCategoria.value)
@@ -1283,34 +1287,11 @@ async function esportaPDF(sez = null, torneo = null, opts = {}) {
           7: { cellWidth: 'wrap' }
         })
 
-        // Il foglio giocatori di QUESTA categoria in QUESTO torneo, subito sotto il suo calendario.
-        // Cognome e Nome bastano: data di nascita, CF e telefoni stanno nel foglio riservato di Liste
-        // Tornei dietro verifyGdpr, e un export che li stampasse sarebbe la scorciatoia per portarli
-        // fuori in un file che poi finisce all'organizzatore
-        const foglio = foglioDi(t, s.catId)
-        let giocatori = null
-        if (foglio) {
-          try { giocatori = (await getGiocatoriLista(foglio.id)).data || [] } catch (e) { giocatori = null }
-        }
-        if (!foglio) {
-          // Una tabella con le colonne Cognome/Nome vuote sarebbe peggio della frase che dichiara
-          // l'assenza: sembra un roster compilato male, e qui il roster non c'e' proprio
-          tabella([['Foglio giocatori assente']],
-                  [barra('Nessun foglio collegato a questa categoria nel torneo: senza questo documento l\'organizzatore non riceve i giocatori.', 1)],
-                  130, { 0: { cellWidth: 130 } })
-        } else {
-          const corpoFoglio = []
-          corpoFoglio.push(barra(`Foglio giocatori — ${foglio.nome}`, 3))
-          if (giocatori === null) {
-            corpoFoglio.push(barra('Elenco giocatori non caricato: la richiesta alle API e\' fallita. Non consegnare questo documento.', 3, 'avviso'))
-          } else if (!giocatori.length) {
-            corpoFoglio.push(barra('Foglio presente ma vuoto: nessun giocatore scelto', 3, 'avviso'))
-          } else {
-            giocatori.forEach((g, i) => corpoFoglio.push([String(i + 1), g.cognome || '-', g.nome || '-']))
-          }
-          tabella([['N.', 'Cognome', 'Nome']], corpoFoglio, 130,
-                  { 0: { cellWidth: 12, halign: 'center' }, 1: { cellWidth: 60 }, 2: { cellWidth: 58 } })
-        }
+        // QUI NON C'E' IL FOGLIO GIOCATORI, e non va rimesso: il roster esce SOLO da Liste Tornei,
+        // dove chi lo stampa ha verificato il codice fiscale. Un calendario che portasse anche i nomi
+        // dei ragazzi sarebbe la scorciatoia per portarli fuori in un file che finisce in chat agli
+        // organizzatori. Il buco del foglio manca lo dice la card (badge "foglio assente" e il pulsante
+        // "Foglio giocatori"), non il documento che si consegna
 
         // Testata ambra, non rossa: queste non sono appuntamenti, sono un buco da riempire prima di
         // consegnare il calendario
