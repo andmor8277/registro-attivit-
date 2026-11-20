@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, DateTime, Text
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, DateTime, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from ..database import Base
 
@@ -42,18 +42,28 @@ class ConvocazioneGiocatore(Base):
 
 
 class Torneo(Base):
-    """Un torneo a cui la societa' iscrive una categoria (Natale, Pasqua, tornei estivi...).
+    """Un torneo a cui la societa' iscrive una o piu' categorie (Natale, Pasqua, tornei estivi...).
 
     Il calendario delle gare sta in TorneoGara. La Lista Tornei con i giocatori convocati non
     e' qui: resta in liste_torneo, collegata da tornei_id, perche' l'export PDF del file da
     consegnare all'organizzatore vive gia' li' e non va duplicato.
+
+    Le categorie ISCRITTE stanno in TorneoCategoria, una riga ciascuna: e' li' la verita', perche'
+    un torneo di stagione a cui partecipano i Pulcini 2016 e gli Esordienti 2015 e' UN torneo, non
+    due da creare a mano con lo stesso nome. Questa tabella non ha una categoria.
     """
     __tablename__ = "tornei"
     id = Column(Integer, primary_key=True)
     societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
     # Nessun ON DELETE CASCADE: cancellare una categoria non deve cancellare da sola i tornei
     # gia' iscritti, meglio che il database lo impedisca e lo si faccia consapevolmente
-    categoria_id = Column(Integer, ForeignKey("categorie.id"), nullable=False)
+    #
+    # Nullable dal 2026-11-20 e tenuto allineato alla PRIMA categoria iscritta. Non e' la fonte di
+    # verita' (quella e' tornei_categorie) ma rimuoverla avrebbe rotto chi la usa perche' costa
+    # poco: il badge della card, il filtro di GET / e l'ingresso da Scelta.vue. E' la stessa
+    # categoria che porta il primo foglio giocatori, quindi per un torneo mono-categoria -- il
+    # caso di gran lunga piu' frequente -- le due fonti coincidono per costruzione.
+    categoria_id = Column(Integer, ForeignKey("categorie.id"), nullable=True)
     nome = Column(String(120), nullable=False)
     data_inizio = Column(Date, nullable=True)
     data_fine = Column(Date, nullable=True)
@@ -64,6 +74,33 @@ class Torneo(Base):
     creato_il = Column(DateTime, nullable=True)
 
 
+class TorneoCategoria(Base):
+    """L'iscrizione di una categoria a un torneo: chi partecipa a quel torneo.
+
+    E' la tabella che mancava quando il torneo aveva una sola categoria addosso: senza di essa,
+    iscrivere due categorie alla stessa Winter Cup significava creare due tornei omonimi, con due
+    calendari separati e due fogli da consegnare quando l'organizzatore ne aspetta uno per torneo.
+
+    Da questa riga nasce la Lista Tornei di quella categoria: un foglio giocatori per categoria,
+    che e' quello che l'organizzatore riceve. Per questo l'iscrizione e la lista si creano insieme
+    nello stesso transaction, come gia' avveniva per il torneo -- se dipendesse da un passaggio
+    manuale del mister resterebbe senza (in liste_torneo c'era UNA lista in tutto).
+    """
+    __tablename__ = "tornei_categorie"
+    id = Column(Integer, primary_key=True)
+    torneo_id = Column(Integer, ForeignKey("tornei.id", ondelete="CASCADE"), nullable=False)
+    # Nessun CASCADE, stessa scelta di Torneo.categoria_id: una categoria con delle gare gia'
+    # giocate dietro non deve sparire da sola insieme all'iscrizione
+    categoria_id = Column(Integer, ForeignKey("categorie.id"), nullable=False)
+
+    __table_args__ = (
+        # Iscrivere due volte la stessa categoria allo stesso torneo non e' un'ipotesi: e' cio'
+        # che fa un doppio click sul pulsante. E ogni iscrizione duplicata porterebbe con se' un
+        # secondo foglio giocatori per la stessa categoria.
+        UniqueConstraint("torneo_id", "categoria_id", name="uq_tornei_categorie"),
+    )
+
+
 class TorneoGara(Base):
     """Una gara (o un girone) del calendario di un torneo.
 
@@ -71,10 +108,17 @@ class TorneoGara(Base):
     .inizio_gara: arrivano da un <input type="time"> e a volte l'organizzatore le comunica in
     forme diverse ("10:30", "10,30", "ore 10:30"). Forzarle in TIME avrebbe reso impossibile
     registrare il calendario cosi' com'e' stato comunicato.
+
+    La categoria sta qui e non sul torneo, esattamente come partite.categoria_id sta sulla partita
+    e non sul weekend: e' cio' che permette al calendario di un torneo di essere suddiviso per
+    categorie come quello del weekend.
     """
     __tablename__ = "tornei_gare"
     id = Column(Integer, primary_key=True)
     torneo_id = Column(Integer, ForeignKey("tornei.id", ondelete="CASCADE"), nullable=False)
+    # Nullable per non obbligare chi ha un torneo di una sola categoria a sceglierla ogni volta:
+    # il router la deduce dall'unica iscritta, e la esige quando le iscritte sono piu' d'una
+    categoria_id = Column(Integer, ForeignKey("categorie.id"), nullable=True)
     numero = Column(Integer, nullable=True)
     avversario = Column(String(120), nullable=True)
     data = Column(Date, nullable=True)

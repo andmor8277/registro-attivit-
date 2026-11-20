@@ -49,12 +49,19 @@
       <div class="torneo-testata" @click="apriCalendario(t)">
         <div class="torneo-titolo">
           <span class="torneo-nome">{{ t.nome }}</span>
-          <span class="badge categoria">{{ nomeCategoria(t.categoria_id) }}</span>
+          <!-- Una chip per categoria iscritta: un torneo puo' iscrivere piu' categorie, e mostrare
+               solo la "prima" (come faceva il badge vecchio) nasconderebbe meta' dei partecipanti -->
+          <span v-for="c in categorieDel(t)" :key="c.id" class="badge categoria">{{ etichettaCategoria(c) }}</span>
           <span v-if="t.gare" class="badge gare">{{ t.gare }} {{ t.gare === 1 ? 'gara' : 'gare' }}</span>
-          <span v-if="t.lista" class="badge lista" :class="{ vuota: !t.lista.giocatori }">
-            lista: {{ t.lista.giocatori }} {{ t.lista.giocatori === 1 ? 'giocatore' : 'giocatori' }}
+          <span v-for="l in listeDel(t)" :key="l.id" class="badge lista" :class="{ vuota: !l.giocatori }">
+            {{ nomeCategoria(l.categoria_id) }}: {{ l.giocatori }} {{ l.giocatori === 1 ? 'giocatore' : 'giocatori' }}
           </span>
-          <span v-else class="badge lista vuota">lista assente</span>
+          <!-- Il foglio nasce da solo con l'iscrizione: se a una categoria iscritta non corrisponde
+               nessun foglio c'e' un buco reale, ed e' esattamente il caso che in due anni ha lasciato
+               i tornei senza il documento da consegnare -->
+          <span v-if="categorieSenzaFoglio(t).length" class="badge lista vuota">
+            {{ categorieSenzaFoglio(t).length }} {{ categorieSenzaFoglio(t).length === 1 ? 'categoria' : 'categorie' }} senza foglio
+          </span>
         </div>
         <div class="torneo-meta">
           <span v-if="t.data_inizio || t.data_fine">{{ formatoPeriodo(t) }}</span>
@@ -68,13 +75,17 @@
         <button class="btn-azione" @click="apriCalendario(t)">
           {{ calendarioAperto === t.id ? 'Chiudi calendario' : 'Calendario' }}
         </button>
+        <!-- Un pulsante per foglio: con piu' categorie iscritte "il" foglio non esiste piu',
+             ce n'e' uno per categoria ed e' quello che l'organizzatore riceve -->
         <button
-          v-if="t.lista"
+          v-for="l in listeDel(t)" :key="l.id"
           class="btn-azione primario"
-          @click="apriLista(t)"
-          title="Apre la Lista Tornei: scegli i giocatori ed esporta il PDF"
-        >Apri lista</button>
-        <button v-else class="btn-azione" disabled title="Lista non collegata al torneo">Apri lista</button>
+          @click="apriLista(l)"
+          :title="`Apre il foglio giocatori di ${nomeCategoria(l.categoria_id)}: scegli i giocatori ed esporta il PDF`"
+        >Foglio {{ nomeCategoria(l.categoria_id) }}</button>
+        <button v-if="!listeDel(t).length" class="btn-azione" disabled title="Nessun foglio collegato al torneo">
+          Foglio giocatori
+        </button>
         <template v-if="!solaLettura">
           <button class="btn-azione" @click="apriModalTorneo(t)">Modifica</button>
           <button class="btn-azione pericolo" @click="elimina(t)">Elimina</button>
@@ -83,33 +94,39 @@
 
       <div v-if="calendarioAperto === t.id" class="calendario">
         <div v-if="!gareDi(t).length" class="stato piccolo">Nessuna gara inserita.</div>
-        <div v-for="g in gareDi(t)" :key="g.id" class="gara-riga">
-          <div class="gara-numero">{{ g.numero || '–' }}</div>
-          <div class="gara-corpo">
-            <div class="gara-verso">
-              <strong>{{ g.avversario || 'Da definire' }}</strong>
+        <!-- Sezioni per categoria, come il weekend fa con le partite: stessa intestazione
+             "2016 - Pulcini" e stesso ordine per anno di ProgrammazionePartite. E' cio' che rende
+             un torneo con due categorie iscritte un torneo solo, e non due da tenere a mente -->
+        <div v-for="grp in gareRaggruppate(t)" :key="grp.chiave" class="categoria-section">
+          <h3 class="categoria-title">{{ grp.titolo }}</h3>
+          <div v-for="g in grp.gare" :key="g.id" class="gara-riga">
+            <div class="gara-numero">{{ g.numero || '–' }}</div>
+            <div class="gara-corpo">
+              <div class="gara-verso">
+                <strong>{{ g.avversario || 'Da definire' }}</strong>
+              </div>
+              <div class="gara-dettaglio">
+                <span v-if="g.data">{{ formatoData(g.data) }}</span>
+                <span v-if="g.ora">inizio {{ g.ora }}</span>
+                <span v-if="g.ora_appuntamento">appuntamento {{ g.ora_appuntamento }}</span>
+                <span v-if="g.campo">{{ g.campo }}<template v-if="g.indirizzo"> — {{ g.indirizzo }}</template></span>
+              </div>
+              <div v-if="g.note" class="gara-note">{{ g.note }}</div>
             </div>
-            <div class="gara-dettaglio">
-              <span v-if="g.data">{{ formatoData(g.data) }}</span>
-              <span v-if="g.ora">inizio {{ g.ora }}</span>
-              <span v-if="g.ora_appuntamento">appuntamento {{ g.ora_appuntamento }}</span>
-              <span v-if="g.campo">{{ g.campo }}<template v-if="g.indirizzo"> — {{ g.indirizzo }}</template></span>
+            <div v-if="!solaLettura" class="gara-azioni">
+              <button class="btn-icon" @click="apriModalGara(t, g)" title="Modifica gara">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/>
+                </svg>
+              </button>
+              <button class="btn-icon pericolo" @click="eliminaGara(t, g)" title="Elimina gara">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+              </button>
             </div>
-            <div v-if="g.note" class="gara-note">{{ g.note }}</div>
-          </div>
-          <div v-if="!solaLettura" class="gara-azioni">
-            <button class="btn-icon" @click="apriModalGara(t, g)" title="Modifica gara">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
-                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/>
-              </svg>
-            </button>
-            <button class="btn-icon pericolo" @click="eliminaGara(t, g)" title="Elimina gara">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-              </svg>
-            </button>
           </div>
         </div>
         <button v-if="!solaLettura" class="btn-aggiungi" @click="apriModalGara(t)">+ Aggiungi gara</button>
@@ -137,12 +154,46 @@
               <label>Torneo *</label>
               <input v-model="formTorneo.nome" placeholder="es. Torneo di Natale" />
             </div>
-            <div class="form-group">
-              <label>Categoria *</label>
-              <select v-model="formTorneo.categoria_id">
-                <option :value="null" disabled>Seleziona…</option>
-                <option v-for="c in categorieOperative" :key="c.id" :value="c.id">{{ etichettaCategoria(c) }}</option>
-              </select>
+            <!-- CREAZIONE: le categorie che partecipano. Caselle e non menu a tendina perche' la
+                 scelta e' multipla: un torneo di stagione con Pulcini ed Esordienti dentro e' la
+                 norma, non l'eccezione, e col menu a tendina diventavano due tornei omonimi -->
+            <div v-if="!torneoDaModificare" class="form-group">
+              <label>
+                Categorie iscritte *
+                <span class="conteggio">{{ (formTorneo.categorie_id || []).length }} scelte</span>
+              </label>
+              <div class="scelta-categorie">
+                <label v-for="c in categorieOperative" :key="c.id" class="scelta-categoria">
+                  <input type="checkbox" :value="c.id" v-model="formTorneo.categorie_id" />
+                  <span>{{ etichettaCategoria(c) }}</span>
+                </label>
+              </div>
+              <p class="suggerimento">
+                Per ognuna viene creato il suo foglio giocatori, quello da consegnare all'organizzatore.
+              </p>
+            </div>
+
+            <!-- MODIFICA: le categorie NON si toccano con la richiesta che rinomina il torneo (il
+                 PUT le ignora di proposito, perche' toglierne una significa gestire il suo foglio
+                 giocatori). Qui si usano le rotte dedicate, con le loro regole. -->
+            <div v-else class="form-group">
+              <label>Categorie iscritte</label>
+              <div class="scelta-categorie">
+                <span v-for="c in categorieDel(torneoDaModificare)" :key="c.id" class="chip-categoria">
+                  {{ etichettaCategoria(c) }}
+                  <button type="button" class="chip-x" title="Rimuovi l'iscrizione" @click="togliCategoria(c)">✕</button>
+                </span>
+                <span v-if="!categorieDel(torneoDaModificare).length" class="suggerimento">nessuna categoria iscritta</span>
+              </div>
+              <div class="aggiungi-categoria">
+                <select v-model="nuovaCategoria">
+                  <option :value="null" disabled>Aggiungi categoria…</option>
+                  <option v-for="c in categorieNonIscritte" :key="c.id" :value="c.id">{{ etichettaCategoria(c) }}</option>
+                </select>
+                <button type="button" class="btn-secondary" :disabled="!nuovaCategoria || salvataggio" @click="aggiungiCategoria">
+                  Iscriviti
+                </button>
+              </div>
             </div>
             <div class="form-riga">
               <div class="form-group">
@@ -192,6 +243,21 @@
             </button>
           </div>
           <div class="modal-body">
+            <!-- La categoria della gara serve solo quando il torneo ne ha piu' d'una: con una sola
+                 iscritta il backend la deduce da solo, e chiederla ogni volta sarebbe rumore. Quando
+                 sono piu' d'una va chiesta per forza: indovinarla vorrebbe dire mettere la gara nel
+                 foglio sbagliato da consegnare -->
+            <div v-if="categorieDelTorneoGara().length > 1" class="form-group">
+              <label>Categoria della gara *</label>
+              <select v-model="formGara.categoria_id">
+                <option :value="null" disabled>Seleziona…</option>
+                <option v-for="c in categorieDelTorneoGara()" :key="c.id" :value="c.id">{{ etichettaCategoria(c) }}</option>
+              </select>
+            </div>
+            <div v-else-if="categorieDelTorneoGara().length === 1" class="form-group">
+              <label>Categoria della gara</label>
+              <p class="suggerimento">{{ etichettaCategoria(categorieDelTorneoGara()[0]) }} — l'unica iscritta al torneo</p>
+            </div>
             <div class="form-riga">
               <div class="form-group">
                 <label>Numero</label>
@@ -249,7 +315,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getTornei, getTorneo, creaTorneo, aggiornaTorneo, eliminaTorneo,
-  aggiungiGaraTorneo, modificaGaraTorneo, eliminaGaraTorneo, getAllCategorie, isParentCategory
+  aggiungiGaraTorneo, modificaGaraTorneo, eliminaGaraTorneo, getAllCategorie, isParentCategory,
+  iscriviCategoriaTorneo, rimuoviCategoriaTorneo
 } from '../../api/index.js'
 import { useStore } from '../../store.js'
 
@@ -287,6 +354,8 @@ const modalGara = ref(false)
 const garaDaModificare = ref(null)
 const garaTorneoId = ref(null)
 const formGara = ref({})
+// La categoria da iscrivere nel modal di modifica: niente di selezionato finche' non si sceglie
+const nuovaCategoria = ref(null)
 
 function tornaIndietro() {
   if (route.params.id) router.push('/scelta/' + route.params.id)
@@ -311,6 +380,71 @@ function etichettaCategoria(c) {
 function nomeCategoria(id) {
   return etichettaCategoria(categorie.value.find(c => c.id === Number(id)))
 }
+
+// ------------------------------------------------------- categorie e fogli di un torneo
+// Un torneo iscrive N categorie. `t.categoria_id` e' solo la "prima", il ricordo del tempo in cui
+// di categorie ne esisteva una sola: le liste della pagina leggono `t.categorie`, che e' la verita',
+// e ripiegano sul vecchio campo solo se il backend e' piu' vecchio della migrazione.
+function categorieDel(t) {
+  if (!t) return []
+  if (Array.isArray(t.categorie)) return t.categorie
+  return t.categoria_id ? [{ id: Number(t.categoria_id), nome: null, anno: null }] : []
+}
+
+function listeDel(t) {
+  if (!t) return []
+  if (Array.isArray(t.liste)) return t.liste
+  return t.lista ? [t.lista] : []
+}
+
+// Una categoria iscritta senza foglio e' esattamente il guasto che in due anni ha lasciato i tornei
+// senza il documento da consegnare all'organizzatore: qui diventa visibile invece di restare
+// un'assenza silenziosa dietro un bottone grigio
+function categorieSenzaFoglio(t) {
+  const conFoglio = new Set(listeDel(t).map(l => Number(l.categoria_id)))
+  return categorieDel(t).filter(c => !conFoglio.has(Number(c.id)))
+}
+
+// Le gare raggruppate per categoria, con lo stesso ordine per anno di weekendPartiteGrouped in
+// ProgrammazionePartite.vue. Le gare senza categoria -- quelle nate prima della migrazione, o a cui
+// la categoria e' stata tolta -- finiscono in una sezione visibile: un calendario che ne mostra sei
+// su otto e' peggio di uno che ammette di averne una senza etichetta
+function gareRaggruppate(t) {
+  const gare = gareDi(t)
+  const iscritte = categorieDel(t)
+  const bucket = {}
+  gare.forEach(g => {
+    const k = g.categoria_id ? String(g.categoria_id) : '__senza__'
+    if (!bucket[k]) bucket[k] = []
+    bucket[k].push(g)
+  })
+  const gruppi = []
+  iscritte.forEach(c => {
+    if (bucket[String(c.id)]) {
+      gruppi.push({ chiave: String(c.id), titolo: etichettaCategoria(c), gare: bucket[String(c.id)] })
+    }
+  })
+  Object.keys(bucket).forEach(k => {
+    if (k === '__senza__') {
+      gruppi.push({ chiave: k, titolo: 'Senza categoria', gare: bucket[k] })
+    } else if (!iscritte.some(c => String(c.id) === k)) {
+      // la gara punta a una categoria non piu' iscritta: si dice quale, non la si nasconde
+      gruppi.push({ chiave: k, titolo: nomeCategoria(k) + ' (non iscritta)', gare: bucket[k] })
+    }
+  })
+  return gruppi
+}
+
+// Le categorie disponibili nel modal della gara: solo quelle iscritte al torneo, perche' una gara
+// di una categoria non iscritta non avrebbe un foglio a cui appartenere
+function categorieDelTorneoGara() {
+  return categorieDel(tornei.value.find(x => x.id === garaTorneoId.value))
+}
+
+const categorieNonIscritte = computed(() => {
+  const gia = new Set(categorieDel(torneoDaModificare.value).map(c => Number(c.id)))
+  return categorieOperative.value.filter(c => !gia.has(Number(c.id)))
+})
 
 function formatoData(d) {
   if (!d) return ''
@@ -365,39 +499,55 @@ function gareDi(t) {
   return gareCache.value[t.id] || []
 }
 
+// Le gare di un torneo: dalla cache del calendario, o caricate adesso. Serve a chi le vuole
+// contare PRIMA di un'azione (togliere una categoria) e non puo' permettere che la cache vuota
+// venga letta come "non ci sono gare": sarebbe un via libera bugiardo. Rende null, non [], quando
+// non e' riuscita a saperlo: "non lo so" e "non ce ne sono" sono due risposte diverse
+async function gareDel(t) {
+  if (gareCache.value[t.id]) return gareCache.value[t.id]
+  try {
+    const res = await getTorneo(t.id)
+    const gare = res.data.gare || []
+    gareCache.value = { ...gareCache.value, [t.id]: gare }
+    return gare
+  } catch (e) {
+    return null
+  }
+}
+
 async function apriCalendario(t) {
   if (calendarioAperto.value === t.id) {
     calendarioAperto.value = null
     return
   }
   calendarioAperto.value = t.id
-  if (!gareCache.value[t.id]) {
-    try {
-      const res = await getTorneo(t.id)
-      gareCache.value = { ...gareCache.value, [t.id]: res.data.gare || [] }
-    } catch (e) {
-      errore.value = e.response?.data?.detail || 'Errore nel caricamento del calendario'
-    }
+  if (!gareCache.value[t.id] && (await gareDel(t)) === null) {
+    errore.value = 'Errore nel caricamento del calendario'
   }
 }
 
-// La lista non si crea qui: nasce col torneo nel backend. Qui si apre quella gia' esistente,
-// dove il mister sceglie i giocatori e preme "Esporta PDF" (gia' funzionante in ListeTornei.vue).
-function apriLista(t) {
-  router.push('/liste-tornei/' + t.categoria_id)
+// Il foglio giocatori non si crea qui: nasce col torneo (o con l'iscrizione della categoria) nel
+// backend. Qui si apre quello gia' esistente, dove il mister sceglie i giocatori e preme
+// "Esporta PDF" (gia' funzionante in ListeTornei.vue, che e' una pagina per categoria).
+function apriLista(l) {
+  router.push('/liste-tornei/' + l.categoria_id)
 }
 
 function apriModalTorneo(t = null) {
   erroreModal.value = ''
+  nuovaCategoria.value = null
   torneoDaModificare.value = t
   formTorneo.value = t
     ? {
-        nome: t.nome, categoria_id: t.categoria_id, data_inizio: t.data_inizio || '',
+        nome: t.nome, data_inizio: t.data_inizio || '',
         data_fine: t.data_fine || '', luogo: t.luogo || '', organizzatore: t.organizzatore || '',
         descrizione: t.descrizione || ''
       }
     : {
-        nome: '', categoria_id: categoriaFiltro.value ? Number(categoriaFiltro.value) : null,
+        nome: '',
+        // da Scelta.vue si arriva con la categoria gia' in testa: pre-selezione la sua, altrimenti
+        // si parte vuoti e si lascia scegliere chi iscrive
+        categorie_id: categoriaFiltro.value ? [Number(categoriaFiltro.value)] : [],
         data_inizio: '', data_fine: '', luogo: '', organizzatore: '', descrizione: ''
       }
   modalTorneo.value = true
@@ -406,12 +556,15 @@ function apriModalTorneo(t = null) {
 async function salvaTorneo() {
   erroreModal.value = ''
   if (!formTorneo.value.nome?.trim()) { erroreModal.value = "Il nome del torneo e' obbligatorio"; return }
-  if (!formTorneo.value.categoria_id) { erroreModal.value = 'Seleziona la categoria'; return }
+  const scelte = (formTorneo.value.categorie_id || []).map(Number)
+  if (!torneoDaModificare.value && !scelte.length) {
+    erroreModal.value = 'Seleziona almeno una categoria: senza categorie il torneo non ha squadre'
+    return
+  }
   salvataggio.value = true
   try {
     const corpo = {
       nome: formTorneo.value.nome.trim(),
-      categoria_id: Number(formTorneo.value.categoria_id),
       data_inizio: formTorneo.value.data_inizio || null,
       data_fine: formTorneo.value.data_fine || null,
       luogo: formTorneo.value.luogo || null,
@@ -419,12 +572,16 @@ async function salvaTorneo() {
       descrizione: formTorneo.value.descrizione || null
     }
     if (torneoDaModificare.value) {
+      // niente categorie nel corpo: le gestiscono le rotte dedicate, con le loro regole
       await aggiornaTorneo(torneoDaModificare.value.id, corpo)
       conferma.value = 'Torneo aggiornato'
     } else {
-      await creaTorneo(corpo)
-      conferma.value = 'Torneo creato: la Lista Tornei collegata e gia'
-        + ' pronta in Liste Tornei'
+      const n = scelte.length
+      await creaTorneo({ ...corpo, categorie_id: scelte })
+      conferma.value = n === 1
+        ? 'Torneo creato: il foglio giocatori della categoria e gia'
+          + ' pronto in Liste Tornei'
+        : `Torneo creato con ${n} categorie: i ${n} fogli giocatori sono gia' pronti in Liste Tornei`
     }
     modalTorneo.value = false
     await carica()
@@ -435,11 +592,74 @@ async function salvaTorneo() {
   }
 }
 
+// Iscrivere una categoria a un torneo gia' creato porta con se' il suo foglio giocatori: lo fa il
+// backend nello stesso transaction, qui si ricarica la pagina per mostrarlo
+async function aggiungiCategoria() {
+  if (!nuovaCategoria.value || !torneoDaModificare.value) return
+  erroreModal.value = ''
+  salvataggio.value = true
+  try {
+    await iscriviCategoriaTorneo(torneoDaModificare.value.id, Number(nuovaCategoria.value))
+    conferma.value = 'Categoria iscritta: il suo foglio giocatori e gia'
+      + ' pronto in Liste Tornei'
+    nuovaCategoria.value = null
+    await ricaricaTorneoInModifica()
+  } catch (e) {
+    erroreModal.value = e.response?.data?.detail || "Errore nell'iscrizione della categoria"
+  } finally {
+    salvataggio.value = false
+  }
+}
+
+async function togliCategoria(c) {
+  if (!torneoDaModificare.value) return
+  const t = torneoDaModificare.value
+  // Si chiedono le gare davvero invece di leggere la cache: se il calendario non era mai stato
+  // aperto la cache e' vuota, e leggerla avrebbe detto "nessun rischio" senza saperlo
+  const cache = await gareDel(t)
+  const gare = cache === null ? null
+    : cache.filter(g => Number(g.categoria_id) === Number(c.id)).length
+  // Il backend rifiuta l'operazione se resterebbero gare orfane: dirlo qui, prima del click, costa
+  // una domanda in meno a chi altrimenti si ritrova un errore senza capire da dove viene. E quando
+  // non e' stato possibile saperlo, la domanda lo dice invece di far finta di niente
+  const avvertenza = gare === null
+    ? "\nNon ho potuto verificare il calendario: se questa categoria ha gare, il backend la rifiutera'."
+    : gare
+      ? `\nIl backend la rifiutera': questa categoria ha ${gare} ${gare === 1 ? 'gara' : 'gare'} nel calendario.`
+      : "\nIl foglio giocatori di questa categoria restera' in Liste Tornei, non verra' cancellato."
+  if (!confirm(`Rimuovere ${etichettaCategoria(c)} dal torneo "${t.nome}"?${avvertenza}`)) return
+  salvataggio.value = true
+  try {
+    await rimuoviCategoriaTorneo(t.id, Number(c.id))
+    conferma.value = 'Iscrizione rimossa'
+    await ricaricaTorneoInModifica()
+  } catch (e) {
+    erroreModal.value = e.response?.data?.detail || "Errore nella rimozione dell'iscrizione"
+  } finally {
+    salvataggio.value = false
+  }
+}
+
+// Dopo un'iscrizione o una rimozione il modal mostra le categorie del torneo: se si ricaricasse
+// solo l'elenco, il chip appena aggiunto (o tolto) comparirebbe solo chiudendo e riaprendo il modal
+async function ricaricaTorneoInModifica() {
+  const id = torneoDaModificare.value?.id
+  await carica()
+  const aggiornato = tornei.value.find(x => x.id === id)
+  // se il torneo non c'e' piu' (eliminato altrove) il modal si chiude da solo invece di restare
+  // aggrappato a un oggetto che non esiste piu'
+  if (!aggiornato) { modalTorneo.value = false; return }
+  torneoDaModificare.value = aggiornato
+}
+
 async function elimina(t) {
-  const n = t.lista?.giocatori ?? 0
-  const avvertenza = n
-    ? `\nAttenzione: la lista collegata contiene ${n} `
-      + `${n === 1 ? 'giocatore' : 'giocatori'} e verra eliminata insieme al torneo.`
+  // Non piu' "la" lista: i fogli sono uno per categoria, e l'avvertenza deve dire quanti giocatori
+  // si perdono in totale, perche' il backend li elimina insieme al torneo
+  const giocatori = listeDel(t).reduce((s, l) => s + (l.giocatori || 0), 0)
+  const fogli = listeDel(t).length
+  const avvertenza = giocatori
+    ? `\nAttenzione: ${fogli} ${fogli === 1 ? 'foglio' : 'fogli'} con ${giocatori} `
+      + `${giocatori === 1 ? 'giocatore' : 'giocatori'} verranno eliminati insieme al torneo.`
     : ''
   if (!confirm(`Eliminare il torneo "${t.nome}"?${avvertenza}`)) return
   try {
@@ -455,13 +675,20 @@ function apriModalGara(t, g = null) {
   erroreModal.value = ''
   garaTorneoId.value = t.id
   garaDaModificare.value = g
+  // Con una sola categoria iscritta la si pre-seleziona: il backend la dedurrebbe comunque, ma
+  // vederla scritta nel modal evita la sorpresa di una gara finita in un foglio non previsto.
+  // Con piu' d'una si parte vuoti: scegliere noi sarebbe mettere la gara nel foglio sbagliato.
+  const iscritte = categorieDel(t)
+  const unaSola = iscritte.length === 1 ? Number(iscritte[0].id) : null
   formGara.value = g
     ? {
+        categoria_id: g.categoria_id ? Number(g.categoria_id) : unaSola,
         numero: g.numero, avversario: g.avversario || '', data: g.data || '', ora: g.ora || '',
         ora_appuntamento: g.ora_appuntamento || '', campo: g.campo || '',
         indirizzo: g.indirizzo || '', note: g.note || ''
       }
     : {
+        categoria_id: unaSola,
         numero: null, avversario: '', data: t.data_inizio || '', ora: '',
         ora_appuntamento: '', campo: '', indirizzo: '', note: ''
       }
@@ -470,10 +697,18 @@ function apriModalGara(t, g = null) {
 
 async function salvaGara() {
   erroreModal.value = ''
+  // Il controllo sta anche qui, e non solo nel backend, per non far premere "Salva" per niente:
+  // con piu' categorie iscritte la gara senza categoria verrebbe rifiutata comunque
+  const disponibili = categorieDelTorneoGara()
+  if (disponibili.length > 1 && !formGara.value.categoria_id) {
+    erroreModal.value = "Indica a quale categoria appartiene la gara: il torneo ne ha " + disponibili.length
+    return
+  }
   salvataggio.value = true
   const tid = garaTorneoId.value
   try {
     const corpo = {
+      categoria_id: formGara.value.categoria_id ? Number(formGara.value.categoria_id) : null,
       numero: formGara.value.numero ? Number(formGara.value.numero) : null,
       avversario: formGara.value.avversario || null,
       data: formGara.value.data || null,
@@ -668,8 +903,52 @@ onMounted(async () => {
 }
 .btn-secondary:hover { color: white; border-color: rgba(255,255,255,0.3); }
 
+/* ------------------------------------------------------------------ sezioni del calendario
+   Stesse intenzioni di .categorie-section in ProgrammazionePartite.vue, rimpicciolite perche' qui
+   stanno dentro una card e non in una pagina intera: l'etichetta "2016 - Pulcini" e il bordo basso
+   colorato sono il segno visivo che dice "da qui in giu' sono le gare di questa categoria" */
+.categoria-section { margin: 0 0 0.875rem; }
+.categoria-section:last-of-type { margin-bottom: 0; }
+.categoria-title {
+  font-size: 0.8125rem; font-weight: 700; color: #60a5fa; margin: 0.5rem 0 0.25rem;
+  letter-spacing: -0.01em; padding-bottom: 0.25rem;
+  border-bottom: 2px solid rgba(59,130,246,0.45);
+}
+
+/* ------------------------------------------------------------------ scelta delle categorie
+   Il checkbox eredita width:100% e il padding da .form-group input: vanno annullati qui, o le
+   caselle si allargano una riga ciascuna e la scelta multipla diventa un elenco infinito */
+.scelta-categorie {
+  display: flex; flex-wrap: wrap; gap: 0.375rem; max-height: 11rem; overflow-y: auto;
+  padding: 0.5rem; border: 1px solid var(--color-border, rgba(255,255,255,0.1));
+  border-radius: 10px; background: rgba(255,255,255,0.02);
+}
+.scelta-categoria {
+  display: flex; align-items: center; gap: 0.3125rem; padding: 0.25rem 0.5rem;
+  border-radius: 999px; background: rgba(255,255,255,0.06); cursor: pointer;
+  font-size: 0.75rem; font-weight: 500; color: #d4d4d4; margin: 0;
+}
+.scelta-categoria input[type="checkbox"] {
+  width: auto; padding: 0; margin: 0; accent-color: #3b82f6; cursor: pointer;
+}
+.conteggio { font-weight: 500; color: #60a5fa; margin-left: 0.25rem; }
+.chip-categoria {
+  display: inline-flex; align-items: center; gap: 0.3125rem; padding: 0.25rem 0.5rem;
+  border-radius: 999px; font-size: 0.75rem; font-weight: 600;
+  background: rgba(59,130,246,0.14); color: #60a5fa;
+}
+.chip-x {
+  border: none; background: transparent; color: inherit; cursor: pointer;
+  font-size: 0.75rem; line-height: 1; padding: 0 0.1875rem; border-radius: 999px;
+}
+.chip-x:hover { background: rgba(239,68,68,0.25); color: #fca5a5; }
+.aggiungi-categoria { display: flex; gap: 0.5rem; margin-top: 0.5rem; align-items: flex-end; }
+.aggiungi-categoria select { flex: 1; }
+.aggiungi-categoria .btn-secondary { white-space: nowrap; }
+
 @media (max-width: 560px) {
   .form-riga { flex-direction: column; gap: 0; }
   .modal { max-width: 100%; }
+  .aggiungi-categoria { flex-direction: column; align-items: stretch; }
 }
 </style>

@@ -85,6 +85,9 @@ q "INSERT INTO categorie (societa_id,nome,anno,is_archiviata) VALUES (1,'$P-cat1
    INSERT INTO categorie (societa_id,nome,anno,is_archiviata) VALUES (2,'$P-cat2',1901,0);" >/dev/null
 CAT1=$(q "SELECT id FROM categorie WHERE nome='$P-cat1'")
 CAT2=$(q "SELECT id FROM categorie WHERE nome='$P-cat2'")
+# L'etichetta che il foglio giocatori deve portare nell'intestazione del PDF. Letta dal DB e non
+# scritta a mano: se un giorno cambia il modo in cui si costruisce, qui si vede.
+ETICHETTA_CAT1=$(q "SELECT anno::text||' - '||nome FROM categorie WHERE id=$CAT1")
 
 # due persone per la societa' 1 (servono per aggiungere/rimuovere dalla lista) e una nella 2,
 # che e' quella che NON deve poter finire nella lista della societa' 1.
@@ -152,7 +155,11 @@ fi
 ck "admin crea il torneo" "$([ -n "$TID" ] && echo si)" "si"
 ck "  la risposta porta gia' la lista collegata" "$([ -n "$LID" ] && echo si)" "si"
 ck "  la lista esiste e punta al torneo" "$(q "SELECT count(*) FROM liste_torneo WHERE id=$LID AND torneo_id=$TID")" "1"
-ck "  la lista eredita il nome del torneo" "$(q "SELECT nome FROM liste_torneo WHERE id=$LID")" "$P-Natale"
+# Il nome del foglio porta ANCHE la categoria, dal 2026-11-20: un torneo puo' iscrivere piu'
+# categorie e due fogli che si chiamano entrambi "Winter Cup" non dicono all'organizzatore quali
+# sono i Pulcini e quali gli Esordienti. Si pretende nome del torneo + etichetta categoria, cosi'
+# l'asserzione cade se se ne perde uno dei due pezzi e non solo se cambia il formato.
+ck "  la lista eredita il nome del torneo e la sua categoria" "$(q "SELECT nome FROM liste_torneo WHERE id=$LID")" "$P-Natale - $ETICHETTA_CAT1"
 ck "  la lista eredita la categoria" "$(q "SELECT categoria_id FROM liste_torneo WHERE id=$LID")" "$CAT1"
 ck "  la lista eredita la societa'" "$(q "SELECT societa_id FROM liste_torneo WHERE id=$LID")" "1"
 ck "  il torneo ha la data di creazione" "$(q "SELECT CASE WHEN creato_il IS NULL THEN 'null' ELSE 'ok' END FROM tornei WHERE id=$TID")" "ok"
@@ -215,7 +222,7 @@ ck "  eliminarla di nuovo -> 404" "$(cod -X DELETE "$D/tornei/$TID/gare/$G2" -H 
 echo
 echo "--- 6. rinominare il torneo aggiorna la lista: quel nome finisce nell'intestazione del PDF ---"
 ck "admin rinomina il torneo" "$(cod -X PUT "$D/tornei/$TID" -H "Content-Type: application/json" -H "Authorization: Bearer $TADM" -d "$(corpo "$P-Natale2027" $CAT1 x)")" "200"
-ck "  la lista collegata porta il nome nuovo" "$(q "SELECT nome FROM liste_torneo WHERE id=$LID")" "$P-Natale2027"
+ck "  la lista collegata porta il nome nuovo (e la sua categoria)" "$(q "SELECT nome FROM liste_torneo WHERE id=$LID")" "$P-Natale2027 - $ETICHETTA_CAT1"
 
 echo
 echo "--- 7. un'altra societa' non vede e non tocca i tornei della prima ---"

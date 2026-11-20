@@ -20,6 +20,7 @@ from .partite import (
     ListaTorneo,
     ListaTorneoGiocatore,
     Torneo,
+    TorneoCategoria,
     TorneoGara,
 )
 from .segreteria import Openday, Valutazione
@@ -53,6 +54,7 @@ __all__ = [
     "ListaTorneo",
     "ListaTorneoGiocatore",
     "Torneo",
+    "TorneoCategoria",
     "TorneoGara",
     "Openday",
     "Valutazione",

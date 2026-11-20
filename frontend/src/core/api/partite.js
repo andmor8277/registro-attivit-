@@ -116,3 +116,7 @@ export const eliminaTorneo = (id) => api.delete(`/tornei/${id}`)
 export const aggiungiGaraTorneo = (id, data) => api.post(`/tornei/${id}/gare`, data)
 export const modificaGaraTorneo = (id, garaId, data) => api.put(`/tornei/${id}/gare/${garaId}`, data)
 export const eliminaGaraTorneo = (id, garaId) => api.delete(`/tornei/${id}/gare/${garaId}`)
+// Iscrivere una categoria a un torneo porta con se' il suo foglio giocatori: lo fa il backend
+// nello stesso transaction, non va creato qui con creaListaTorneo.
+export const iscriviCategoriaTorneo = (id, categoriaId) => api.post(`/tornei/${id}/categorie`, { categoria_id: categoriaId })
+export const rimuoviCategoriaTorneo = (id, categoriaId) => api.delete(`/tornei/${id}/categorie/${categoriaId}`)

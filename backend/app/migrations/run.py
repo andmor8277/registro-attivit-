@@ -1654,6 +1654,101 @@ def run_migrations():
                 print(f"Migration warning (liste_torneo.torneo_id FK): {e}")
                 conn.rollback()
 
+            # ---- tornei_categorie: un torneo iscrive N categorie, ognuna col suo foglio ----
+            # Nasce perche' il torneo aveva UNA categoria addosso: iscrivere Pulcini 2016 ed
+            # Esordienti 2015 alla stessa Winter Cup significava creare due tornei omonimi, con due
+            # calendari separati e due fogli da consegnare dove l'organizzatore ne aspetta uno per
+            # torneo. Da qui la suddivisione per categorie del calendario, come il weekend.
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS tornei_categorie (
+                        id SERIAL PRIMARY KEY,
+                        torneo_id INTEGER NOT NULL REFERENCES tornei(id) ON DELETE CASCADE,
+                        categoria_id INTEGER NOT NULL REFERENCES categorie(id),
+                        CONSTRAINT uq_tornei_categorie UNIQUE (torneo_id, categoria_id)
+                    )
+                """))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tornei_categorie_categoria "
+                                  "ON tornei_categorie(categoria_id)"))
+                # Retrodata: i tornei nati ieri avevano la categoria addosso, e quell'unica
+                # categoria E' l'iscrizione vera. Senza questo i due tornei gia' creati sarebbero
+                # rimasti senza categorie iscritte, e il calendario sarebbe apparso vuoto.
+                conn.execute(text("""
+                    INSERT INTO tornei_categorie (torneo_id, categoria_id)
+                    SELECT t.id, t.categoria_id
+                    FROM tornei t
+                    WHERE t.categoria_id IS NOT NULL
+                      AND NOT EXISTS (
+                          SELECT 1 FROM tornei_categorie tc
+                          WHERE tc.torneo_id = t.id AND tc.categoria_id = t.categoria_id
+                      )
+                """))
+                conn.commit()
+                print("Migration: Created tornei_categorie")
+            except Exception as e:
+                print(f"Migration warning (tornei_categorie): {e}")
+                conn.rollback()
+
+            # ---- la categoria sulla singola gara, come partite.categoria_id sul weekend ----
+            try:
+                conn.execute(text(
+                    "ALTER TABLE tornei_gare ADD COLUMN IF NOT EXISTS categoria_id INTEGER "
+                    "REFERENCES categorie(id)"
+                ))
+                # Stesso buco gia' visto su liste_torneo.torneo_id: "ADD COLUMN IF NOT EXISTS" e'
+                # un no-op quando la colonna esiste, e in quel caso la REFERENCES inline non viene
+                # mai eseguita, quindi la FK non c'e' e nessuno lo dice. ADD CONSTRAINT non ha una
+                # forma IF NOT EXISTS, allora prima si guarda pg_constraint.
+                manca = conn.execute(text("""
+                    SELECT count(*) FROM pg_constraint c
+                    JOIN pg_class ct ON ct.oid = c.conrelid
+                    JOIN pg_class cf ON cf.oid = c.confrelid
+                    WHERE c.contype = 'f'
+                      AND ct.relname = 'tornei_gare'
+                      AND cf.relname = 'categorie'
+                """)).scalar()
+                if not manca:
+                    conn.execute(text(
+                        "ALTER TABLE tornei_gare ADD CONSTRAINT tornei_gare_categoria_id_fkey "
+                        "FOREIGN KEY (categoria_id) REFERENCES categorie(id)"
+                    ))
+                    print("Migration: Re-created tornei_gare.categoria_id FK")
+                # Retrodata: le gare di un torneo che ha una sola categoria iscritta appartengono
+                # a quella. Non si legge tornei.categoria_id, che puo' essere NULL o la "prima" di
+                # molte: qui serve l'unica iscrizione, se e una sola.
+                conn.execute(text("""
+                    UPDATE tornei_gare g SET categoria_id = tc.categoria_id
+                    FROM tornei_categorie tc
+                    WHERE g.torneo_id = tc.torneo_id
+                      AND g.categoria_id IS NULL
+                      AND (SELECT count(*) FROM tornei_categorie t2
+                           WHERE t2.torneo_id = g.torneo_id) = 1
+                """))
+                conn.commit()
+                print("Migration: Added tornei_gare.categoria_id")
+            except Exception as e:
+                print(f"Migration warning (tornei_gare.categoria_id): {e}")
+                conn.rollback()
+
+            # ---- il foglio da consegnare diventa uno per categoria ----
+            # ux_liste_torneo_torneo diceva "un torneo produce una sola lista". Con le categorie
+            # iscritte a piu' d'una quel vincolo e' sbagliato, non solo stretto: l'organizzatore
+            # riceve UN foglio giocatori PER CATEGORIA, quindi due categorie sono due liste legittime
+            # dello stesso torneo e l'UNIQUE vecchio ne avrebbe rifiutata una. L'UNIQUE parziale
+            # nuovo resta altrettanto severo, solo sull'asse giusto: due fogli per la stessa
+            # categoria dello stesso torneo restano impossibili.
+            try:
+                conn.execute(text("DROP INDEX IF EXISTS ux_liste_torneo_torneo"))
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ux_liste_torneo_torneo_categoria "
+                    "ON liste_torneo(torneo_id, categoria_id) WHERE torneo_id IS NOT NULL"
+                ))
+                conn.commit()
+                print("Migration: Lista Tornei unica per (torneo, categoria)")
+            except Exception as e:
+                print(f"Migration warning (ux_liste_torneo_torneo_categoria): {e}")
+                conn.rollback()
+
         finally:
             if has_lock:
                 try:
