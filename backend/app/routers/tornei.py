@@ -270,19 +270,40 @@ def lista_tornei(
 
     risultati = []
     for t in query.order_by(Torneo.data_inizio.desc().nullslast(), Torneo.id.desc()).all():
+        categorie = _categorie_iscritte(t.id, db)
+        # Il conteggio delle gare non puo' essere un numero solo: nella pagina suddivisa per
+        # categorie, dire "6 gare" dentro la sezione Pulcini e' falso se 4 sono degli Esordienti.
+        # Si contano per categoria qui, perche' il calendario vero arriva solo quando lo si apre
+        # (GET /tornei/{id}) e chiederlo per ogni card significherebbe N richieste per dipingere
+        # dei numeri.
+        righe_gare = db.execute(text(
+            "SELECT categoria_id, count(*) FROM tornei_gare WHERE torneo_id = :tid GROUP BY categoria_id"
+        ), {"tid": t.id}).fetchall()
+        gare_per_categoria = {str(r[0]): r[1] for r in righe_gare if r[0] is not None}
+        # Orfana non e' solo la gara con la categoria NULL: e' anche quella che punta a una
+        # categoria che NON risulta piu' iscritta (dati nati prima della migrazione, o un'iscrizione
+        # sciolta a mani nude sul DB). Quella categoria non ha una sezione dove comparire, quindi
+        # contarla solo come NULL darebbe "0 gare senza categoria" accanto a una gara elencata lo
+        # stesso, che e' il tipo di bug che si vede solo dopo mesi
+        iscritte = {str(c["id"]) for c in categorie}
+        gare_orfane = sum(
+            r[1] for r in righe_gare
+            if r[0] is None or str(r[0]) not in iscritte
+        )
         risultati.append({
             "id": t.id,
             "nome": t.nome,
             "categoria_id": t.categoria_id,
-            "categorie": _categorie_iscritte(t.id, db),
+            "categorie": categorie,
             "societa_id": t.societa_id,
             "data_inizio": t.data_inizio.isoformat() if t.data_inizio else None,
             "data_fine": t.data_fine.isoformat() if t.data_fine else None,
             "luogo": t.luogo,
             "organizzatore": t.organizzatore,
             "descrizione": t.descrizione,
-            "gare": db.execute(text(
-                "SELECT count(*) FROM tornei_gare WHERE torneo_id = :tid"), {"tid": t.id}).scalar() or 0,
+            "gare": sum(r[1] for r in righe_gare),
+            "gare_per_categoria": gare_per_categoria,
+            "gare_orfane": gare_orfane,
             "liste": _liste_collegate(t.id, db),
             "lista": _lista_collegata(t.id, db, t.categoria_id),
         })

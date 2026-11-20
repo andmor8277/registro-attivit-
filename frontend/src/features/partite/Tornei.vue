@@ -45,61 +45,73 @@
           : 'Nessun torneo. Con "Nuovo torneo" si crea anche la Lista Tornei collegata.' }}
     </div>
 
-    <div v-for="t in tornei" :key="t.id" class="torneo-card">
-      <div class="torneo-testata" @click="apriCalendario(t)">
-        <div class="torneo-titolo">
-          <span class="torneo-nome">{{ t.nome }}</span>
-          <!-- Una chip per categoria iscritta: un torneo puo' iscrivere piu' categorie, e mostrare
-               solo la "prima" (come faceva il badge vecchio) nasconderebbe meta' dei partecipanti -->
-          <span v-for="c in categorieDel(t)" :key="c.id" class="badge categoria">{{ etichettaCategoria(c) }}</span>
-          <span v-if="t.gare" class="badge gare">{{ t.gare }} {{ t.gare === 1 ? 'gara' : 'gare' }}</span>
-          <span v-for="l in listeDel(t)" :key="l.id" class="badge lista" :class="{ vuota: !l.giocatori }">
-            {{ nomeCategoria(l.categoria_id) }}: {{ l.giocatori }} {{ l.giocatori === 1 ? 'giocatore' : 'giocatori' }}
-          </span>
-          <!-- Il foglio nasce da solo con l'iscrizione: se a una categoria iscritta non corrisponde
-               nessun foglio c'e' un buco reale, ed e' esattamente il caso che in due anni ha lasciato
-               i tornei senza il documento da consegnare -->
-          <span v-if="categorieSenzaFoglio(t).length" class="badge lista vuota">
-            {{ categorieSenzaFoglio(t).length }} {{ categorieSenzaFoglio(t).length === 1 ? 'categoria' : 'categorie' }} senza foglio
-          </span>
-        </div>
-        <div class="torneo-meta">
-          <span v-if="t.data_inizio || t.data_fine">{{ formatoPeriodo(t) }}</span>
-          <span v-if="t.luogo">{{ t.luogo }}</span>
-          <span v-if="t.organizzatore">a cura di {{ t.organizzatore }}</span>
-        </div>
-        <p v-if="t.descrizione" class="torneo-descrizione">{{ t.descrizione }}</p>
-      </div>
+    <!-- Prima le categorie, come fa la programmazione partite del weekend: la sezione "2016 - Pulcini"
+         e' il primo livello e dentro ci sono i tornei a cui i Pulcini sono iscritti. Un torneo
+         iscritto a due categorie compare in entrambe, ed e' voluto: cio' che chi guarda cerca e'
+         "cosa fa la MIA categoria", non "cosa e' questo torneo". Le azioni pero' restano del torneo
+         intero, quindi la card dice esplicitamente le altre categorie coinvolte prima di distruggerlo -->
+    <section v-for="sez in sezioniPerCategoria" :key="sez.chiave" class="categoria-sezione">
+      <h2 class="categoria-intestazione">
+        {{ sez.titolo }}
+        <span class="conteggio-sezione">{{ sez.tornei.length }} {{ sez.tornei.length === 1 ? 'torneo' : 'tornei' }}</span>
+      </h2>
 
-      <div class="torneo-azioni">
-        <button class="btn-azione" @click="apriCalendario(t)">
-          {{ calendarioAperto === t.id ? 'Chiudi calendario' : 'Calendario' }}
-        </button>
-        <!-- Un pulsante per foglio: con piu' categorie iscritte "il" foglio non esiste piu',
-             ce n'e' uno per categoria ed e' quello che l'organizzatore riceve -->
-        <button
-          v-for="l in listeDel(t)" :key="l.id"
-          class="btn-azione primario"
-          @click="apriLista(l)"
-          :title="`Apre il foglio giocatori di ${nomeCategoria(l.categoria_id)}: scegli i giocatori ed esporta il PDF`"
-        >Foglio {{ nomeCategoria(l.categoria_id) }}</button>
-        <button v-if="!listeDel(t).length" class="btn-azione" disabled title="Nessun foglio collegato al torneo">
-          Foglio giocatori
-        </button>
-        <template v-if="!solaLettura">
-          <button class="btn-azione" @click="apriModalTorneo(t)">Modifica</button>
-          <button class="btn-azione pericolo" @click="elimina(t)">Elimina</button>
-        </template>
-      </div>
+      <div v-for="t in sez.tornei" :key="t.id" class="torneo-card">
+        <div class="torneo-testata" @click="apriCalendario(t, sez)">
+          <div class="torneo-titolo">
+            <span class="torneo-nome">{{ t.nome }}</span>
+            <!-- Solo le gare DI QUESTA categoria: "6 gare" detto nella sezione Pulcini sarebbe falso
+                 se 4 sono degli Esordienti -->
+            <span v-if="t.gare_per_categoria && t.gare_per_categoria[sez.catId]" class="badge gare">
+              {{ t.gare_per_categoria[sez.catId] }} {{ t.gare_per_categoria[sez.catId] === 1 ? 'gara' : 'gare' }}
+            </span>
+            <span v-if="foglioDi(t, sez.catId)" class="badge lista" :class="{ vuota: !foglioDi(t, sez.catId).giocatori }">
+              {{ foglioDi(t, sez.catId).giocatori }} {{ foglioDi(t, sez.catId).giocatori === 1 ? 'giocatore' : 'giocatori' }}
+            </span>
+            <!-- Il foglio nasce da solo con l'iscrizione: se manca, qui c'e' un buco reale ed e'
+                 esattamente il caso che in due anni ha lasciato i tornei senza documento -->
+            <span v-else class="badge lista vuota">foglio assente</span>
+            <!-- Le altre categorie dello stesso torneo: non e' decorazione, e' l'avvertenza che
+                 "Elimina" qui si porta via anche loro -->
+            <span v-for="a in altreCategorie(t, sez.catId)" :key="a.id" class="badge categoria altrui">
+              anche {{ etichettaCategoria(a) }}
+            </span>
+            <span v-if="t.gare_orfane" class="badge lista vuota" :title="'Gare senza categoria, o con una categoria non piu\' iscritta al torneo'">
+              {{ t.gare_orfane }} {{ t.gare_orfane === 1 ? 'gara' : 'gare' }} senza categoria
+            </span>
+          </div>
+          <div class="torneo-meta">
+            <span v-if="t.data_inizio || t.data_fine">{{ formatoPeriodo(t) }}</span>
+            <span v-if="t.luogo">{{ t.luogo }}</span>
+            <span v-if="t.organizzatore">a cura di {{ t.organizzatore }}</span>
+          </div>
+          <p v-if="t.descrizione" class="torneo-descrizione">{{ t.descrizione }}</p>
+        </div>
 
-      <div v-if="calendarioAperto === t.id" class="calendario">
-        <div v-if="!gareDi(t).length" class="stato piccolo">Nessuna gara inserita.</div>
-        <!-- Sezioni per categoria, come il weekend fa con le partite: stessa intestazione
-             "2016 - Pulcini" e stesso ordine per anno di ProgrammazionePartite. E' cio' che rende
-             un torneo con due categorie iscritte un torneo solo, e non due da tenere a mente -->
-        <div v-for="grp in gareRaggruppate(t)" :key="grp.chiave" class="categoria-section">
-          <h3 class="categoria-title">{{ grp.titolo }}</h3>
-          <div v-for="g in grp.gare" :key="g.id" class="gara-riga">
+        <div class="torneo-azioni">
+          <button class="btn-azione" @click="apriCalendario(t, sez)">
+            {{ calendarioAperto === chiaveCalendario(t, sez) ? 'Chiudi calendario' : 'Calendario' }}
+          </button>
+          <!-- Una sola categoria per sezione, quindi il bottone non deve piu' dire QUALE foglio:
+               lo dice l'intestazione della sezione -->
+          <button
+            v-if="foglioDi(t, sez.catId)"
+            class="btn-azione primario"
+            @click="apriLista(foglioDi(t, sez.catId))"
+            title="Apre il foglio giocatori di questa categoria: scegli i giocatori ed esporta il PDF"
+          >Foglio giocatori</button>
+          <button v-else class="btn-azione" disabled :title="'Nessun foglio per ' + etichettaCategoria(sez) + ' in questo torneo'">
+            Foglio giocatori
+          </button>
+          <template v-if="!solaLettura">
+            <button class="btn-azione" @click="apriModalTorneo(t)">Modifica</button>
+            <button class="btn-azione pericolo" @click="elimina(t, sez)">Elimina</button>
+          </template>
+        </div>
+
+        <div v-if="calendarioAperto === chiaveCalendario(t, sez)" class="calendario">
+          <div v-if="!gareDiCategoria(t, sez.catId)" class="stato piccolo">Nessuna gara per questa categoria.</div>
+          <div v-for="g in gareDiCategoria(t, sez.catId)" :key="g.id" class="gara-riga">
             <div class="gara-numero">{{ g.numero || '–' }}</div>
             <div class="gara-corpo">
               <div class="gara-verso">
@@ -114,13 +126,13 @@
               <div v-if="g.note" class="gara-note">{{ g.note }}</div>
             </div>
             <div v-if="!solaLettura" class="gara-azioni">
-              <button class="btn-icon" @click="apriModalGara(t, g)" title="Modifica gara">
+              <button class="btn-icon" @click="apriModalGara(t, g, sez)" title="Modifica gara">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
                   <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                   <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/>
                 </svg>
               </button>
-              <button class="btn-icon pericolo" @click="eliminaGara(t, g)" title="Elimina gara">
+              <button class="btn-icon pericolo" @click="eliminaGara(t, g, sez)" title="Elimina gara">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
                   <polyline points="3 6 5 6 21 6"/>
                   <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
@@ -128,10 +140,37 @@
               </button>
             </div>
           </div>
+          <!-- Le gare senza categoria, o con una categoria non piu' iscritta, una sezione loro non
+               ce l'hanno: si mostrano qui, in ogni sezione del torneo, perche' nasconderle sarebbe
+               peggio che ripetere -->
+          <template v-if="gareOrfaneDi(t).length">
+            <h4 class="orfane-intestazione">Senza categoria ({{ gareOrfaneDi(t).length }})</h4>
+            <div v-for="g in gareOrfaneDi(t)" :key="'orfana-' + g.id" class="gara-riga orfana">
+              <div class="gara-numero">{{ g.numero || '–' }}</div>
+              <div class="gara-corpo">
+                <div class="gara-verso"><strong>{{ g.avversario || 'Da definire' }}</strong></div>
+                <div class="gara-dettaglio">
+                  <span v-if="g.data">{{ formatoData(g.data) }}</span>
+                  <span v-if="g.ora">inizio {{ g.ora }}</span>
+                  <span v-if="g.campo">{{ g.campo }}</span>
+                </div>
+              </div>
+              <div v-if="!solaLettura" class="gara-azioni">
+                <button class="btn-icon" @click="apriModalGara(t, g)" title="Modifica gara">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                    <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </template>
+          <button v-if="!solaLettura" class="btn-aggiungi" @click="apriModalGara(t, null, sez)">
+            + Aggiungi gara per {{ sez.titolo }}
+          </button>
         </div>
-        <button v-if="!solaLettura" class="btn-aggiungi" @click="apriModalGara(t)">+ Aggiungi gara</button>
       </div>
-    </div>
+    </section>
 
     <!-- Modal torneo -->
     <Teleport to="body">
@@ -353,6 +392,10 @@ const formTorneo = ref({})
 const modalGara = ref(false)
 const garaDaModificare = ref(null)
 const garaTorneoId = ref(null)
+// La sezione da cui il modal e' stato aperto: serve a riaprire il calendario ESATTAMENTE dove era,
+// perche' con la pagina suddivisa per categorie la chiave e' torneo+sezione e "riapri il torneo" non
+// riapre niente (era il bug che faceva sparire il calendario dopo aver salvato una gara)
+const garaSezione = ref(null)
 const formGara = ref({})
 // La categoria da iscrivere nel modal di modifica: niente di selezionato finche' non si sceglie
 const nuovaCategoria = ref(null)
@@ -377,10 +420,6 @@ function etichettaCategoria(c) {
   return c.anno ? `${c.anno} - ${c.nome}` : c.nome
 }
 
-function nomeCategoria(id) {
-  return etichettaCategoria(categorie.value.find(c => c.id === Number(id)))
-}
-
 // ------------------------------------------------------- categorie e fogli di un torneo
 // Un torneo iscrive N categorie. `t.categoria_id` e' solo la "prima", il ricordo del tempo in cui
 // di categorie ne esisteva una sola: le liste della pagina leggono `t.categorie`, che e' la verita',
@@ -397,42 +436,78 @@ function listeDel(t) {
   return t.lista ? [t.lista] : []
 }
 
-// Una categoria iscritta senza foglio e' esattamente il guasto che in due anni ha lasciato i tornei
-// senza il documento da consegnare all'organizzatore: qui diventa visibile invece di restare
-// un'assenza silenziosa dietro un bottone grigio
-function categorieSenzaFoglio(t) {
-  const conFoglio = new Set(listeDel(t).map(l => Number(l.categoria_id)))
-  return categorieDel(t).filter(c => !conFoglio.has(Number(c.id)))
+// ------------------------------------------------------- sezioni per categoria
+// Il primo livello della pagina e' la categoria, non il torneo: la stessa scelta di
+// weekendPartiteGrouped in ProgrammazionePartite.vue, per la stessa ragione. Chi guarda vuole
+// sapere cosa fa la SUA categoria. Un torneo iscritto a Pulcini ed Esordienti compare in entrambe
+// le sezioni, ed e' corretto: sono due attivita' diverse che condividono nome e calendario.
+const sezioniPerCategoria = computed(() => {
+  const sezioni = []
+  const piazzati = new Set()
+  categorieOperative.value.forEach(cat => {
+    const id = String(cat.id)
+    const dentro = tornei.value.filter(t => categorieDel(t).some(c => String(c.id) === id))
+    if (!dentro.length) return
+    dentro.forEach(t => piazzati.add(t.id))
+    // la sezione porta anche anno/nome, cosi' etichettaCategoria() funziona su di lei direttamente
+    sezioni.push({
+      chiave: 'cat-' + id, catId: id, id: cat.id, nome: cat.nome, anno: cat.anno,
+      titolo: etichettaCategoria(cat), tornei: dentro
+    })
+  })
+  // Le categorie non operative (archiviate, o un gruppo parent) e i tornei rimasti senza nessuna
+  // iscrizione non avrebbero una sezione: senza questo giro sparirebbero dalla pagina, che e' il
+  // modo peggiore di perdere un torneo
+  const extra = {}
+  tornei.value.filter(t => !piazzati.has(t.id)).forEach(t => {
+    const cats = categorieDel(t)
+    const chiavi = cats.length ? cats : [null]
+    chiavi.forEach(c => {
+      const k = c ? 'cat-' + c.id : 'cat-nessuna'
+      if (!extra[k]) {
+        extra[k] = c
+          ? { chiave: k, catId: String(c.id), id: c.id, nome: c.nome, anno: c.anno,
+              titolo: etichettaCategoria(c) + ' (non operativa)', tornei: [] }
+          : { chiave: k, catId: '__nessuna__', id: null, nome: 'Senza categoria', anno: null,
+              titolo: 'Senza categoria', tornei: [] }
+      }
+      extra[k].tornei.push(t)
+    })
+  })
+  Object.keys(extra).forEach(k => sezioni.push(extra[k]))
+  return sezioni
+})
+
+function chiaveCalendario(t, sez) {
+  // Non basta t.id: lo stesso torneo sta in due sezioni, e aprire il calendario nei Pulcini non
+  // deve aprirlo anche negli Esordienti
+  return `${t.id}:${sez ? sez.catId : '*'}`
 }
 
-// Le gare raggruppate per categoria, con lo stesso ordine per anno di weekendPartiteGrouped in
-// ProgrammazionePartite.vue. Le gare senza categoria -- quelle nate prima della migrazione, o a cui
-// la categoria e' stata tolta -- finiscono in una sezione visibile: un calendario che ne mostra sei
-// su otto e' peggio di uno che ammette di averne una senza etichetta
-function gareRaggruppate(t) {
-  const gare = gareDi(t)
-  const iscritte = categorieDel(t)
-  const bucket = {}
-  gare.forEach(g => {
-    const k = g.categoria_id ? String(g.categoria_id) : '__senza__'
-    if (!bucket[k]) bucket[k] = []
-    bucket[k].push(g)
-  })
-  const gruppi = []
-  iscritte.forEach(c => {
-    if (bucket[String(c.id)]) {
-      gruppi.push({ chiave: String(c.id), titolo: etichettaCategoria(c), gare: bucket[String(c.id)] })
-    }
-  })
-  Object.keys(bucket).forEach(k => {
-    if (k === '__senza__') {
-      gruppi.push({ chiave: k, titolo: 'Senza categoria', gare: bucket[k] })
-    } else if (!iscritte.some(c => String(c.id) === k)) {
-      // la gara punta a una categoria non piu' iscritta: si dice quale, non la si nasconde
-      gruppi.push({ chiave: k, titolo: nomeCategoria(k) + ' (non iscritta)', gare: bucket[k] })
-    }
-  })
-  return gruppi
+// Il conteggio arriva dal backend (gare_per_categoria), non dal calendario: quello si carica solo
+// quando la sezione la apri, e chiederlo per ogni card significherebbe N richieste per dipingere
+// dei numeri
+function gareDiCategoria(t, catId) {
+  const g = gareDi(t).filter(x => x.categoria_id && String(x.categoria_id) === String(catId))
+  return g.length ? g : null
+}
+
+// Le gare senza categoria, o con una categoria non piu' iscritta al torneo: una sezione loro non
+// ce l'hanno, quindi si mostrano in ogni sezione del torneo invece di sparire. Ripeterle e'
+// fastidioso, nasconderle no
+function gareOrfaneDi(t) {
+  const iscritte = new Set(categorieDel(t).map(c => String(c.id)))
+  return gareDi(t).filter(g => !g.categoria_id || !iscritte.has(String(g.categoria_id)))
+}
+
+function foglioDi(t, catId) {
+  return listeDel(t).find(l => String(l.categoria_id) === String(catId)) || null
+}
+
+// Le altre categorie dello stesso torneo. Non e' decorazione: e' l'avvertenza che "Elimina" qui
+// dentro si porta via anche loro, perche' il torneo e' uno solo
+function altreCategorie(t, catId) {
+  return categorieDel(t).filter(c => String(c.id) !== String(catId))
 }
 
 // Le categorie disponibili nel modal della gara: solo quelle iscritte al torneo, perche' una gara
@@ -515,12 +590,15 @@ async function gareDel(t) {
   }
 }
 
-async function apriCalendario(t) {
-  if (calendarioAperto.value === t.id) {
+async function apriCalendario(t, sez) {
+  // La chiave e' torneo+sezione, non il solo torneo: la stessa card sta in due sezioni e aprire il
+  // calendario nei Pulcini non deve aprirlo anche negli Esordienti
+  const chiave = chiaveCalendario(t, sez)
+  if (calendarioAperto.value === chiave) {
     calendarioAperto.value = null
     return
   }
-  calendarioAperto.value = t.id
+  calendarioAperto.value = chiave
   if (!gareCache.value[t.id] && (await gareDel(t)) === null) {
     errore.value = 'Errore nel caricamento del calendario'
   }
@@ -652,7 +730,7 @@ async function ricaricaTorneoInModifica() {
   torneoDaModificare.value = aggiornato
 }
 
-async function elimina(t) {
+async function elimina(t, sez = null) {
   // Non piu' "la" lista: i fogli sono uno per categoria, e l'avvertenza deve dire quanti giocatori
   // si perdono in totale, perche' il backend li elimina insieme al torneo
   const giocatori = listeDel(t).reduce((s, l) => s + (l.giocatori || 0), 0)
@@ -661,7 +739,14 @@ async function elimina(t) {
     ? `\nAttenzione: ${fogli} ${fogli === 1 ? 'foglio' : 'fogli'} con ${giocatori} `
       + `${giocatori === 1 ? 'giocatore' : 'giocatori'} verranno eliminati insieme al torneo.`
     : ''
-  if (!confirm(`Eliminare il torneo "${t.nome}"?${avvertenza}`)) return
+  // Qui sta il rischio vero della pagina suddivisa per categorie: la card e' "Winter Cup dei
+  // Pulcini", ma il torneo e' uno solo e "Elimina" si porta via anche le altre categorie iscritte.
+  // Se la sezione le nasconde, chi cancella non lo sa: vanno nominate, tutte
+  const altre = altreCategorie(t, sez ? sez.catId : null)
+  const anche = altre.length
+    ? `\nIl torneo e' uno solo: vengono eliminati anche ${altre.map(a => etichettaCategoria(a)).join(', ')}.`
+    : ''
+  if (!confirm(`Eliminare il torneo "${t.nome}"${sez ? ' — ' + sez.titolo : ''}?${avvertenza}${anche}`)) return
   try {
     await eliminaTorneo(t.id)
     conferma.value = 'Torneo eliminato'
@@ -671,24 +756,29 @@ async function elimina(t) {
   }
 }
 
-function apriModalGara(t, g = null) {
+function apriModalGara(t, g = null, sez = null) {
   erroreModal.value = ''
   garaTorneoId.value = t.id
   garaDaModificare.value = g
+  garaSezione.value = sez || null
   // Con una sola categoria iscritta la si pre-seleziona: il backend la dedurrebbe comunque, ma
   // vederla scritta nel modal evita la sorpresa di una gara finita in un foglio non previsto.
   // Con piu' d'una si parte vuoti: scegliere noi sarebbe mettere la gara nel foglio sbagliato.
   const iscritte = categorieDel(t)
   const unaSola = iscritte.length === 1 ? Number(iscritte[0].id) : null
+  // La sezione in cui si sta lavorando vince sul "una sola": aggiungere una gara dentro i Pulcini
+  // vuol dire metterla nei Pulcini, anche se il torneo ne iscrive altre due. Non vale per la
+  // sezione "Senza categoria", che di una categoria non ha niente
+  const diSezione = sez && sez.catId && sez.catId !== '__nessuna__' ? Number(sez.catId) : null
   formGara.value = g
     ? {
-        categoria_id: g.categoria_id ? Number(g.categoria_id) : unaSola,
+        categoria_id: g.categoria_id ? Number(g.categoria_id) : (diSezione || unaSola),
         numero: g.numero, avversario: g.avversario || '', data: g.data || '', ora: g.ora || '',
         ora_appuntamento: g.ora_appuntamento || '', campo: g.campo || '',
         indirizzo: g.indirizzo || '', note: g.note || ''
       }
     : {
-        categoria_id: unaSola,
+        categoria_id: diSezione || unaSola,
         numero: null, avversario: '', data: t.data_inizio || '', ora: '',
         ora_appuntamento: '', campo: '', indirizzo: '', note: ''
       }
@@ -724,7 +814,7 @@ async function salvaGara() {
       await aggiungiGaraTorneo(tid, corpo)
     }
     modalGara.value = false
-    await ricaricaConCalendarioAperto(tid)
+    await ricaricaConCalendarioAperto(tid, garaSezione.value)
   } catch (e) {
     erroreModal.value = e.response?.data?.detail || 'Errore nel salvataggio della gara'
   } finally {
@@ -732,11 +822,11 @@ async function salvaGara() {
   }
 }
 
-async function eliminaGara(t, g) {
+async function eliminaGara(t, g, sez = null) {
   if (!confirm(`Eliminare la gara ${g.avversario || g.numero || ''}?`)) return
   try {
     await eliminaGaraTorneo(t.id, g.id)
-    await ricaricaConCalendarioAperto(t.id)
+    await ricaricaConCalendarioAperto(t.id, sez)
   } catch (e) {
     errore.value = e.response?.data?.detail || "Errore nell'eliminazione della gara"
   }
@@ -744,10 +834,14 @@ async function eliminaGara(t, g) {
 
 // carica() richiude il calendario e svuota la cache delle gare: dopo una modifica alla gara si
 // vuole rivedere il calendario aperto con il dato nuovo, non la lista chiusa
-async function ricaricaConCalendarioAperto(torneoId) {
+async function ricaricaConCalendarioAperto(torneoId, sez = null) {
   await carica()
+  // carica() ha chiuso il calendario e svuotato la cache: si riapre la STESSA sezione da cui si
+  // stava lavorando. Con la pagina suddivisa per categorie la chiave e' torneo+sezione, quindi
+  // riaprire "il torneo" senza sezione non corrisponde a nessuna card aperta: dopo il salvataggio
+  // il calendario che avevi davanti spariva dalla pagina
   const t = tornei.value.find(x => x.id === torneoId)
-  if (t) await apriCalendario(t)
+  if (t && sez) await apriCalendario(t, sez)
 }
 
 onMounted(async () => {
@@ -903,17 +997,36 @@ onMounted(async () => {
 }
 .btn-secondary:hover { color: white; border-color: rgba(255,255,255,0.3); }
 
-/* ------------------------------------------------------------------ sezioni del calendario
-   Stesse intenzioni di .categorie-section in ProgrammazionePartite.vue, rimpicciolite perche' qui
-   stanno dentro una card e non in una pagina intera: l'etichetta "2016 - Pulcini" e il bordo basso
-   colorato sono il segno visivo che dice "da qui in giu' sono le gare di questa categoria" */
-.categoria-section { margin: 0 0 0.875rem; }
-.categoria-section:last-of-type { margin-bottom: 0; }
-.categoria-title {
-  font-size: 0.8125rem; font-weight: 700; color: #60a5fa; margin: 0.5rem 0 0.25rem;
-  letter-spacing: -0.01em; padding-bottom: 0.25rem;
-  border-bottom: 2px solid rgba(59,130,246,0.45);
+/* ------------------------------------------------------------------ sezioni per categoria
+   Il primo livello della pagina, stesso aspetto delle sezioni di ProgrammazionePartite.vue: titolo
+   grande e bordo basso del colore primario. Chi apre la pagina deve vedere prima "2016 - Pulcini"
+   e solo dopo i tornei, perche' la domanda reale e' "cosa fa la mia categoria" */
+.categoria-sezione { margin: 0 0 1.75rem; }
+.categoria-sezione:last-of-type { margin-bottom: 0; }
+.categoria-intestazione {
+  display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap;
+  font-size: 1.25rem; font-weight: 700; color: var(--color-text, #f3f4f6);
+  margin: 0 0 0.875rem; padding-bottom: 0.625rem; letter-spacing: -0.01em;
+  border-bottom: 2px solid #dc2626;
 }
+.conteggio-sezione {
+  font-size: 0.6875rem; font-weight: 600; padding: 0.125rem 0.4375rem; border-radius: 999px;
+  background: rgba(255,255,255,0.08); color: #a3a3a3;
+}
+
+/* Le altre categorie dello stesso torneo: colore diverso dal badge della sezione, perche' qui il
+   messaggio non e' "questa e' la tua categoria" ma "attenzione, il torneo e' condiviso con loro"
+   e "Elimina" le porta via */
+.badge.categoria.altrui { background: rgba(168,85,247,0.14); color: #c084fc; }
+
+/* Le gare senza categoria, o con una categoria non piu' iscritta: non hanno una sezione, quindi
+   vengono elencate in fondo a quelle del torneo con un'intestazione che le nomina. Un calendario
+   che ne mostra sei su otto e' peggio di uno che ammette di averne due senza etichetta */
+.orfane-intestazione {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: #facc15; margin: 0.75rem 0 0.25rem;
+}
+.gara-riga.orfana { border-left: 2px solid rgba(234,179,8,0.45); padding-left: 0.5rem; }
 
 /* ------------------------------------------------------------------ scelta delle categorie
    Il checkbox eredita width:100% e il padding da .form-group input: vanno annullati qui, o le
