@@ -119,7 +119,10 @@ ck "GET /api/auth/me senza token" "$(curl -s -o /dev/null -w '%{http_code}' --ma
 ck "GET /api/persone/public/by-token/errato -> 4xx" "$(cod GET "/persone/public/by-token/inesistente" "" "")" "404"
 
 echo "--- conteggi DB: invarianza + gli incrementi portati dal test ---"
-ck "registro invariato ($PRIMA_REGISTRO)"      "$(q "SELECT count(*) FROM registro")" "$PRIMA_REGISTRO"
+# registro lo scrive chiunque faccia un accesso su PROD: pretenderlo IDENTICO a prima fa fallire il
+# test perche' qualcuno ha usato il sito mentre girava. Si verifica il verso che conta, che il test non
+# ne abbia cancellate (il "non ha aggiunto" lo dice il conteggio dei residui di prova)
+ckmin "registro non ha perso righe (baseline $PRIMA_REGISTRO)" registro "$PRIMA_REGISTRO"
 ck "persone = baseline + 1 di prova"            "$(q "SELECT count(*) FROM persone")"  "$((PRIMA_PERSONE + 1))"
 ck "utenti = baseline + 2 di prova"             "$(q "SELECT count(*) FROM utenti")"   "$((PRIMA_UTENTI + 2))"
 ck "categorie = baseline + 1 di prova"          "$(q "SELECT count(*) FROM categorie")" "$((PRIMA_CAT + 1))"
