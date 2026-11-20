@@ -1,5 +1,5 @@
 from sqlalchemy import text
-from ..database import engine
+from ..database import engine, Base
 
 ALLOWED_TABLES = frozenset({'utenti', 'categorie', 'persone', 'registro', 'convocazioni'})
 
@@ -13,6 +13,40 @@ def run_migrations():
         except Exception as e:
             print(f"Migration: Could not acquire advisory lock: {e}")
         try:
+            # create_all QUI, non in main.py all'import. Stava la' e ogni worker uvicorn lo
+            # eseguiva per conto proprio: i 4 figli di `--workers 4` correvano contemporaneamente
+            # sulla CREATE SEQUENCE della stessa tabella e tre morivano con
+            # psycopg2.errors.UniqueViolation su pg_class_relname_nsp_index (su PROD, al deploy dei
+            # tornei del 2026-11-20: SpawnProcess-1/2/3 morti, uvicorn li ha respawnti e i nuovi
+            # sono partiti puliti perche' la tabella ormai c'era -- nessun downtime, ma il difetto
+            # si ripresenta a ogni tabella nuova).
+            #
+            # Due dettagli non ovvi:
+            #  - si passa `conn`, non `engine`: le advisory lock sono di SESSIONE, quindi un
+            #    create_all che prendesse una connessione diversa dal pool sarebbe di nuovo fuori
+            #    dalla lock che dovrebbe proteggerlo;
+            #  - si salta se la lock non c'e': in quel caso un altro processo la sta gia' facendo,
+            #    e riprovarci in parallelo e' esattamente la corsa di prima.
+            if has_lock:
+                # create_all non crea nulla se i modelli non sono ancora stati importati:
+                # Base.metadata si popola quando i moduli dei modelli vengono importati. main.py
+                # chiama run_migrations() DOPO `from .routers import ...`, che e' quello che li
+                # registra (verificato: 32 tabelle registrate). Se qualcuno spostasse la chiamata
+                # prima degli import, qui dentro sarebbe un no-op silenzioso e le tabelle nuove non
+                # nascerebbero mai: meglio che lo dica, perche' l'errore si vedrebbe solo molto
+                # dopo, come una tabella che "doveva essere creata all'avvio".
+                if not Base.metadata.tables:
+                    print("Migration: ATTENZIONE Base.metadata e' vuoto, create_all non creera' nulla")
+                else:
+                    try:
+                        Base.metadata.create_all(bind=conn)
+                        conn.commit()
+                    except Exception as e:
+                        print(f"Migration warning (create_all): {e}")
+                        conn.rollback()
+            else:
+                print("Migration: create_all saltato, nessun processo detiene la lock")
+
             result = conn.execute(text(
                 "SELECT table_name FROM information_schema.tables WHERE table_name = :tn"
             ), {"tn": "societa"})
@@ -1588,6 +1622,36 @@ def run_migrations():
                 print("Migration: Added liste_torneo.torneo_id")
             except Exception as e:
                 print(f"Migration warning (liste_torneo.torneo_id): {e}")
+                conn.rollback()
+
+            # La FK liste_torneo.torneo_id -> tornei nasce dalla REFERENCES inline del blocco sopra,
+            # che pero' e' "ADD COLUMN IF NOT EXISTS": se la colonna esiste gia' l'intera istruzione
+            # e' un no-op e la FK non viene ricreata. Non e' teoria: droppare tornei con CASCADE
+            # (da cui dipende liste_torneo_torneo_id_fkey) si porta via il vincolo e il blocco
+            # sopra non lo rimette su, lasciando la colonna orfana senza che nessuno se ne accorga.
+            # ADD CONSTRAINT non ha IF NOT EXISTS, quindi prima si guarda se manca.
+            try:
+                # Join su pg_class invece di 'tornei'::regclass: risolvere il regclass di una tabella
+                # che non esiste fa UndefinedTable. Qui tornei c'e' gia' (create_all o i blocchi
+                # sopra l'hanno creata), ma se uno di quei blocchi fallisse questo non deve
+                # diventarne un secondo errore incatenato: la join semplicemente non trova righe.
+                manca = conn.execute(text("""
+                    SELECT count(*) FROM pg_constraint c
+                    JOIN pg_class ct ON ct.oid = c.conrelid
+                    JOIN pg_class cf ON cf.oid = c.confrelid
+                    WHERE c.contype = 'f'
+                      AND ct.relname = 'liste_torneo'
+                      AND cf.relname = 'tornei'
+                """)).scalar()
+                if not manca:
+                    conn.execute(text(
+                        "ALTER TABLE liste_torneo ADD CONSTRAINT liste_torneo_torneo_id_fkey "
+                        "FOREIGN KEY (torneo_id) REFERENCES tornei(id) ON DELETE SET NULL"
+                    ))
+                    conn.commit()
+                    print("Migration: Re-created liste_torneo.torneo_id FK")
+            except Exception as e:
+                print(f"Migration warning (liste_torneo.torneo_id FK): {e}")
                 conn.rollback()
 
         finally:

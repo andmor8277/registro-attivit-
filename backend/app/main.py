@@ -7,7 +7,8 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 import os
 from .rate_limit import limiter
-from .database import Base, engine
+# Base/engine non servono piu' qui: create_all e le migrazioni stanno entrambe in
+# app/migrations/run.py, sotto la stessa advisory lock.
 from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni, infortuni, openday, planning_eventi, schede_allenamento, scouting
 from .routers.gruppi import router as gruppi_router
 from .routers.liste_tornei import router as liste_tornei_router
@@ -68,7 +69,15 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 from .migrations import run_migrations
 
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all() NON va rimesso qui. Stava a questo livello, all'import del modulo, e
+# ognuno dei 4 worker uvicorn (`--workers 4` nel Dockerfile) lo eseguiva per conto proprio: alla
+# prima creazione di una tabella nuova i 4 hanno corso sulla stessa sequenza e tre sono morti con
+# UniqueViolation su pg_class_relname_nsp_index (successo davvero su PROD il 2026-11-20 col deploy
+# dei tornei; uvicorn li ha respawnati e i nuovi, trovando la tabella gia' creata, sono partiti
+# puliti, per questo il servizio non si era mai fermato). Ora e' la prima cosa dentro
+# run_migrations(), sotto la stessa pg_advisory_lock: un solo processo la esegue, gli altri tre
+# aspettano. Con lo schema gia' creato non si vedeva mai, perche' create_all non fa nulla se la
+# tabella esiste gia'.
 run_migrations()
 
 app.include_router(auth_router)
