@@ -323,3 +323,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Tornei di stagione (calendario, Lista Tornei auto-creata, ruoli sulle liste), CF in chiaro cifrati e create_all sotto advisory lock
+
+## [7.7.0] - 2026-11-20
+
+### Added
+- Tornei suddivisi per categorie iscritte, con un foglio giocatori per categoria
