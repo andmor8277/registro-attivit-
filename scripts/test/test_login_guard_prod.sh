@@ -23,10 +23,14 @@ pass=0; fail=0
 # contatore. Pretenderle IDENTICHE a prima significa far fallire il test perche' una persona ha
 # aperto l'app mentre girava, ed e' successo il 20/11/2026: quattro righe con chiavi 'de santis
 # andrea', 'andrea', 'andesant80@gmail.com' - un essere umano che provava a entrare durante il deploy
-# - e il test era rosso da solo. Per quelle si chiede solo che NON SIANO DIMINUITE (un calo = il test
-# o il deploy ha cancellato righe reali); il "il test non ha aggiunto niente" lo garantiscono le
-# asserzioni che cercano le chiavi di prova per pattern, che sono precise e non dipendono dal mondo.
-cknoncalo() { local n; n=$(q "SELECT count(*) FROM $2"); if [ -n "$n" ] && [ "$n" -ge "$3" ]; then pass=$((pass+1)); echo "  ok   $1 ($n, baseline $3)"; else fail=$((fail+1)); echo "  FAIL $1 -> $n, sotto la baseline $3"; fi; }
+# - e il test era rosso da solo. Ma nemmeno "che non siano diminuite" va bene per login_bloccaggi,
+# e il 21/11 lo ha mostrato: _pulisci_vecchie() cancella le righe non in blocco piu' vecchie di
+# FINESTRA_MINUTI, e il test stesso la innesca di proposito nella sezione "le righe vecchie non si
+# accumulano"; un accesso riuscito azzera il contatore di chi entra; un blocco scaduto si cancella al
+# tentativo successivo. Quindi per quella tabella si protegge solo cio' che l'app NON puo' toccare
+# (vedi sotto), mentre registro - che non ha nessuna potatura periodica, solo cancellazioni legate
+# all'eliminazione di una persona - si misura ancora col calo.
+cknoncalo() { local n; n=$(q "$2"); if [ -n "$n" ] && [ "$n" -ge "$3" ]; then pass=$((pass+1)); echo "  ok   $1 ($n, baseline $3)"; else fail=$((fail+1)); echo "  FAIL $1 -> $n, sotto la baseline $3"; fi; }
 ck() { if [ "$2" = "$3" ]; then pass=$((pass+1)); echo "  ok   $1"; else fail=$((fail+1)); echo "  FAIL $1 -> '$2' (atteso '$3')"; fi }
 
 # docker exec NON propaga l'ambiente del container: servono i -e espliciti
@@ -64,8 +68,21 @@ PRIMA_LISTE=$(q "SELECT count(*) FROM liste_torneo")
 echo "  baseline di questa esecuzione: utenti=$PRIMA_UTENTI registro=$PRIMA_REGISTRO persone=$PRIMA_PERSONE categorie=$PRIMA_CAT infortuni=$PRIMA_INF liste=$PRIMA_LISTE"
 q "DELETE FROM login_bloccaggi WHERE chiave LIKE 'testlock%' OR chiave LIKE 'testlibero%' OR chiave LIKE 'testmix%' OR chiave LIKE 'vecchio%' OR chiave='x' OR chiave='nonesiste@example.com';
    DELETE FROM utenti WHERE username IN ('$U1','$U2','$U3');" >/dev/null
-PRIMA_BLOCCHI=$(q "SELECT count(*) FROM login_bloccaggi")
-echo "  blocchi login gia' presenti all'inizio: $PRIMA_BLOCCHI"
+# Orologio FISSO preso prima di tutto: il predicato "in blocco" deve essere lo stesso all'inizio e
+# alla fine, perche' un blocco da 15 minuti uscirebbe dal conteggio mentre giriamo e il conto
+# scenderebbe da solo. Si guarda solo cio' che scade dopo la fine del run (+10 minuti)
+ORIGINE_TEST=$(q "SELECT now()")
+PRIMA_BLOCCHI_DURI=$(q "SELECT count(*) FROM login_bloccaggi WHERE bloccato_sino > '$ORIGINE_TEST'::timestamptz + interval '10 minutes'")
+echo "  blocchi login all'inizio: $(q "SELECT count(*) FROM login_bloccaggi"), di cui in blocco oltre la fine del run: $PRIMA_BLOCCHI_DURI"
+# Una baseline vuota NON e' "nessun blocco": puo' essere la query fallita (e' gia' successo con
+# `'$ORIGINE_TEST' + interval '10 minutes'`, dove Postgres leggeva la stringa come interval e
+# chiedeva il cast ::timestamptz). Lasciar passare significherebbe un'asserzione che non misura
+# niente, verde per il motivo sbagliato
+if [ -z "$PRIMA_BLOCCHI_DURI" ]; then
+  echo "  la baseline dei blocchi non e' stata letta: mi fermo, perche' senza quel numero l'asserzione non misura niente"
+  echo "  0 passati, 1 falliti (prerequisiti)"
+  exit 1
+fi
 q "INSERT INTO utenti (username,password_hash,societa_id,is_admin,is_super_admin,ruolo)
    VALUES ('$U1','$HASH',1,0,0,'dirigente'), ('$U2','$HASH',1,0,0,'dirigente'), ('$U3','$HASH',1,0,0,'dirigente');" >/dev/null
 ck "utenti di prova creati" "$(q "SELECT count(*) FROM utenti WHERE username IN ('$U1','$U2','$U3')")" "3"
@@ -143,7 +160,7 @@ echo "   nota: contatori su utenti reali = $(q "SELECT count(*) FROM login_blocc
 
 echo "--- conteggi: il test non deve aver spostato niente ---"
 # invarianza rispetto all'inizio di QUESTA esecuzione: prova che il test non ha toccato i dati
-cknoncalo "registro non ha perso righe" registro "$PRIMA_REGISTRO"
+cknoncalo "registro non ha perso righe" "SELECT count(*) FROM registro" "$PRIMA_REGISTRO"
 ck "persone invariate ($PRIMA_PERSONE)"     "$(q "SELECT count(*) FROM persone")"     "$PRIMA_PERSONE"
 ck "categorie invariate ($PRIMA_CAT)"       "$(q "SELECT count(*) FROM categorie")"   "$PRIMA_CAT"
 ck "infortuni invariati ($PRIMA_INF)"       "$(q "SELECT count(*) FROM infortuni")"   "$PRIMA_INF"
@@ -168,8 +185,13 @@ ck "utenti e persone tornati alla baseline" "$(q "SELECT (SELECT count(*) FROM u
 # registro e login_bloccaggi NON si pretendono uguali a prima: le scrive anche chi sta usando il sito
 # in questo momento (login e password sbagliate). Si verifica il verso che conta, che il test non le
 # abbia VUOTATE: un calo qui significa che la pulizia del test, o il deploy, ha cancellato righe reali
-cknoncalo "registro non ha perso righe (dopo la pulizia)" registro "$PRIMA_REGISTRO"
-cknoncalo "i blocchi login gia' presenti non sono stati cancellati" login_bloccaggi "$PRIMA_BLOCCHI"
+cknoncalo "registro non ha perso righe (dopo la pulizia)" "SELECT count(*) FROM registro" "$PRIMA_REGISTRO"
+# Nessuna via lecita cancella un blocco non scaduto: ne' _pulisci_vecchie (che tocca solo le righe
+# NON in blocco), ne' l'azzeramento dopo un login riuscito, ne' la scadenza. Se questo calo e' vero,
+# qualcuno e' stato liberato da un blocco che doveva tenerlo fuori: e' il rischio che riguarda le
+# persone, ed e' l'unico che ha senso chiedere a una tabella che il test stesso fa svuotare
+cknoncalo "nessun blocco attivo e' stato cancellato dal test" \
+   "SELECT count(*) FROM login_bloccaggi WHERE bloccato_sino > '$ORIGINE_TEST'::timestamptz + interval '10 minutes'" "$PRIMA_BLOCCHI_DURI"
 
 echo
 echo "  $pass passati, $fail falliti"
