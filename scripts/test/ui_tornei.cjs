@@ -18,6 +18,7 @@ const { spawn } = require('child_process')
 // perche' le asserzioni sull'export cercano il torneo demo per nome e il foglio per categoria
 const NOME_DEMO = '__demo_tornei__-WINTER CUP'
 const CAT_PULCINI = '19'
+const CAT_ESORDIENTI = '26'
 
 const BASE = process.env.THOF_UI_BASE || 'http://192.168.178.133:3000'
 const USER = process.argv[2]
@@ -387,6 +388,16 @@ const LEGGI = `(() => {
     ck('e l\'appuntamento, che e\' la colonna che si spezzava', /08:45/.test(pdfCard), true)
   }
 
+  // I responsabili della categoria, letti dalla STESSA API che usa la pagina. Confrontare il menu
+  // con l'attesa scritta a mano (Papaveri dentro, Quadri fuori) vede i due nomi che ci si aspetta ma
+  // non vede il terzo arrivato: qui si confronta l'insieme degli id, cosi' un mister censito dopo
+  // nella categoria sbagliata, o una categoria in piu' nel menu, diventano rossi da soli
+  const responsabiliDi = async catId => await evalJS(`(async () => {
+    const tk = localStorage.getItem('token')
+    const r = await (await fetch('/api/categorie/${catId}/responsabili', {headers:{Authorization:'Bearer '+tk}})).json()
+    return (r || []).filter(x => x.ruolo !== 'dirigente').map(x => String(x.id)).sort()
+  })()`, { awaitPromise: true })
+
   console.log('--- il Mister: il menu, il salvataggio, e il PDF che lo stampa ---')
   // Il menu a tendina non si inventa le persone: prende i responsabili DELLE categorie iscritte al
   // torneo, come fa il weekend. Qui si prova l'unione (Papaveri e' dei Pulcini, Quadri degli
@@ -403,14 +414,27 @@ const LEGGI = `(() => {
     return {
       opzioni: [...sel.options].map(o => o.text.replace(/\\s+/g, ' ').trim()),
       valore: sel.value,
-      etichetta: (sel.closest('.form-group')?.querySelector('label')?.innerText || '').trim()
+      etichetta: (sel.closest('.form-group')?.querySelector('label')?.innerText || '').trim(),
+      valori: [...sel.options].map(o => o.value),
+      titolo: (m.querySelector('h3')?.innerText || '').replace(/\\s+/g, ' ').trim(),
+      suggerimento: (sel.closest('.form-group')?.querySelector('.suggerimento')?.innerText || '').replace(/\\s+/g, ' ').trim()
     }
   })()`)
   console.log('   menu:', JSON.stringify(menuMister))
   ck('il modal di modifica ha la voce Mister', menuMister.etichetta, 'Mister del torneo')
   ck('il menu offre il mister dei Pulcini', (menuMister.opzioni || []).some(o => /Papaveri/.test(o)), true)
-  ck('e anche quello degli Esordienti (unione delle categorie iscritte)',
-     (menuMister.opzioni || []).some(o => /Quadri/.test(o)), true)
+  // Quadri e' dei 2015 - Esordienti e il torneo e' iscritto a entrambe le categorie: qui NON deve
+  // esserci, perche' la lista arriva dalla sezione in cui stai lavorando e non dall'unione. E' la
+  // richiesta del titolare: un torneo dei 2016 lo segue uno dei 2016
+  ck('e NON offre il mister dell\'altra categoria iscritta (la lista e\' della sezione)',
+     (menuMister.opzioni || []).some(o => /Quadri/.test(o)), false)
+  ck('il modal dice in quale sezione stai lavorando', menuMister.titolo, 'Modifica torneo — 2016 - Pulcini')
+  const respPulcini = await responsabiliDi(CAT_PULCINI)
+  console.log('   responsabili API dei Pulcini:', JSON.stringify(respPulcini))
+  ck('il menu offre ESATTAMENTE i responsabili dei Pulcini: né uno in piu ne uno in meno',
+     (menuMister.valori || []).filter(v => v && v !== '__manuale__').sort().join(','), respPulcini.join(','))
+  ck('e il suggerimento nomina la categoria da cui arrivano le persone',
+     /2016 - Pulcini/.test(menuMister.suggerimento || ''), true)
   ck('il dirigente NON e\' un candidato a mister del torneo',
      (menuMister.opzioni || []).some(o => /Dirigenti/.test(o)), false)
   ck('parte vuoto, perche\' il torneo non ce l\'ha', menuMister.valore, '')
@@ -537,7 +561,7 @@ const LEGGI = `(() => {
   ck('il menu NON e\' vuoto su un torneo che il mister ce l\'ha', menuFuori.valore, String(MISTER_FUORI))
   ck('lo nomina come persona, non come numero', /Ivo Fuorilista/.test(menuFuori.testo || ''), true)
   ck('e spiega perche\' non e\' fra le persone delle categorie',
-     /tra i responsabili di queste categorie/.test(menuFuori.testo || ''), true)
+     /tra i responsabili di 2016 - Pulcini/.test(menuFuori.testo || ''), true)
   // Il punto che questa opzione esiste per evitare: salvare senza toccare niente
   await clickReale(`[...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))` +
                    `.querySelectorAll('.modal-footer .btn-primary')[0]`)
@@ -546,6 +570,37 @@ const LEGGI = `(() => {
     { awaitPromise: true })
   ck('salvare senza toccare niente NON se lo porta via',
      await evalJS(`${CARD}.querySelector('.mister-torneo').innerText.replace(/\\s+/g,' ').trim()`), 'Ivo Fuorilista')
+
+  console.log('--- la lista la decide la sezione: apro lo stesso torneo dagli Esordienti ---')
+  // Senza questa, "la lista viene dalla sezione" resta verde anche con un menu fisso sui Pulcini: e'
+  // l'asserzione che distingue "filtrato per la sezione" da "filtrato per caso"
+  await clickReale(`[...${SEZ_ESOR}.querySelectorAll('.btn-azione')].find(b => b.innerText.trim() === 'Modifica')`)
+  await sleep(900)
+  const menuEsordienti = await evalJS(`(() => {
+    const m = [...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))
+    if (!m) return {nessuno: true}
+    const sel = [...m.querySelectorAll('select')].find(s => [...s.options].some(o => o.value === '__manuale__'))
+    return {
+      titolo: (m.querySelector('h3')?.innerText || '').replace(/\\s+/g, ' ').trim(),
+      opzioni: sel ? [...sel.options].map(o => o.text.replace(/\\s+/g, ' ').trim()) : [],
+      valori: sel ? [...sel.options].map(o => o.value) : []
+    }
+  })()`)
+  console.log('   menu (Esordienti):', JSON.stringify(menuEsordienti))
+  ck('il modal si apre nominando gli Esordienti', menuEsordienti.titolo, 'Modifica torneo — 2015 - Esordienti')
+  ck('e offre il mister degli Esordienti', (menuEsordienti.opzioni || []).some(o => /Quadri/.test(o)), true)
+  ck('ma NON quello dei Pulcini, che pure e\' iscritto allo stesso torneo',
+     (menuEsordienti.opzioni || []).some(o => /Papaveri/.test(o)), false)
+  const respEsordienti = await responsabiliDi(CAT_ESORDIENTI)
+  console.log('   responsabili API degli Esordienti:', JSON.stringify(respEsordienti))
+  ck('il menu degli Esordienti offre ESATTAMENTE i loro responsabili (fuori il referente fuori lista)',
+     (menuEsordienti.valori || []).filter(v => v && v !== '__manuale__' && v !== String(MISTER_FUORI))
+       .sort().join(','), respEsordienti.join(','))
+  await clickReale(`[...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))` +
+                   `.querySelector('.modal-footer .btn-secondary')`)
+  await sleep(600)
+  ck('Annulla chiude il modal senza salvare niente',
+     await evalJS(`!!document.querySelector('.modal')`), false)
 
   console.log('--- il filtro categoria: lo schermo si restringe, il documento della societa\' no ---')
   // Il filtro in alto filtra i TORNEI (EXISTS su tornei_categorie), ma il backend restituisce ogni

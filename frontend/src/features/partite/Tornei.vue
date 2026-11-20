@@ -151,7 +151,7 @@
             Foglio giocatori
           </button>
           <template v-if="!solaLettura">
-            <button class="btn-azione" @click="apriModalTorneo(t)">Modifica</button>
+            <button class="btn-azione" @click="apriModalTorneo(t, sez)">Modifica</button>
             <button class="btn-azione pericolo" @click="elimina(t, sez)">Elimina</button>
           </template>
           <!-- Terzo livello di export: questo torneo, in questa categoria. Serve perche' il
@@ -246,7 +246,10 @@
       <div v-if="modalTorneo" class="modal-overlay" @click.self="modalTorneo = false">
         <div class="modal">
           <div class="modal-header">
-            <h3>{{ torneoDaModificare ? 'Modifica torneo' : 'Nuovo torneo' }}</h3>
+            <!-- Il titolo nomina la sezione da cui stai lavorando: e' lei a decidere chi compare nel
+                 menu del Mister, e un menu piu' corto del previsto senza una ragione scritta in alto
+                 sembra un bug della lista -->
+            <h3>{{ (torneoDaModificare ? 'Modifica torneo' : 'Nuovo torneo') + (etichettaCategoriaLavoro ? ' — ' + etichettaCategoriaLavoro : '') }}</h3>
             <button class="modal-close" @click="modalTorneo = false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -335,7 +338,7 @@
                 <!-- Il referente salvato puo' non essere piu' tra i responsabili delle categorie:
                      senza questa voce il menu sarebbe vuoto su un torneo che il mister ce l'ha -->
                 <option v-if="misterFuoriLista" :value="String(misterFuoriLista.id)">
-                  {{ misterFuoriLista.nome }} (non piu' tra i responsabili di queste categorie)
+                  {{ misterFuoriLista.nome }} ({{ misterFuoriLista.motivo }})
                 </option>
                 <option value="__manuale__">✏️ Inserisci manualmente (non censito)…</option>
               </select>
@@ -516,12 +519,36 @@ const misterPerCategoria = ref({})
 // '', l'id come stringa, o '__manuale__': lo stesso pattern del weekend
 const misterScelta = ref('')
 
-// Le categorie a cui il mister deve appartenere: quelle gia' iscritte se sto modificando, quelle
-// spuntate adesso se sto creando. Non si chiedono i responsabili di tutte le categorie della
-// societa' a ogni apertura di pagina: sono N richieste per un menu che serve solo a modal aperto
+// La categoria "di lavoro" del modal, cioe' QUELLA che decide chi finisce nel menu del Mister: la
+// categoria della sezione da cui hai aperto Modifica (stai lavorando nei 2016, e il menu offre i
+// mister dei 2016), o il filtro a schermo quando stai creando. E' una ref e non un computed perche'
+// la sezione e' un contesto di click: il torneo e' uno solo e sta in piu' sezioni, quindi "da dove
+// hai cliccato" e' un'informazione che lo script non puo' dedurre dal torneo.
+// null = nessun contesto, il menu torna l'unione delle categorie (il comportamento di prima)
+const categoriaLavoro = ref(null)
+
+// L'etichetta da mostrare accanto al menu: dire "le persone delle categorie iscritte" quando poi il
+// menu ne mostra solo una parte e' il genere di frase che fa scegliere la persona sbagliata
+const etichettaCategoriaLavoro = computed(() => {
+  const id = categoriaLavoro.value
+  if (!id) return ''
+  const c = (categorie.value || []).find(x => String(x.id) === String(id))
+  return c ? etichettaCategoria(c) : `categoria ${id}`
+})
+
+// Le categorie a cui il mister deve appartenere: la categoria della sezione in cui si sta lavorando
+// (se e fra quelle del torneo), altrimenti quelle gia' iscritte in modifica o quelle spuntate in
+// creazione. Non si chiedono i responsabili di tutte le categorie della societa' a ogni apertura di
+// pagina: sono N richieste per un menu che serve solo a modal aperto
 const categorieDelModal = computed(() => {
-  if (torneoDaModificare.value) return categorieDel(torneoDaModificare.value)
-  return (formTorneo.value.categorie_id || []).map(Number).map(id => ({ id }))
+  const lav = categoriaLavoro.value ? String(categoriaLavoro.value) : null
+  const candidate = torneoDaModificare.value
+    ? categorieDel(torneoDaModificare.value)
+    : (formTorneo.value.categorie_id || []).map(Number).map(id => ({ id }))
+  // La categoria di lavoro vale solo se il torneo la contempla davvero: aprirlo da un altro punto
+  // (o un filtro cambiato dopo) non deve far sparire le altre persone dal menu
+  if (lav && candidate.some(c => String(c.id) === lav)) return [{ id: Number(lav) }]
+  return candidate
 })
 
 const misterDisponibili = computed(() => {
@@ -539,8 +566,13 @@ const misterDisponibili = computed(() => {
 
 const suggerimentoMister = computed(() => {
   if (misterScelta.value === '__manuale__') return 'Verrà stampato nel PDF così com\'è scritto.'
-  if (misterDisponibili.value.length) return 'Le persone delle categorie iscritte al torneo.'
-  return 'Nessun responsabile censito per queste categorie: scegli "Inserisci manualmente".'
+  const dove = etichettaCategoriaLavoro.value
+  if (misterDisponibili.value.length) {
+    return dove ? `I mister e gli amministrativi di ${dove}.`
+                : 'Le persone delle categorie iscritte al torneo.'
+  }
+  return dove ? `Nessun responsabile censito per ${dove}: scegli "Inserisci manualmente".`
+              : 'Nessun responsabile censito per queste categorie: scegli "Inserisci manualmente".'
 })
 
 // Il mister salvato puo' non essere piu' tra i responsabili delle categorie: cambia l'assegnazione
@@ -557,7 +589,12 @@ const misterFuoriLista = computed(() => {
   if (!categorie.every(c => String(c.id) in misterPerCategoria.value)) return null
   if (misterDisponibili.value.some(m => String(m.id) === String(id))) return null
   const nome = (torneoDaModificare.value && torneoDaModificare.value.mister_nome) || `persona ${id}`
-  return { id, nome }
+  // Il motivo va detto bene: con il menu ristretto alla sezione, un mister degli Esordienti aperto
+  // dalla sezione dei Pulcini NON e' "un responsabile che non c'e' piu'", e' uno di un'altra
+  // categoria. Scriverlo male fa pensare a un dato perso e induce a sostituirlo
+  const dove = etichettaCategoriaLavoro.value
+  return { id, nome, motivo: dove ? `non e' tra i responsabili di ${dove}`
+                                  : "non piu' tra i responsabili di queste categorie" }
 })
 
 async function caricaMister(ids) {
@@ -821,10 +858,16 @@ function apriLista(l) {
   router.push('/liste-tornei/' + l.categoria_id)
 }
 
-function apriModalTorneo(t = null) {
+// `sez` e' la sezione da cui si sta aprendo il modal: e' lei a decidere chi finisce nel menu del
+// Mister (stai lavorando nei 2016, il menu offre i mister dei 2016). In creazione non c'e' sezione,
+// e il filtro a schermo non viene usato come contesto: li' le categorie le stai scegliendo proprio
+// in quel momento, e restringere il menu a una di esse nasconderebbe le persone delle altre che hai
+// appena spuntato (difetto che questo file ha gia' corretto una volta)
+function apriModalTorneo(t = null, sez = null) {
   erroreModal.value = ''
   nuovaCategoria.value = null
   torneoDaModificare.value = t
+  categoriaLavoro.value = (t && sez && sez.catId) ? Number(sez.catId) : null
   formTorneo.value = t
     ? {
         nome: t.nome, data_inizio: t.data_inizio || '',
