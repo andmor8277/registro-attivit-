@@ -1522,6 +1522,74 @@ def run_migrations():
                 print(f"Migration warning (login_bloccaggi): {e}")
                 conn.rollback()
 
+            # ---- Tornei (Natale, Pasqua, tornei di stagione) con calendario ----
+            # L'ordine conta: liste_torneo.torneo_id ha una FK verso tornei, quindi le due
+            # tabelle qui sotto devono esistere prima di aggiungere quella colonna.
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS tornei (
+                        id SERIAL PRIMARY KEY,
+                        societa_id INTEGER NOT NULL REFERENCES societa(id),
+                        categoria_id INTEGER NOT NULL REFERENCES categorie(id),
+                        nome VARCHAR(120) NOT NULL,
+                        data_inizio DATE,
+                        data_fine DATE,
+                        luogo VARCHAR(200),
+                        organizzatore VARCHAR(120),
+                        descrizione TEXT,
+                        creato_da INTEGER,
+                        creato_il TIMESTAMP
+                    )
+                """))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tornei_societa_categoria ON tornei(societa_id, categoria_id)"))
+                conn.commit()
+                print("Migration: Created tornei")
+            except Exception as e:
+                print(f"Migration warning (tornei): {e}")
+                conn.rollback()
+
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS tornei_gare (
+                        id SERIAL PRIMARY KEY,
+                        torneo_id INTEGER NOT NULL REFERENCES tornei(id) ON DELETE CASCADE,
+                        numero INTEGER,
+                        avversario VARCHAR(120),
+                        data DATE,
+                        ora VARCHAR(20),
+                        ora_appuntamento VARCHAR(20),
+                        campo VARCHAR(120),
+                        indirizzo VARCHAR(200),
+                        note TEXT
+                    )
+                """))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tornei_gare_torneo ON tornei_gare(torneo_id)"))
+                conn.commit()
+                print("Migration: Created tornei_gare")
+            except Exception as e:
+                print(f"Migration warning (tornei_gare): {e}")
+                conn.rollback()
+
+            try:
+                conn.execute(text(
+                    "ALTER TABLE liste_torneo ADD COLUMN IF NOT EXISTS torneo_id INTEGER "
+                    "REFERENCES tornei(id) ON DELETE SET NULL"
+                ))
+                # Un torneo produce una sola lista, che e' IL file da consegnare: senza vincolo,
+                # due click creerebbero due "liste bloccate" diverse per lo stesso torneo e
+                # l'organizzatore non saprebbe quale PDF e' quello giusto. E' un UNIQUE parziale
+                # perche' in Postgres i NULL non collidono: le liste create a mano (torneo_id
+                # NULL, quelle gia' esistenti) restano libere di essere quante se ne vuole.
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ux_liste_torneo_torneo "
+                    "ON liste_torneo(torneo_id) WHERE torneo_id IS NOT NULL"
+                ))
+                conn.commit()
+                print("Migration: Added liste_torneo.torneo_id")
+            except Exception as e:
+                print(f"Migration warning (liste_torneo.torneo_id): {e}")
+                conn.rollback()
+
         finally:
             if has_lock:
                 try:

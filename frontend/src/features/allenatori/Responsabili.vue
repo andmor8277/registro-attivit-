@@ -47,6 +47,23 @@
         <div class="card-arrow">→</div>
       </div>
 
+      <!-- Accanto a Programmazione Partite perche' e' la stessa attivita' con un contenitore
+           diverso: li il calendario lo genera il weekend, qui lo inserisce il responsabile per i
+           tornei di Natale/Pasqua, e dalla lista collegata si stampa il file da consegnare -->
+      <div class="hub-card tornei" @click="router.push('/responsabili/tornei')">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 01-10 0V4z"/>
+            <path d="M17 5h2.5a1.5 1.5 0 010 4H17M7 5H4.5a1.5 1.5 0 000 4H7"/>
+          </svg>
+        </div>
+        <div class="card-content">
+          <span class="card-title">Programmazione Tornei</span>
+          <span class="card-desc">Calendario tornei di stagione e liste da consegnare</span>
+        </div>
+        <div class="card-arrow">→</div>
+      </div>
+
       <div class="hub-card spogliatoi" @click="router.push('/responsabili/spogliatoi')">
         <div class="card-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -664,6 +681,10 @@ onMounted(() => {
 .hub-card.presenze-allenatori .card-icon { background: rgba(6, 182, 212, 0.15); }
 .hub-card.presenze-allenatori .card-icon svg { color: #06b6d4; }
 .hub-card.presenze-allenatori:hover { border-color: rgba(6, 182, 212, 0.3); box-shadow: 0 8px 20px rgba(6, 182, 212, 0.12); }
+
+.hub-card.tornei .card-icon { background: rgba(239, 68, 68, 0.15); }
+.hub-card.tornei .card-icon svg { color: #ef4444; }
+.hub-card.tornei:hover { border-color: rgba(239, 68, 68, 0.3); box-shadow: 0 8px 20px rgba(239, 68, 68, 0.12); }
 
 .hub-card.gestione-stagione .card-icon { background: rgba(59, 130, 246, 0.15); }
 .hub-card.gestione-stagione .card-icon svg { color: #3b82f6; }

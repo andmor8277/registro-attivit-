@@ -59,7 +59,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - `backend/app/services/` — `email.py`, `invitations.py`, `oauth_google.py`
 - `backend/app/routers/` — router flat, prefix API invariati
 
-## Backend Routers (23)
+## Backend Routers (24)
 | Router | Prefix | Auth |
 |--------|--------|------|
 | `auth.py` | `/auth` | vari (login pubblico, resto JWT) |
@@ -84,7 +84,8 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 | `schede_allenamento.py` | `/schede-allenamento` | login |
 | `scouting.py` | `/scouting` | login (creazione: mister/admin; valutazione/stato: scouting/admin) |
 | `inviti.py` | `/inviti` | admin (creazione/lista/elimina/rinvia); `GET /verifica/{token}` pubblico |
-| `liste_tornei.py` | `/liste-torneo` | login |
+| `liste_tornei.py` | `/liste-torneo` | login (letture: tutti i ruoli; scritture: admin/`mister`/`segreteria`; cancellazione lista: solo admin) |
+| `tornei.py` | `/tornei` | login (letture: tutti i ruoli della societa'; tornei e gare: solo admin/super_admin) |
 
 ## Frontend Structure
 - `frontend/src/core/router.js` — route e guard
@@ -93,7 +94,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - `frontend/src/features/home/` — Home, Scelta
 - `frontend/src/features/presenze/` — Registro
 - `frontend/src/features/allenatori/` — Allenatori, Responsabili, ResponsabiliCategoria, PresenzeAllenatori
-- `frontend/src/features/partite/` — ProgrammazionePartite, Convocazioni, ListeTornei, Spogliatoi
+- `frontend/src/features/partite/` — ProgrammazionePartite, Convocazioni, ListeTornei, Spogliatoi, Tornei
 - `frontend/src/features/allenamenti/` — Allenamenti, SchedaAllenamento
 - `frontend/src/features/segreteria/` — Segreteria, SegreteriaCategoria, SchedaGiocatore, Openday, PresenzeSegreteria, Valutazioni, DatiMatricole
 - `frontend/src/features/infermeria/` — Infermeria, CertificatoMedico, Infortunati
@@ -101,8 +102,8 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - `frontend/src/features/reportistica/` — Reportistica
 - `frontend/src/features/admin/` — Admin, Societa
 
-## DB Models (27)
-`Societa`, `Categoria` (+`parent_id` self-referencing FK), `Gruppo`, `Persona`, `CodicePresenza`, `Registro`, `Utente`, `UtenteCategoria`, `Convocazione`, `ConvocazioneGara`, `ConvocazioneGiocatore`, `Allenatore`, `Allenamento`, `AllenamentoMese`, `AllenamentoSettimana`, `AllenamentoGiorno`, `AllenamentoEsercizio`, `AllenamentoElemento`, `PresenzaAllenatore`, `CatalogoEsercizio`, `Valutazione`, `Infortunio`, `Openday`, `PlanningEvento`, `SchedaAllenamento`, `ScoutingSegnalazione`, `ScoutingGiocatore`
+## DB Models (32)
+`Societa`, `Categoria` (+`parent_id` self-referencing FK), `Gruppo`, `Persona`, `CodicePresenza`, `Registro`, `Utente`, `UtenteCategoria`, `Invito`, `Convocazione`, `ConvocazioneGara`, `ConvocazioneGiocatore`, `Torneo`, `TorneoGara`, `ListaTorneo` (+`torneo_id` nullable, UNIQUE parziale: un torneo produce una sola lista), `ListaTorneoGiocatore`, `Allenatore`, `Allenamento`, `AllenamentoMese`, `AllenamentoSettimana`, `AllenamentoGiorno`, `AllenamentoEsercizio`, `AllenamentoElemento`, `PresenzaAllenatore`, `CatalogoEsercizio`, `Valutazione`, `Infortunio`, `Openday`, `PlanningEvento`, `SchedaAllenamento`, `ScoutingSegnalazione`, `ScoutingGiocatore`
 
 ## Route Map
 ```
@@ -113,6 +114,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 /responsabili/categorie           → ResponsabiliCategoria.vue
 /responsabili/partite             → ProgrammazionePartite.vue
 /responsabili/spogliatoi          → Spogliatoi.vue
+/responsabili/tornei              → Tornei.vue (Programmazione Tornei; admin/super_admin)
 /responsabili/presenze-allenatori → PresenzeAllenatori.vue
 /scelta/:id                       → Scelta.vue (action picker per category)
 /registro/:id                     → Registro.vue (attendance calendar)
@@ -120,6 +122,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 /scheda-allenamento/:id           → SchedaAllenamento.vue (GPS metrics dashboard + table)
 /convocazioni/:id                 → Convocazioni.vue
 /liste-tornei/:id                 → ListeTornei.vue
+/tornei/:id                       → Tornei.vue (stessa componente di /responsabili/tornei: "Convocazioni Tornei" per i mister, in sola lettura perche' il livello di modifica lo decide il ruolo e non la rotta)
 /dati/:id                         → DatiMatricole.vue
 /reportistica/:id                 → Reportistica.vue
 /segreteria                       → Segreteria.vue
@@ -171,6 +174,11 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - **Catalogo esercizi visibility**: `visibilita` ('pubblico'/'societa') + `societa_id` for row-level filtering.
 - **SchedaAllenamento**: GPS training metrics. Backend stats endpoints at `/schede-allenamento/stats/{trend|summary|team|player-trend}` accept `period` (week|month|season).
 - **SchedaAllenamento charts**: Chart.js, dark theme, destroyed on unmount.
+- **Tornei non usano la tabella `partite`**: il calendario dei tornei sta in `tornei_gare`. `partite` e' impastata con `weekend_id`, `risultato`, `goal_punti`, `mister_id` e `convocazioni.py` la interroga con `WHERE categoria_id AND data_partite` per generare le convocazioni: mischiarci le gare di torneo falserebbe il calendario di campionato e la generazione automatica. `ora`/`ora_appuntamento` sono `VARCHAR(20)` e non TIME, come `ConvocazioneGara.appuntamento`, per registrare l'orario cosi' come l'organizzatore lo comunica
+- **La Lista Tornei nasce col torneo** (`POST /tornei` crea torneo + lista nello stesso transaction, `liste_torneo.torneo_id` UNIQUE parziale): se dipendesse da un passaggio manuale del mister il file da consegnare non verrebbe prodotto (in produzione, in due anni, di liste ce n'era **una**). Cancellare il torneo si porta dietro la sua lista; le liste create a mano (`torneo_id` NULL) no. Nessuno "stato di blocco": il PDF esportato da `ListeTornei.vue` **e** il documento finale, e l'export non e' stato toccato
+- **Le liste torneo hanno due livelli di difesa sul tenant**, e servono entrambi: `add_giocatore_lista` valida che la `persona` sia della societa' di chi scrive, **e** `GET /{id}/giocatori` filtra `p.societa_id` sulla JOIN con `persone`. Il secondo costa zero e copre le righe gia' presenti nel DB o un bug futuro nella scrittura. Le scritture sono riservate a `RUOLI_GESTIONE_LISTA = ("mister","segreteria")` + admin, la cancellazione a solo admin: prima bastava un token valido, quindi `dirigente` e `scouting` (sola lettura nel resto dell'app) potevano riscrivere e cancellare la lista consegnata all'organizzatore
+- **I tornei NON filtrano per `utente_categorie`**: il titolare ha deciso che i mister vedono e usano legittimamente tutte le categorie della propria societa' (in media hanno una sola riga di assegnazione, `registro.py:112`). Filtrare per assegnazione li terrebbe fuori. Conseguenza sul frontend: le etichette delle categorie devono venire da `getAllCategorie`, perche' `getCategorie` per un mister restituisce solo le assegnate
+- **I menu a tendina delle categorie vanno ordinati e filtrati**, non lasciati all'ordine della query: `/categorie/all` ordina `anno DESC` e Postgres mette i NULL per primi, quindi la prima voce (e la preselezione dei modal) cade su una categoria senza anno, "Portieri Scuola Calcio". Usare `isParentCategory` per escludere i gruppi ("Agonistica", "Scuola Calcio") e l'etichetta `anno - nome`: senza anno le due "Esordienti" (2014 e 2015) sembrano la stessa voce
 
 ## Security
 - Firma APK: credenziali in `frontend/android/keystore.properties` (gitignored; template `keystore.properties.example`) o env `THOF_KEYSTORE_*`. Mai in chiaro in `build.gradle`. Senza credenziali il debug usa il keystore standard di Gradle, `assembleRelease` fallisce di proposito.
@@ -217,6 +225,8 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
   - `test_creazione_utente.sh` (30) — la password non la sceglie e non la vede chi crea l'account
   - `test_reset_password.sh` (44) — reset monouso, blocco `PASSWORD_DA_CAMBIARE`, niente via locale agli account Google
   - `test_login_guard.sh` (28), `test_fix_a2_a8_a9.sh` (34), `test_pii_accessi.sh` (29), `test_registro_tenant.sh` (14), `test_token_pubblico.sh` (20), `test_orario_presentazione.sh` (10) + l'unit `.py` (14) nel container backend
+  - `test_tornei.sh` (112) — tornei: scrittura riservata all'admin, Lista Tornei auto-creata e collegata, calendario CRUD, isolamento fra societa', `persona_id` di altra societa' rifiutato, `dirigente`/`scouting`/`infermeria` in sola lettura sulle liste. **Provato che sa fallire**: indebolendo `get_gestore_lista` + `get_responsabile_tornei` nel container diventano rosse 41 asserzioni; indebolendo solo il filtro di societa' su `persona_id` ne diventano rosse 2 (verifica separata, perche' altrimenti la seconda sarebbe rossa per cascata e non per sua colpa)
+  - `ck` di `test_tornei.sh` **rifiuta due valori vuoti** come "ok", e il test si ferma se manca un token o l'id del torneo: con i token vuoti (es. `tok` chiamato con un solo argomento) le asserzioni confrontavano `''` con `''` e dicevano ok. Un test che perde i prerequisiti deve fermarsi, non stampare un verde che non ha misurato niente. `POST /persone/` scrive il `cognome` in MAIUSCOLO: i dati di prova creati via SQL devono essere maiuscoli o i confronti sul cognome falliscono per la forma
   - Insidie note: `/auth/token` ha `@limiter.limit("10/minute")` percio' i test che fanno molti login devono gestire il 429 (non e' un 401); le password generate contengono `& % #` e vanno passate con `--data-urlencode`; la soglia di blocco login e' 10 tentativi per username; ripulire sempre `utenti` **e** `login_bloccaggi` dei propri utenti di prova
 - **Verifica manuale o log** per cio' che i test non coprono (UI, accesso Google):
   - Prod: `ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f"`

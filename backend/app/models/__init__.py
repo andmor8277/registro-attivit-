@@ -19,6 +19,8 @@ from .partite import (
     ConvocazioneGiocatore,
     ListaTorneo,
     ListaTorneoGiocatore,
+    Torneo,
+    TorneoGara,
 )
 from .segreteria import Openday, Valutazione
 from .infermeria import Infortunio, PlanningEvento
@@ -50,6 +52,8 @@ __all__ = [
     "ConvocazioneGiocatore",
     "ListaTorneo",
     "ListaTorneoGiocatore",
+    "Torneo",
+    "TorneoGara",
     "Openday",
     "Valutazione",
     "Infortunio",

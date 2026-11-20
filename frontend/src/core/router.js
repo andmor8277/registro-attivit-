@@ -68,12 +68,20 @@ export const router = createRouter({
     { path: '/responsabili/categorie', component: () => import('../features/allenatori/ResponsabiliCategoria.vue'), name: 'responsabili-categorie', meta: { requiresAuth: true, roles: RUOLI.responsabili } },
     { path: '/responsabili/partite', component: () => import('../features/partite/ProgrammazionePartite.vue'), name: 'responsabili-partite', meta: { requiresAuth: true, roles: RUOLI.responsabili } },
     { path: '/responsabili/spogliatoi', component: () => import('../features/partite/Spogliatoi.vue'), name: 'responsabili-spogliatoi', meta: { requiresAuth: true, roles: RUOLI.responsabili } },
+    // Tornei: la stessa componente Tornei.vue serve due ingressi. Qui il responsabile (admin)
+    // crea tornei e calendari; la rotta /tornei/:id qui sotto e' l'ingresso dei mister.
+    { path: '/responsabili/tornei', component: () => import('../features/partite/Tornei.vue'), name: 'responsabili-tornei', meta: { requiresAuth: true, roles: RUOLI.responsabili } },
     { path: '/responsabili/presenze-allenatori', component: () => import('../features/allenatori/PresenzeAllenatori.vue'), name: 'responsabili-presenze-allenatori', meta: { requiresAuth: true, roles: RUOLI.responsabili } },
     { path: '/scelta/:id', component: () => import('../features/home/Scelta.vue'), name: 'scelta', meta: { requiresAuth: true } },
     { path: '/registro/:id', component: () => import('../features/presenze/Registro.vue'), name: 'registro', meta: { requiresAuth: true } },
     { path: '/convocazioni/:id', component: () => import('../features/partite/Convocazioni.vue'), name: 'convocazioni', meta: { requiresAuth: true } },
     { path: '/dati/:id', component: () => import('../features/segreteria/DatiMatricole.vue'), name: 'dati-matricole', meta: { requiresAuth: true } },
     { path: '/liste-tornei/:id', component: () => import('../features/partite/ListeTornei.vue'), name: 'liste-tornei', meta: { requiresAuth: true } },
+    // "Convocazioni Tornei" per i mister: stessa componente di /responsabili/tornei, in sola
+    // lettura perche' il livello di modifica lo decide il ruolo dentro Tornei.vue, non la rotta.
+    // requiresAuth senza roles: come /convocazioni/:id, la visibilita' la da' la card in Scelta.vue
+    // e il filtro di societa' lo fa il backend.
+    { path: '/tornei/:id', component: () => import('../features/partite/Tornei.vue'), name: 'tornei-categoria', meta: { requiresAuth: true } },
     { path: '/allenamenti/:id', component: () => import('../features/allenamenti/Allenamenti.vue'), name: 'allenamenti', meta: { requiresAuth: true } },
     { path: '/scheda-allenamento/:id', component: () => import('../features/allenamenti/SchedaAllenamento.vue'), name: 'scheda-allenamento', meta: { requiresAuth: true } },
     { path: '/admin', component: () => import('../features/admin/Admin.vue'), name: 'admin', meta: { requiresAuth: true, roles: RUOLI.superAdmin } },

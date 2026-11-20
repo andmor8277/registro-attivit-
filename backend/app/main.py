@@ -11,6 +11,7 @@ from .database import Base, engine
 from .routers import persone, registro, codici, categorie, convocazioni, allenatori, societa, allenamenti, partite, weekend, spogliatoi, campi, presenze_allenatori, valutazioni, infortuni, openday, planning_eventi, schede_allenamento, scouting
 from .routers.gruppi import router as gruppi_router
 from .routers.liste_tornei import router as liste_tornei_router
+from .routers.tornei import router as tornei_router
 from .routers.inviti import router as inviti_router
 from .routers.auth import router as auth_router, get_current_user
 from sqlalchemy import text
@@ -93,6 +94,7 @@ app.include_router(openday.router, prefix="/openday", dependencies=[Depends(get_
 app.include_router(planning_eventi.router, dependencies=[Depends(get_current_user)])
 app.include_router(schede_allenamento.router, dependencies=[Depends(get_current_user)])
 app.include_router(liste_tornei_router, dependencies=[Depends(get_current_user)])
+app.include_router(tornei_router, dependencies=[Depends(get_current_user)])
 
 @app.get("/")
 def root():

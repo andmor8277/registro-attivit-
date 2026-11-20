@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
 from typing import Optional, List
-from app.models import Utente, UtenteCategoria, ListaTorneo, ListaTorneoGiocatore
+from app.models import Utente, UtenteCategoria, ListaTorneo, ListaTorneoGiocatore, Persona
 from app.database import get_db
 from app.routers.auth import get_current_user
 from app.core.encryption import safe_decrypt
@@ -33,6 +33,31 @@ class GiocatoreListaOut(BaseModel):
     class Config:
         from_attributes = True
 
+
+# Chi puo' modificare una lista. Prima bastava essere autenticati: un dirigente o uno scouting,
+# che nel resto dell'applicazione hanno accesso di sola lettura, potevano aggiungere e togliere
+# giocatori e cancellare l'intera lista. L'allowlist segue i ruoli che ListeTornei.vue gia'
+# tratta come operatori (il lucchetto GDPR e' mostrato a admin, mister e segreteria).
+# Nota: infermeria resta fuori dalle scritture. Vede i dati sensibili per il suo lavoro, ma non
+# decide chi entra nella lista che viene consegnata all'organizzatore.
+RUOLI_GESTIONE_LISTA = ("mister", "segreteria")
+
+
+def get_gestore_lista(current_user: Utente = Depends(get_current_user)):
+    if current_user.is_admin or current_user.is_super_admin:
+        return current_user
+    if current_user.ruolo in RUOLI_GESTIONE_LISTA:
+        return current_user
+    raise HTTPException(status_code=403, detail=(
+        "Non puoi modificare le liste torneo: sono il documento che viene consegnato "
+        "all'organizzatore"))
+
+
+def get_amministratore_lista(current_user: Utente = Depends(get_current_user)):
+    if current_user.is_admin or current_user.is_super_admin:
+        return current_user
+    raise HTTPException(status_code=403, detail="Solo un admin puo' eliminare una lista torneo")
+
 @router.get("/", response_model=list[ListaTorneoOut])
 def get_liste_torneo(categoria_id: Optional[int] = None, societa_id: Optional[int] = Query(None), request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
     sid = get_societa_filter(current_user, societa_id, request)
@@ -44,7 +69,7 @@ def get_liste_torneo(categoria_id: Optional[int] = None, societa_id: Optional[in
     return query.order_by(ListaTorneo.creato_il.desc()).all()
 
 @router.post("/", response_model=ListaTorneoOut)
-def create_lista_torneo(data: ListaTorneoIn, request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def create_lista_torneo(data: ListaTorneoIn, request: Request = None, db: Session = Depends(get_db), current_user: Utente = Depends(get_gestore_lista)):
     societa_id = resolve_tenant_societa_id(current_user, data.societa_id, request, categoria_id=data.categoria_id, db=db)
     lista = ListaTorneo(nome=data.nome, categoria_id=data.categoria_id, societa_id=societa_id, creato_il=text("NOW()"))
     db.add(lista)
@@ -77,7 +102,19 @@ def get_giocatori_lista(lista_id: int, db: Session = Depends(get_db), current_us
         ).first()
         puo_vedere_sensibili = bool(assegnato)
 
-    result = db.execute(text("""
+    # Il filtro di societa' sulla JOIN non era superfluo: liste_torneo_giocatori.persona_id non
+    # era validato in scrittura, quindi una persona di un'altra societa' poteva essere inserita
+    # in una lista della propria e questa query l'avrebbe restituita con l'anagrafica (e con CF e
+    # telefoni decifrati, per chi ha puo_vedere_sensibili). Ora l'ingresso e' bloccato in
+    # add_giocatore_lista; questo resta il secondo livello, perche' qui non costa nulla e senza
+    # di esso basterebbe una riga gia' presente nel DB o un bug futuro nella scrittura.
+    params = {"lid": lista_id}
+    filtro_soc = ""
+    if societa_id:
+        filtro_soc = "AND p.societa_id = :sid"
+        params["sid"] = societa_id
+
+    result = db.execute(text(f"""
         SELECT p.id as persona_id, p.nome, p.cognome, p.data_nascita, p.sesso,
                p.comune_nato, p.residenza, p.indirizzo, p.codice_fiscale,
                p.matricola, p.numero_maglia, p.scadenza_certificato,
@@ -87,9 +124,9 @@ def get_giocatori_lista(lista_id: int, db: Session = Depends(get_db), current_us
         FROM liste_torneo_giocatori lg
         JOIN persone p ON p.id = lg.persona_id
         LEFT JOIN gruppi g ON g.id = p.gruppo_id
-        WHERE lg.lista_id = :lid
+        WHERE lg.lista_id = :lid {filtro_soc}
         ORDER BY lg.ordine, p.cognome
-    """), {"lid": lista_id}).fetchall()
+    """), params).fetchall()
     return [{
         "id": r.id, "persona_id": r.persona_id,
         "nome": r.nome, "cognome": r.cognome,
@@ -111,13 +148,23 @@ def get_giocatori_lista(lista_id: int, db: Session = Depends(get_db), current_us
     } for r in result]
 
 @router.post("/{lista_id}/giocatori")
-def add_giocatore_lista(lista_id: int, persona_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def add_giocatore_lista(lista_id: int, persona_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_gestore_lista)):
     lista = db.query(ListaTorneo).filter(ListaTorneo.id == lista_id).first()
     if not lista:
         raise HTTPException(status_code=404, detail="Lista non trovata")
     societa_id = get_societa_filter(current_user)
     if societa_id and lista.societa_id != societa_id:
         raise HTTPException(status_code=403, detail="Non autorizzato")
+    # persona_id arrivava dall'esterno senza alcuna verifica: chi poteva scrivere una lista
+    # poteva inserirci una persona qualsiasi, anche di un'altra societa', e poi leggersi
+    # l'anagrafica da GET /giocatori, che non filtrava per societa' sulla JOIN con persone.
+    # Per un minore di un'altra societa' significa nome, cognome, residenza e indirizzo, e per
+    # chi ha i permessi sensibili anche il codice fiscale e i telefoni dei genitori decifrati.
+    persona = db.query(Persona).filter(Persona.id == persona_id).first()
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona non trovata")
+    if societa_id and persona.societa_id != societa_id:
+        raise HTTPException(status_code=403, detail="Non autorizzato su questa persona")
     existing = db.query(ListaTorneoGiocatore).filter(
         ListaTorneoGiocatore.lista_id == lista_id,
         ListaTorneoGiocatore.persona_id == persona_id
@@ -132,7 +179,7 @@ def add_giocatore_lista(lista_id: int, persona_id: int, db: Session = Depends(ge
     return {"success": True}
 
 @router.delete("/{lista_id}/giocatori/{persona_id}")
-def remove_giocatore_lista(lista_id: int, persona_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def remove_giocatore_lista(lista_id: int, persona_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_gestore_lista)):
     lista = db.query(ListaTorneo).filter(ListaTorneo.id == lista_id).first()
     if not lista:
         raise HTTPException(status_code=404, detail="Lista non trovata")
@@ -149,7 +196,7 @@ def remove_giocatore_lista(lista_id: int, persona_id: int, db: Session = Depends
     return {"success": True}
 
 @router.delete("/{lista_id}")
-def delete_lista_torneo(lista_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def delete_lista_torneo(lista_id: int, db: Session = Depends(get_db), current_user: Utente = Depends(get_amministratore_lista)):
     lista = db.query(ListaTorneo).filter(ListaTorneo.id == lista_id).first()
     if not lista:
         return {"success": True}
@@ -162,7 +209,7 @@ def delete_lista_torneo(lista_id: int, db: Session = Depends(get_db), current_us
     return {"success": True}
 
 @router.put("/{lista_id}/riordina")
-def riordina_giocatori(lista_id: int, giocatori: List[dict], db: Session = Depends(get_db), current_user: Utente = Depends(get_current_user)):
+def riordina_giocatori(lista_id: int, giocatori: List[dict], db: Session = Depends(get_db), current_user: Utente = Depends(get_gestore_lista)):
     lista = db.query(ListaTorneo).filter(ListaTorneo.id == lista_id).first()
     if not lista:
         raise HTTPException(status_code=404, detail="Lista non trovata")

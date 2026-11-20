@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Tornei di stagione** (Natale, Pasqua, tornei estivi) — `backend/app/routers/tornei.py`, `frontend/src/features/partite/Tornei.vue`
+  - Due tabelle nuove: `tornei` (nome, categoria, societa', date, luogo, organizzatore, note) e `tornei_gare` (calendario: avversario, data, ora, ora di appuntamento, campo, indirizzo, note), con `ON DELETE CASCADE` sul torneo
+  - `liste_torneo` riceve `torneo_id` (nullable, `ON DELETE SET NULL`) con indice UNIQUE parziale: un torneo produce **una sola** lista, che e' il file da consegnare all'organizzatore. Le liste create a mano (torneo_id NULL) restano libere di essere quante se ne vuole
+  - La Lista Tornei nasce **insieme** al torneo nello stesso transaction: non dipende da un passaggio manuale del mister, che in due anni ha prodotto esattamente una lista in produzione
+  - `ora` e `ora_appuntamento` delle gare sono `VARCHAR(20)` e non TIME, come `ConvocazioneGara.appuntamento`: arrivano da un organizzatore che le comunica in forme diverse
+  - Il calendario **non** riusa `partite`: quella tabella e' impastata con `weekend_id`/`risultato`/`goal_punti` e `convocazioni.py` la interroga con `WHERE categoria_id AND data_partite` per generare le convocazioni
+  - Una sola componente con due ingressi: `/responsabili/tornei` (Programmazione Tornei, nel menu Responsabili sotto Programmazione Partite) e `/tornei/:id` (card "Convocazioni Tornei" in Scelta.vue). Il livello di modifica lo decide il ruolo, non la rotta
+  - Esportazione PDF della lista: **nessuna modifica**, e' gia' quella giusta in `ListeTornei.vue`
+  - `scripts/test/test_tornei.sh` — 112 asserzioni (10 file nella suite, 335 totali)
+
+### Fixed
+- **`POST /liste-torneo/{id}/giocatori` accettava una persona di un'altra societa'** — `persona_id` non era validato: si poteva inserire in una propria lista un minore di un'altra societa' e leggerne l'anagrafica da `GET /{id}/giocatori`, che faceva `JOIN persone` senza filtro di societa' (nome, residenza, indirizzo, e CF/telefoni decifrati per chi ha i permessi sensibili). Ora la persona viene verificata in scrittura **e** filtrata sulla JOIN: due livelli, perche' il secondo costa zero e copre le righe gia' presenti nel DB
+- **Qualsiasi ruolo autenticato poteva modificare le liste torneo** — `create/add/remove/riordina` avevano solo `Depends(get_current_user)`: un `dirigente` o uno `scouting`, che nel resto dell'applicazione sono in sola lettura, potevano aggiungere e togliere giocatori e cancellare l'intera lista. Ora `RUOLI_GESTIONE_LISTA = ("mister","segreteria")` piu' admin per le scritture, solo admin per la cancellazione. `infermeria` resta fuori: vede i dati sensibili per il suo lavoro, non decide chi entra nella lista consegnata all'organizzatore
+- **Menu a tendina di "Aggiungi Partita" senza ordine e con la preselezione sbagliata** — `categorieOperative` filtrava i gruppi ma non ordinava, ereditando l'`ORDER BY anno DESC` dell'API che in Postgres mette i NULL per primi: la prima voce (e quindi la categoria gia' selezionata all'apertura del modal) era **"Portieri Scuola Calcio"**, una categoria che il weekend non gioca. Ora l'ordine e' per anno crescente, come le categorie sono gia' mostrate a schermo nella stessa pagina, e la preselezione e' scritta esplicitamente su `categoriaPiuPiccola()` invece di dipendere da `[0]` di una query
+- **Menu a tendina delle categorie in Programmazione Tornei** — usava `getCategorie`, che per un mister restituisce solo le categorie assegnate in `utente_categorie`; i tornei invece si vedono di tutta la societa' (decisone del titolare), quindi il torneo di una categoria non assegnata restava senza etichetta. Passa a `getAllCategorie` + `isParentCategory`, con etichetta `anno - nome` come in Programmazione Partite: senza anno le due "Esordienti" (2014 e 2015) sembrano la stessa voce
 ## [1.0.0] - 2026-04-01
 
 ### Added

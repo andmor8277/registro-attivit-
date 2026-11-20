@@ -394,8 +394,24 @@ const societaNome = computed(() => societaAttiva.value?.nome || societaAttiva.va
 
 const categorie = ref([])
 const categorieOperative = computed(() => {
-  return (categorie.value || []).filter(c => !isParentCategory(c, categorie.value))
+  // Ordine crescente per anno, come le categorie sono gia' mostrate a schermo nella stessa pagina
+  // (weekendPartiteGrouped). Senza sort si eredita l'ordine dell'API, che e' anno DESC e Postgres
+  // mette i NULL per primi: la prima voce del menu era "Portieri Scuola Calcio" (anno NULL)
+  return (categorie.value || [])
+    .filter(c => !isParentCategory(c, categorie.value))
+    .slice()
+    .sort((a, b) => (a.anno || 9999) - (b.anno || 9999))
 })
+
+// Preselezione del modal "Aggiungi Partita": la categoria dei piu' piccoli, cioe' l'anno di
+// nascita piu' alto. Non categorieOperative[0]: dipendeva dall'ordine di una query e, con i NULL
+// per primi, faceva aprire il modal su "Portieri Scuola Calcio", una categoria che il weekend
+// non gioca. Un criterio scritto e' anche piu' leggibile di "[0]"
+function categoriaPiuPiccola() {
+  const conAnno = categorieOperative.value.filter(c => c.anno)
+  if (!conAnno.length) return categorieOperative.value[0] || null
+  return conAnno.reduce((max, c) => (c.anno > max.anno ? c : max), conAnno[0])
+}
 const misterPerCategoria = ref({})
 const weekend = ref([])
 const weekendSelezionato = ref(null)
@@ -607,7 +623,7 @@ function apriModal(partita, defaultCatId, defaultWeekendId) {
     modal.value = {
       show: true,
       id: null,
-      categoria_id: defaultCatId || categorieOperative.value[0]?.id || null,
+      categoria_id: defaultCatId || categoriaPiuPiccola()?.id || null,
       data_partite: defaultData,
       ora: "",
       ora_presentazione: "",

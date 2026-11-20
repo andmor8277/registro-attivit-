@@ -96,3 +96,23 @@ export const eliminaListaTorneo = (id) => api.delete('/liste-torneo/' + id)
 export const getGiocatoriLista = (listaId) => api.get('/liste-torneo/' + listaId + '/giocatori')
 export const aggiungiGiocatoreLista = (listaId, personaId) => api.post('/liste-torneo/' + listaId + '/giocatori', null, { params: { persona_id: personaId } })
 export const rimuoviGiocatoreLista = (listaId, personaId) => api.delete('/liste-torneo/' + listaId + '/giocatori/' + personaId)
+
+// ---- Tornei (Natale, Pasqua, tornei di stagione) ----
+// Il calendario sta qui, la lista dei giocatori no: quella resta in /liste-torneo, collegata
+// al torneo, perche' l'export PDF del file da consegnare all'organizzatore vive gia' li'.
+export const getTornei = (params = {}) => {
+  const qs = new URLSearchParams()
+  if (params.categoria_id) qs.append('categoria_id', params.categoria_id)
+  if (params.societa_id) qs.append('societa_id', params.societa_id)
+  if (params.da) qs.append('da', params.da)
+  if (params.a) qs.append('a', params.a)
+  const q = qs.toString()
+  return api.get('/tornei/' + (q ? `?${q}` : ''))
+}
+export const getTorneo = (id) => api.get(`/tornei/${id}`)
+export const creaTorneo = (data) => api.post('/tornei/', data)
+export const aggiornaTorneo = (id, data) => api.put(`/tornei/${id}`, data)
+export const eliminaTorneo = (id) => api.delete(`/tornei/${id}`)
+export const aggiungiGaraTorneo = (id, data) => api.post(`/tornei/${id}/gare`, data)
+export const modificaGaraTorneo = (id, garaId, data) => api.put(`/tornei/${id}/gare/${garaId}`, data)
+export const eliminaGaraTorneo = (id, garaId) => api.delete(`/tornei/${id}/gare/${garaId}`)

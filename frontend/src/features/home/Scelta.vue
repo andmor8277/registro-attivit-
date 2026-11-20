@@ -206,6 +206,26 @@
           </div>
         </div>
 
+        <!-- Tornei della categoria: li inserisce il responsabile, qui il mister consulta il
+             calendario e apre la Lista Tornei gia' collegata per stampare il file da consegnare.
+             Stessa guardia della card Convocazioni: i dirigenti non convocano e la categoria
+             portieri non partecipa ai tornei con la propria squadra. -->
+        <div v-if="!isDirigente && !categoria?.is_portieri" class="scelta-card" @click="router.push('/tornei/' + categoria?.id)">
+          <div class="card-icon-wrap tornei">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
+              <path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 01-10 0V4z"/>
+              <path d="M17 5h2.5a1.5 1.5 0 010 4H17M7 5H4.5a1.5 1.5 0 000 4H7"/>
+            </svg>
+          </div>
+          <div class="card-label">Convocazioni Tornei</div>
+          <div class="card-desc">Calendario tornei e lista da consegnare</div>
+          <div class="card-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </div>
+        </div>
+
         <div v-if="!categoria?.is_portieri" class="scelta-card" @click="router.push('/dati/' + categoria?.id)">
           <div class="card-icon-wrap dati">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
@@ -915,6 +935,12 @@ function selezionaCategoria(cat) {
   background: linear-gradient(135deg, rgba(234, 179, 8, 0.2) 0%, rgba(234, 179, 8, 0.08) 100%);
   border-color: rgba(234, 179, 8, 0.3);
   color: #fbbf24;
+}
+
+.card-icon-wrap.tornei {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(249, 115, 22, 0.08) 100%);
+  border-color: rgba(249, 115, 22, 0.3);
+  color: #fb923c;
 }
 
 .card-icon-wrap.allenamenti {
