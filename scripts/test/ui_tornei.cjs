@@ -22,6 +22,9 @@ const CAT_PULCINI = '19'
 const BASE = process.env.THOF_UI_BASE || 'http://192.168.178.133:3000'
 const USER = process.argv[2]
 const PASS = process.argv[3]
+// L'id dell'utente 'mister' SENZA categoria, creato da prepara_demo_tornei.sh: serve per il caso del
+// referente che il menu non conosce piu'
+const MISTER_FUORI = process.argv[4] || ''
 const OUT = process.env.THOF_UI_OUT || '/tmp/opencode/ui'
 fs.mkdirSync(OUT, { recursive: true })
 
@@ -109,10 +112,24 @@ const LEGGI = `(() => {
 })()`
 
 ;(async () => {
+  // Il profilo si ripulisce a ogni esecuzione: Chrome ricorda in quello lo stato di Safe Browsing e
+  // delle protezioni sui download, e riusandolo lo stesso identico export e' passato dall'essere
+  // scaricato all'essere bloccato senza nessun errore in pagina ("The file at 'blob:...' was loaded
+  // over an insecure connection"). Una cartella pulita rende il run deterministico
+  fs.rmSync(`${OUT}/profile`, { recursive: true, force: true })
   const chrome = spawn('/usr/bin/google-chrome-stable', [
     '--headless=new', `--remote-debugging-port=${PORT}`, '--no-sandbox', '--disable-gpu',
     '--disable-dev-shm-usage', '--hide-scrollbars', `--user-data-dir=${OUT}/profile`,
-    '--window-size=1180,1500', 'about:blank'
+    '--window-size=1180,1500',
+    // DEV serve l'app in HTTP: senza queste, Chrome blocca il download del blob generato
+    // dall'export e non scrive nessun errore in console ("The file at 'blob:...' was loaded over an
+    // insecure connection"). Sono flags del browser di prova, non dell'app: la stessa pagina in
+    // produzione serve tutto in HTTPS. Il terzo e' quello che conta, perche' dichiara sicura
+    // QUELL'origine; gli altri tolgono gli avvisi residui
+    '--allow-running-insecure-content', '--test-type', '--safebrowsing-disable-download-protection',
+    `--unsafely-treat-insecure-origin-as-secure=${BASE}`,
+    '--disable-features=InsecureDownloadWarnings,DownloadBubble,DownloadBubbleV2',
+    'about:blank'
   ], { stdio: 'ignore' })
   process.on('exit', () => { try { chrome.kill('SIGKILL') } catch (e) {} })
 
@@ -190,19 +207,32 @@ const LEGGI = `(() => {
      (ESOR ? ESOR.vuoti.filter(x => /senza categoria/.test(x)).length : -1), '1/1')
   await shot('01_sezioni')
 
-  console.log('--- esportazione PDF: i due pulsanti, e cosa c\'E\' dentro i file ---')
+  console.log('--- esportazione PDF: i TRE pulsanti, e cosa c\'E\' dentro i file ---')
   // L'export non lo verifica nessun test API: qui si scarica davvero il PDF e se ne legge il testo.
   // Un pulsante che sembra funzionare e sforna un documento vuoto e' il modo peggiore per scoprirlo
   // la sera prima del torneo, quando il file va consegnato all'organizzatore
   const DL = `${OUT}/download`
-  fs.rmSync(DL, { recursive: true, force: true })
-  fs.mkdirSync(DL, { recursive: true })
-  await send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: DL })
-  // Su alcune versioni di Chrome il percorso di download e' solo a livello di browser: messo su
-  // entrambe le sessioni, il file arriva comunque dove lo aspettiamo
-  await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: DL }).catch(() => {})
+  // Come si chiama davvero il file del singolo torneo: il prefisso __demo_tornei__ lascia tre
+  // underscorelli (due letterali + quello della virgoletta), e riscriverlo a mano quattro volte e
+  // il modo piu veloce per sbagliarlo
+  const PDF_TORNEO = 'tornei_demo_tornei___winter_cup_2016_pulcini.pdf'
   const { execFileSync } = require('child_process')
+  const occorrenze = (testo, ago) => (testo.match(new RegExp(ago, 'g')) || []).length
+  // Senza questo Chrome non scrive da nessuna parte il blob dell'export, e non dice niente: la
+  // prima volta che e' successo sembrava un export rotto, ed era solo il browser di prova senza
+  // una cartella di destinazione. Su alcune versioni il percorso vale solo a livello di browser,
+  // quindi viene messo su entrambe le sessioni
+  await send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: DL })
+  await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: DL }).catch(() => {})
+
+  // Ogni export riparte da una cartella vuota: Chrome non sovrascrive lo stesso nome, scrive
+  // "nome (1).pdf", e la seconda esportazione dello stesso documento avrebbe rotto l'asserzione sul
+  // nome del file per il motivo sbagliato. Si svuota la cartella, NON si cancella: il percorso e'
+  // quello dato a Chrome con setDownloadBehavior, e rifare la directory con un inode nuovo e'
+  // bastato a far finire nel vuoto tutti e tre i download
   async function scarica(nome, espressioneElemento) {
+    fs.mkdirSync(DL, { recursive: true })
+    for (const f of fs.readdirSync(DL)) fs.rmSync(`${DL}/${f}`, { recursive: true, force: true })
     await clickReale(espressioneElemento)
     const atteso = `${DL}/${nome}`
     for (let i = 0; i < 60; i++) {
@@ -212,10 +242,10 @@ const LEGGI = `(() => {
       }
       await sleep(250)
     }
-    console.log('   perche\' nessun file:', await erroreSchermo(), '| cartella:', fs.readdirSync(DL).join(','))
+    console.log('   perche\' nessun file:', await erroreSchermo(), '| cartella:', fs.readdirSync(DL).join(','),
+                '| console:', erroriConsole.filter(e => !/favicon|DevTools|Download the Vue/i.test(e)).slice(-3).join(' // ') || 'pulita')
     return null
   }
-  const occorrenze = (testo, ago) => (testo.match(new RegExp(ago, 'g')) || []).length
 
   // le cognome vere dei giocatori, prese dalla STESSA API che l'export usa: se il PDF le contiene,
   // il foglio e' stato davvero caricato e stampato
@@ -231,9 +261,25 @@ const LEGGI = `(() => {
   })()`, { awaitPromise: true })
   console.log('   atteso nel foglio:', JSON.stringify(attese))
 
-  const btnSezione = `[...document.querySelectorAll('.categoria-sezione')]
-      .find(x => /Esordienti/.test(x.querySelector('.categoria-intestazione').innerText))
-      .querySelector('.btn-esporta')`
+  // Agganci stabili: la sezione per titolo, la card per nome, i pulsanti per testo
+  const SEZ_ESOR = `[...document.querySelectorAll('.categoria-sezione')].find(x=>/Esordienti/.test(x.querySelector('.categoria-intestazione').innerText))`
+  const SEZ_PULC = `[...document.querySelectorAll('.categoria-sezione')].find(x=>/Pulcini/.test(x.querySelector('.categoria-intestazione').innerText))`
+  // La card si prende DENTRO la sezione dei Pulcini: il torneo e' uno solo e sta in entrambe, ma il
+  // pulsante di export della prima card della pagina esporterebbe la sezione degli Esordienti
+  const CARD = `${SEZ_PULC}.querySelector('.torneo-card')`
+  const btnSezione = `${SEZ_ESOR}.querySelector('.btn-esporta')`
+  const btnTutti = `document.querySelector('.page-header .btn-esporta')`
+  const btnCard = `${CARD}.querySelector('.btn-esporta')`
+
+  // ---------------------------------------------------------------- 1) nessun mister assegnato
+  const cardSenzaMister = await evalJS(`(() => {
+    const c = ${CARD}
+    const m = c && c.querySelector('.mister-torneo')
+    return m ? { testo: m.innerText.replace(/\\s+/g,' ').trim(), assente: m.classList.contains('assente') } : null
+  })()`)
+  ck('la card dice che il torneo non ha un referente', cardSenzaMister && cardSenzaMister.testo, 'mister da assegnare')
+  ck('e lo dice come un buco (ambra), non come un dato normale', cardSenzaMister && cardSenzaMister.assente, true)
+
   const pdfSezione = await scarica('tornei_2015_esordienti.pdf', btnSezione)
   ck('il PDF della singola categoria si scarica', pdfSezione !== null, true)
   if (pdfSezione) {
@@ -245,14 +291,14 @@ const LEGGI = `(() => {
     ck('dichiara il foglio assente, non lo tace', /Foglio giocatori assente/.test(pdfSezione), true)
     ck('nomina le orfane invece di dimenticarle', /Gare senza categoria \(1\)/.test(pdfSezione), true)
     ck('e stampa la gara orfana', /Amichevole fuori calendario/.test(pdfSezione), true)
+    ck('dichiaria anche il mister mancante, invece di omettere la riga', /Mister: non assegnato/.test(pdfSezione), true)
     ck('non stampa colonne GDPR (data di nascita, CF, telefoni)',
        /Data Nascita|Codice fiscale|Telefono/i.test(pdfSezione), false)
-    // Qui il foglio NON c'e' (e' stato distaccato di proposito): un tabella del roster vuota sarebbe
+    // Qui il foglio NON c'e' (e' stato distaccato di proposito): una tabella del roster vuota sarebbe
     // peggio della frase che dichiara l'assenza
     ck('e non stampa una tabella giocatori vuota', /Cognome/.test(pdfSezione), false)
   }
 
-  const btnTutti = `document.querySelector('.page-header .btn-esporta')`
   const pdfTutti = await scarica('tornei_tutte_categorie.pdf', btnTutti)
   ck('il PDF di tutte le categorie si scarica', pdfTutti !== null, true)
   if (pdfTutti) {
@@ -261,18 +307,198 @@ const LEGGI = `(() => {
        /Vecchia Guardia/.test(pdfTutti) && /Real Junior/.test(pdfTutti) && /Atletico Sud/.test(pdfTutti), true)
     ck('contiene i giocatori veri del foglio dei Pulcini',
        attese.cognomi.length > 0 && attese.cognomi.every(c => pdfTutti.includes(c)), true)
-    ck('il foglio ha le sue colonne, e niente di piu\'',
-       /Cognome/.test(pdfTutti) && /Nome/.test(pdfTutti), true)
+    ck('il foglio ha le sue colonne, e niente di piu\'', /Cognome/.test(pdfTutti) && /Nome/.test(pdfTutti), true)
     ck('nomina il foglio con il suo nome completo', pdfTutti.includes(attese.nomeFoglio || '###'), true)
     // Le orfane sono dello stesso torneo: in "tutte le categorie" vanno stampate una volta sola
     ck('la gara orfana compare UNA volta sola, non una per sezione', occorrenze(pdfTutti, 'Amichevole fuori calendario'), 1)
     ck('anche l\'intestazione orfane compare una volta sola', occorrenze(pdfTutti, 'Gare senza categoria'), 1)
+    // Il referente sta nell'intestazione del torneo, e in "tutte le categorie" il torneo viene
+    // ripetuto una volta per sezione (come il suo nome, le sue date e il suo luogo): una sezione e'
+    // una lettura a se'. Le GARE senza categoria invece si stampano una volta sola, perche' li' la
+    // ripetizione sarebbe dato duplicato, non contesto
+    ck('il mister e\' dichiarato in ogni sezione in cui il torneo compare',
+       occorrenze(pdfTutti, 'Mister: non assegnato'), 2)
     ck('non stampa colonne GDPR', /Data Nascita|Codice fiscale|Telefono/i.test(pdfTutti), false)
   }
-  ck('nessun file PDF inaspettato nella cartella download',
-     fs.readdirSync(DL).sort().join(','), 'tornei_2015_esordienti.pdf,tornei_tutte_categorie.pdf')
   ck('i pulsanti non sono rimasti disabilitati dopo l\'export',
      await evalJS(`[...document.querySelectorAll('.btn-esporta')].every(b => !b.disabled)`), true)
+
+  console.log('--- il terzo livello: QUESTO torneo, in QUESTA categoria ---')
+  // Perche' esiste: il responsabile che deve mandare il suo all'organizzatore non vuole il resto
+  // della giornata. Un PDF con dentro anche l'altra categoria e' un documento da tagliare a mano
+  const pdfCard = await scarica(PDF_TORNEO, btnCard)
+  ck('il PDF del singolo torneo si scarica', pdfCard !== null, true)
+  if (pdfCard) {
+    ck('il file si chiama anche con il torneo, non solo con la categoria',
+       fs.readdirSync(DL).join(','), PDF_TORNEO)
+    ck('ha il torneo nel titolo, oltre alla categoria',
+       pdfCard.includes(NOME_DEMO) && /2016 - Pulcini/.test(pdfCard), true)
+    ck('ha le sue due gare dei Pulcini', /Real Junior/.test(pdfCard) && /Atletico Sud/.test(pdfCard), true)
+    ck('NON ha la gara dell\'altra categoria dello stesso torneo', /Vecchia Guardia/.test(pdfCard), false)
+    ck('NON ha nemmeno l\'intestazione dell\'altra categoria', /2015 - Esordienti/.test(pdfCard), false)
+    ck('ha il foglio giocatori di quella categoria', attese.cognomi.every(c => pdfCard.includes(c)), true)
+    ck('e l\'appuntamento, che e\' la colonna che si spezzava', /08:45/.test(pdfCard), true)
+  }
+
+  console.log('--- il Mister: il menu, il salvataggio, e il PDF che lo stampa ---')
+  // Il menu a tendina non si inventa le persone: prende i responsabili DELLE categorie iscritte al
+  // torneo, come fa il weekend. Qui si prova l'unione (Papaveri e' dei Pulcini, Quadri degli
+  // Esordienti) e l'esclusione del dirigente, che nel menu non c'entra
+  const apriModifica = `[...${CARD}.querySelectorAll('.btn-azione')]` +
+    `.find(b => b.innerText.trim() === 'Modifica')`
+  await clickReale(apriModifica)
+  await sleep(700)
+  const menuMister = await evalJS(`(() => {
+    const m = [...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))
+    if (!m) return {nessuno: true}
+    const sel = [...m.querySelectorAll('select')].find(s => [...s.options].some(o => o.value === '__manuale__'))
+    if (!sel) return {nienteSelect: true}
+    return {
+      opzioni: [...sel.options].map(o => o.text.replace(/\\s+/g, ' ').trim()),
+      valore: sel.value,
+      etichetta: (sel.closest('.form-group')?.querySelector('label')?.innerText || '').trim()
+    }
+  })()`)
+  console.log('   menu:', JSON.stringify(menuMister))
+  ck('il modal di modifica ha la voce Mister', menuMister.etichetta, 'Mister del torneo')
+  ck('il menu offre il mister dei Pulcini', (menuMister.opzioni || []).some(o => /Papaveri/.test(o)), true)
+  ck('e anche quello degli Esordienti (unione delle categorie iscritte)',
+     (menuMister.opzioni || []).some(o => /Quadri/.test(o)), true)
+  ck('il dirigente NON e\' un candidato a mister del torneo',
+     (menuMister.opzioni || []).some(o => /Dirigenti/.test(o)), false)
+  ck('parte vuoto, perche\' il torneo non ce l\'ha', menuMister.valore, '')
+
+  // Selezionare dal menu e salvare: la pagina deve ricaricarsi con il nome sulla card
+  await evalJS(`(() => {
+    const m = [...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))
+    const sel = [...m.querySelectorAll('select')].find(s => [...s.options].some(o => o.value === '__manuale__'))
+    const o = [...sel.options].find(o => /Papaveri/.test(o.text))
+    sel.value = o.value
+    sel.dispatchEvent(new Event('change', { bubbles: true }))
+    return sel.value
+  })()`)
+  await clickReale(`[...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))` +
+                   `.querySelectorAll('.modal-footer .btn-primary')[0]`)
+  await evalJS(`new Promise(res => { let n=0; const t=setInterval(() => {
+    if (!document.querySelector('.modal') || ++n > 40) { clearInterval(t); res(true) } }, 150) })`,
+    { awaitPromise: true })
+  const cardConMister = await evalJS(`(() => {
+    const m = ${CARD}.querySelector('.mister-torneo')
+    return m ? { testo: m.innerText.replace(/\\s+/g,' ').trim(), assente: m.classList.contains('assente') } : null
+  })()`)
+  ck('dopo il salvataggio la card dice CHI e\' il mister', cardConMister && cardConMister.testo,
+     'Gino Papaveri 3330000111')
+  ck('e non e\' piu\' un buco', cardConMister && cardConMister.assente, false)
+  await shot('04_mister_sulla_card')
+
+  const pdfConMister = await scarica(PDF_TORNEO, btnCard)
+  ck('il PDF del singolo torneo stampa il mister con il recapito',
+     pdfConMister !== null && /Mister: Gino Papaveri \(3330000111\)/.test(pdfConMister), true)
+  ck('e non dice piu\' "non assegnato"', /Mister: non assegnato/.test(pdfConMister || ''), false)
+
+  console.log('--- il mister scritto a mano (l\'accompagnatore non censito) ---')
+  await clickReale(apriModifica)
+  await sleep(700)
+  // Il menu deve riaprirsi gia\' con la persona giusta: se il modal ripartisse vuoto, il primo
+  // "Salva" distruggerebbe il mister scelto prima
+  ck('il modal si riapre con il mister gia\' selezionato', await evalJS(`(() => {
+    const m = [...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))
+    const sel = [...m.querySelectorAll('select')].find(s => [...s.options].some(o => o.value === '__manuale__'))
+    const o = sel.options[sel.selectedIndex]
+    return o ? o.text.replace(/\\s+/g, ' ').trim() : null
+  })()`), 'Papaveri Gino (3330000111)')
+
+  await evalJS(`(() => {
+    const m = [...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))
+    const sel = [...m.querySelectorAll('select')].find(s => [...s.options].some(o => o.value === '__manuale__'))
+    const o = [...sel.options].find(o => o.value === '__manuale__')
+    sel.value = o.value
+    sel.dispatchEvent(new Event('change', { bubbles: true }))
+    return 'ok'
+  })()`)
+  await sleep(300)
+  // "manuale" senza nome NON e' un torneo senza mister: e' un nome perso per strada. La pagina deve
+  // rifiutarsi di salvare, perche' il PDF uscirebbe senza referente mentre lo schermo mostrava la
+  // voce selezionata
+  await clickReale(`[...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))` +
+                   `.querySelectorAll('.modal-footer .btn-primary')[0]`)
+  await sleep(700)
+  ck('"manuale" senza nome non salva, e lo dice', await evalJS(`(() => {
+    const m = [...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))
+    return m ? (m.querySelector('.messaggio.errore')?.innerText.trim() || 'NESSUN ERRORE A SCHERMO') : 'MODAL CHIUSO'
+  })()`), 'Scrivi il nome del mister, o scegli una persona dal menu')
+  ck('e il torneo tiene il suo mister (il tentativo non ha scritto niente)',
+     await evalJS(`${CARD}.querySelector('.mister-torneo').innerText.replace(/\\s+/g,' ').trim()`),
+     'Gino Papaveri 3330000111')
+
+  await evalJS(`(() => {
+    const m = [...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))
+    const i = m.querySelector('.mister-manuale input')
+    i.value = 'Gianni Testa'
+    i.dispatchEvent(new Event('input', { bubbles: true }))
+    return 'ok'
+  })()`)
+  await clickReale(`[...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))` +
+                   `.querySelectorAll('.modal-footer .btn-primary')[0]`)
+  await evalJS(`new Promise(res => { let n=0; const t=setInterval(() => {
+    if (!document.querySelector('.modal') || ++n > 40) { clearInterval(t); res(true) } }, 150) })`,
+    { awaitPromise: true })
+  ck('il nome scritto a mano compare sulla card',
+     await evalJS(`${CARD}.querySelector('.mister-torneo').innerText.replace(/\\s+/g,' ').trim()`), 'Gianni Testa')
+  const pdfMisterManuale = await scarica(PDF_TORNEO, btnCard)
+  ck('e compare nel PDF, cosi\' com\'e\' scritto',
+     pdfMisterManuale !== null && /Mister: Gianni Testa/.test(pdfMisterManuale), true)
+  ck('senza recapito inventati', /Gianni Testa \(333/.test(pdfMisterManuale || ''), false)
+
+  console.log('--- il referente che il menu non conosce piu\' (fuori lista) ---')
+  // Il caso reale: il mister assegnato cambia categoria, o il responsabile scioglie un'iscrizione.
+  // Il backend NON chiede che il referente sia delle categorie iscritte (valida solo societa' e
+  // ruolo), quindi questa condizione si crea da sola e la pagina deve reggerla: se il menu la
+  // dipingesse vuota, chi apre il modal per correggere il luogo vedrebbe "da assegnare" e con il
+  // prossimo Salva perderebbe il mister senza averlo mai visto
+  if (!MISTER_FUORI) {
+    console.log('  ATTENZIONE: nessun mister senza categoria nei dati di prova: le asserzioni sotto non misurano niente')
+  }
+  const idTorneo = await evalJS(`(async () => {
+    const tk = localStorage.getItem('token')
+    const ts = await (await fetch('/api/tornei/', {headers:{Authorization:'Bearer '+tk}})).json()
+    const t = ts.find(x => (x.nome || '').indexOf(${JSON.stringify(NOME_DEMO)}) === 0)
+    return t ? t.id : null })()`, { awaitPromise: true })
+  const messoFuori = await evalJS(`(async () => {
+    const tk = localStorage.getItem('token')
+    const d = await (await fetch('/api/tornei/${idTorneo}', {headers:{Authorization:'Bearer '+tk}})).json()
+    const corpo = { nome: d.nome, data_inizio: d.data_inizio, data_fine: d.data_fine, luogo: d.luogo,
+                    organizzatore: d.organizzatore, descrizione: d.descrizione,
+                    mister_id: ${Number(MISTER_FUORI) || 0}, mister_manuale: null }
+    const r = await fetch('/api/tornei/${idTorneo}', {method:'PUT',
+      headers:{'Content-Type':'application/json', Authorization:'Bearer '+tk}, body: JSON.stringify(corpo)})
+    return r.status })()`, { awaitPromise: true })
+  ck('il backend accetta un referente che non e\' delle categorie iscritte (valida solo societa\' e ruolo)',
+     messoFuori, 200)
+  await goto(`${BASE}/responsabili/tornei`)
+  const cardFuori = await evalJS(`${CARD}.querySelector('.mister-torneo').innerText.replace(/\\s+/g,' ').trim()`)
+  ck('la card lo dice lo stesso, con il nome e non con l\'id', cardFuori, 'Ivo Fuorilista')
+  await clickReale(apriModifica)
+  await sleep(900)
+  const menuFuori = await evalJS(`(() => {
+    const m = [...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))
+    const sel = [...m.querySelectorAll('select')].find(s => [...s.options].some(o => o.value === '__manuale__'))
+    const o = sel.options[sel.selectedIndex]
+    return { valore: sel.value, testo: o ? o.text.replace(/\\s+/g, ' ').trim() : null }
+  })()`)
+  console.log('   menu:', JSON.stringify(menuFuori))
+  ck('il menu NON e\' vuoto su un torneo che il mister ce l\'ha', menuFuori.valore, String(MISTER_FUORI))
+  ck('lo nomina come persona, non come numero', /Ivo Fuorilista/.test(menuFuori.testo || ''), true)
+  ck('e spiega perche\' non e\' fra le persone delle categorie',
+     /tra i responsabili di queste categorie/.test(menuFuori.testo || ''), true)
+  // Il punto che questa opzione esiste per evitare: salvare senza toccare niente
+  await clickReale(`[...document.querySelectorAll('.modal')].find(x => /Modifica torneo/.test(x.innerText))` +
+                   `.querySelectorAll('.modal-footer .btn-primary')[0]`)
+  await evalJS(`new Promise(res => { let n=0; const t=setInterval(() => {
+    if (!document.querySelector('.modal') || ++n > 40) { clearInterval(t); res(true) } }, 150) })`,
+    { awaitPromise: true })
+  ck('salvare senza toccare niente NON se lo porta via',
+     await evalJS(`${CARD}.querySelector('.mister-torneo').innerText.replace(/\\s+/g,' ').trim()`), 'Ivo Fuorilista')
 
   console.log('--- aprire il calendario di UNA sola sezione ---')
   await evalJS(`document.querySelectorAll('.categoria-sezione')[${PULC.idx}].querySelectorAll('.btn-azione')[0].click(); 'ok'`)

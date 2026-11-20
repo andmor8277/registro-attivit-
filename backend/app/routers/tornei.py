@@ -8,6 +8,11 @@ from datetime import date
 from app.models import Utente, Torneo, TorneoCategoria, TorneoGara, ListaTorneo, Categoria
 from app.database import get_db
 from app.routers.auth import get_current_user
+# Importato e non riscritto: e' l'elenco che GET /categorie/{id}/responsabili usa per costruire il
+# menu a tendina dei mister. Validare con un elenco scritto a parte qui vorrebbe dire, il giorno
+# che si aggiunge un ruolo, o rifiutare valori legittimi o accettarne che la pagina non puo'
+# produrre. Non c'e' ciclo: categorie.py non importa questo modulo
+from app.routers.categorie import RUOLI_RESPONSABILI
 from app.core.deps import get_societa_filter, resolve_tenant_societa_id
 
 router = APIRouter(prefix="/tornei", tags=["tornei"])
@@ -25,6 +30,9 @@ class TorneoIn(BaseModel):
     luogo: Optional[str] = None
     organizzatore: Optional[str] = None
     descrizione: Optional[str] = None
+    # Il referente del torneo. Le due strade si escludono a vicenda (vedi _valida_mister)
+    mister_id: Optional[int] = None
+    mister_manuale: Optional[str] = None
 
 
 class CategorieIn(BaseModel):
@@ -104,6 +112,68 @@ def _valida(data: TorneoIn, current_user: Utente, db: Session) -> List[int]:
         if sid and cat.societa_id != sid:
             raise HTTPException(status_code=403, detail="Non autorizzato su questa categoria")
     return categorie
+
+
+def _valida_mister(data: TorneoIn, db: Session, societa_id):
+    """Pulisce e valida il mister del torneo; restituisce (mister_id, mister_manuale).
+
+    Le due fonti si escludono: o una persona censita, o un nome scritto a mano per
+    l'accompagnatore non censito. Accettarle entrambe e decidere quale delle due stampare
+    vorrebbe dire consegnare all'organizzatore un documento con un referente scelto in silenzio.
+
+    Il tenant si controlla qui e non ci si fida del client: mister_id arriva dalla richiesta e,
+    senza questo controllo, passando l'id di un utente di un'altra societa' (sono sequenziali) si
+    leggerebbe il suo nome nel PDF. Il controllo sul ruolo e' lo stesso elenco che la pagina usa
+    per riempire il menu a tendina, cosi' non succede che la pagina offra un valore che il backend
+    rifiuta o viceversa.
+    """
+    manuale = (data.mister_manuale or "").strip() or None
+    mister_id = int(data.mister_id) if data.mister_id else None
+    if manuale and mister_id:
+        raise HTTPException(status_code=400,
+                            detail="Indica un solo mister: quello a tendina oppure il nome scritto a mano")
+    if manuale and len(manuale) > 100:
+        # 100 e' la larghezza della colonna: oltre, sarebbe il database a rispondere 500 invece
+        # di dirlo all'utente
+        raise HTTPException(status_code=400, detail="Il nome del mister non puo' superare 100 caratteri")
+    if mister_id:
+        u = db.query(Utente).filter(Utente.id == mister_id).first()
+        if not u:
+            raise HTTPException(status_code=404, detail="Mister non trovato")
+        if societa_id and u.societa_id != societa_id:
+            raise HTTPException(status_code=403, detail="Non autorizzato su questo mister")
+        if u.ruolo not in RUOLI_RESPONSABILI:
+            raise HTTPException(status_code=400,
+                                detail="Il mister del torneo deve essere un allenatore o un dirigente della societa'")
+    return mister_id, manuale
+
+
+def _dati_mister(t: Torneo, db: Session) -> dict:
+    """I campi del mister gia' risolti, tutti insieme: la card, il modal e il PDF leggono questi.
+
+    Il nome scritto a mano vince su mister_id: se il responsabile ne ha scritto uno, quello e' il
+    referente che vuole sul documento. Si risolve qui e non lasciato comporre alle pagine perche'
+    il PDF va consegnato, e due schermate che chiamano la stessa persona "Rossi" in un punto e
+    "Mario Rossi" nell'altro e' il modo in cui nasce un documento incoerente.
+
+    `mister_cellulare` viene esposto perche' il PDF del weekend stampa gia' il recapito del mister
+    di ogni partita: qui e' lo stesso dato, la stessa persona, nello stesso tipo di documento che
+    finisce all'organizzatore.
+    """
+    dati = {"mister_id": t.mister_id, "mister_manuale": t.mister_manuale,
+            "mister_nome": None, "mister_cellulare": None}
+    if t.mister_manuale and t.mister_manuale.strip():
+        dati["mister_nome"] = t.mister_manuale.strip()
+        return dati
+    if t.mister_id:
+        # nessuna FK (vedi modello): l'utente puo' non esserci piu'. In quel caso mister_nome resta
+        # None e la pagina scrive "da assegnare", invece di stampare un id orfano
+        u = db.query(Utente).filter(Utente.id == t.mister_id).first()
+        if u:
+            nome = " ".join(x for x in [u.nome, u.cognome] if x).strip()
+            dati["mister_nome"] = nome or None
+            dati["mister_cellulare"] = u.cellulare
+    return dati
 
 
 def _categorie_iscritte(torneo_id: int, db: Session) -> List[dict]:
@@ -301,6 +371,7 @@ def lista_tornei(
             "luogo": t.luogo,
             "organizzatore": t.organizzatore,
             "descrizione": t.descrizione,
+            **_dati_mister(t, db),
             "gare": sum(r[1] for r in righe_gare),
             "gare_per_categoria": gare_per_categoria,
             "gare_orfane": gare_orfane,
@@ -325,6 +396,7 @@ def dettaglio_torneo(torneo_id: int, db: Session = Depends(get_db),
         "luogo": torneo.luogo,
         "organizzatore": torneo.organizzatore,
         "descrizione": torneo.descrizione,
+        **_dati_mister(torneo, db),
         "gare": _serie_gare(torneo_id, db),
         "liste": _liste_collegate(torneo_id, db),
         "lista": _lista_collegata(torneo_id, db, torneo.categoria_id),
@@ -337,6 +409,7 @@ def crea_torneo(data: TorneoIn, request: Request = None, db: Session = Depends(g
     categorie_ids = _valida(data, current_user, db)
     societa_id = resolve_tenant_societa_id(current_user, data.societa_id, request,
                                            categoria_id=categorie_ids[0], db=db)
+    mister_id, mister_manuale = _valida_mister(data, db, societa_id)
     torneo = Torneo(
         societa_id=societa_id,
         categoria_id=categorie_ids[0],
@@ -346,6 +419,8 @@ def crea_torneo(data: TorneoIn, request: Request = None, db: Session = Depends(g
         luogo=data.luogo,
         organizzatore=data.organizzatore,
         descrizione=data.descrizione,
+        mister_id=mister_id,
+        mister_manuale=mister_manuale,
         creato_da=current_user.id,
         creato_il=text("NOW()"),
     )
@@ -389,6 +464,10 @@ def aggiorna_torneo(torneo_id: int, data: TorneoIn, db: Session = Depends(get_db
     torneo.luogo = data.luogo
     torneo.organizzatore = data.organizzatore
     torneo.descrizione = data.descrizione
+    # Il mister si sovrascrive sempre, come gli altri campi anagrafici: il modal manda la scheda
+    # completa, quindi "campo assente" qui vuol dire "il responsabile lo ha tolto", non "non lo
+    # so". Valutare la differenza significherebbe non poter mai togliere un mister sbagliato.
+    torneo.mister_id, torneo.mister_manuale = _valida_mister(data, db, torneo.societa_id)
     # I fogli portano il nome del torneo nell'intestazione del PDF: se il responsabile lo corregge,
     # nessuno deve restare con il nome vecchio. Si ricostruisce il nome categoria per categoria,
     # cosi' il suffisso con la categoria non si perde.

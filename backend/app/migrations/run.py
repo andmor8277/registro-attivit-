@@ -1749,6 +1749,21 @@ def run_migrations():
                 print(f"Migration warning (ux_liste_torneo_torneo_categoria): {e}")
                 conn.rollback()
 
+            # ---- il mister del torneo ----
+            # Il torneo ha UN referente, non uno per categoria: l'organizzatore chiama una persona
+            # sola la mattina della domenica, e con le gare su due categorie il mister della singola
+            # partita non dice chi risponde del torneo intero. Nessuna FK su mister_id, come su
+            # partite.mister_id: l'utente puo' essere cancellato e un vincolo qui trasformerebbe
+            # quella cancellazione in un errore o in un torneo perso per cascata
+            try:
+                conn.execute(text("ALTER TABLE tornei ADD COLUMN IF NOT EXISTS mister_id INTEGER"))
+                conn.execute(text("ALTER TABLE tornei ADD COLUMN IF NOT EXISTS mister_manuale VARCHAR(100)"))
+                conn.commit()
+                print("Migration: Added mister_id, mister_manuale to tornei")
+            except Exception as e:
+                print(f"Migration warning (tornei mister): {e}")
+                conn.rollback()
+
         finally:
             if has_lock:
                 try:

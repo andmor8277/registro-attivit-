@@ -70,6 +70,19 @@ class Torneo(Base):
     luogo = Column(String(200), nullable=True)
     organizzatore = Column(String(120), nullable=True)
     descrizione = Column(Text, nullable=True)
+    # Il referente del torneo: UNA persona per il torneo intero, non una per categoria. Non e' la
+    # stessa cosa del mister della singola partita (partite.mister_id, che nel weekend c'e' gia'):
+    # li' serve sapere chi dirige quella gara, qui serve il nome che l'organizzatore chiama la
+    # mattina, quando le gare sono su due categorie e due mister diversi.
+    #
+    # mister_id non ha FK, come partite.mister_id: il riferimento e' a un utente che pu' essere
+    # cancellato, e un vincolo qui renderebbe la cancellazione di un utente un errore, o peggio
+    # cancellerebbe il torneo per cascata. Senza vincolo l'id resta orfano e la pagina dice
+    # "da assegnare", che e' la verita' invece di un numero stampato nel PDF
+    mister_id = Column(Integer, nullable=True)
+    # Per l'accompagnatore che non ha un account: il weekend ha la stessa opzione, e un torneo
+    # ospitato da un'altra societa' porta spesso un mister che qui non e' censito
+    mister_manuale = Column(String(100), nullable=True)
     creato_da = Column(Integer, nullable=True)
     creato_il = Column(DateTime, nullable=True)
 

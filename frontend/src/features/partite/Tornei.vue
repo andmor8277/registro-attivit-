@@ -105,6 +105,17 @@
             <span v-if="t.data_inizio || t.data_fine">{{ formatoPeriodo(t) }}</span>
             <span v-if="t.luogo">{{ t.luogo }}</span>
             <span v-if="t.organizzatore">a cura di {{ t.organizzatore }}</span>
+            <!-- Il referente del torneo, mostrato sempre: se manca, l'organizzatore non ha chi
+                 chiamare la mattina, e scriverlo qui e' il modo per non scoprirlo il venerdi' sera.
+                 Il nome arriva gia' risolto dal backend, cosi' card e PDF dicono la stessa cosa -->
+            <span class="mister-torneo" :class="{ assente: !t.mister_nome }"
+                  :title="t.mister_nome ? 'Referente del torneo' : 'Nessun referente: chi chiama per questo torneo?'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              </svg>
+              <span>{{ t.mister_nome || 'mister da assegnare' }}</span>
+              <span v-if="t.mister_cellulare" class="mister-tel">{{ t.mister_cellulare }}</span>
+            </span>
           </div>
           <p v-if="t.descrizione" class="torneo-descrizione">{{ t.descrizione }}</p>
         </div>
@@ -128,6 +139,19 @@
             <button class="btn-azione" @click="apriModalTorneo(t)">Modifica</button>
             <button class="btn-azione pericolo" @click="elimina(t, sez)">Elimina</button>
           </template>
+          <!-- Terzo livello di export: questo torneo, in questa categoria. Serve perche' il
+               responsabile che deve mandare "il suo" all'organizzatore non gli interessa il resto
+               della giornata: un PDF con dentro anche l'altra categoria e' un documento che va
+               tagliato a mano prima di essere inviato -->
+          <button class="btn-esporta" :disabled="esportazione" @click="esportaPDF(sez, t)"
+                  :title="'Esporta il PDF di ' + t.nome + ' per ' + etichettaCategoria(sez) + ': calendario e foglio giocatori'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
+            </svg>
+            <span>Esporta PDF</span>
+          </button>
         </div>
 
         <div v-if="calendarioAperto === chiaveCalendario(t, sez)" class="calendario">
@@ -282,6 +306,30 @@
               <label>Organizzatore</label>
               <input v-model="formTorneo.organizzatore" placeholder="es. Società X" />
             </div>
+            <!-- Il referente del torneo, UNA persona per il torneo intero e non una per categoria:
+                 l'organizzatore chiama un numero solo la mattina, e con le gare su due categorie il
+                 mister della singola gara non dice chi risponde del torneo. Stessa UX del weekend:
+                 menu a tendina + "manuale" per chi non ha un account -->
+            <div class="form-group">
+              <label>Mister del torneo</label>
+              <select v-model="misterScelta" @change="cambioMister">
+                <option value="">— da assegnare —</option>
+                <option v-for="m in misterDisponibili" :key="m.id" :value="String(m.id)">
+                  {{ m.cognome }}{{ m.nome ? ' ' + m.nome : '' }}{{ m.cellulare ? ' (' + m.cellulare + ')' : '' }}
+                </option>
+                <!-- Il referente salvato puo' non essere piu' tra i responsabili delle categorie:
+                     senza questa voce il menu sarebbe vuoto su un torneo che il mister ce l'ha -->
+                <option v-if="misterFuoriLista" :value="String(misterFuoriLista.id)">
+                  {{ misterFuoriLista.nome }} (non piu' tra i responsabili di queste categorie)
+                </option>
+                <option value="__manuale__">✏️ Inserisci manualmente (non censito)…</option>
+              </select>
+              <div v-if="misterScelta === '__manuale__'" class="mister-manuale">
+                <input v-model="formTorneo.mister_manuale" maxlength="100"
+                       placeholder="Nome e cognome (es. Mario Rossi)" />
+              </div>
+              <p class="suggerimento">{{ suggerimentoMister }}</p>
+            </div>
             <div class="form-group">
               <label>Note</label>
               <textarea v-model="formTorneo.descrizione" rows="3"
@@ -380,12 +428,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getTornei, getTorneo, creaTorneo, aggiornaTorneo, eliminaTorneo,
   aggiungiGaraTorneo, modificaGaraTorneo, eliminaGaraTorneo, getAllCategorie, isParentCategory,
-  iscriviCategoriaTorneo, rimuoviCategoriaTorneo, getGiocatoriLista, saveOrSharePdf
+  iscriviCategoriaTorneo, rimuoviCategoriaTorneo, getGiocatoriLista, saveOrSharePdf,
+  getCategoriaResponsabili
 } from '../../api/index.js'
 import { jsPDF } from 'jspdf'
 // Il plugin va importato ANCHE qui, non basta che lo importino Liste Tornei o Programmazione Partite:
@@ -435,6 +484,94 @@ const garaSezione = ref(null)
 const formGara = ref({})
 // La categoria da iscrivere nel modal di modifica: niente di selezionato finche' non si sceglie
 const nuovaCategoria = ref(null)
+
+// ------------------------------------------------------- mister del torneo
+// Il referente e' UNO per il torneo intero, non uno per categoria: l'organizzatore chiama un numero
+// solo la mattina della domenica, e con le gare su due categorie il mister della singola gara (che
+// nel weekend esiste gia') non dice chi risponde del torneo.
+//
+// La lista viene dagli STESSI responsabili di categoria che usa la programmazione partite del
+// weekend, non dalla tabella allenatori: quella tabella in produzione e' vuota (zero righe,
+// verificato sul DB di PROD e DEV), quindi un menu attaccato a quella non avrebbe mai offerto un
+// nome e sarebbe rimasta solo la voce "manuale".
+const misterPerCategoria = ref({})
+// '', l'id come stringa, o '__manuale__': lo stesso pattern del weekend
+const misterScelta = ref('')
+
+// Le categorie a cui il mister deve appartenere: quelle gia' iscritte se sto modificando, quelle
+// spuntate adesso se sto creando. Non si chiedono i responsabili di tutte le categorie della
+// societa' a ogni apertura di pagina: sono N richieste per un menu che serve solo a modal aperto
+const categorieDelModal = computed(() => {
+  if (torneoDaModificare.value) return categorieDel(torneoDaModificare.value)
+  return (formTorneo.value.categorie_id || []).map(Number).map(id => ({ id }))
+})
+
+const misterDisponibili = computed(() => {
+  const visti = new Map()
+  for (const c of categorieDelModal.value) {
+    for (const r of (misterPerCategoria.value[String(c.id)] || [])) {
+      if (!visti.has(r.id)) visti.set(r.id, r)
+    }
+  }
+  // per cognome, come il weekend: due "Rossi" in fila sono due voci da indovinare, e qui accanto
+  // al cognome esce anche il nome
+  return [...visti.values()]
+    .sort((a, b) => String(a.cognome || '').localeCompare(String(b.cognome || '')))
+})
+
+const suggerimentoMister = computed(() => {
+  if (misterScelta.value === '__manuale__') return 'Verrà stampato nel PDF così com\'è scritto.'
+  if (misterDisponibili.value.length) return 'Le persone delle categorie iscritte al torneo.'
+  return 'Nessun responsabile censito per queste categorie: scegli "Inserisci manualmente".'
+})
+
+// Il mister salvato puo' non essere piu' tra i responsabili delle categorie: cambia l'assegnazione
+// di categoria, o il responsabile scioglie un'iscrizione. Senza questa opzione il menu si dipinge
+// VUOTO mentre il torneo un referente ce l'ha, e chi apre il modal per cambiare il luogo vede
+// "da assegnare" e con il prossimo Salva lo perde davvero. L'opzione si aggiunge solo quando le
+// categorie sono gia' state lette, altrimenti per un attimo ogni mister salvato sembrerebbe "fuori
+// lista" mentre le richieste sono ancora in volo
+const misterFuoriLista = computed(() => {
+  const id = misterScelta.value
+  if (!id || id === '__manuale__') return null
+  const categorie = categorieDelModal.value
+  if (!categorie.length) return null
+  if (!categorie.every(c => String(c.id) in misterPerCategoria.value)) return null
+  if (misterDisponibili.value.some(m => String(m.id) === String(id))) return null
+  const nome = (torneoDaModificare.value && torneoDaModificare.value.mister_nome) || `persona ${id}`
+  return { id, nome }
+})
+
+async function caricaMister(ids) {
+  const mancanti = [...new Set((ids || []).map(String))].filter(id => !(id in misterPerCategoria.value))
+  await Promise.all(mancanti.map(async id => {
+    try {
+      const res = await getCategoriaResponsabili(Number(id))
+      // i dirigenti non guidano le squadre: il weekend li esclude dallo stesso menu, e qui il
+      // backend li accetterebbe comunque (valida solo che sia una persona della societa')
+      misterPerCategoria.value[id] = (res.data || []).filter(r => r.ruolo !== 'dirigente')
+    } catch (e) {
+      // un fallimento qui non deve lasciare il modal senza menu ne' impedire di salvare il torneo:
+      // il campo resta compilabile a mano
+      misterPerCategoria.value[id] = []
+    }
+  }))
+}
+
+function cambioMister() {
+  // le due fonti si escludono a vicenda, e la scelta si fa qui per non mandare al backend un
+  // payload con entrambe: lo rifiuterebbe con un 400, ma l'utente lo vedrebbe solo dopo un click
+  // che sembrava riuscito
+  const manuale = misterScelta.value === '__manuale__'
+  formTorneo.value.mister_id = manuale || !misterScelta.value ? null : Number(misterScelta.value)
+  if (!manuale) formTorneo.value.mister_manuale = ''
+  // ^  se si sceglie una persona dal menu, il nome scritto a mano prima non deve restare nel form:
+  //    il backend li vuole uno dei due, non entrambi
+}
+
+// Spuntando una categoria nuova il menu deve offrire anche le sue persone: senza questo, il
+// responsabile iscrive gli Esordienti e nel menu restano solo i mister dei Pulcini
+watch(() => [...(formTorneo.value.categorie_id || [])], ids => { caricaMister(ids) })
 
 function tornaIndietro() {
   if (route.params.id) router.push('/scelta/' + route.params.id)
@@ -655,16 +792,24 @@ function apriModalTorneo(t = null) {
     ? {
         nome: t.nome, data_inizio: t.data_inizio || '',
         data_fine: t.data_fine || '', luogo: t.luogo || '', organizzatore: t.organizzatore || '',
-        descrizione: t.descrizione || ''
+        descrizione: t.descrizione || '',
+        mister_id: t.mister_id || null, mister_manuale: t.mister_manuale || ''
       }
     : {
         nome: '',
         // da Scelta.vue si arriva con la categoria gia' in testa: pre-selezione la sua, altrimenti
         // si parte vuoti e si lascia scegliere chi iscrive
         categorie_id: categoriaFiltro.value ? [Number(categoriaFiltro.value)] : [],
-        data_inizio: '', data_fine: '', luogo: '', organizzatore: '', descrizione: ''
+        data_inizio: '', data_fine: '', luogo: '', organizzatore: '', descrizione: '',
+        mister_id: null, mister_manuale: ''
       }
+  // Il menu riparte da quello che c'e' gia' scritto: un torneo con il mister a mano deve riaprirsi
+  // con "manuale" selezionato e il nome dentro, non con il menu vuoto che sembrerebbe perso
+  misterScelta.value = (formTorneo.value.mister_manuale || '').trim()
+    ? '__manuale__'
+    : (formTorneo.value.mister_id ? String(formTorneo.value.mister_id) : '')
   modalTorneo.value = true
+  caricaMister(categorieDelModal.value.map(c => c.id))
 }
 
 async function salvaTorneo() {
@@ -675,6 +820,13 @@ async function salvaTorneo() {
     erroreModal.value = 'Seleziona almeno una categoria: senza categorie il torneo non ha squadre'
     return
   }
+  // "manuale" senza nome non e' un torneo senza mister: e' un nome perso per strada. Lasciarlo
+  // passare significherebbe svuotare il campo senza che nessuno lo dica, e il PDF uscirebbe senza
+  // referente mentre lo schermo mostrava la voce selezionata
+  if (misterScelta.value === '__manuale__' && !(formTorneo.value.mister_manuale || '').trim()) {
+    erroreModal.value = 'Scrivi il nome del mister, o scegli una persona dal menu'
+    return
+  }
   salvataggio.value = true
   try {
     const corpo = {
@@ -683,7 +835,12 @@ async function salvaTorneo() {
       data_fine: formTorneo.value.data_fine || null,
       luogo: formTorneo.value.luogo || null,
       organizzatore: formTorneo.value.organizzatore || null,
-      descrizione: formTorneo.value.descrizione || null
+      descrizione: formTorneo.value.descrizione || null,
+      // uno solo dei due, come deciso dal menu: il backend rifiuta chi li manda entrambi
+      mister_id: misterScelta.value && misterScelta.value !== '__manuale__'
+        ? Number(misterScelta.value) : null,
+      mister_manuale: misterScelta.value === '__manuale__'
+        ? (formTorneo.value.mister_manuale || '').trim() : null
     }
     if (torneoDaModificare.value) {
       // niente categorie nel corpo: le gestiscono le rotte dedicate, con le loro regole
@@ -881,8 +1038,10 @@ async function ricaricaConCalendarioAperto(torneoId, sez = null) {
 }
 
 // ------------------------------------------------------- esportazione PDF
-// Stesso schema dell'export del weekend: UNA funzione e due pulsanti, perche' "tutte le categorie"
-// e "questa categoria" sono lo stesso documento con perimetro diverso.
+// Stesso schema dell'export del weekend: UNA funzione e TRE pulsanti (tutte le categorie, questa
+// categoria, questo torneo in questa categoria), perche' sono lo stesso documento con perimetro
+// diverso. Tre funzioni che si duplicano il foglio di stile sono tre documenti che il giorno dopo
+// non si assomigliano piu'.
 // Perche' il foglio giocatori sta qui dentro: il documento che il responsabile consegna
 // all'organizzatore e' il calendario delle gare PIU' la lista dei giocatori di quella categoria.
 // Finora per averlo bisognava aprire Liste Tornei, selezionare il torneo e premere esporta: due
@@ -891,7 +1050,7 @@ async function ricaricaConCalendarioAperto(torneoId, sez = null) {
 // ListeTornei.vue stampa di default. Data di nascita, codice fiscale e telefoni la' stanno dietro
 // il lucchetto GDPR, e un secondo export che li stampasse senza lucchetto sarebbe il modo piu'
 // semplice per aggirarlo senza passare dallo sblocco.
-async function esportaPDF(sez = null) {
+async function esportaPDF(sez = null, torneo = null) {
   const sezioni = sez ? [sez] : sezioniPerCategoria.value
   if (!sezioni.length || esportazione.value) return
   esportazione.value = true
@@ -902,7 +1061,9 @@ async function esportaPDF(sez = null) {
     const alta = doc.internal.pageSize.getHeight()
 
     doc.setFontSize(16); doc.setFont(undefined, 'bold')
-    doc.text(sez ? `Tornei — ${sez.titolo}` : 'Tornei — tutte le categorie', 14, 15)
+    doc.text(torneo ? `${torneo.nome} — ${sez.titolo}`
+                    : sez ? `Tornei — ${sez.titolo}`
+                    : 'Tornei — tutte le categorie', 14, 15)
     doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(110)
     doc.text(`Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 21)
     doc.setTextColor(0)
@@ -924,7 +1085,7 @@ async function esportaPDF(sez = null) {
       doc.setTextColor(0); doc.setFont(undefined, 'normal')
       y += 13
 
-      for (const t of s.tornei) {
+      for (const t of (torneo ? [torneo] : s.tornei)) {
         // null vuol dire "non sono riuscita a leggerle", [] vuol dire "non ce ne sono": stampare
         // "nessuna gara" quando la richiesta era fallita consegnerebbe un calendario falso
         const tutte = await gareDel(t)
@@ -936,6 +1097,21 @@ async function esportaPDF(sez = null) {
         doc.setFontSize(10); doc.setFont(undefined, 'bold')
         doc.text(String(doc.splitTextToSize(riga, larga - 28)[0]), 14, y)
         doc.setFont(undefined, 'normal'); y += 4
+
+        // Il referente del torneo, in un documento che l'organizzatore riceve e con cui deve
+        // sapere chi chiamare. Il nome arriva dal backend (mister_nome), cosi' la card e il PDF
+        // dicono la stessa cosa; se non c'e' lo si scrive, perche' un documento senza referente
+        // e' il caso in cui il buco va mostrato e non taciuto
+        respira(10)
+        doc.setFontSize(9)
+        if (t.mister_nome) {
+          doc.setTextColor(0)
+          doc.text(`Mister: ${t.mister_nome}${t.mister_cellulare ? '  (' + t.mister_cellulare + ')' : ''}`, 14, y + 1)
+        } else {
+          doc.setTextColor(180, 83, 9)
+          doc.text('Mister: non assegnato — indicare il referente del torneo', 14, y + 1)
+        }
+        doc.setTextColor(0); y += 7
 
         if (tutte === null) {
           doc.setTextColor(180, 83, 9)
@@ -1038,10 +1214,17 @@ async function esportaPDF(sez = null) {
       }
     }
 
-    const nomeFile = sez
-      ? `tornei_${String(`${sez.anno || ''}_${sez.nome || ''}`).replace(/[\s/-]+/g, '_').toLowerCase()}.pdf`
-      : 'tornei_tutte_categorie.pdf'
-    await saveOrSharePdf(doc, nomeFile, sez ? `Tornei ${sez.titolo}` : 'Tornei — tutte le categorie')
+    // Nomi file diversi per i tre livelli, perche' finiscono in una chat e "tornei.pdf" non dice
+    // cosa c'e' dentro. I caratteri illegali li toglie sanitizeFilename dentro saveOrSharePdf; qui
+    // si tolgono solo gli spazi e la punteggiatura, che rendono il nome illeggibile
+    const pulito = s => String(s || '').replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase()
+    const nomeFile = torneo
+      ? `tornei_${pulito(torneo.nome)}_${pulito(`${sez.anno || ''} ${sez.nome || ''}`)}.pdf`
+      : sez ? `tornei_${pulito(`${sez.anno || ''} ${sez.nome || ''}`)}.pdf`
+            : 'tornei_tutte_categorie.pdf'
+    const titolo = torneo ? `${torneo.nome} — ${sez.titolo}`
+                          : sez ? `Tornei ${sez.titolo}` : 'Tornei — tutte le categorie'
+    await saveOrSharePdf(doc, nomeFile, titolo)
     conferma.value = 'PDF generato'
   } catch (e) {
     // console.error perche' dall'esterno un'eccezione inghiottita qui sarebbe invisibile: la pagina
@@ -1110,6 +1293,12 @@ onMounted(async () => {
 .badge.lista.vuota { background: var(--color-warning-soft); color: var(--color-warning); }
 
 .torneo-meta { display: flex; gap: 0.875rem; flex-wrap: wrap; color: var(--color-text-secondary); font-size: 0.8125rem; }
+/* Il referente del torneo, mostrato anche quando manca: un documento da consegnare senza un numero
+   da chiamare lo si scopre la mattina del torneo, qui costa una riga color ambra */
+.mister-torneo { display: inline-flex; align-items: center; gap: 0.25rem; }
+.mister-torneo.assente { color: var(--color-warning); font-weight: 600; }
+.mister-tel { color: var(--color-text-muted); font-size: 0.75rem; }
+.mister-manuale { margin-top: 0.375rem; }
 .torneo-descrizione { color: var(--color-text-secondary); font-size: 0.8125rem; margin: 0.5rem 0 0; white-space: pre-line; }
 
 .torneo-azioni { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }

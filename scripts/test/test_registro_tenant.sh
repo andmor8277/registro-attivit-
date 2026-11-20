@@ -32,10 +32,35 @@ MID=$(q "SELECT id FROM utenti WHERE username='testtenantmister'")
 q "INSERT INTO utente_categorie (utente_id,categoria_id) VALUES ($MID,20);" >/dev/null
 echo "  persone prova: normale=$PN portiere=$PP | utenti: admin=$AID mister=$MID (assegnato solo a cat 20)"
 
-tok() { curl -s --max-time 20 -X POST "$D/auth/token" -d "username=$1&password=$PW" | python3 -c "import sys,json;print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null; }
+# Il 429 va gestito, non confuso con un 401: /auth/token ha @limiter.limit("10/minute") e la suite
+# fa decine di login in raffica. Senza il retry, un run su due questo file si colorava di rosso per
+# il rate limit, e i due 401 sotto erano la conseguenza (token vuoto) e non un difetto del tenant
+tok() {
+  local out code i
+  for i in 1 2 3 4 5; do
+    out=$(curl -s -w '\n%{http_code}' --max-time 20 -X POST "$D/auth/token" \
+             --data-urlencode "username=$1" --data-urlencode "password=$PW")
+    code="${out##*$'\n'}"
+    if [ "$code" = "429" ]; then sleep 8; continue; fi
+    printf '%s' "${out%$'\n'*}" | python3 -c "import sys,json;print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null
+    return 0
+  done
+  echo ""
+}
 TOK_A=$(tok testtenantadmin); TOK_M=$(tok testtenantmister)
 ck "login admin di prova"  "$([ -n "$TOK_A" ] && echo si)" "si"
 ck "login mister di prova" "$([ -n "$TOK_M" ] && echo si)" "si"
+# Senza token le asserzioni sotto confrontano un 401 con un 200: e' un rosso che non dice niente di
+# cio' che doveva misurare, quindi meglio fermarsi qui e dirlo
+if [ -z "$TOK_A" ] || [ -z "$TOK_M" ]; then
+  echo "  login di prova fallito: senza token le asserzioni sul tenant non misurerebbero niente, mi fermo"
+  q "DELETE FROM registro WHERE persona_id IN (SELECT id FROM persone WHERE cognome='TestTenant');
+     DELETE FROM persone WHERE cognome='TestTenant';
+     DELETE FROM login_bloccaggi WHERE chiave LIKE 'testtenant%';
+     DELETE FROM utenti WHERE username LIKE 'testtenant%';" >/dev/null
+  echo "  $pass passati, $((fail+1)) falliti (prerequisiti)"
+  exit 1
+fi
 
 echo "--- 1. scrittura legittima: non deve rompersi ---"
 ck "admin su persona e categoria proprie"        "$(codice "$TOK_A" "{\"persona_id\":$PN,\"data\":\"2026-11-16\",\"codice\":\"P\",\"categoria_id\":20}")" "200"
@@ -65,6 +90,7 @@ echo "--- pulizia (solo gli oggetti di prova) ---"
 q "DELETE FROM registro WHERE persona_id IN ($PN,$PP);
    DELETE FROM persone WHERE id IN ($PN,$PP);
    DELETE FROM utente_categorie WHERE utente_id IN ($AID,$MID);
+   DELETE FROM login_bloccaggi WHERE chiave LIKE 'testtenant%';
    DELETE FROM utenti WHERE id IN ($AID,$MID);" >/dev/null
 ck "nessun residuo di prova" "$(q "SELECT (SELECT count(*) FROM persone WHERE cognome='TestTenant')+(SELECT count(*) FROM utenti WHERE username LIKE 'testtenant%')+(SELECT count(*) FROM registro WHERE persona_id IN ($PN,$PP))")" "0"
 

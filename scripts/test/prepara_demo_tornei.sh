@@ -24,6 +24,7 @@ pulisci() {
      DELETE FROM liste_torneo_giocatori WHERE lista_id IN (SELECT id FROM liste_torneo WHERE nome LIKE '$P%' OR nome LIKE 'P-WINTER CUP%');
      DELETE FROM liste_torneo WHERE nome LIKE '$P%' OR nome LIKE 'P-WINTER CUP%';
      DELETE FROM tornei WHERE nome LIKE '$P%' OR nome LIKE 'P-WINTER CUP%';
+     DELETE FROM utente_categorie WHERE utente_id IN (SELECT id FROM utenti WHERE username LIKE '$U%');
      DELETE FROM login_bloccaggi WHERE chiave LIKE '$U%';
      DELETE FROM utenti WHERE username LIKE '$U%';" >/dev/null
   echo "ripulito"
@@ -37,6 +38,26 @@ HASH=$($SSH "docker exec $BE python -c \"from passlib.context import CryptContex
 # utente demo: admin della societa' 1, serve solo per aprire la pagina col browser headless
 q "INSERT INTO utenti (username,password_hash,societa_id,is_admin,is_super_admin,ruolo)
    VALUES ('$U','$HASH',1,1,0,NULL);" >/dev/null
+
+# Le persone che il menu "Mister del torneo" deve offrire. Vengono dagli STESSI responsabili di
+# categoria che usa la programmazione partite del weekend: la tabella allenatori e' vuota in
+# produzione, quindi non e' quella la fonte dei nomi. Due mister, uno per categoria, per provare che
+# il menu fa l'unione delle categorie iscritte, e un dirigente che nel menu NON deve comparire
+q "INSERT INTO utenti (username,password_hash,societa_id,is_admin,is_super_admin,ruolo,nome,cognome,cellulare) VALUES
+     ('demo_tornei_mister1','$HASH',1,0,0,'mister','Gino','Papaveri','3330000111'),
+     ('demo_tornei_mister2','$HASH',1,0,0,'mister','Nina','Quadri','3330000222'),
+     ('demo_tornei_dirigente','$HASH',1,0,0,'dirigente','Tito','Dirigenti',NULL),
+     ('demo_tornei_mister3','$HASH',1,0,0,'mister','Ivo','Fuorilista',NULL);" >/dev/null
+# NB: demo_tornei_mister3 NON viene assegnato a nessuna categoria, di proposito. E' il caso del
+# referente che il torneo ce l'ha ma il menu non lo conosce piu' (cambia assegnazione, o viene tolta
+# una categoria): la pagina deve comunque mostrarlo, perche' un menu vuoto su un torneo che il mister
+# ce l'ha vuol dire che il prossimo "Salva" se lo porta via
+q "INSERT INTO utente_categorie (utente_id, categoria_id, ruolo)
+   SELECT id, $CATP, 'mister'     FROM utenti WHERE username='demo_tornei_mister1'
+   UNION ALL
+   SELECT id, $CATE, 'mister'     FROM utenti WHERE username='demo_tornei_mister2'
+   UNION ALL
+   SELECT id, $CATP, 'dirigente'  FROM utenti WHERE username='demo_tornei_dirigente';" >/dev/null
 
 TOK=$(curl -s --max-time 25 -X POST "$D/auth/token" --data-urlencode "username=$U" --data-urlencode "password=$PW" \
       | python3 -c "import sys,json;print(json.load(sys.stdin).get('access_token',''))")
@@ -70,6 +91,7 @@ q "UPDATE liste_torneo SET torneo_id = NULL WHERE torneo_id = $TID AND categoria
 
 echo "=== stato creato ==="
 echo "torneo_id=$TID  password_admin_demo=$PW"
+echo "mister_fuori_lista=$(q "SELECT id FROM utenti WHERE username='demo_tornei_mister3'")"
 q "SELECT 'gare: '||count(*) FROM tornei_gare WHERE torneo_id=$TID;
    SELECT 'orfane(NULL): '||count(*) FROM tornei_gare WHERE torneo_id=$TID AND categoria_id IS NULL;
    SELECT 'foglio cat '||categoria_id||' giocatori='||(SELECT count(*) FROM liste_torneo_giocatori g WHERE g.lista_id=l.id)||' legato='||COALESCE(torneo_id::text,'NULL') FROM liste_torneo l WHERE nome LIKE '$P%';"
