@@ -8,17 +8,32 @@
         <span>Indietro</span>
       </button>
       <h2>{{ solaLettura ? 'Convocazioni Tornei' : 'Programmazione Tornei' }}</h2>
-      <!-- Due pulsanti di export, come in Programmazione Partite: questo prende tutto, quello
-           nell'intestazione di ogni sezione prende solo quella categoria. Sono lo stesso documento
-           che oggi si ottiene aprendo Liste Tornei, selezionando il torneo e premendo esporta -->
-      <button class="btn-esporta" :disabled="!tornei.length || esportazione" @click="esportaPDF()"
-              title="Esporta il PDF di tutti i tornei: calendario e foglio giocatori di ogni categoria">
+      <!-- Quattro livelli di export, una sola funzione: tutti i tornei della societa' (quaggiu'),
+           la selezione a schermo (quaggiu', ma solo quando un filtro e' attivo), questa categoria
+           (nell'intestazione della sezione) e questo torneo (sulla card). Il primo IGNORA i filtri e
+           si ricarica la lista: un documento che si chiama "i tornei della societa'" e ha dentro solo
+           i Pulcini perche' qualcuno aveva il filtro su e' plausibile e falso -->
+      <button class="btn-esporta" :disabled="esportazione" @click="esportaTutti()"
+              title="Esporta il PDF di TUTTI i tornei della società: calendario e foglio giocatori di ogni categoria, senza farsi condizionare dai filtri">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
           <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
           <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
         </svg>
-        <span>{{ esportazione ? 'Genero…' : 'Esporta PDF' }}</span>
+        <span>{{ esportazione ? 'Genero…' : 'Esporta tutti i tornei' }}</span>
+      </button>
+      <!-- Compare solo con un filtro attivo: senza filtri "selezione" e "tutti" sono lo stesso
+           documento, e due bottoni che fanno la stessa cosa sono due risposte diverse alla stessa
+           domanda. Quando c'e', il PDF che produce lo scrive da solo di essere un sottoinsieme -->
+      <button v-if="filtriAttivi.length" class="btn-esporta secondario"
+              :disabled="!tornei.length || esportazione" @click="esportaSelezione()"
+              :title="'Esporta solo quello che vedi (' + filtriAttivi.join(', ') + '). Il documento lo dichiara, per non scambiarlo per quello completo'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
+        </svg>
+        <span>Esporta la selezione</span>
       </button>
       <button v-if="!solaLettura" class="btn-primary" @click="apriModalTorneo()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
@@ -614,12 +629,26 @@ function listeDel(t) {
 // weekendPartiteGrouped in ProgrammazionePartite.vue, per la stessa ragione. Chi guarda vuole
 // sapere cosa fa la SUA categoria. Un torneo iscritto a Pulcini ed Esordienti compare in entrambe
 // le sezioni, ed e' corretto: sono due attivita' diverse che condividono nome e calendario.
-const sezioniPerCategoria = computed(() => {
+// Le sezioni si costruiscono a partire da UNA LISTA DI TORNEI passata dentro, non leggendo
+// `tornei.value`: l'export "tutti i tornei della societa'" deve poterle costruire sulla lista completa
+// appena ripresa dall'API, mentre a schermo c'e' la lista filtrata. Un computed che leggeva solo lo
+// schermo non poteva farlo, e l'alternativa (cambiare i filtri, riesportare, rimetterli a posto) e'
+// il modo in cui un documento esce con dentro meta' giornata
+//
+// `soloCategoria` e' il filtro scelto in alto, e serve perche' il backend filtra i TORNEI (EXISTS su
+// tornei_categorie) ma restituisce ogni torneo con TUTTE le sue categorie: senza questo parametro,
+// scegliendo "2016 - Pulcini" la pagina dipingeva comunque la sezione "2015 - Esordienti" con dentro
+// il torneo condiviso, cioe' il filtro sembrava non funzionare. Il torneo condiviso lo dice gia' la
+// card, con "anche 2015 - Esordienti": la sezione in piu' era rumore, e rendeva falso l'avviso
+// "solo la selezione a schermo" del PDF
+function costruisciSezioni(lista, soloCategoria = null) {
   const sezioni = []
   const piazzati = new Set()
+  const filtro = soloCategoria ? String(soloCategoria) : null
   categorieOperative.value.forEach(cat => {
     const id = String(cat.id)
-    const dentro = tornei.value.filter(t => categorieDel(t).some(c => String(c.id) === id))
+    if (filtro && id !== filtro) return
+    const dentro = lista.filter(t => categorieDel(t).some(c => String(c.id) === id))
     if (!dentro.length) return
     dentro.forEach(t => piazzati.add(t.id))
     // la sezione porta anche anno/nome, cosi' etichettaCategoria() funziona su di lei direttamente
@@ -630,10 +659,13 @@ const sezioniPerCategoria = computed(() => {
   })
   // Le categorie non operative (archiviate, o un gruppo parent) e i tornei rimasti senza nessuna
   // iscrizione non avrebbero una sezione: senza questo giro sparirebbero dalla pagina, che e' il
-  // modo peggiore di perdere un torneo
+  // modo peggiore di perdere un torneo. Con il filtro attivo contano solo i tornei che riguardano la
+  // categoria scelta: gli altri li ha gia' esclusi il filtro, e rimetterli dentro sarebbe peggio di
+  // prima (il filtro darebbe il via libera a cio' che ha appena tolto)
   const extra = {}
-  tornei.value.filter(t => !piazzati.has(t.id)).forEach(t => {
+  lista.filter(t => !piazzati.has(t.id)).forEach(t => {
     const cats = categorieDel(t)
+    if (filtro && !cats.some(c => String(c.id) === filtro)) return
     const chiavi = cats.length ? cats : [null]
     chiavi.forEach(c => {
       const k = c ? 'cat-' + c.id : 'cat-nessuna'
@@ -649,7 +681,9 @@ const sezioniPerCategoria = computed(() => {
   })
   Object.keys(extra).forEach(k => sezioni.push(extra[k]))
   return sezioni
-})
+}
+
+const sezioniPerCategoria = computed(() => costruisciSezioni(tornei.value, categoriaFiltro.value || null))
 
 function chiaveCalendario(t, sez) {
   // Non basta t.id: lo stesso torneo sta in due sezioni, e aprire il calendario nei Pulcini non
@@ -1038,21 +1072,35 @@ async function ricaricaConCalendarioAperto(torneoId, sez = null) {
 }
 
 // ------------------------------------------------------- esportazione PDF
-// Stesso schema dell'export del weekend: UNA funzione e TRE pulsanti (tutte le categorie, questa
-// categoria, questo torneo in questa categoria), perche' sono lo stesso documento con perimetro
-// diverso. Tre funzioni che si duplicano il foglio di stile sono tre documenti che il giorno dopo
-// non si assomigliano piu'.
-// Perche' il foglio giocatori sta qui dentro: il documento che il responsabile consegna
-// all'organizzatore e' il calendario delle gare PIU' la lista dei giocatori di quella categoria.
-// Finora per averlo bisognava aprire Liste Tornei, selezionare il torneo e premere esporta: due
-// passaggi in piu' per prendere un documento che questa pagina ha gia' davanti agli occhi.
-// Le colonne del foglio sono #, Cognome, Nome e null'altro: sono esattamente le colonne che
-// ListeTornei.vue stampa di default. Data di nascita, codice fiscale e telefoni la' stanno dietro
-// il lucchetto GDPR, e un secondo export che li stampasse senza lucchetto sarebbe il modo piu'
-// semplice per aggirarlo senza passare dallo sblocco.
-async function esportaPDF(sez = null, torneo = null) {
-  const sezioni = sez ? [sez] : sezioniPerCategoria.value
+// QUATTRO pulsanti, UNA sola funzione: tutti i tornei della societa' (indipendente da cosa c'e' a
+// schermo), la selezione a schermo, questa categoria, questo torneo in questa categoria. Sono lo
+// stesso documento con perimetro diverso, e tre funzioni che si duplicano il foglio di stile sono
+// tre documenti che il giorno dopo non si assomigliano piu'.
+// I filtri in alto (categoria, date) servono a TROVARE un torneo, non a decidere cosa finisce nel
+// file che l'organizzatore riceve: per questo il pulsante "tutti i tornei" si ricarica la lista senza
+// parametri, e quando invece si esporta cio' che si vede il documento LO DICE, perche' un foglio con
+// meta' giornata e nessun segno che lo dice e' plausibile e falso
+const filtriAttivi = computed(() => {
+  const parti = []
+  if (categoriaFiltro.value) {
+    const c = categorieOperative.value.find(x => String(x.id) === String(categoriaFiltro.value))
+    parti.push('categoria ' + (c ? etichettaCategoria(c) : '#' + categoriaFiltro.value))
+  }
+  if (daFiltro.value) parti.push('dal ' + formatoData(daFiltro.value))
+  if (aFiltro.value) parti.push('al ' + formatoData(aFiltro.value))
+  return parti
+})
+
+async function esportaPDF(sez = null, torneo = null, opts = {}) {
+  const sezioni = opts.sezioni || (sez ? [sez] : sezioniPerCategoria.value)
   if (!sezioni.length || esportazione.value) return
+  // Chi ha chiesto "tutti i tornei" ha gia' una lista presa senza filtri: per lui questo avviso non
+  // ha senso. Per gli altri tre pulsanti, invece, il perimetro e' quello che sta a schermo, e se a
+  // schermo c'e' un filtro attivo il documento e' un sottoinsieme: va scritto, non lasciato intuire
+  const sottotitolo = opts.sottotitolo
+    || (opts.senzaFiltri ? null : (filtriAttivi.value.length
+        ? `ATTENZIONE: solo la selezione a schermo (${filtriAttivi.value.join(' · ')}), non tutti i tornei della societa'`
+        : null))
   esportazione.value = true
   errore.value = ''
   try {
@@ -1061,13 +1109,23 @@ async function esportaPDF(sez = null, torneo = null) {
     const alta = doc.internal.pageSize.getHeight()
 
     doc.setFontSize(16); doc.setFont(undefined, 'bold')
-    doc.text(torneo ? `${torneo.nome} — ${sez.titolo}`
-                    : sez ? `Tornei — ${sez.titolo}`
-                    : 'Tornei — tutte le categorie', 14, 15)
+    doc.text(opts.titolo || (torneo ? `${torneo.nome} — ${sez.titolo}`
+                                    : sez ? `Tornei — ${sez.titolo}`
+                                    : 'Tornei — tutte le categorie'), 14, 15)
     doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(110)
     doc.text(`Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 21)
+    // Il sottotitolo e' l'unica cosa che distingue "il documento della societa'" da "quello che
+    // avevo filtrato a schermo": in ambra e sopra le righe, perche' chi riceve il file deve capirlo
+    // prima di leggerlo, non accorgersene a meta'
+    if (sottotitolo) {
+      doc.setTextColor(180, 83, 9); doc.setFont(undefined, 'bold')
+      doc.text(String(sottotitolo), 14, 26)
+      doc.setFont(undefined, 'normal')
+    }
     doc.setTextColor(0)
-    let y = 28
+    // il sottotitolo sta a 26, quindi il primo blocco scende: altrimenti la barra della categoria ci
+    // si sovrappone e l'unica riga che avvisa "questo non e' il documento completo" non si legge
+    let y = sottotitolo ? 32 : 28
     // autotable va a capo da solo DENTRO una tabella; fra un blocco e l'altro il salto pagina va
     // deciso qui, o l'intestazione di un torneo resta orfana in fondo al foglio
     const respira = (serve) => { if (y + serve > alta - 16) { doc.addPage(); y = 18 } }
@@ -1214,16 +1272,16 @@ async function esportaPDF(sez = null, torneo = null) {
       }
     }
 
-    // Nomi file diversi per i tre livelli, perche' finiscono in una chat e "tornei.pdf" non dice
+    // Nomi file diversi per i quattro livelli, perche' finiscono in una chat e "tornei.pdf" non dice
     // cosa c'e' dentro. I caratteri illegali li toglie sanitizeFilename dentro saveOrSharePdf; qui
     // si tolgono solo gli spazi e la punteggiatura, che rendono il nome illeggibile
     const pulito = s => String(s || '').replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase()
-    const nomeFile = torneo
+    const nomeFile = opts.nomeFile || (torneo
       ? `tornei_${pulito(torneo.nome)}_${pulito(`${sez.anno || ''} ${sez.nome || ''}`)}.pdf`
       : sez ? `tornei_${pulito(`${sez.anno || ''} ${sez.nome || ''}`)}.pdf`
-            : 'tornei_tutte_categorie.pdf'
-    const titolo = torneo ? `${torneo.nome} — ${sez.titolo}`
-                          : sez ? `Tornei ${sez.titolo}` : 'Tornei — tutte le categorie'
+            : 'tornei_tutte_categorie.pdf')
+    const titolo = opts.titolo || (torneo ? `${torneo.nome} — ${sez.titolo}`
+                                           : sez ? `Tornei ${sez.titolo}` : 'Tornei — tutte le categorie')
     await saveOrSharePdf(doc, nomeFile, titolo)
     conferma.value = 'PDF generato'
   } catch (e) {
@@ -1234,6 +1292,48 @@ async function esportaPDF(sez = null, torneo = null) {
   } finally {
     esportazione.value = false
   }
+}
+
+// Il pulsante "Esporta tutti i tornei". Non riusa `tornei.value`: si ricarica la lista SENZA
+// parametri, perche' il documento che porta il nome della societa' deve contenere la societa' intera
+// anche mentre a schermo c'e' un filtro attivo. Chiedere all'utente di togliere i filtri prima di
+// esportare e' la stessa classe di errore del "ricordati di salvare prima di chiudere": funziona fin
+// che nessuno si dimentica
+async function esportaTutti() {
+  if (esportazione.value) return
+  errore.value = ''
+  let lista
+  try {
+    lista = (await getTornei({})).data || []
+  } catch (e) {
+    console.error('Export "tutti i tornei": lettura lista fallita:', e)
+    // Meglio nessun PDF che un PDF a meta': chi lo riceve non ha modo di accorgersi che mancano
+    // dei tornei, e lo consegna all'organizzatore lo stesso
+    errore.value = 'Esportazione interrotta: non sono riuscita a leggere tutti i tornei della societa'
+    return
+  }
+  if (!lista.length) { errore.value = 'Nessun torneo da esportare'; return }
+  const soc = societaAttiva.value?.nome
+  await esportaPDF(null, null, {
+    sezioni: costruisciSezioni(lista),
+    senzaFiltri: true,
+    titolo: `Tornei${soc ? ' — ' + soc : ''} — tutti i tornei`,
+    nomeFile: soc ? `tornei_societa_${String(soc).replace(/[^\w]+/g, '_').toLowerCase()}.pdf`
+                  : 'tornei_societa.pdf',
+    sottotitolo: `${lista.length} ${lista.length === 1 ? 'torneo' : 'tornei'} di tutta la societa'`
+                 + (filtriAttivi.value.length ? ' (i filtri a schermo non contano)' : '')
+  })
+}
+
+// Il pulsante che compare solo con un filtro attivo: esporta esattamente il perimetro che si sta
+// guardando. Serve a chi vuole "solo il weekend di Natale", ma il foglio deve dichiararlo da solo,
+// perche' il file parte in chat e chi lo riceve non ha visto lo schermo di chi l'ha generato
+async function esportaSelezione() {
+  await esportaPDF(null, null, {
+    sezioni: sezioniPerCategoria.value,
+    titolo: 'Tornei — selezione a schermo',
+    nomeFile: 'tornei_selezione.pdf'
+  })
 }
 
 onMounted(async () => {
@@ -1433,6 +1533,10 @@ onMounted(async () => {
 }
 .btn-esporta:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-soft); }
 .btn-esporta:disabled { opacity: 0.5; cursor: not-allowed; }
+/* "Esporta la selezione" non e' lo stesso pulsante con un altro nome: produce un sottoinsieme e il
+   PDF lo dichiara. Il bordo tratteggiato e' il linguaggio gia' usato per le altre categorie del
+   torneo, cioe' "attenzione, questo non e' quello che sembra a prima vista" */
+.btn-esporta.secondario { border-style: dashed; }
 /* In fondo all'intestazione, come il pulsante del weekend: a schermo deve dire "questo esporta la
    sezione", non essere l'ennesimo pulsante della card */
 .categoria-intestazione .btn-esporta { margin-left: auto; }

@@ -171,6 +171,15 @@ const LEGGI = `(() => {
     localStorage.setItem('utente_data', JSON.stringify(me))
     localStorage.setItem('thof_last_activity', Date.now().toString())
     if (me.is_admin) localStorage.setItem('is_admin','1')
+    // Come fa Login.vue: la societa' si carica dopo e finisce in societa_data, da cui lo store la
+    // rilegge all'avvio. Senza questo la pagina non sa come si chiama la societa', e il documento
+    // "tutti i tornei" perderebbe il pezzo di nome file che serve a capire di chi e'
+    if (me.societa_id) {
+      try {
+        const s = await (await fetch('/api/societa/' + me.societa_id, {headers:{Authorization:'Bearer '+access_token}})).json()
+        localStorage.setItem('societa_data', JSON.stringify(s))
+      } catch (e) {}
+    }
     return {ok:true, admin: !!me.is_admin, societa: me.societa_id}
   })()`, { awaitPromise: true })
   if (!login || !login.ok) throw new Error('login fallito: ' + JSON.stringify(login))
@@ -207,7 +216,7 @@ const LEGGI = `(() => {
      (ESOR ? ESOR.vuoti.filter(x => /senza categoria/.test(x)).length : -1), '1/1')
   await shot('01_sezioni')
 
-  console.log('--- esportazione PDF: i TRE pulsanti, e cosa c\'E\' dentro i file ---')
+  console.log('--- esportazione PDF: i QUATTRO pulsanti, e cosa c\'E\' dentro i file ---')
   // L'export non lo verifica nessun test API: qui si scarica davvero il PDF e se ne legge il testo.
   // Un pulsante che sembra funzionare e sforna un documento vuoto e' il modo peggiore per scoprirlo
   // la sera prima del torneo, quando il file va consegnato all'organizzatore
@@ -216,6 +225,15 @@ const LEGGI = `(() => {
   // underscorelli (due letterali + quello della virgoletta), e riscriverlo a mano quattro volte e
   // il modo piu veloce per sbagliarlo
   const PDF_TORNEO = 'tornei_demo_tornei___winter_cup_2016_pulcini.pdf'
+  // Il nome del documento "tutti i tornei" porta la societa', quindi va costruito come lo costruisce
+  // la pagina: riscriverlo a mano qui vuol dire un rosso per il nome del file e non per il contenuto
+  const nomeSocieta = await evalJS(`(() => { try { return JSON.parse(localStorage.getItem('societa_data') || '{}').nome || '' } catch (e) { return '' } })()`)
+  const pulito = s => String(s || '').replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase()
+  const PDF_SOCIETA = nomeSocieta ? `tornei_societa_${pulito(nomeSocieta)}.pdf` : 'tornei_societa.pdf'
+  console.log('   societa letta dal profilo:', JSON.stringify(nomeSocieta), '->', PDF_SOCIETA)
+  // Se la pagina non sapesse come si chiama la societa', il file sarebbe "tornei_societa.pdf" per
+  // tutti: due societa' che si scambiano i PDF in chat non saprebbero di chi e' quale
+  ck('la pagina conosce il nome della societa', String(nomeSocieta || '').length > 0, true)
   const { execFileSync } = require('child_process')
   const occorrenze = (testo, ago) => (testo.match(new RegExp(ago, 'g')) || []).length
   // Senza questo Chrome non scrive da nessuna parte il blob dell'export, e non dice niente: la
@@ -299,9 +317,13 @@ const LEGGI = `(() => {
     ck('e non stampa una tabella giocatori vuota', /Cognome/.test(pdfSezione), false)
   }
 
-  const pdfTutti = await scarica('tornei_tutte_categorie.pdf', btnTutti)
-  ck('il PDF di tutte le categorie si scarica', pdfTutti !== null, true)
+  const pdfTutti = await scarica(PDF_SOCIETA, btnTutti)
+  ck('il PDF di tutti i tornei della societa si scarica', pdfTutti !== null, true)
   if (pdfTutti) {
+    ck('il titolo del documento dice che e\' di tutta la societa',
+       /tutti i tornei/.test(pdfTutti), true)
+    ck('dice quanti tornei contiene, cosi\' chi lo riceve puo\' accorgersi se ne mancano',
+       /1 torneo di tutta la societa/.test(pdfTutti), true)
     ck('contiene entrambe le sezioni', /2015 - Esordienti/.test(pdfTutti) && /2016 - Pulcini/.test(pdfTutti), true)
     ck('contiene le gare di entrambe',
        /Vecchia Guardia/.test(pdfTutti) && /Real Junior/.test(pdfTutti) && /Atletico Sud/.test(pdfTutti), true)
@@ -499,6 +521,105 @@ const LEGGI = `(() => {
     { awaitPromise: true })
   ck('salvare senza toccare niente NON se lo porta via',
      await evalJS(`${CARD}.querySelector('.mister-torneo').innerText.replace(/\\s+/g,' ').trim()`), 'Ivo Fuorilista')
+
+  console.log('--- il filtro categoria: lo schermo si restringe, il documento della societa\' no ---')
+  // Il filtro in alto filtra i TORNEI (EXISTS su tornei_categorie), ma il backend restituisce ogni
+  // torneo con TUTTE le sue categorie: se la pagina le dipinge tutte, scegliendo "2016 - Pulcini"
+  // resta visibile anche la sezione degli Esordienti e il filtro sembra rotto. E soprattutto l'export
+  // "selezione" dichiarerebbe di essere un sottoinsieme senza esserlo
+  await evalJS(`(() => { const s = document.querySelector('.select-filtro')
+    s.value = ${JSON.stringify(CAT_PULCINI)}
+    s.dispatchEvent(new Event('change', { bubbles: true }))
+    return s.value })()`)
+  await sleep(1800)
+  const titoliFiltrati = await evalJS(`[...document.querySelectorAll('.categoria-intestazione')].map(x => x.innerText.replace(/\\s+/g,' ').trim())`)
+  console.log('   sezioni col filtro:', JSON.stringify(titoliFiltrati))
+  ck('col filtro su Pulcini la sezione degli Esordienti NON compare piu\'', titoliFiltrati.length, 1)
+  ck('e resta quella chiesta', /^2016 - Pulcini/.test(titoliFiltrati[0] || ''), true)
+
+  const btnSelezione = `document.querySelectorAll('.page-header .btn-esporta')[1]`
+  ck('con un filtro attivo compare il secondo pulsante di export', await evalJS(`!!(${btnSelezione})`), true)
+  ck('e si chiama "Esporta la selezione", non un altro "Esporta PDF"',
+     await evalJS(`${btnSelezione} ? ${btnSelezione}.innerText.trim() : null`), 'Esporta la selezione')
+
+  const pdfSelezione = await scarica('tornei_selezione.pdf', btnSelezione)
+  ck('il PDF della selezione si scarica', pdfSelezione !== null, true)
+  if (pdfSelezione) {
+    ck('dichiara da solo di essere un sottoinsieme',
+       /ATTENZIONE: solo la selezione a schermo/.test(pdfSelezione), true)
+    ck('e dice quale filtro lo ha prodotto', /categoria 2016 - Pulcini/.test(pdfSelezione), true)
+    ck('ha la categoria chiesta', /2016 - Pulcini/.test(pdfSelezione), true)
+    ck('NON ha l\'altra categoria, che a schermo non c\'e\'', /2015 - Esordienti/.test(pdfSelezione), false)
+    ck('e ha i suoi giocatori', attese.cognomi.length > 0 && attese.cognomi.every(c => pdfSelezione.includes(c)), true)
+  }
+
+  // Il punto della richiesta: con lo schermo filtrato, "tutti i tornei" deve restare completo. E'
+  // l'asserzione che distingue il documento della societa' da una copia di quello che ho in faccia
+  const pdfSocietaFiltrato = await scarica(PDF_SOCIETA, btnTutti)
+  ck('con il filtro attivo, "Esporta tutti i tornei" si scarica lo stesso', pdfSocietaFiltrato !== null, true)
+  if (pdfSocietaFiltrato) {
+    ck('e dentro ci sta ANCHE la categoria che a schermo e\' nascosta',
+       /2015 - Esordienti/.test(pdfSocietaFiltrato) && /Vecchia Guardia/.test(pdfSocietaFiltrato), true)
+    ck('ci sta anche il foglio assente degli Esordienti', /Foglio giocatori assente/.test(pdfSocietaFiltrato), true)
+    ck('e non si spaccia per una selezione', /solo la selezione a schermo/.test(pdfSocietaFiltrato), false)
+  }
+
+  // Anche i due pulsanti "piccoli", con un filtro attivo, producono un sottoinsieme: devono dirlo,
+  // perche' il file parte in chat e chi lo riceve non ha visto lo schermo di chi l'ha generato
+  const pdfCardFiltrata = await scarica(PDF_TORNEO, btnCard)
+  ck('anche il PDF del singolo torneo, col filtro attivo, lo dichiara',
+     pdfCardFiltrata !== null && /solo la selezione a schermo/.test(pdfCardFiltrata), true)
+
+  await evalJS(`(() => { const s = document.querySelector('.select-filtro')
+    s.value = ''
+    s.dispatchEvent(new Event('change', { bubbles: true }))
+    return s.value })()`)
+  await sleep(1800)
+  ck('tolto il filtro, le sezioni tornano due',
+     await evalJS(`document.querySelectorAll('.categoria-intestazione').length`), 2)
+  ck('e il secondo pulsante non ha piu\' niente da dichiarare, quindi sparisce',
+     await evalJS(`!!document.querySelectorAll('.page-header .btn-esporta')[1]`), false)
+
+  console.log('--- lo schermo VUOTO non deve fermare il documento della societa\' ---')
+  // Questo e' il caso che distingue davvero le due implementazioni. Con un solo torneo demo, il filtro
+  // per categoria non esclude nessun torneo (il backend filtra i tornei ma li restituisce con tutte le
+  // loro categorie), quindi "riusare la lista a schermo" e "ricaricare tutto" producono lo stesso
+  // documento: l'asserzione qui sopra era verde per il motivo sbagliato. Svuotando la pagina con un
+  // filtro per date, invece, le due strade si separano: se il pulsante riusasse cio' che si vede non
+  // ci sarebbe niente da stampare e non scaricherebbe nulla
+  await evalJS(`(() => {
+    const [da, a] = document.querySelectorAll('.filtro-data input')
+    // v-model ascolta 'input', @change e' quello che chiama carica(): vanno entrambi, dare per
+    // scontato il solo change lascia la lista vecchia a schermo e il test misura il nulla
+    da.value = '2027-06-01'; da.dispatchEvent(new Event('input', { bubbles: true }))
+    a.value = '2027-06-30'; a.dispatchEvent(new Event('input', { bubbles: true }))
+    da.dispatchEvent(new Event('change', { bubbles: true }))
+    a.dispatchEvent(new Event('change', { bubbles: true }))
+    return 'ok' })()`)
+  await sleep(1800)
+  ck('col filtro su un periodo senza tornei la pagina non mostra nessuna card',
+     await evalJS(`document.querySelectorAll('.torneo-card').length`), 0)
+  ck('ma "Esporta tutti i tornei" resta attivo: non dipende da cosa si vede',
+     await evalJS(`!document.querySelector('.page-header .btn-esporta').disabled`), true)
+  const pdfSchermoVuoto = await scarica(PDF_SOCIETA, btnTutti)
+  ck('e il documento completo esce lo stesso', pdfSchermoVuoto !== null, true)
+  if (pdfSchermoVuoto) {
+    ck('con entrambe le categorie', /2015 - Esordienti/.test(pdfSchermoVuoto) && /2016 - Pulcini/.test(pdfSchermoVuoto), true)
+    ck('con le gare di entrambe, che a schermo non c\'erano piu\'',
+       /Vecchia Guardia/.test(pdfSchermoVuoto) && /Real Junior/.test(pdfSchermoVuoto) && /Atletico Sud/.test(pdfSchermoVuoto), true)
+    ck('con i giocatori del foglio', attese.cognomi.length > 0 && attese.cognomi.every(c => pdfSchermoVuoto.includes(c)), true)
+    ck('e senza l\'avviso da sottoinsieme, perche\' sottoinsieme non e\'',
+       /solo la selezione a schermo/.test(pdfSchermoVuoto), false)
+  }
+  await evalJS(`(() => {
+    const [da, a] = document.querySelectorAll('.filtro-data input')
+    da.value = ''; a.value = ''
+    da.dispatchEvent(new Event('input', { bubbles: true })); a.dispatchEvent(new Event('input', { bubbles: true }))
+    da.dispatchEvent(new Event('change', { bubbles: true })); a.dispatchEvent(new Event('change', { bubbles: true }))
+    return 'ok' })()`)
+  await sleep(1800)
+  ck('tolto il filtro per date, le card tornano',
+     await evalJS(`document.querySelectorAll('.torneo-card').length`), 2)
 
   console.log('--- aprire il calendario di UNA sola sezione ---')
   await evalJS(`document.querySelectorAll('.categoria-sezione')[${PULC.idx}].querySelectorAll('.btn-azione')[0].click(); 'ok'`)
