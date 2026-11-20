@@ -39,7 +39,20 @@ PW="S3greta-$(openssl rand -hex 6)"
 HASH=$($SSH "docker exec $BE python -c \"from passlib.context import CryptContext; print(CryptContext(schemes=['bcrypt']).hash('$PW'))\"" 2>/dev/null | tr -d '\r' | tail -1)
 [ -z "$HASH" ] && { echo "  impossibile generare l'hash"; exit 1; }
 U1="testlock@example.com"; U2="testlibero@example.com"; U3="testmix@example.com"
+# Baseline catturata ADESSO, non scritta a mano nel file. La versione precedente aveva
+# "registro = 2961" fissato al deploy del 16/11: quattro giorni di presenze reali lo hanno
+# portato a 3154 e il test era rosso da solo, senza che fosse rotto niente. Un conteggio assoluto
+# di un DB in produzione scade appena qualcuno iscrive un ragazzo.
+# Ma renderli solo dinamici sarebbe peggio: un deploy che svuota il DB verrebbe "catturato" gia'
+# vuoto e il test sarebbe verde per il motivo sbagliato. Quindi qui si misura l'invarianza, e piu'
+# sotto ci sono i minimi assoluti che servono a intercettare proprio lo svuotamento.
 PRIMA_UTENTI=$(q "SELECT count(*) FROM utenti")
+PRIMA_REGISTRO=$(q "SELECT count(*) FROM registro")
+PRIMA_PERSONE=$(q "SELECT count(*) FROM persone")
+PRIMA_CAT=$(q "SELECT count(*) FROM categorie")
+PRIMA_INF=$(q "SELECT count(*) FROM infortuni")
+PRIMA_LISTE=$(q "SELECT count(*) FROM liste_torneo")
+echo "  baseline di questa esecuzione: utenti=$PRIMA_UTENTI registro=$PRIMA_REGISTRO persone=$PRIMA_PERSONE categorie=$PRIMA_CAT infortuni=$PRIMA_INF liste=$PRIMA_LISTE"
 q "DELETE FROM login_bloccaggi WHERE chiave LIKE 'testlock%' OR chiave LIKE 'testlibero%' OR chiave LIKE 'testmix%' OR chiave LIKE 'vecchio%' OR chiave='x' OR chiave='nonesiste@example.com';
    DELETE FROM utenti WHERE username IN ('$U1','$U2','$U3');" >/dev/null
 q "INSERT INTO utenti (username,password_hash,societa_id,is_admin,is_super_admin,ruolo)
@@ -115,19 +128,30 @@ done
 ck "liste-torneo senza token -> 401" "$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$P/liste-torneo/3/giocatori")" "401"
 ck "gli utenti reali non hanno contatori aperti" "$(q "SELECT count(*) FROM login_bloccaggi lb JOIN utenti u ON u.username = lb.chiave WHERE u.username NOT LIKE 'test%'")" "0"
 
-echo "--- conteggi vs baseline pre-deploy ---"
-ck "registro invariato (2961)" "$(q "SELECT count(*) FROM registro")" "2961"
-ck "persone invariate (127)"   "$(q "SELECT count(*) FROM persone")" "127"
-ck "categorie invariate (31)"  "$(q "SELECT count(*) FROM categorie")" "31"
-ck "infortuni invariati (0)"   "$(q "SELECT count(*) FROM infortuni")" "0"
-ck "liste torneo invariate (1)" "$(q "SELECT count(*) FROM liste_torneo")" "1"
+echo "--- conteggi: il test non deve aver spostato niente ---"
+# invarianza rispetto all'inizio di QUESTA esecuzione: prova che il test non ha toccato i dati
+ck "registro invariato ($PRIMA_REGISTRO)"   "$(q "SELECT count(*) FROM registro")"   "$PRIMA_REGISTRO"
+ck "persone invariate ($PRIMA_PERSONE)"     "$(q "SELECT count(*) FROM persone")"     "$PRIMA_PERSONE"
+ck "categorie invariate ($PRIMA_CAT)"       "$(q "SELECT count(*) FROM categorie")"   "$PRIMA_CAT"
+ck "infortuni invariati ($PRIMA_INF)"       "$(q "SELECT count(*) FROM infortuni")"   "$PRIMA_INF"
+ck "liste torneo invariate ($PRIMA_LISTE)"  "$(q "SELECT count(*) FROM liste_torneo")" "$PRIMA_LISTE"
 ck "utenti = baseline + 3 di prova" "$(q "SELECT count(*) FROM utenti")" "$((PRIMA_UTENTI + 3))"
+echo "--- minimi assoluti: questi si' che accorgono di un DB svuotato dal deploy ---"
+# Sono soglie basse e volutamente sporche: non devono seguire la crescita del DB (altrimenti
+# scadono come scadiva il 2961 di prima), devono solo essere molto sopra zero. Un ripristino da
+# un dump vuoto, o un deploy che ricrea lo schema, li fa scattare; l'uso normale no.
+ckmin() { local n; n=$(q "SELECT count(*) FROM $2"); if [ -n "$n" ] && [ "$n" -ge "$3" ]; then pass=$((pass+1)); echo "  ok   $1 (>= $3, ora $n)"; else fail=$((fail+1)); echo "  FAIL $1 -> $n, sotto la soglia $3"; fi; }
+ckmin "registro popolato"        registro     1000
+ckmin "persone popolato"         persone      50
+ckmin "categorie popolato"       categorie    10
+ckmin "utenti presente"          utenti       10
+ckmin "almeno una lista torneo"  liste_torneo 1
 
 echo "--- pulizia ---"
 q "DELETE FROM login_bloccaggi WHERE chiave LIKE 'testlock%' OR chiave LIKE 'testlibero%' OR chiave LIKE 'testmix%' OR chiave LIKE 'vecchio%' OR chiave='x' OR chiave='nonesiste@example.com';
    DELETE FROM utenti WHERE username IN ('$U1','$U2','$U3');" >/dev/null
 ck "nessun residuo di prova" "$(q "SELECT (SELECT count(*) FROM utenti WHERE username LIKE 'testlock%' OR username LIKE 'testlibero%' OR username LIKE 'testmix%')+(SELECT count(*) FROM login_bloccaggi WHERE chiave LIKE 'test%' OR chiave LIKE 'vecchio%' OR chiave='x' OR chiave='nonesiste@example.com')")" "0"
-ck "tutto tornato alla baseline" "$(q "SELECT (SELECT count(*) FROM utenti)||'/'||(SELECT count(*) FROM persone)||'/'||(SELECT count(*) FROM registro)||'/'||(SELECT count(*) FROM login_bloccaggi)")" "$PRIMA_UTENTI/127/2961/0"
+ck "tutto tornato alla baseline" "$(q "SELECT (SELECT count(*) FROM utenti)||'/'||(SELECT count(*) FROM persone)||'/'||(SELECT count(*) FROM registro)||'/'||(SELECT count(*) FROM login_bloccaggi)")" "$PRIMA_UTENTI/$PRIMA_PERSONE/$PRIMA_REGISTRO/0"
 
 echo
 echo "  $pass passati, $fail falliti"

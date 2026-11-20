@@ -9,6 +9,10 @@ q() { $SSH "docker exec -i \$(docker ps -qf name=db) psql -U registro_user -d re
 
 pass=0; fail=0
 ck() { if [ "$2" = "$3" ]; then pass=$((pass+1)); echo "  ok   $1"; else fail=$((fail+1)); echo "  FAIL $1 -> '$2' (atteso '$3')"; fi }
+# Soglia minima assoluta su una tabella: non deve seguire la crescita del DB (altrimenti scade come
+# scadiva il "2961" scritto a mano), deve solo stare molto sopra zero. Un ripristino da un dump
+# vuoto, o un deploy che ricrea lo schema da zero, la fanno scattare; l'uso normale no.
+ckmin() { local n; n=$(q "SELECT count(*) FROM $2"); if [ -n "$n" ] && [ "$n" -ge "$3" ]; then pass=$((pass+1)); echo "  ok   $1 (>= $3, ora $n)"; else fail=$((fail+1)); echo "  FAIL $1 -> $n, sotto la soglia $3"; fi; }
 cod() { curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X "$1" "$P$2" -H "Content-Type: application/json" ${3:+-H "Authorization: Bearer $3"} ${4:+-d "$4"}; }
 
 echo "--- preparazione (solo oggetti di prova) ---"
@@ -23,6 +27,17 @@ q "DELETE FROM infortuni WHERE note LIKE '__test_fix%';
    DELETE FROM utente_categorie WHERE categoria_id IN (SELECT id FROM categorie WHERE nome='__test_fix__');
    DELETE FROM categorie WHERE nome='__test_fix__';
    DELETE FROM utenti WHERE username LIKE 'testprod%';" >/dev/null
+# Baseline misurata ADESSO, dopo la pulizia dei residui e prima di creare gli oggetti di prova.
+# Prima c'era "registro = 2961" scritto a mano: il conteggio di un deploy di novembre, reso a mano.
+# Quattro giorni di presenze reali lo hanno portato a 3154 e il test era rosso senza che fosse
+# rotto niente. Un conteggio assoluto di un DB in uso scade alla prima iscrizione vera.
+# Sotto pero' restano dei minimi assoluti: la sola invarianza non vede un DB gia' svuotato.
+PRIMA_REGISTRO=$(q "SELECT count(*) FROM registro")
+PRIMA_PERSONE=$(q "SELECT count(*) FROM persone")
+PRIMA_UTENTI=$(q "SELECT count(*) FROM utenti")
+PRIMA_CAT=$(q "SELECT count(*) FROM categorie")
+PRIMA_INF=$(q "SELECT count(*) FROM infortuni")
+echo "  baseline di questa esecuzione: registro=$PRIMA_REGISTRO persone=$PRIMA_PERSONE utenti=$PRIMA_UTENTI categorie=$PRIMA_CAT infortuni=$PRIMA_INF"
 q "INSERT INTO categorie (societa_id,nome,anno,is_archiviata) VALUES (1,'__test_fix__',1900,0);" >/dev/null
 CATP=$(q "SELECT id FROM categorie WHERE nome='__test_fix__'")
 q "INSERT INTO persone (societa_id,nome,cognome,categoria_id) VALUES (1,'Prova','TestProd',$CATP);" >/dev/null
@@ -103,11 +118,17 @@ done
 ck "GET /api/auth/me senza token" "$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$P/auth/me")" "401"
 ck "GET /api/persone/public/by-token/errato -> 4xx" "$(cod GET "/persone/public/by-token/inesistente" "" "")" "404"
 
-echo "--- conteggi DB vs baseline ---"
-ck "registro invariato (2961)"   "$(q "SELECT count(*) FROM registro")" "2961"
-ck "persone = 127 + 1 di prova"  "$(q "SELECT count(*) FROM persone")" "128"
-ck "utenti = 13 + 2 di prova"    "$(q "SELECT count(*) FROM utenti")" "15"
-ck "categorie = 31 + 1 di prova" "$(q "SELECT count(*) FROM categorie")" "32"
+echo "--- conteggi DB: invarianza + gli incrementi portati dal test ---"
+ck "registro invariato ($PRIMA_REGISTRO)"      "$(q "SELECT count(*) FROM registro")" "$PRIMA_REGISTRO"
+ck "persone = baseline + 1 di prova"            "$(q "SELECT count(*) FROM persone")"  "$((PRIMA_PERSONE + 1))"
+ck "utenti = baseline + 2 di prova"             "$(q "SELECT count(*) FROM utenti")"   "$((PRIMA_UTENTI + 2))"
+ck "categorie = baseline + 1 di prova"          "$(q "SELECT count(*) FROM categorie")" "$((PRIMA_CAT + 1))"
+echo "--- minimi assoluti: questi si' che accorgono di un DB svuotato dal deploy ---"
+ckmin "registro popolato"        registro 1000
+ckmin "persone popolate"         persone     50
+ckmin "categorie popolate"       categorie   10
+ckmin "utenti presenti"          utenti      10
+ckmin "almeno una lista torneo"  liste_torneo 1
 
 echo "--- pulizia ---"
 q "DELETE FROM infortuni WHERE id IN ($IID,$IID_B);
@@ -118,7 +139,7 @@ q "DELETE FROM infortuni WHERE id IN ($IID,$IID_B);
    DELETE FROM categorie WHERE id=$CATP;
    DELETE FROM utenti WHERE id IN ($AID,$BID);" >/dev/null
 ck "nessun residuo di prova" "$(q "SELECT (SELECT count(*) FROM persone WHERE cognome='TestProd')+(SELECT count(*) FROM categorie WHERE nome='__test_fix__')+(SELECT count(*) FROM utenti WHERE username LIKE 'testprod%')+(SELECT count(*) FROM infortuni WHERE id IN ($IID,$IID_B))+(SELECT count(*) FROM partite WHERE note='__test_fix__')")" "0"
-ck "conteggi tornati alla baseline" "$(q "SELECT (SELECT count(*) FROM persone)||'/'||(SELECT count(*) FROM utenti)||'/'||(SELECT count(*) FROM categorie)||'/'||(SELECT count(*) FROM registro)||'/'||(SELECT count(*) FROM infortuni)")" "127/13/31/2961/0"
+ck "conteggi tornati alla baseline" "$(q "SELECT (SELECT count(*) FROM persone)||'/'||(SELECT count(*) FROM utenti)||'/'||(SELECT count(*) FROM categorie)||'/'||(SELECT count(*) FROM registro)||'/'||(SELECT count(*) FROM infortuni)")" "$PRIMA_PERSONE/$PRIMA_UTENTI/$PRIMA_CAT/$PRIMA_REGISTRO/$PRIMA_INF"
 
 echo
 echo "  $pass passati, $fail falliti"
