@@ -8,6 +8,18 @@
         <span>Indietro</span>
       </button>
       <h2>{{ solaLettura ? 'Convocazioni Tornei' : 'Programmazione Tornei' }}</h2>
+      <!-- Due pulsanti di export, come in Programmazione Partite: questo prende tutto, quello
+           nell'intestazione di ogni sezione prende solo quella categoria. Sono lo stesso documento
+           che oggi si ottiene aprendo Liste Tornei, selezionando il torneo e premendo esporta -->
+      <button class="btn-esporta" :disabled="!tornei.length || esportazione" @click="esportaPDF()"
+              title="Esporta il PDF di tutti i tornei: calendario e foglio giocatori di ogni categoria">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
+        </svg>
+        <span>{{ esportazione ? 'Genero…' : 'Esporta PDF' }}</span>
+      </button>
       <button v-if="!solaLettura" class="btn-primary" @click="apriModalTorneo()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -54,6 +66,15 @@
       <h2 class="categoria-intestazione">
         {{ sez.titolo }}
         <span class="conteggio-sezione">{{ sez.tornei.length }} {{ sez.tornei.length === 1 ? 'torneo' : 'tornei' }}</span>
+        <button class="btn-esporta" :disabled="esportazione" @click="esportaPDF(sez)"
+                :title="'Esporta il PDF di ' + sez.titolo + ': calendario e foglio giocatori di ogni torneo'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
+          </svg>
+          <span>Esporta PDF</span>
+        </button>
       </h2>
 
       <div v-for="t in sez.tornei" :key="t.id" class="torneo-card">
@@ -160,6 +181,15 @@
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
                     <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                     <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/>
+                  </svg>
+                </button>
+                <!-- Il cestino qui non e' ridondante: una gara senza categoria non compare nella
+                     lista di nessuna sezione, quindi senza questo bottino non si potrebbe
+                     eliminare da nessuna parte -->
+                <button class="btn-icon pericolo" @click="eliminaGara(t, g, sez)" title="Elimina gara">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                   </svg>
                 </button>
               </div>
@@ -355,8 +385,13 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   getTornei, getTorneo, creaTorneo, aggiornaTorneo, eliminaTorneo,
   aggiungiGaraTorneo, modificaGaraTorneo, eliminaGaraTorneo, getAllCategorie, isParentCategory,
-  iscriviCategoriaTorneo, rimuoviCategoriaTorneo
+  iscriviCategoriaTorneo, rimuoviCategoriaTorneo, getGiocatoriLista, saveOrSharePdf
 } from '../../api/index.js'
+import { jsPDF } from 'jspdf'
+// Il plugin va importato ANCHE qui, non basta che lo importino Liste Tornei o Programmazione Partite:
+// le pagine sono chunk caricati al bisogno, e senza questa riga doc.autoTable e' undefined. E' un
+// errore che non si vede in nessun posto, perche' la chiamata cade dentro il try/catch dell'export
+import 'jspdf-autotable'
 import { useStore } from '../../store.js'
 
 const route = useRoute()
@@ -373,6 +408,7 @@ const tornei = ref([])
 const categorie = ref([])
 const gareCache = ref({})
 const caricamento = ref(true)
+const esportazione = ref(false)
 const salvataggio = ref(false)
 const errore = ref('')
 const conferma = ref('')
@@ -844,6 +880,179 @@ async function ricaricaConCalendarioAperto(torneoId, sez = null) {
   if (t && sez) await apriCalendario(t, sez)
 }
 
+// ------------------------------------------------------- esportazione PDF
+// Stesso schema dell'export del weekend: UNA funzione e due pulsanti, perche' "tutte le categorie"
+// e "questa categoria" sono lo stesso documento con perimetro diverso.
+// Perche' il foglio giocatori sta qui dentro: il documento che il responsabile consegna
+// all'organizzatore e' il calendario delle gare PIU' la lista dei giocatori di quella categoria.
+// Finora per averlo bisognava aprire Liste Tornei, selezionare il torneo e premere esporta: due
+// passaggi in piu' per prendere un documento che questa pagina ha gia' davanti agli occhi.
+// Le colonne del foglio sono #, Cognome, Nome e null'altro: sono esattamente le colonne che
+// ListeTornei.vue stampa di default. Data di nascita, codice fiscale e telefoni la' stanno dietro
+// il lucchetto GDPR, e un secondo export che li stampasse senza lucchetto sarebbe il modo piu'
+// semplice per aggirarlo senza passare dallo sblocco.
+async function esportaPDF(sez = null) {
+  const sezioni = sez ? [sez] : sezioniPerCategoria.value
+  if (!sezioni.length || esportazione.value) return
+  esportazione.value = true
+  errore.value = ''
+  try {
+    const doc = new jsPDF({ orientation: 'landscape' })
+    const larga = doc.internal.pageSize.getWidth()
+    const alta = doc.internal.pageSize.getHeight()
+
+    doc.setFontSize(16); doc.setFont(undefined, 'bold')
+    doc.text(sez ? `Tornei — ${sez.titolo}` : 'Tornei — tutte le categorie', 14, 15)
+    doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(110)
+    doc.text(`Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 21)
+    doc.setTextColor(0)
+    let y = 28
+    // autotable va a capo da solo DENTRO una tabella; fra un blocco e l'altro il salto pagina va
+    // deciso qui, o l'intestazione di un torneo resta orfana in fondo al foglio
+    const respira = (serve) => { if (y + serve > alta - 16) { doc.addPage(); y = 18 } }
+    // Le orfane si stampano una volta sola per torneo: in "tutte le categorie" lo stesso torneo sta
+    // in piu' sezioni, e ripetere due volte le stesse gare in un documento da consegnare e' peggio
+    // che non ripeterle a schermo
+    const orfaneStampate = new Set()
+
+    for (const s of sezioni) {
+      respira(24)
+      doc.setFillColor(220, 38, 38); doc.setTextColor(255)
+      doc.setFontSize(11); doc.setFont(undefined, 'bold')
+      doc.rect(14, y, larga - 28, 8, 'F')
+      doc.text(s.titolo, 17, y + 5.6)
+      doc.setTextColor(0); doc.setFont(undefined, 'normal')
+      y += 13
+
+      for (const t of s.tornei) {
+        // null vuol dire "non sono riuscita a leggerle", [] vuol dire "non ce ne sono": stampare
+        // "nessuna gara" quando la richiesta era fallita consegnerebbe un calendario falso
+        const tutte = await gareDel(t)
+        const gare = tutte === null ? null
+          : tutte.filter(g => g.categoria_id && String(g.categoria_id) === String(s.catId))
+        const riga = [t.nome, formatoPeriodo(t), t.luogo, t.organizzatore ? 'a cura di ' + t.organizzatore : '']
+          .filter(Boolean).join('   ·   ')
+        respira(26)
+        doc.setFontSize(10); doc.setFont(undefined, 'bold')
+        doc.text(String(doc.splitTextToSize(riga, larga - 28)[0]), 14, y)
+        doc.setFont(undefined, 'normal'); y += 4
+
+        if (tutte === null) {
+          doc.setTextColor(180, 83, 9)
+          doc.text('Calendario non disponibile: la richiesta alle API e\' fallita. Non consegnare questo documento.', 14, y + 2)
+          doc.setTextColor(0); y += 10
+        } else if (!gare.length) {
+          doc.setTextColor(110); doc.text('Nessuna gara per questa categoria.', 14, y + 2)
+          doc.setTextColor(0); y += 9
+        } else {
+          // spazio minimo prima di una tabella: autotable va a capo da solo, ma iniziare una tabella
+          // a fondo pagina vuol dire stampare l'intestazione e una riga, poi saltare pagina — che in
+          // un documento da consegnare sembra un errore di stampa
+          respira(42)
+          doc.autoTable({
+            head: [['N.', 'Avversario', 'Data', 'Inizio', 'Appuntamento', 'Campo', 'Note']],
+            body: gare.map(g => [
+              g.numero || '–', g.avversario || 'Da definire', g.data ? formatoData(g.data) : '–',
+              g.ora || '–', g.ora_appuntamento || '–',
+              [g.campo, g.indirizzo].filter(Boolean).join(' — ') || '–', g.note || '–'
+            ]),
+            startY: y, theme: 'grid', margin: { left: 14, right: 14 },
+            styles: { fontSize: 8.5, cellPadding: 2.5 },
+            headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9 },
+            // le larghezze sono misurate sulle parole dell'intestazione: "Appuntamento" in una
+            // colonna da 24 mm si spezzava a meta' ("Appuntamen / to"), che e' il genere di dettaglio
+            // che fa sembrare il documento fatto a mano
+            columnStyles: {
+              0: { cellWidth: 10, halign: 'center' }, 2: { cellWidth: 22, halign: 'center' },
+              3: { cellWidth: 14, halign: 'center' }, 4: { cellWidth: 30, halign: 'center' }
+            }
+          })
+          y = doc.lastAutoTable.finalY + 6
+        }
+
+        // il foglio giocatori di QUESTA categoria: e' il pezzo che all'organizzatore serve davvero
+        const foglio = foglioDi(t, s.catId)
+        let giocatori = null
+        if (foglio) {
+          try { giocatori = (await getGiocatoriLista(foglio.id)).data || [] } catch (e) { giocatori = null }
+        }
+        respira(24)
+        doc.setFontSize(9); doc.setFont(undefined, 'bold')
+        doc.text(foglio ? `Foglio giocatori — ${foglio.nome}` : 'Foglio giocatori assente', 14, y)
+        doc.setFont(undefined, 'normal'); y += 4
+
+        if (!foglio) {
+          doc.setTextColor(180, 83, 9)
+          doc.text('Nessun foglio collegato a questa categoria nel torneo: senza questo documento l\'organizzatore non riceve i giocatori.', 14, y)
+          doc.setTextColor(0); y += 10
+        } else if (giocatori === null) {
+          doc.setTextColor(180, 83, 9)
+          doc.text('Elenco giocatori non disponibile: la richiesta alle API e\' fallita. Non consegnare questo documento.', 14, y)
+          doc.setTextColor(0); y += 10
+        } else if (!giocatori.length) {
+          doc.setTextColor(110); doc.text('Nessun giocatore scelto.', 14, y)
+          doc.setTextColor(0); y += 9
+        } else {
+          respira(42)
+          doc.autoTable({
+            head: [['N.', 'Cognome', 'Nome']],
+            body: giocatori.map((g, i) => [i + 1, g.cognome || '–', g.nome || '–']),
+            startY: y, theme: 'grid', margin: { left: 14, right: 14 }, tableWidth: 130,
+            styles: { fontSize: 9, cellPadding: 2.5 },
+            headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9 },
+            // larghezze fisse: lasciate a 'auto' le due colonne del nome si allargavano a tutta la
+            // tabella, e un foglio con le colonne larghissime sembra compilato a caso
+            columnStyles: { 0: { cellWidth: 12, halign: 'center' }, 1: { cellWidth: 60 }, 2: { cellWidth: 58 } },
+            alternateRowStyles: { fillColor: [245, 245, 245] }
+          })
+          y = doc.lastAutoTable.finalY + 10
+        }
+
+        // Le gare senza categoria, o con una categoria non piu' iscritta: una sezione loro non ce
+        // l'hanno, quindi qui tendono a sparire. Se l'export le tacesse, il documento consegnato
+        // all'organizzatore sarebbe un calendario che ne mostra sei su otto: si stampano, etichettate
+        const iscritte = new Set(categorieDel(t).map(c => String(c.id)))
+        const orfane = tutte === null ? []
+          : tutte.filter(g => !g.categoria_id || !iscritte.has(String(g.categoria_id)))
+        if (tutte !== null && orfane.length && !orfaneStampate.has(t.id)) {
+          orfaneStampate.add(t.id)
+          respira(24)
+          doc.setFontSize(9); doc.setFont(undefined, 'bold'); doc.setTextColor(180, 83, 9)
+          doc.text(`Gare senza categoria (${orfane.length}) — da assegnare a una categoria`, 14, y)
+          doc.setTextColor(0); doc.setFont(undefined, 'normal'); y += 4
+          respira(42)
+          doc.autoTable({
+            head: [['N.', 'Avversario', 'Data', 'Inizio', 'Campo']],
+            body: orfane.map(g => [
+              g.numero || '–', g.avversario || 'Da definire', g.data ? formatoData(g.data) : '–',
+              g.ora || '–', [g.campo, g.indirizzo].filter(Boolean).join(' — ') || '–'
+            ]),
+            startY: y, theme: 'grid', margin: { left: 14, right: 14 }, tableWidth: 200,
+            styles: { fontSize: 8.5, cellPadding: 2.5 },
+            headStyles: { fillColor: [180, 83, 9], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9 },
+            columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 2: { cellWidth: 24, halign: 'center' },
+                            3: { cellWidth: 16, halign: 'center' } }
+          })
+          y = doc.lastAutoTable.finalY + 10
+        }
+      }
+    }
+
+    const nomeFile = sez
+      ? `tornei_${String(`${sez.anno || ''}_${sez.nome || ''}`).replace(/[\s/-]+/g, '_').toLowerCase()}.pdf`
+      : 'tornei_tutte_categorie.pdf'
+    await saveOrSharePdf(doc, nomeFile, sez ? `Tornei ${sez.titolo}` : 'Tornei — tutte le categorie')
+    conferma.value = 'PDF generato'
+  } catch (e) {
+    // console.error perche' dall'esterno un'eccezione inghiottita qui sarebbe invisibile: la pagina
+    // mostrerebbe solo "Errore nella generazione del PDF" e il test non avrebbe modo di capire perche'
+    console.error('Export PDF tornei fallito:', e)
+    errore.value = 'Errore nella generazione del PDF'
+  } finally {
+    esportazione.value = false
+  }
+}
+
 onMounted(async () => {
   await caricaCategorie()
   await carica()
@@ -858,82 +1067,90 @@ onMounted(async () => {
 
 .btn-back {
   display: flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.625rem;
-  background: transparent; border: none; color: #a3a3a3; font-size: 0.8125rem; cursor: pointer;
+  background: transparent; border: none; color: var(--color-text-muted); font-size: 0.8125rem; cursor: pointer;
 }
-.btn-back:hover { color: white; }
+.btn-back:hover { color: var(--color-primary); }
 
-.nota { color: #a3a3a3; font-size: 0.8125rem; margin: 0 0 1rem; }
+.nota { color: var(--color-text-secondary); font-size: 0.8125rem; margin: 0 0 1rem; }
 
 .filtri { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
 .select-filtro, .filtro-data input {
-  padding: 0.4rem 0.5rem; border-radius: var(--radius-md, 8px); border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.05); color: white; font-size: 0.8125rem;
+  padding: 0.4rem 0.5rem; border-radius: var(--radius-md, 8px); border: 1px solid var(--color-border);
+  background: var(--color-surface); color: var(--color-text); font-size: 0.8125rem;
 }
-.filtro-data { display: flex; align-items: center; gap: 0.375rem; color: #a3a3a3; font-size: 0.75rem; }
+.filtro-data { display: flex; align-items: center; gap: 0.375rem; color: var(--color-text-secondary); font-size: 0.75rem; }
 
-.stato { padding: 2rem; text-align: center; color: #737373; font-size: 0.875rem; }
+.stato { padding: 2rem; text-align: center; color: var(--color-text-muted); font-size: 0.875rem; }
 .stato.piccolo { padding: 0.75rem; font-size: 0.8125rem; }
 .messaggio { padding: 0.5rem 0.75rem; border-radius: var(--radius-md, 8px); font-size: 0.8125rem; margin-bottom: 0.75rem; }
-.messaggio.errore { background: rgba(239,68,68,0.12); color: #ef4444; }
-.messaggio.successo { background: rgba(34,197,94,0.12); color: #22c55e; }
+.messaggio.errore { background: var(--color-primary-soft); color: var(--color-error); }
+.messaggio.successo { background: var(--color-success-soft); color: var(--color-success); }
 
+/* I colori vengono TUTTI dalle variabili di global.css. Questa pagina era stata scritta con
+   letterali pensati per un tema scuro (#d4d4d4 su rgba(255,255,255,0.06), #facc15, #171717):
+   l'app non ha nessun tema scuro, `--color-surface` e' #ffffff, e a schermo i bottoni delle azioni
+   risultavano grigio chiarissimo su bianco, praticamente illeggibili. Verificato su DEV con lo
+   screenshot della pagina, non a occhio sul codice. */
 .torneo-card {
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+  background: var(--color-surface); border: 1px solid var(--color-border);
   border-radius: var(--radius-lg, 12px); padding: 1rem; margin-bottom: 0.875rem;
+  box-shadow: var(--shadow-sm); transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+.torneo-card:hover { border-color: var(--color-primary); box-shadow: 0 4px 12px rgba(20,26,36,0.08); }
 .torneo-testata { cursor: pointer; }
 .torneo-titolo { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.375rem; }
-.torneo-nome { font-size: 1.0625rem; font-weight: 700; }
+.torneo-nome { font-size: 1.0625rem; font-weight: 700; color: var(--color-text); }
 .badge {
   padding: 0.125rem 0.4375rem; border-radius: 999px; font-size: 0.6875rem; font-weight: 600;
-  background: rgba(255,255,255,0.08); color: #a3a3a3;
+  background: var(--color-slate-soft); color: var(--color-text-secondary);
 }
-.badge.categoria { background: rgba(59,130,246,0.14); color: #60a5fa; }
-.badge.gare { background: rgba(168,85,247,0.14); color: #c084fc; }
-.badge.lista { background: rgba(34,197,94,0.14); color: #4ade80; }
-.badge.lista.vuota { background: rgba(234,179,8,0.14); color: #facc15; }
+.badge.categoria { background: var(--color-info-soft); color: var(--color-info); }
+.badge.gare { background: var(--color-violet-soft); color: var(--color-violet); }
+.badge.lista { background: var(--color-success-soft); color: var(--color-success); }
+.badge.lista.vuota { background: var(--color-warning-soft); color: var(--color-warning); }
 
-.torneo-meta { display: flex; gap: 0.875rem; flex-wrap: wrap; color: #a3a3a3; font-size: 0.8125rem; }
-.torneo-descrizione { color: #a3a3a3; font-size: 0.8125rem; margin: 0.5rem 0 0; white-space: pre-line; }
+.torneo-meta { display: flex; gap: 0.875rem; flex-wrap: wrap; color: var(--color-text-secondary); font-size: 0.8125rem; }
+.torneo-descrizione { color: var(--color-text-secondary); font-size: 0.8125rem; margin: 0.5rem 0 0; white-space: pre-line; }
 
 .torneo-azioni { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
 .btn-azione {
   padding: 0.375rem 0.75rem; border-radius: var(--radius-md, 8px); font-size: 0.75rem; font-weight: 600;
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #d4d4d4; cursor: pointer;
+  background: var(--color-surface); border: 1px solid var(--color-border-strong); color: var(--color-text-secondary);
+  cursor: pointer;
 }
-.btn-azione:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
-.btn-azione.primario { background: rgba(220,38,38,0.16); border-color: rgba(220,38,38,0.35); color: #fca5a5; }
-.btn-azione.primario:hover { background: #dc2626; color: white; }
-.btn-azione.pericolo { color: #f87171; }
-.btn-azione:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-azione:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-soft); }
+.btn-azione.primario { background: var(--color-primary-soft); border-color: rgba(220,38,38,0.35); color: var(--color-primary); }
+.btn-azione.primario:hover { background: var(--color-primary); border-color: var(--color-primary); color: white; }
+.btn-azione.pericolo { color: var(--color-error); }
+.btn-azione:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.calendario { margin-top: 0.875rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.5rem; }
+.calendario { margin-top: 0.875rem; border-top: 1px solid var(--color-border); padding-top: 0.5rem; }
 .gara-riga {
   display: flex; gap: 0.625rem; padding: 0.5rem 0; align-items: flex-start;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--color-border-light);
 }
 .gara-numero {
   flex: 0 0 1.5rem; height: 1.5rem; border-radius: 999px; display: flex; align-items: center;
   justify-content: center; font-size: 0.6875rem; font-weight: 700;
-  background: rgba(255,255,255,0.08); color: #a3a3a3;
+  background: var(--color-slate-soft); color: var(--color-text-secondary);
 }
 .gara-corpo { flex: 1; min-width: 0; }
-.gara-verso { font-size: 0.9375rem; }
-.gara-dettaglio { display: flex; gap: 0.75rem; flex-wrap: wrap; color: #a3a3a3; font-size: 0.75rem; margin-top: 0.1875rem; }
-.gara-note { color: #d4d4d4; font-size: 0.75rem; margin-top: 0.25rem; white-space: pre-line; }
+.gara-verso { font-size: 0.9375rem; color: var(--color-text); }
+.gara-dettaglio { display: flex; gap: 0.75rem; flex-wrap: wrap; color: var(--color-text-muted); font-size: 0.75rem; margin-top: 0.1875rem; }
+.gara-note { color: var(--color-text-secondary); font-size: 0.75rem; margin-top: 0.25rem; white-space: pre-line; }
 .gara-azioni { display: flex; gap: 0.25rem; }
 .btn-icon {
   padding: 0.3125rem; border-radius: var(--radius-md, 8px); background: transparent; border: none;
-  color: #737373; cursor: pointer;
+  color: var(--color-text-muted); cursor: pointer;
 }
-.btn-icon:hover { background: rgba(255,255,255,0.08); color: white; }
-.btn-icon.pericolo:hover { color: #f87171; }
+.btn-icon:hover { background: var(--color-slate-soft); color: var(--color-primary); }
+.btn-icon.pericolo:hover { color: var(--color-error); }
 .btn-aggiungi {
   margin-top: 0.625rem; padding: 0.375rem 0.75rem; border-radius: var(--radius-md, 8px);
-  background: transparent; border: 1px dashed rgba(255,255,255,0.2); color: #a3a3a3;
+  background: transparent; border: 1px dashed var(--color-border-strong); color: var(--color-text-secondary);
   font-size: 0.75rem; cursor: pointer;
 }
-.btn-aggiungi:hover { color: white; border-color: rgba(255,255,255,0.4); }
+.btn-aggiungi:hover { color: var(--color-primary); border-color: var(--color-primary); background: var(--color-primary-soft); }
 
 /* Modal: gli stili sono scoped e non esiste un CSS globale condiviso, quindi ogni pagina
    definisce i suoi (come ListeTornei.vue). Gli stessi nomi di classe, le stesse variabili. */
@@ -942,60 +1159,62 @@ onMounted(async () => {
   display: flex; align-items: center; justify-content: center; z-index: 1000;
 }
 .modal {
-  background: var(--color-surface, #171717); border: 1px solid var(--color-border, rgba(255,255,255,0.1));
+  background: var(--color-surface); border: 1px solid var(--color-border);
   border-radius: 16px; width: 92%; max-width: 460px; max-height: 90vh;
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: column; box-shadow: var(--shadow);
 }
 .modal-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 1.25rem 1.5rem 0.75rem;
 }
-.modal-header h3 { font-size: 1.125rem; font-weight: 700; color: var(--color-text, #f3f4f6); margin: 0; }
+.modal-header h3 { font-size: 1.125rem; font-weight: 700; color: var(--color-text); margin: 0; }
 .modal-close {
-  background: transparent; border: none; color: #737373; cursor: pointer; padding: 0.25rem;
+  background: transparent; border: none; color: var(--color-text-muted); cursor: pointer; padding: 0.25rem;
   display: flex; align-items: center;
 }
-.modal-close:hover { color: white; }
+.modal-close:hover { color: var(--color-text); }
 .modal-close svg { width: 20px; height: 20px; }
 .modal-body { padding: 0 1.5rem; overflow-y: auto; }
 .modal-footer {
   display: flex; justify-content: flex-end; gap: 0.5rem; padding: 1rem 1.5rem 1.25rem;
 }
 .suggerimento {
-  font-size: 0.75rem; color: #a3a3a3; background: rgba(59,130,246,0.1);
-  border-left: 2px solid rgba(59,130,246,0.5); padding: 0.5rem 0.625rem;
+  font-size: 0.75rem; color: var(--color-info); background: var(--color-info-soft);
+  border-left: 2px solid var(--color-info); padding: 0.5rem 0.625rem;
   border-radius: 6px; margin: 0 0 1rem;
 }
 
 .form-group { margin-bottom: 0.875rem; flex: 1; }
 .form-group label {
   display: block; font-size: 0.75rem; font-weight: 600;
-  color: var(--color-text-muted, #6b7280); margin-bottom: 0.3125rem;
+  color: var(--color-text-muted); margin-bottom: 0.3125rem;
 }
 .form-group input, .form-group select, .form-group textarea {
-  width: 100%; padding: 0.5625rem 0.75rem; border: 1px solid var(--color-border, rgba(255,255,255,0.1));
-  border-radius: 10px; background: var(--color-surface, #171717); color: var(--color-text, #f3f4f6);
+  width: 100%; padding: 0.5625rem 0.75rem; border: 1px solid var(--color-border);
+  border-radius: 10px; background: var(--color-surface); color: var(--color-text);
   font-size: 0.875rem; box-sizing: border-box; font-family: inherit;
 }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-  outline: none; border-color: rgba(220,38,38,0.5);
+  outline: none; border-color: var(--color-primary);
 }
-.form-group select option { background: #171717; color: #f3f4f6; }
+/* Le opzioni del menu a tendina si dipingono da sole, fuori dal flusso della pagina: lasciarle
+   scritte per un tema scuro dava un menu nero con testo chiarissimo su un'app bianca */
+.form-group select option { background: var(--color-surface); color: var(--color-text); }
 .form-group textarea { resize: vertical; }
 .form-riga { display: flex; gap: 0.75rem; }
 
 .btn-primary {
   display: flex; align-items: center; gap: 0.375rem; padding: 0.5rem 1rem; border: none;
-  border-radius: 10px; background: #dc2626; color: white; font-size: 0.8125rem;
+  border-radius: 10px; background: var(--color-primary); color: white; font-size: 0.8125rem;
   font-weight: 600; cursor: pointer;
 }
-.btn-primary:hover:not(:disabled) { background: #b91c1c; }
+.btn-primary:hover:not(:disabled) { background: var(--color-primary-dark); }
 .btn-primary:disabled { opacity: 0.6; cursor: wait; }
 .btn-secondary {
-  padding: 0.5rem 1rem; border: 1px solid var(--color-border, rgba(255,255,255,0.1));
-  border-radius: 10px; background: transparent; color: #a3a3a3; font-size: 0.8125rem; cursor: pointer;
+  padding: 0.5rem 1rem; border: 1px solid var(--color-border-strong);
+  border-radius: 10px; background: transparent; color: var(--color-text-secondary); font-size: 0.8125rem; cursor: pointer;
 }
-.btn-secondary:hover { color: white; border-color: rgba(255,255,255,0.3); }
+.btn-secondary:hover { color: var(--color-text); background: var(--color-slate-soft); }
 
 /* ------------------------------------------------------------------ sezioni per categoria
    Il primo livello della pagina, stesso aspetto delle sezioni di ProgrammazionePartite.vue: titolo
@@ -1005,56 +1224,76 @@ onMounted(async () => {
 .categoria-sezione:last-of-type { margin-bottom: 0; }
 .categoria-intestazione {
   display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap;
-  font-size: 1.25rem; font-weight: 700; color: var(--color-text, #f3f4f6);
+  font-size: 1.25rem; font-weight: 700; color: var(--color-text);
   margin: 0 0 0.875rem; padding-bottom: 0.625rem; letter-spacing: -0.01em;
-  border-bottom: 2px solid #dc2626;
+  border-bottom: 2px solid var(--color-primary);
 }
 .conteggio-sezione {
   font-size: 0.6875rem; font-weight: 600; padding: 0.125rem 0.4375rem; border-radius: 999px;
-  background: rgba(255,255,255,0.08); color: #a3a3a3;
+  background: var(--color-slate-soft); color: var(--color-text-secondary);
 }
 
-/* Le altre categorie dello stesso torneo: colore diverso dal badge della sezione, perche' qui il
-   messaggio non e' "questa e' la tua categoria" ma "attenzione, il torneo e' condiviso con loro"
-   e "Elimina" le porta via */
-.badge.categoria.altrui { background: rgba(168,85,247,0.14); color: #c084fc; }
+/* Il pulsante di export, nelle due versioni: nell'intestazione della pagina (tutte le categorie)
+   e in quella di ogni sezione (solo quella categoria). Stesso ruolo di .btn-secondary-sm nel
+   weekend, colori del tema */
+.btn-esporta {
+  display: inline-flex; align-items: center; gap: 0.3125rem;
+  padding: 0.3125rem 0.625rem; border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--color-border-strong); background: var(--color-surface);
+  color: var(--color-text-secondary); font-size: 0.75rem; font-weight: 600; cursor: pointer;
+}
+.btn-esporta:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-soft); }
+.btn-esporta:disabled { opacity: 0.5; cursor: not-allowed; }
+/* In fondo all'intestazione, come il pulsante del weekend: a schermo deve dire "questo esporta la
+   sezione", non essere l'ennesimo pulsante della card */
+.categoria-intestazione .btn-esporta { margin-left: auto; }
+
+/* Le altre categorie dello stesso torneo: stesso colore del badge categoria, ma tratteggiato, perche'
+   qui il messaggio non e' "questa e' la tua categoria" bensi' "attenzione, il torneo e' condiviso con
+   loro" e "Elimina" le porta via. Non e' decorazione: e' la guardia della card */
+.badge.categoria.altrui {
+  background: var(--color-info-soft); color: var(--color-info);
+  border: 1px dashed rgba(37,99,235,0.45);
+}
 
 /* Le gare senza categoria, o con una categoria non piu' iscritta: non hanno una sezione, quindi
    vengono elencate in fondo a quelle del torneo con un'intestazione che le nomina. Un calendario
    che ne mostra sei su otto e' peggio di uno che ammette di averne due senza etichetta */
 .orfane-intestazione {
   font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
-  color: #facc15; margin: 0.75rem 0 0.25rem;
+  color: var(--color-warning); margin: 0.75rem 0 0.25rem;
 }
-.gara-riga.orfana { border-left: 2px solid rgba(234,179,8,0.45); padding-left: 0.5rem; }
+.gara-riga.orfana { border-left: 2px solid rgba(180,83,9,0.4); padding-left: 0.5rem; }
 
 /* ------------------------------------------------------------------ scelta delle categorie
    Il checkbox eredita width:100% e il padding da .form-group input: vanno annullati qui, o le
    caselle si allargano una riga ciascuna e la scelta multipla diventa un elenco infinito */
 .scelta-categorie {
   display: flex; flex-wrap: wrap; gap: 0.375rem; max-height: 11rem; overflow-y: auto;
-  padding: 0.5rem; border: 1px solid var(--color-border, rgba(255,255,255,0.1));
-  border-radius: 10px; background: rgba(255,255,255,0.02);
+  padding: 0.5rem; border: 1px solid var(--color-border);
+  border-radius: 10px; background: var(--color-bg);
 }
 .scelta-categoria {
   display: flex; align-items: center; gap: 0.3125rem; padding: 0.25rem 0.5rem;
-  border-radius: 999px; background: rgba(255,255,255,0.06); cursor: pointer;
-  font-size: 0.75rem; font-weight: 500; color: #d4d4d4; margin: 0;
+  border-radius: 999px; background: var(--color-surface); border: 1px solid var(--color-border);
+  cursor: pointer;
+  font-size: 0.75rem; font-weight: 500; color: var(--color-text-secondary); margin: 0;
 }
+.scelta-categoria:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .scelta-categoria input[type="checkbox"] {
-  width: auto; padding: 0; margin: 0; accent-color: #3b82f6; cursor: pointer;
+  width: auto; padding: 0; margin: 0; accent-color: var(--color-primary); cursor: pointer;
 }
-.conteggio { font-weight: 500; color: #60a5fa; margin-left: 0.25rem; }
+.conteggio { font-weight: 500; color: var(--color-info); margin-left: 0.25rem; }
 .chip-categoria {
   display: inline-flex; align-items: center; gap: 0.3125rem; padding: 0.25rem 0.5rem;
   border-radius: 999px; font-size: 0.75rem; font-weight: 600;
-  background: rgba(59,130,246,0.14); color: #60a5fa;
+  background: var(--color-info-soft); color: var(--color-info);
 }
 .chip-x {
   border: none; background: transparent; color: inherit; cursor: pointer;
   font-size: 0.75rem; line-height: 1; padding: 0 0.1875rem; border-radius: 999px;
 }
-.chip-x:hover { background: rgba(239,68,68,0.25); color: #fca5a5; }
+.chip-x:hover { background: var(--color-primary-soft); color: var(--color-error); }
 .aggiungi-categoria { display: flex; gap: 0.5rem; margin-top: 0.5rem; align-items: flex-end; }
 .aggiungi-categoria select { flex: 1; }
 .aggiungi-categoria .btn-secondary { white-space: nowrap; }
