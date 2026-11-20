@@ -224,18 +224,27 @@ const LEGGI = `(() => {
   // Come si chiama davvero il file del singolo torneo: il prefisso __demo_tornei__ lascia tre
   // underscorelli (due letterali + quello della virgoletta), e riscriverlo a mano quattro volte e
   // il modo piu veloce per sbagliarlo
-  const PDF_TORNEO = 'tornei_demo_tornei___winter_cup_2016_pulcini.pdf'
   // Il nome del documento "tutti i tornei" porta la societa', quindi va costruito come lo costruisce
   // la pagina: riscriverlo a mano qui vuol dire un rosso per il nome del file e non per il contenuto
   const nomeSocieta = await evalJS(`(() => { try { return JSON.parse(localStorage.getItem('societa_data') || '{}').nome || '' } catch (e) { return '' } })()`)
   const pulito = s => String(s || '').replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase()
   const PDF_SOCIETA = nomeSocieta ? `tornei_societa_${pulito(nomeSocieta)}.pdf` : 'tornei_societa.pdf'
+  // Tutti e quattro i documenti si chiamano ..._<societa>.pdf: due societa' che si scambiano i
+  // calendari in chat non devono ritrovarsi due file con lo stesso nome
+  const SUFFISSO = nomeSocieta ? '_' + pulito(nomeSocieta) : ''
+  const PDF_TORNEO = `tornei_demo_tornei___winter_cup_2016_pulcini${SUFFISSO}.pdf`
+  const PDF_ESORDIENTI = `tornei_2015_esordienti${SUFFISSO}.pdf`
   console.log('   societa letta dal profilo:', JSON.stringify(nomeSocieta), '->', PDF_SOCIETA)
   // Se la pagina non sapesse come si chiama la societa', il file sarebbe "tornei_societa.pdf" per
   // tutti: due societa' che si scambiano i PDF in chat non saprebbero di chi e' quale
   ck('la pagina conosce il nome della societa', String(nomeSocieta || '').length > 0, true)
   const { execFileSync } = require('child_process')
   const occorrenze = (testo, ago) => (testo.match(new RegExp(ago, 'g')) || []).length
+  // Le frasi del PDF vanno cercate su un testo senza a capo: "Gare senza categoria" scritto in una
+  // cella da 30 mm arriva come "Gare senza / categoria", e il documento era giusto. Appiattire
+  // rende le asserzioni sull'impaginazione meno fragili; sui controlli GDPR puo' solo aggiungere
+  // un falso rosso, mai un falso verde, che e' la direzione giusta
+  const piatto = t => String(t == null ? '' : t).replace(/\s+/g, ' ')
   // Senza questo Chrome non scrive da nessuna parte il blob dell'export, e non dice niente: la
   // prima volta che e' successo sembrava un export rotto, ed era solo il browser di prova senza
   // una cartella di destinazione. Su alcune versioni il percorso vale solo a livello di browser,
@@ -256,7 +265,15 @@ const LEGGI = `(() => {
     for (let i = 0; i < 60; i++) {
       if (fs.existsSync(atteso) && fs.statSync(atteso).size > 500) {
         await sleep(400)   // il file puo' ancora essere in scrittura
-        return execFileSync('pdftotext', ['-layout', atteso, '-'], { encoding: 'utf8' })
+        const testo = execFileSync('pdftotext', ['-layout', atteso, '-'], { encoding: 'utf8' })
+        // DUMP_PDF=1 lascia il testo estratto accanto al PDF: quando un'asserzione sul contenuto e'
+        // rossa, la domanda e' quasi sempre "il documento non c'e' l'ha o lo cerca male il test", e
+        // senza il testo estratto la risposta e' un'altra esecuzione
+        if (process.env.DUMP_PDF) {
+          fs.mkdirSync(`${OUT}/pdf-text`, { recursive: true })
+          fs.writeFileSync(`${OUT}/pdf-text/testo-${nome}.txt`, testo)
+        }
+        return testo
       }
       await sleep(250)
     }
@@ -298,18 +315,26 @@ const LEGGI = `(() => {
   ck('la card dice che il torneo non ha un referente', cardSenzaMister && cardSenzaMister.testo, 'mister da assegnare')
   ck('e lo dice come un buco (ambra), non come un dato normale', cardSenzaMister && cardSenzaMister.assente, true)
 
-  const pdfSezione = await scarica('tornei_2015_esordienti.pdf', btnSezione)
+  const pdfSezione = await scarica(PDF_ESORDIENTI, btnSezione)
   ck('il PDF della singola categoria si scarica', pdfSezione !== null, true)
   if (pdfSezione) {
     ck('contiene la sua categoria', /2015 - Esordienti/.test(pdfSezione), true)
+    ck('il titolo finisce con il nome della societa\', come quello del weekend',
+       (pdfSezione.split('\n').find(l => l.trim()) || '').includes(' - RedTigers 1957'), true)
+    ck('e il sottotitolo dice quando e\' stato generato, come quello del weekend',
+       /Generato il \d{1,2}\/\d{1,2}\/\d{4}/.test(pdfSezione), true)
+    ck('le colonne sono quelle del calendario, Mister compreso',
+       ['Data', 'Ora', 'Avversario', 'Appuntamento', 'Campo', 'Indirizzo', 'Mister', 'Note']
+         .every(c => new RegExp('\\b' + c + '\\b').test(piatto(pdfSezione))), true)
     ck('contiene la SUA gara', /Vecchia Guardia/.test(pdfSezione), true)
     // Il punto delicato dell'export per categoria: se trapelassero le gare dell'altra categoria, il
     // documento consegnato all'organizzatore sarebbe plausibile e falso
     ck('NON contiene le gare dei Pulcini', /Real Junior|Atletico Sud/.test(pdfSezione), false)
     ck('dichiara il foglio assente, non lo tace', /Foglio giocatori assente/.test(pdfSezione), true)
-    ck('nomina le orfane invece di dimenticarle', /Gare senza categoria \(1\)/.test(pdfSezione), true)
+    ck('nomina le orfane invece di dimenticarle',
+       /Gare senza categoria \(1\)/.test(piatto(pdfSezione)) && /assegnare a una categoria/.test(piatto(pdfSezione)), true)
     ck('e stampa la gara orfana', /Amichevole fuori calendario/.test(pdfSezione), true)
-    ck('dichiaria anche il mister mancante, invece di omettere la riga', /Mister: non assegnato/.test(pdfSezione), true)
+    ck('dichiara il mister mancante nella sua colonna, invece di omettere la riga', /non assegnato/.test(piatto(pdfSezione)), true)
     ck('non stampa colonne GDPR (data di nascita, CF, telefoni)',
        /Data Nascita|Codice fiscale|Telefono/i.test(pdfSezione), false)
     // Qui il foglio NON c'e' (e' stato distaccato di proposito): una tabella del roster vuota sarebbe
@@ -321,7 +346,7 @@ const LEGGI = `(() => {
   ck('il PDF di tutti i tornei della societa si scarica', pdfTutti !== null, true)
   if (pdfTutti) {
     ck('il titolo del documento dice che e\' di tutta la societa',
-       /tutti i tornei/.test(pdfTutti), true)
+       /tutti i tornei/i.test(pdfTutti), true)
     ck('dice quanti tornei contiene, cosi\' chi lo riceve puo\' accorgersi se ne mancano',
        /1 torneo di tutta la societa/.test(pdfTutti), true)
     ck('contiene entrambe le sezioni', /2015 - Esordienti/.test(pdfTutti) && /2016 - Pulcini/.test(pdfTutti), true)
@@ -330,16 +355,16 @@ const LEGGI = `(() => {
     ck('contiene i giocatori veri del foglio dei Pulcini',
        attese.cognomi.length > 0 && attese.cognomi.every(c => pdfTutti.includes(c)), true)
     ck('il foglio ha le sue colonne, e niente di piu\'', /Cognome/.test(pdfTutti) && /Nome/.test(pdfTutti), true)
-    ck('nomina il foglio con il suo nome completo', pdfTutti.includes(attese.nomeFoglio || '###'), true)
+    ck('nomina il foglio con il suo nome completo', piatto(pdfTutti).includes(attese.nomeFoglio || '###'), true)
     // Le orfane sono dello stesso torneo: in "tutte le categorie" vanno stampate una volta sola
     ck('la gara orfana compare UNA volta sola, non una per sezione', occorrenze(pdfTutti, 'Amichevole fuori calendario'), 1)
-    ck('anche l\'intestazione orfane compare una volta sola', occorrenze(pdfTutti, 'Gare senza categoria'), 1)
+    ck('anche l\'intestazione orfane compare una volta sola', occorrenze(piatto(pdfTutti), 'Gare senza categoria'), 1)
     // Il referente sta nell'intestazione del torneo, e in "tutte le categorie" il torneo viene
     // ripetuto una volta per sezione (come il suo nome, le sue date e il suo luogo): una sezione e'
     // una lettura a se'. Le GARE senza categoria invece si stampano una volta sola, perche' li' la
     // ripetizione sarebbe dato duplicato, non contesto
-    ck('il mister e\' dichiarato in ogni sezione in cui il torneo compare',
-       occorrenze(pdfTutti, 'Mister: non assegnato'), 2)
+    ck('il mister e\' dichiarato su ogni riga di gara (3 gare: 1 Esordienti + 2 Pulcini)',
+       occorrenze(piatto(pdfTutti), 'non assegnato'), 3)
     ck('non stampa colonne GDPR', /Data Nascita|Codice fiscale|Telefono/i.test(pdfTutti), false)
   }
   ck('i pulsanti non sono rimasti disabilitati dopo l\'export',

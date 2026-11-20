@@ -387,6 +387,10 @@ import { getAllCategorie, getCategoriaResponsabili, getCampiSportivi, creaPartit
 import { useStore } from "../../store.js"
 import { jsPDF } from "jspdf"
 import "jspdf-autotable"
+// L'intestazione e lo stile di tabella sono condivisi con Programmazione Tornei: due copie del foglio
+// di stile sono due documenti che il giorno dopo non si assomigliano piu', e qui la forma di
+// riferimento e' proprio questa perche' e' quella che la societa' gia' usa e riconosce
+import { intestazionePdf, BASE_TABELLA, barra, didParseCellBarra, coloraDomenica } from "../../core/utils/pdfTHOF.js"
 const router = useRouter()
 const { societaAttiva } = useStore()
 
@@ -927,12 +931,10 @@ async function esportaPDFWeekend() {
   if (!weekendSelezionato.value) return
   const doc = new jsPDF({ orientation: 'landscape' })
   const nome = societaNome.value
-  doc.setFontSize(16)
-  doc.text(`${weekendSelezionato.value.nome} - ${nome}`, 14, 15)
-  doc.setFontSize(9)
-  doc.setTextColor(100)
-  doc.text(`${formatDate(weekendSelezionato.value.data_inizio)} - ${formatDate(weekendSelezionato.value.data_fine)} | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 22)
-  doc.setTextColor(0)
+  const startY = intestazionePdf(doc, {
+    titolo: `${weekendSelezionato.value.nome} - ${nome}`,
+    sottotitolo: `${formatDate(weekendSelezionato.value.data_inizio)} - ${formatDate(weekendSelezionato.value.data_fine)} | Generato il ${new Date().toLocaleDateString('it-IT')}`
+  })
   const sorted = weekendPartiteGrouped.value.map(g => ({
     cat: g.cat,
     partite: g.partite.slice().sort((a, b) => (a.data_partite || '').localeCompare(b.data_partite || '') || (a.ora || '').localeCompare(b.ora || ''))
@@ -941,7 +943,7 @@ async function esportaPDFWeekend() {
   const body = []
   sorted.forEach(g => {
     const catLabel = `${g.cat.anno} - ${g.cat.nome}`
-    body.push([{ content: catLabel, colSpan: 8 }])
+    body.push(barra(catLabel, 8))
     g.partite.forEach(p => {
       const isDom = isDomenica(p.data_partite)
       const data = formatDate(p.data_partite) + (isDom ? ' (DOM)' : '')
@@ -956,14 +958,10 @@ async function esportaPDFWeekend() {
     })
   })
   doc.autoTable({
+    ...BASE_TABELLA,
     head: headers,
     body: body,
-    startY: 28,
-    theme: 'grid',
-    margin: { left: 14, right: 14 },
-    tableWidth: 260,
-    styles: { fontSize: 8.5, cellPadding: 3, halign: 'left', valign: 'middle' },
-    headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9 },
+    startY,
     columnStyles: {
       0: { cellWidth: 26, halign: 'center' },
       1: { cellWidth: 15, halign: 'center' },
@@ -975,20 +973,9 @@ async function esportaPDFWeekend() {
       7: { cellWidth: 'wrap' }
     },
     didParseCell: function(d) {
-      if (d.section === 'body' && d.raw && d.raw.colSpan) {
-        d.cell.colSpan = d.raw.colSpan
-        d.cell.raw = d.raw.content
-        d.cell.styles.fillColor = [220, 38, 38]
-        d.cell.styles.textColor = [255, 255, 255]
-        d.cell.styles.fontStyle = 'bold'
-        d.cell.styles.fontSize = 11
-        d.cell.styles.halign = 'left'
-        d.cell.styles.cellPadding = { top: 5, bottom: 5, left: 6, right: 6 }
-      } else if (d.section === 'body' && d.cell && !d.raw?.colSpan) {
-        if (d.column.index === 0 && d.cell.raw && String(d.cell.raw).includes('(DOM)')) {
-          d.cell.styles.textColor = [217, 119, 6]
-          d.cell.styles.fontStyle = 'bold'
-        }
+      didParseCellBarra(d)
+      if (d.section === 'body' && d.cell && !d.raw?.colSpan) {
+        coloraDomenica(d, 0)
         if (d.column.index === 2) {
           d.cell.text = []
         }
@@ -1006,12 +993,10 @@ async function esportaPDFGenitori(group = null) {
   if (!weekendSelezionato.value) return
   const doc = new jsPDF({ orientation: 'landscape' })
   const nome = societaNome.value
-  doc.setFontSize(16)
-  doc.text(`${weekendSelezionato.value.nome} - ${nome}`, 14, 15)
-  doc.setFontSize(9)
-  doc.setTextColor(100)
-  doc.text(`${formatDate(weekendSelezionato.value.data_inizio)} - ${formatDate(weekendSelezionato.value.data_fine)} | Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 22)
-  doc.setTextColor(0)
+  const startY = intestazionePdf(doc, {
+    titolo: `${weekendSelezionato.value.nome} - ${nome}`,
+    sottotitolo: `${formatDate(weekendSelezionato.value.data_inizio)} - ${formatDate(weekendSelezionato.value.data_fine)} | Generato il ${new Date().toLocaleDateString('it-IT')}`
+  })
 
   const groupsToExport = group ? [group] : weekendPartiteGrouped.value
   const sorted = groupsToExport.map(g => ({
@@ -1023,7 +1008,7 @@ async function esportaPDFGenitori(group = null) {
   const body = []
   sorted.forEach(g => {
     const catLabel = `${g.cat.anno} - ${g.cat.nome}`
-    body.push([{ content: catLabel, colSpan: 7 }])
+    body.push(barra(catLabel, 7))
     g.partite.forEach(p => {
       const isDom = isDomenica(p.data_partite)
       const data = formatDate(p.data_partite) + (isDom ? ' (DOM)' : '')
@@ -1038,14 +1023,10 @@ async function esportaPDFGenitori(group = null) {
   })
 
   doc.autoTable({
+    ...BASE_TABELLA,
     head: headers,
     body: body,
-    startY: 28,
-    theme: 'grid',
-    margin: { left: 14, right: 14 },
-    tableWidth: 260,
-    styles: { fontSize: 8.5, cellPadding: 3, halign: 'left', valign: 'middle' },
-    headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9 },
+    startY,
     columnStyles: {
       0: { cellWidth: 26, halign: 'center' },
       1: { cellWidth: 15, halign: 'center' },
@@ -1056,20 +1037,9 @@ async function esportaPDFGenitori(group = null) {
       6: { cellWidth: 'wrap' }
     },
     didParseCell: function(d) {
-      if (d.section === 'body' && d.raw && d.raw.colSpan) {
-        d.cell.colSpan = d.raw.colSpan
-        d.cell.raw = d.raw.content
-        d.cell.styles.fillColor = [220, 38, 38]
-        d.cell.styles.textColor = [255, 255, 255]
-        d.cell.styles.fontStyle = 'bold'
-        d.cell.styles.fontSize = 11
-        d.cell.styles.halign = 'left'
-        d.cell.styles.cellPadding = { top: 5, bottom: 5, left: 6, right: 6 }
-      } else if (d.section === 'body' && d.cell && !d.raw?.colSpan) {
-        if (d.column.index === 0 && d.cell.raw && String(d.cell.raw).includes('(DOM)')) {
-          d.cell.styles.textColor = [217, 119, 6]
-          d.cell.styles.fontStyle = 'bold'
-        }
+      didParseCellBarra(d)
+      if (d.section === 'body' && d.cell && !d.raw?.colSpan) {
+        coloraDomenica(d, 0)
         if (d.column.index === 2) {
           d.cell.text = []
         }

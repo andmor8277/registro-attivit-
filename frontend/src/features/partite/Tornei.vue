@@ -456,6 +456,9 @@ import { jsPDF } from 'jspdf'
 // le pagine sono chunk caricati al bisogno, e senza questa riga doc.autoTable e' undefined. E' un
 // errore che non si vede in nessun posto, perche' la chiamata cade dentro il try/catch dell'export
 import 'jspdf-autotable'
+// Intestazione e stile di tabella condivisi con Programmazione Partite: la forma di riferimento
+// e' la sua, perche' e' il PDF che la societa' gia' conosce e riceve il venerdi'
+import { intestazionePdf, BASE_TABELLA, barra, didParseCellBarra, coloraDomenica, cellData, AMBRA_THOF } from '../../core/utils/pdfTHOF.js'
 import { useStore } from '../../store.js'
 
 const route = useRoute()
@@ -1091,197 +1094,208 @@ const filtriAttivi = computed(() => {
   return parti
 })
 
+/**
+ * Come si legge il Mister nella colonna: `Cognome Nome (cellulare)`, o `non assegnato`.
+ * Stesso testo della card, perche' la card e il PDF sono lo stesso dato visto da due persone che si
+ * parlano fra loro: se uno dei due tace il buco, l'organizzatore telefona a chi non c'e'.
+ */
+function testoMisterPdf(t) {
+  if (!t || !t.mister_nome) return 'non assegnato'
+  return t.mister_cellulare ? `${t.mister_nome} (${t.mister_cellulare})` : t.mister_nome
+}
+
+/**
+ * Il PDF dei tornei, in quattro varianti che sono la stessa funzione: tutte le categorie della
+ * societa', la selezione a schermo, una categoria, un torneo con il suo foglio.
+ *
+ * La forma e' quella del weekend (vedi core/utils/pdfTHOF.js): intestazione con il nome della
+ * societa', tabelle col tema rosso, le barre di categoria e di torneo come RIGHE colSpan dentro il
+ * corpo, il Mister come colonna. Non e' estetica: un calendario consegnato all'organizzatore deve
+ * assomigliare al calendario che la societa' gia' stampa il venerdi', altrimenti in chat arrivano due
+ * documenti che sembrano di due associazioni diverse.
+ *
+ * Perche' UNA tabella per torneo e non una tabella sola come nel weekend: qui ogni blocco ha un suo
+ * foglio giocatori da stampare subito sotto, e un foglio solo costringerebbe a leggersi tutti i
+ * calendari e poi a cercare i roster in fondo. La barra della categoria esce una volta sola per
+ * gruppo, quando cambia: ripetuta sotto ogni torneo direbbe niente.
+ */
 async function esportaPDF(sez = null, torneo = null, opts = {}) {
   const sezioni = opts.sezioni || (sez ? [sez] : sezioniPerCategoria.value)
   if (!sezioni.length || esportazione.value) return
-  // Chi ha chiesto "tutti i tornei" ha gia' una lista presa senza filtri: per lui questo avviso non
-  // ha senso. Per gli altri tre pulsanti, invece, il perimetro e' quello che sta a schermo, e se a
-  // schermo c'e' un filtro attivo il documento e' un sottoinsieme: va scritto, non lasciato intuire
-  const sottotitolo = opts.sottotitolo
-    || (opts.senzaFiltri ? null : (filtriAttivi.value.length
-        ? `ATTENZIONE: solo la selezione a schermo (${filtriAttivi.value.join(' · ')}), non tutti i tornei della societa'`
-        : null))
+  // Chi ha chiesto "tutti i tornei" ha gia' una lista presa senza filtri: per lui questo avviso non ha
+  // senso. Per gli altri tre pulsanti il perimetro e' quello che sta a schermo, e se a schermo c'e' un
+  // filtro attivo il documento e' un sottoinsieme: va scritto nel foglio, non lasciato intuire
+  const avviso = opts.avviso || (opts.senzaFiltri ? null : (filtriAttivi.value.length
+      ? `ATTENZIONE: solo la selezione a schermo (${filtriAttivi.value.join(' · ')}), non tutti i tornei della societa'`
+      : null))
+  const oggi = new Date().toLocaleDateString('it-IT')
   esportazione.value = true
   errore.value = ''
   try {
     const doc = new jsPDF({ orientation: 'landscape' })
-    const larga = doc.internal.pageSize.getWidth()
-    const alta = doc.internal.pageSize.getHeight()
+    const nomeSocieta = societaAttiva.value?.nome || ''
+    // Il nome della societa' in coda al titolo, come nel weekend (`<nome> - <societa'>`): il file
+    // parte in chat e arriva a organizzatori di altre societa'
+    const conSocieta = t => (nomeSocieta ? `${t} - ${nomeSocieta}` : t)
+    const titolo = opts.titolo || conSocieta(opts.titoloBase
+      || (torneo ? `${torneo.nome} — ${sez.titolo}`
+                 : sez ? `Tornei ${sez.titolo}`
+                       : 'Tutti i tornei della società'))
+    // La riga grigia sotto il titolo, come nel weekend: cosa c'e' dentro e quando e' stato generato.
+    // Nel torneo singolo c'e' anche il Mister, perche' e' la prima cosa che l'organizzatore cerca
+    const quanti = sezioni.reduce((n, s) => n + (torneo ? 1 : (s.tornei || []).length), 0)
+    const sottotitolo = opts.sottotitolo || (torneo
+      ? [formatoPeriodo(torneo), `Mister: ${testoMisterPdf(torneo)}`, `Generato il ${oggi}`].filter(Boolean).join(' | ')
+      : [`${quanti} ${quanti === 1 ? 'torneo' : 'tornei'}` +
+         (sez ? ' in questa categoria' : ` in ${sezioni.length} categor${sezioni.length === 1 ? 'ia' : 'ie'}`),
+         `Generato il ${oggi}`].join(' | '))
+    let y = intestazionePdf(doc, { titolo, sottotitolo, avviso })
 
-    doc.setFontSize(16); doc.setFont(undefined, 'bold')
-    doc.text(opts.titolo || (torneo ? `${torneo.nome} — ${sez.titolo}`
-                                    : sez ? `Tornei — ${sez.titolo}`
-                                    : 'Tornei — tutte le categorie'), 14, 15)
-    doc.setFontSize(9); doc.setFont(undefined, 'normal'); doc.setTextColor(110)
-    doc.text(`Generato il ${new Date().toLocaleDateString('it-IT')}`, 14, 21)
-    // Il sottotitolo e' l'unica cosa che distingue "il documento della societa'" da "quello che
-    // avevo filtrato a schermo": in ambra e sopra le righe, perche' chi riceve il file deve capirlo
-    // prima di leggerlo, non accorgersene a meta'
-    if (sottotitolo) {
-      doc.setTextColor(180, 83, 9); doc.setFont(undefined, 'bold')
-      doc.text(String(sottotitolo), 14, 26)
-      doc.setFont(undefined, 'normal')
+    const COLONNE = 8
+    const headers = [['Data', 'Ora', 'Avversario', 'Appuntamento', 'Campo', 'Indirizzo', 'Mister', 'Note']]
+    const didParseCell = function (d) {
+      didParseCellBarra(d)
+      if (d.section !== 'body' || !d.cell || (d.raw && d.raw.colSpan)) return
+      coloraDomenica(d, 0)
+      // Il referente che non c'e' si vede anche in tabella: chi sfoglia il calendario deve poter
+      // dire "qui manca un numero da chiamare" senza tornare all'intestazione
+      if (d.column.index === 6 && String(d.cell.raw) === 'non assegnato') {
+        d.cell.styles.textColor = AMBRA_THOF
+        d.cell.styles.fontStyle = 'italic'
+      }
     }
-    doc.setTextColor(0)
-    // il sottotitolo sta a 26, quindi il primo blocco scende: altrimenti la barra della categoria ci
-    // si sovrappone e l'unica riga che avvisa "questo non e' il documento completo" non si legge
-    let y = sottotitolo ? 32 : 28
-    // autotable va a capo da solo DENTRO una tabella; fra un blocco e l'altro il salto pagina va
-    // deciso qui, o l'intestazione di un torneo resta orfana in fondo al foglio
-    const respira = (serve) => { if (y + serve > alta - 16) { doc.addPage(); y = 18 } }
-    // Le orfane si stampano una volta sola per torneo: in "tutte le categorie" lo stesso torneo sta
-    // in piu' sezioni, e ripetere due volte le stesse gare in un documento da consegnare e' peggio
-    // che non ripeterle a schermo
+    // autotable impagina da solo anche fra una tabella e l'altra: se lo spazio rimasto non basta,
+    // ricomincia su un foglio nuovo con la testata. E' il motivo per cui qui non c'e' piu' nessun
+    // "respira()" calcolato a mano come nella prima versione
+    const tabella = (head, body, larghezza, stili, testata) => {
+      doc.autoTable({
+        ...BASE_TABELLA,
+        head, body, startY: y,
+        tableWidth: larghezza || 260,
+        columnStyles: stili,
+        ...(testata ? { headStyles: testata } : {}),
+        didParseCell
+      })
+      y = doc.lastAutoTable.finalY + 7
+    }
+    // Le gare senza categoria, o con una categoria non piu' iscritta: una sezione loro non ce
+    // l'hanno, quindi tendono a sparire dall'export. Se il documento le tacesse sarebbe un calendario
+    // che ne mostra sei su otto. Una volta sola per torneo: in "tutte le categorie" lo stesso torneo
+    // sta in piu' sezioni e ripetere le stesse righe e' peggio che non ripeterle
     const orfaneStampate = new Set()
+    let ultimaCategoria = null
 
     for (const s of sezioni) {
-      respira(24)
-      doc.setFillColor(220, 38, 38); doc.setTextColor(255)
-      doc.setFontSize(11); doc.setFont(undefined, 'bold')
-      doc.rect(14, y, larga - 28, 8, 'F')
-      doc.text(s.titolo, 17, y + 5.6)
-      doc.setTextColor(0); doc.setFont(undefined, 'normal')
-      y += 13
+      const lista = torneo ? [torneo] : (s.tornei || [])
+      if (!lista.length) {
+        tabella(headers, [barra(`${s.titolo} — nessun torneo in questa categoria`, COLONNE, 'avviso')],
+                260, { 0: { cellWidth: 26 }, 1: { cellWidth: 14 }, 2: { cellWidth: 'wrap' }, 3: { cellWidth: 26 },
+                      4: { cellWidth: 30 }, 5: { cellWidth: 'wrap' }, 6: { cellWidth: 38 }, 7: { cellWidth: 'wrap' } })
+        continue
+      }
 
-      for (const t of (torneo ? [torneo] : s.tornei)) {
+      for (const t of lista) {
+        const body = []
+        // La barra della categoria esce solo al primo torneo del gruppo: sotto ogni tabella sarebbe
+        // rumore, e il documento si legge ancora come il weekend
+        if (ultimaCategoria !== String(s.catId)) {
+          body.push(barra(s.titolo, COLONNE))
+          ultimaCategoria = String(s.catId)
+        }
+        const rigaTorneo = [t.nome, formatoPeriodo(t), t.luogo, t.organizzatore ? 'a cura di ' + t.organizzatore : '']
+          .filter(Boolean).join('   ·   ')
+        body.push(barra(rigaTorneo, COLONNE, 'torneo'))
+
         // null vuol dire "non sono riuscita a leggerle", [] vuol dire "non ce ne sono": stampare
         // "nessuna gara" quando la richiesta era fallita consegnerebbe un calendario falso
         const tutte = await gareDel(t)
-        const gare = tutte === null ? null
-          : tutte.filter(g => g.categoria_id && String(g.categoria_id) === String(s.catId))
-        const riga = [t.nome, formatoPeriodo(t), t.luogo, t.organizzatore ? 'a cura di ' + t.organizzatore : '']
-          .filter(Boolean).join('   ·   ')
-        respira(26)
-        doc.setFontSize(10); doc.setFont(undefined, 'bold')
-        doc.text(String(doc.splitTextToSize(riga, larga - 28)[0]), 14, y)
-        doc.setFont(undefined, 'normal'); y += 4
-
-        // Il referente del torneo, in un documento che l'organizzatore riceve e con cui deve
-        // sapere chi chiamare. Il nome arriva dal backend (mister_nome), cosi' la card e il PDF
-        // dicono la stessa cosa; se non c'e' lo si scrive, perche' un documento senza referente
-        // e' il caso in cui il buco va mostrato e non taciuto
-        respira(10)
-        doc.setFontSize(9)
-        if (t.mister_nome) {
-          doc.setTextColor(0)
-          doc.text(`Mister: ${t.mister_nome}${t.mister_cellulare ? '  (' + t.mister_cellulare + ')' : ''}`, 14, y + 1)
-        } else {
-          doc.setTextColor(180, 83, 9)
-          doc.text('Mister: non assegnato — indicare il referente del torneo', 14, y + 1)
-        }
-        doc.setTextColor(0); y += 7
-
         if (tutte === null) {
-          doc.setTextColor(180, 83, 9)
-          doc.text('Calendario non disponibile: la richiesta alle API e\' fallita. Non consegnare questo documento.', 14, y + 2)
-          doc.setTextColor(0); y += 10
-        } else if (!gare.length) {
-          doc.setTextColor(110); doc.text('Nessuna gara per questa categoria.', 14, y + 2)
-          doc.setTextColor(0); y += 9
+          body.push(barra('Gare non caricabili: la richiesta al server e\' fallita, questo calendario non e\' completo', COLONNE, 'avviso'))
         } else {
-          // spazio minimo prima di una tabella: autotable va a capo da solo, ma iniziare una tabella
-          // a fondo pagina vuol dire stampare l'intestazione e una riga, poi saltare pagina — che in
-          // un documento da consegnare sembra un errore di stampa
-          respira(42)
-          doc.autoTable({
-            head: [['N.', 'Avversario', 'Data', 'Inizio', 'Appuntamento', 'Campo', 'Note']],
-            body: gare.map(g => [
-              g.numero || '–', g.avversario || 'Da definire', g.data ? formatoData(g.data) : '–',
-              g.ora || '–', g.ora_appuntamento || '–',
-              [g.campo, g.indirizzo].filter(Boolean).join(' — ') || '–', g.note || '–'
-            ]),
-            startY: y, theme: 'grid', margin: { left: 14, right: 14 },
-            styles: { fontSize: 8.5, cellPadding: 2.5 },
-            headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9 },
-            // le larghezze sono misurate sulle parole dell'intestazione: "Appuntamento" in una
-            // colonna da 24 mm si spezzava a meta' ("Appuntamen / to"), che e' il genere di dettaglio
-            // che fa sembrare il documento fatto a mano
-            columnStyles: {
-              0: { cellWidth: 10, halign: 'center' }, 2: { cellWidth: 22, halign: 'center' },
-              3: { cellWidth: 14, halign: 'center' }, 4: { cellWidth: 30, halign: 'center' }
-            }
-          })
-          y = doc.lastAutoTable.finalY + 6
+          const gare = tutte.filter(g => g.categoria_id && String(g.categoria_id) === String(s.catId))
+          if (!gare.length) {
+            body.push(barra('Nessuna gara per questa categoria', COLONNE, 'avviso'))
+          } else {
+            gare.forEach(g => body.push([
+              cellData(g.data, '-'), g.ora || '-', g.avversario || '-', g.ora_appuntamento || '-',
+              g.campo || '-', g.indirizzo || '-', testoMisterPdf(t), g.note || '-'
+            ]))
+          }
         }
+        tabella(headers, body, 260, {
+          0: { cellWidth: 26, halign: 'center' },
+          1: { cellWidth: 14, halign: 'center' },
+          2: { cellWidth: 'wrap' },
+          3: { cellWidth: 30, halign: 'center' },
+          4: { cellWidth: 26, halign: 'center' },
+          5: { cellWidth: 'wrap' },
+          6: { cellWidth: 38 },
+          7: { cellWidth: 'wrap' }
+        })
 
-        // il foglio giocatori di QUESTA categoria: e' il pezzo che all'organizzatore serve davvero
+        // Il foglio giocatori di QUESTA categoria in QUESTO torneo, subito sotto il suo calendario.
+        // Cognome e Nome bastano: data di nascita, CF e telefoni stanno nel foglio riservato di Liste
+        // Tornei dietro verifyGdpr, e un export che li stampasse sarebbe la scorciatoia per portarli
+        // fuori in un file che poi finisce all'organizzatore
         const foglio = foglioDi(t, s.catId)
         let giocatori = null
         if (foglio) {
           try { giocatori = (await getGiocatoriLista(foglio.id)).data || [] } catch (e) { giocatori = null }
         }
-        respira(24)
-        doc.setFontSize(9); doc.setFont(undefined, 'bold')
-        doc.text(foglio ? `Foglio giocatori — ${foglio.nome}` : 'Foglio giocatori assente', 14, y)
-        doc.setFont(undefined, 'normal'); y += 4
-
         if (!foglio) {
-          doc.setTextColor(180, 83, 9)
-          doc.text('Nessun foglio collegato a questa categoria nel torneo: senza questo documento l\'organizzatore non riceve i giocatori.', 14, y)
-          doc.setTextColor(0); y += 10
-        } else if (giocatori === null) {
-          doc.setTextColor(180, 83, 9)
-          doc.text('Elenco giocatori non disponibile: la richiesta alle API e\' fallita. Non consegnare questo documento.', 14, y)
-          doc.setTextColor(0); y += 10
-        } else if (!giocatori.length) {
-          doc.setTextColor(110); doc.text('Nessun giocatore scelto.', 14, y)
-          doc.setTextColor(0); y += 9
+          // Una tabella con le colonne Cognome/Nome vuote sarebbe peggio della frase che dichiara
+          // l'assenza: sembra un roster compilato male, e qui il roster non c'e' proprio
+          tabella([['Foglio giocatori assente']],
+                  [barra('Nessun foglio collegato a questa categoria nel torneo: senza questo documento l\'organizzatore non riceve i giocatori.', 1)],
+                  130, { 0: { cellWidth: 130 } })
         } else {
-          respira(42)
-          doc.autoTable({
-            head: [['N.', 'Cognome', 'Nome']],
-            body: giocatori.map((g, i) => [i + 1, g.cognome || '–', g.nome || '–']),
-            startY: y, theme: 'grid', margin: { left: 14, right: 14 }, tableWidth: 130,
-            styles: { fontSize: 9, cellPadding: 2.5 },
-            headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9 },
-            // larghezze fisse: lasciate a 'auto' le due colonne del nome si allargavano a tutta la
-            // tabella, e un foglio con le colonne larghissime sembra compilato a caso
-            columnStyles: { 0: { cellWidth: 12, halign: 'center' }, 1: { cellWidth: 60 }, 2: { cellWidth: 58 } },
-            alternateRowStyles: { fillColor: [245, 245, 245] }
-          })
-          y = doc.lastAutoTable.finalY + 10
+          const corpoFoglio = []
+          corpoFoglio.push(barra(`Foglio giocatori — ${foglio.nome}`, 3))
+          if (giocatori === null) {
+            corpoFoglio.push(barra('Elenco giocatori non caricato: la richiesta alle API e\' fallita. Non consegnare questo documento.', 3, 'avviso'))
+          } else if (!giocatori.length) {
+            corpoFoglio.push(barra('Foglio presente ma vuoto: nessun giocatore scelto', 3, 'avviso'))
+          } else {
+            giocatori.forEach((g, i) => corpoFoglio.push([String(i + 1), g.cognome || '-', g.nome || '-']))
+          }
+          tabella([['N.', 'Cognome', 'Nome']], corpoFoglio, 130,
+                  { 0: { cellWidth: 12, halign: 'center' }, 1: { cellWidth: 60 }, 2: { cellWidth: 58 } })
         }
 
-        // Le gare senza categoria, o con una categoria non piu' iscritta: una sezione loro non ce
-        // l'hanno, quindi qui tendono a sparire. Se l'export le tacesse, il documento consegnato
-        // all'organizzatore sarebbe un calendario che ne mostra sei su otto: si stampano, etichettate
-        const iscritte = new Set(categorieDel(t).map(c => String(c.id)))
-        const orfane = tutte === null ? []
-          : tutte.filter(g => !g.categoria_id || !iscritte.has(String(g.categoria_id)))
-        if (tutte !== null && orfane.length && !orfaneStampate.has(t.id)) {
-          orfaneStampate.add(t.id)
-          respira(24)
-          doc.setFontSize(9); doc.setFont(undefined, 'bold'); doc.setTextColor(180, 83, 9)
-          doc.text(`Gare senza categoria (${orfane.length}) — da assegnare a una categoria`, 14, y)
-          doc.setTextColor(0); doc.setFont(undefined, 'normal'); y += 4
-          respira(42)
-          doc.autoTable({
-            head: [['N.', 'Avversario', 'Data', 'Inizio', 'Campo']],
-            body: orfane.map(g => [
-              g.numero || '–', g.avversario || 'Da definire', g.data ? formatoData(g.data) : '–',
-              g.ora || '–', [g.campo, g.indirizzo].filter(Boolean).join(' — ') || '–'
-            ]),
-            startY: y, theme: 'grid', margin: { left: 14, right: 14 }, tableWidth: 200,
-            styles: { fontSize: 8.5, cellPadding: 2.5 },
-            headStyles: { fillColor: [180, 83, 9], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 9 },
-            columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 2: { cellWidth: 24, halign: 'center' },
-                            3: { cellWidth: 16, halign: 'center' } }
-          })
-          y = doc.lastAutoTable.finalY + 10
+        // Testata ambra, non rossa: queste non sono appuntamenti, sono un buco da riempire prima di
+        // consegnare il calendario
+        if (tutte !== null && !orfaneStampate.has(t.id)) {
+          const iscritte = new Set(categorieDel(t).map(c => String(c.id)))
+          const orfane = tutte.filter(g => !g.categoria_id || !iscritte.has(String(g.categoria_id)))
+          if (orfane.length) {
+            orfaneStampate.add(t.id)
+            tabella(
+              [[`Gare senza categoria (${orfane.length}) — da assegnare a una categoria`, 'Avversario', 'Data', 'Inizio', 'Campo']],
+              orfane.map(g => [
+                g.numero ? 'Gara ' + g.numero : '-', g.avversario || 'Da definire', cellData(g.data, '-'),
+                g.ora || '-', [g.campo, g.indirizzo].filter(Boolean).join(' — ') || '-'
+              ]),
+              200,
+              { 0: { cellWidth: 56 }, 1: { cellWidth: 'wrap' },
+                2: { cellWidth: 26, halign: 'center' }, 3: { cellWidth: 16, halign: 'center' },
+                4: { cellWidth: 'wrap' } },
+              { fillColor: AMBRA_THOF, textColor: 255, fontStyle: 'bold', halign: 'left', fontSize: 9 }
+            )
+          }
         }
       }
     }
 
     // Nomi file diversi per i quattro livelli, perche' finiscono in una chat e "tornei.pdf" non dice
-    // cosa c'e' dentro. I caratteri illegali li toglie sanitizeFilename dentro saveOrSharePdf; qui
-    // si tolgono solo gli spazi e la punteggiatura, che rendono il nome illeggibile
+    // cosa c'e' dentro. Con la societa' in coda: due societa' che si scambiano i calendari non devono
+    // ritrovarsi due file che si chiamano uguale. Gli altri caratteri illegali li toglie
+    // sanitizeFilename dentro saveOrSharePdf
     const pulito = s => String(s || '').replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase()
+    const suffissoSocieta = nomeSocieta ? '_' + pulito(nomeSocieta) : ''
     const nomeFile = opts.nomeFile || (torneo
-      ? `tornei_${pulito(torneo.nome)}_${pulito(`${sez.anno || ''} ${sez.nome || ''}`)}.pdf`
-      : sez ? `tornei_${pulito(`${sez.anno || ''} ${sez.nome || ''}`)}.pdf`
-            : 'tornei_tutte_categorie.pdf')
-    const titolo = opts.titolo || (torneo ? `${torneo.nome} — ${sez.titolo}`
-                                           : sez ? `Tornei ${sez.titolo}` : 'Tornei — tutte le categorie')
+      ? `tornei_${pulito(torneo.nome)}_${pulito(`${sez.anno || ''} ${sez.nome || ''}`)}${suffissoSocieta}.pdf`
+      : sez ? `tornei_${pulito(`${sez.anno || ''} ${sez.nome || ''}`)}${suffissoSocieta}.pdf`
+            : `tornei_tutte_categorie${suffissoSocieta}.pdf`)
     await saveOrSharePdf(doc, nomeFile, titolo)
     conferma.value = 'PDF generato'
   } catch (e) {
@@ -1317,7 +1331,7 @@ async function esportaTutti() {
   await esportaPDF(null, null, {
     sezioni: costruisciSezioni(lista),
     senzaFiltri: true,
-    titolo: `Tornei${soc ? ' — ' + soc : ''} — tutti i tornei`,
+    titoloBase: 'Tutti i tornei della società',
     nomeFile: soc ? `tornei_societa_${String(soc).replace(/[^\w]+/g, '_').toLowerCase()}.pdf`
                   : 'tornei_societa.pdf',
     sottotitolo: `${lista.length} ${lista.length === 1 ? 'torneo' : 'tornei'} di tutta la societa'`
@@ -1331,7 +1345,7 @@ async function esportaTutti() {
 async function esportaSelezione() {
   await esportaPDF(null, null, {
     sezioni: sezioniPerCategoria.value,
-    titolo: 'Tornei — selezione a schermo',
+    titoloBase: 'Tornei (selezione a schermo)',
     nomeFile: 'tornei_selezione.pdf'
   })
 }
