@@ -42,6 +42,28 @@ u_raw=$(timeout 200 ssh -i ~/.ssh/id_ed25519_dev root@192.168.178.133 \
      < "$SH/test_orario_presentazione_unit.py" 2>&1)
 aggiungi "test_orario_presentazione_unit.py" "$u_raw"
 
+# Controllo residui: ogni test pulisce da solo, ma le pulizie cercano le proprie chiavi (di
+# solito LIKE 'test%') e non vedono il resto. Una riga orfana in login_bloccaggi lasciata da un
+# sondaggio lanciato a mano, non da un file della suite, era rimasta li' invisibile perche' nessuno
+# la cercava. Contare gli orfani, non solo i 'test%', e' cio' che rende questo check utile.
+residui=$(timeout 200 ssh -i ~/.ssh/id_ed25519_dev root@192.168.178.133 \
+     'docker exec -i $(docker ps -qf name=db) psql -U registro_user -d registro -tA -f -' \
+     <<'SQL' 2>&1 | tr -d '\r' | tail -1
+SELECT 'residui='||(SELECT count(*) FROM utenti WHERE username LIKE 'test%')
+                ||'/'||(SELECT count(*) FROM login_bloccaggi WHERE chiave LIKE 'test%')
+                ||'/'||(SELECT count(*) FROM login_bloccaggi lb
+                        WHERE NOT EXISTS (SELECT 1 FROM utenti u WHERE u.username = lb.chiave));
+SQL
+)
+if [ "$residui" = "residui=0/0/0" ]; then
+  riga "residui nel DB (utenti/blocchi/orfani)" "nessuno"
+else
+  # i numeri sono utenti/bloccaggi-test/orfani: stamparli, perche' "residui" senza dire quali
+  # obbligherebbe chi legge a rincorrere il DB per capire di chi sono
+  riga "residui nel DB (utenti/blocchi/orfani)" "$residui  <- da pulire"
+  rotti=$((rotti + 1))
+fi
+
 echo "  ------------------------------------------------------------------"
-printf "  TOTALE: %s asserzioni verdi, %s rosse, %s script senza riassunto\n" "$tot" "$ko" "$rotti"
+printf "  TOTALE: %s asserzioni verdi, %s rosse, %s problemi\n" "$tot" "$ko" "$rotti"
 [ "$ko" -eq 0 ] && [ "$rotti" -eq 0 ]
