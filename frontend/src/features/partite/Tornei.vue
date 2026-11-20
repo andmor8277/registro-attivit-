@@ -564,15 +564,24 @@ const misterDisponibili = computed(() => {
     .sort((a, b) => String(a.cognome || '').localeCompare(String(b.cognome || '')))
 })
 
+// Cosa nominare nel suggerimento: in modifica la sezione da cui hai aperto il modal, in creazione
+// le categorie spuntate. Dire "le persone delle categorie iscritte" quando ne hai spuntata una sola
+// non fa capire da dove arriva la lista, e chi crea il torneo non ha modo di accorgersi se il menu
+// sta guardando la categoria sbagliata
+const doveMenuTesto = computed(() => {
+  if (etichettaCategoriaLavoro.value) return etichettaCategoriaLavoro.value
+  return categorieDelModal.value
+    .map(c => etichettaCategoria((categorie.value || []).find(x => String(x.id) === String(c.id)) || c))
+    .join(' e ')
+})
+
 const suggerimentoMister = computed(() => {
   if (misterScelta.value === '__manuale__') return 'Verrà stampato nel PDF così com\'è scritto.'
-  const dove = etichettaCategoriaLavoro.value
-  if (misterDisponibili.value.length) {
-    return dove ? `I mister e gli amministrativi di ${dove}.`
-                : 'Le persone delle categorie iscritte al torneo.'
-  }
-  return dove ? `Nessun responsabile censito per ${dove}: scegli "Inserisci manualmente".`
-              : 'Nessun responsabile censito per queste categorie: scegli "Inserisci manualmente".'
+  // Senza categorie non c'e' nessun menu da offrire, e dirlo e' diverso da "non ce ne sono": qui la
+  // lista e' vuota perche' non hai ancora detto per chi la vuoi
+  if (!categorieDelModal.value.length) return 'Spunta una categoria: il menu offre i mister di quella categoria.'
+  if (misterDisponibili.value.length) return `I mister e gli amministrativi di ${doveMenuTesto.value}.`
+  return `Nessun responsabile censito per ${doveMenuTesto.value}: scegli "Inserisci manualmente".`
 })
 
 // Il mister salvato puo' non essere piu' tra i responsabili delle categorie: cambia l'assegnazione
@@ -592,9 +601,7 @@ const misterFuoriLista = computed(() => {
   // Il motivo va detto bene: con il menu ristretto alla sezione, un mister degli Esordienti aperto
   // dalla sezione dei Pulcini NON e' "un responsabile che non c'e' piu'", e' uno di un'altra
   // categoria. Scriverlo male fa pensare a un dato perso e induce a sostituirlo
-  const dove = etichettaCategoriaLavoro.value
-  return { id, nome, motivo: dove ? `non e' tra i responsabili di ${dove}`
-                                  : "non piu' tra i responsabili di queste categorie" }
+  return { id, nome, motivo: `non e' tra i responsabili di ${doveMenuTesto.value}` }
 })
 
 async function caricaMister(ids) {

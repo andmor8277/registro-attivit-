@@ -602,6 +602,67 @@ const LEGGI = `(() => {
   ck('Annulla chiude il modal senza salvare niente',
      await evalJS(`!!document.querySelector('.modal')`), false)
 
+  console.log('--- il menu del Mister nel "Nuovo torneo": segue le categorie che spunti ---')
+  // La richiesta del titolare: "quando aggiungi un torneo per la categoria 2016 i mister che devono
+  // comparire nel menu devono essere quelli dei 2016". Qui si misura con gli id letti dall'API, non
+  // con i nomi che ci si aspetta: e' l'unico modo di accorgersi di una categoria in piu' nel menu
+  const MENU_CREA = `(() => {
+    const m = [...document.querySelectorAll('.modal')].find(x => /Nuovo torneo/.test(x.innerText))
+    if (!m) return {nessuno: true}
+    const sel = [...m.querySelectorAll('select')].find(s => [...s.options].some(o => o.value === '__manuale__'))
+    return {
+      scelte: [...m.querySelectorAll('.scelta-categoria')].filter(l => l.querySelector('input').checked)
+              .map(l => l.innerText.replace(/\\s+/g,' ').trim()),
+      suggerimento: (sel?.closest('.form-group')?.querySelector('.suggerimento')?.innerText || '').replace(/\\s+/g,' ').trim(),
+      valori: sel ? [...sel.options].map(o => o.value).filter(v => v && v !== '__manuale__') : []
+    }
+  })()`
+  const spuntaCat = (catId, on) => `(() => {
+    const m = [...document.querySelectorAll('.modal')].find(x => /Nuovo torneo/.test(x.innerText))
+    const l = [...m.querySelectorAll('.scelta-categoria')].find(x => x.querySelector('input').value === ${JSON.stringify(String(catId))})
+    if (!l) return 'NON TROVATA'
+    const i = l.querySelector('input'); i.checked = ${on ? 'true' : 'false'}
+    i.dispatchEvent(new Event('change', { bubbles: true }))
+    return i.checked
+  })()`
+  const soloId = v => (v || []).filter(x => /^\d+$/.test(String(x))).map(String).sort()
+  const union = (...liste) => [...new Set([].concat(...liste))].sort()
+
+  await clickReale(`document.querySelector('.page-header .btn-primary')`)
+  await sleep(900)
+  const creaVuoto = await evalJS(MENU_CREA)
+  console.log('   nuovo torneo, nessuna categoria:', JSON.stringify(creaVuoto))
+  ck('senza categorie spuntate il menu non offre persone, e il perche\' lo dice',
+     creaVuoto.suggerimento, 'Spunta una categoria: il menu offre i mister di quella categoria.')
+  ck('e le uniche due voci restano "da assegnare" e "manuale"', soloId(creaVuoto.valori).length, 0)
+
+  console.log('   spunto 2016 - Pulcini:', await evalJS(spuntaCat(CAT_PULCINI, true)))
+  await sleep(1300)
+  const crea2016 = await evalJS(MENU_CREA)
+  ck('spuntati i Pulcini, il suggerimento nomina loro',
+     /2016 - Pulcini/.test(crea2016.suggerimento || '') && !/2015/.test(crea2016.suggerimento || ''), true)
+  ck('e il menu offre ESATTAMENTE i responsabili dei 2016',
+     soloId(crea2016.valori).join(','), respPulcini.join(','))
+
+  console.log('   spunto anche 2015 - Esordienti:', await evalJS(spuntaCat(CAT_ESORDIENTI, true)))
+  await sleep(1300)
+  const creaDue = await evalJS(MENU_CREA)
+  ck('con due categorie spuntate il suggerimento le nomina entrambe',
+     /2016 - Pulcini/.test(creaDue.suggerimento || '') && /2015 - Esordienti/.test(creaDue.suggerimento || ''), true)
+  ck('e il menu e\' l\'unione dei responsabili delle due, senza duplicati',
+     soloId(creaDue.valori).join(','), union(respPulcini, respEsordienti).join(','))
+
+  console.log('   tolgo 2015 - Esordienti:', await evalJS(spuntaCat(CAT_ESORDIENTI, false)))
+  await sleep(1300)
+  const creaDiNuovo = await evalJS(MENU_CREA)
+  ck('deselezionandola il menu torna solo i 2016 (segue le spunte, non e\' un colpo unico)',
+     soloId(creaDiNuovo.valori).join(','), respPulcini.join(','))
+
+  await clickReale(`[...document.querySelectorAll('.modal')].find(x => /Nuovo torneo/.test(x.innerText))` +
+                   `.querySelector('.modal-footer .btn-secondary')`)
+  await sleep(600)
+  ck('Annulla chiude anche questo modal', await evalJS(`!!document.querySelector('.modal')`), false)
+
   console.log('--- il filtro categoria: lo schermo si restringe, il documento della societa\' no ---')
   // Il filtro in alto filtra i TORNEI (EXISTS su tornei_categorie), ma il backend restituisce ogni
   // torneo con TUTTE le sue categorie: se la pagina le dipinge tutte, scegliendo "2016 - Pulcini"
