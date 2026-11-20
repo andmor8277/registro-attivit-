@@ -30,6 +30,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 ./scripts/ops/verifica_worker_riavvio.sh dev [drop] [cicli]  # Riavvia il backend N volte (con drop delle tabelle tornei) e asserisce che nessun worker muore: e' la prova della corsa di create_all
 ./scripts/ops/gen_passphrase.sh     # Passphrase comunicabile per DEFAULT_PASSWORD (5 parole + 3 cifre, ~44 bit)
 ./scripts/ops/confronta_env.sh      # Confronta i segreti DEV<->PROD per hash, senza stamparli
+./scripts/ops/silenzia_mail_prove.sh dev|prod [--dry-run]  # Fa scartare a postfix i destinatari di prova (x.local, test.local, example.com) invece di smistarli alla Gmail: senza, ogni suite DEV lascia due bounce "Indirizzo non trovato" nella casella del titolare
 ./scripts/ops/run_suite_dev.sh      # Esegue tutta la suite DEV e somma le asserzioni
 ```
 
@@ -243,4 +244,4 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - **Verifica manuale o log** per cio' che i test non coprono (UI, accesso Google):
   - Prod: `ssh root@192.168.178.132 "cd /opt/registro_presenze && docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f"`
   - Dev: `ssh -i ~/.ssh/id_ed25519_dev root@192.168.178.133 "cd /opt/registro_presenze && docker compose logs -f"`
-  - postfix su DEV **non** scrive in `/var/log/mail.log`: registra in journald (`journalctl | grep postfix`). Per una mail inviata cercare `status=sent`
+  - postfix su DEV **non** scrive in `/var/log/mail.log`: registra in journald (`journalctl | grep postfix`). Per una mail inviata cercare `status=sent` — **ma non per i domini di prova**: `x.local`, `test.local` e `example.com` sono messi in `discard:` da `scripts/ops/silenzia_mail_prove.sh` e registrano anch'essi `status=sent`, con `relay=none` e `postfix/discard` invece di `postfix/smtp`. La riga giusta da guardare e' quella: `relay=smtp.gmail.com` vuol dire che la mail e' davvero uscita, `relay=none` vuol dire che e' stata buttata via. **Non rimuovere quella regola pensando a un avanzo**: prima di essa ogni esecuzione della suite DEV smistava due destinatari inesistenti alla Gmail del titolare, che si ritrovava in casella due bounce "Indirizzo non trovato / NXDOMAIN" (24 in quattordici giorni, piu' due su PROD). Il backend consegna al postfix locale e alza `email_inviata` appena postfix **accetta**: il relay a Gmail e' un passo successivo, tutto di postfix, quindi silenziarlo non toglie niente a cio' che i test misurano. La prova end-to-end di credenziali Gmail e relay va fatta con un invio **voluto** a un indirizzo reale che il titolare legge, non di sfuggita dietro alla suite
