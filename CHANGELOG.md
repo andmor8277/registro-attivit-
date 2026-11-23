@@ -372,3 +372,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Tornei suddivisi per categorie iscritte, con un foglio giocatori per categoria
+
+## [7.9.0] - 2026-11-23
+
+### Added
+- Liste Tornei e Convocazioni Tornei anche nella barra laterale e nel menu del telefono
