@@ -18,44 +18,57 @@ def get_societa_filter(current_user: Utente):
     return current_user.societa_id
 
 
-# BUCO NOTO, non risolto qui e da decidere col titolare.
-# Le scritture del percorso WEEKEND (`crea`, `aggiorna`, `elimina`) hanno come unica guardia
-# `get_current_user` + il confronto su `societa_id`: chiunque abbia un token valido puo' creare,
-# riscrivere o cancellare una convocazione di campionato, inclusi `dirigente`, `scouting` e `infermeria`,
-# che nel resto dell'app sono ruoli di sola lettura. E' la stessa classe di buco chiuso nel 2026-11 su
-# Liste Tornei, dove bastava un token per riscrivere il foglio consegnato all'organizzatore.
+# CHI PUO' SCRIVERE LE CONVOCAZIONI (deciso dal titolare il 23/11/2026).
 #
-# Non l'ho chiuso in questa modifica perche' cambiare chi puo' scrivere su una funzione che il titolare
-# usa ogni settimana e' una decisione sua, non una correzione ovvia: se oggi un dirigente prepara le
-# convocazioni, mettere il gate gli toglie un lavoro che sta facendo. Le convocazioni di TORNEO, che
-# invece nascono oggi, quel gate ce l'hanno gia' (_esigi_gestore_convocazioni).
+# Le scritture — `crea`, `aggiorna`, `elimina`, per ENTRAMBI i percorsi (weekend e torneo) — sono
+# riservate a `RUOLI_GESTIONE_CONVOCAZIONI` + admin. Fino al 23/11 le scritture del percorso WEEKEND
+# avevano come unica guardia `get_current_user` + il confronto su `societa_id`: chiunque avesse un token
+# valido poteva creare, riscrivere o cancellare una convocazione di campionato, inclusi `dirigente`,
+# `scouting` e `infermeria`, che nel resto dell'app sono ruoli di sola lettura. E' la stessa classe di
+# buco chiuso nel 2026-11 su Liste Tornei, dove bastava un token per riscrivere il foglio consegnato
+# all'organizzatore.
 #
-# Il frontend non compensa: la pagina Convocazioni ha UNA sola guardia di ruolo (`puoScouting`, usata per
-# il solo pulsante Scouting) e la rotta `/convocazioni/:id` in `core/router.js` non ha `roles`. La
-# separazione reale sta nelle card di Scelta.vue e nel menu di App.vue, cioe' nella visibilita', non nel
-# permesso.
+# Cosa dicevano i dati prima di stringere (PROD, 23/11/2026), perche' chiudere un gate su una funzione
+# usata ogni settimana senza guardarli e' il modo di togliere il lavoro a qualcuno:
+#   - cat 19 Pulcini: 11 fogli, l'ultimo del 21/11 -> flusso settimanale vivo, 3 mister assegnati
+#   - cat 26 Esordienti 2015: 3 fogli, ultimo 21/11 -> vivo, 2 mister assegnati
+#   - cat 1 Esordienti 2014: 1 foglio del 28/03, stagione finita, ZERO mister assegnati -> quel foglio
+#     lo potra' modificare solo un admin. Accettato: e' una riga di otto mesi fa, non un flusso attivo
+# Le categorie vive hanno tutte un mister, quindi il lavoro del sabato non si ferma.
+#
+# APERTURA NOTA, da decidere col titolare: `segreteria` (un utente su PROD, stefaniafiorini8@gmail.com,
+# SENZA nessuna categoria assegnata) puo' scrivere le Liste Tornei perche' `RUOLI_GESTIONE_LISTA` lo
+# include, ma NON puo' scrivere le convocazioni, perche' qui l'elenco e' solo `mister`. Le due liste sono
+# due documenti che escono dall'app, e hanno due elenchi di ruoli diversi. Se un giorno la segreteria
+# dovesse preparare anche le convocazioni, la modifica e' UNA parola in
+# `RUOLI_GESTIONE_CONVOCAZIONI` — che e' l'unica fonte, letta sia dal percorso torneo sia da quello
+# weekend, apposta per non far divergere i due.
+#
+# Il frontend NON compensa e non ha mai compensato: la pagina Convocazioni ha UNA sola guardia di ruolo
+# (`puoScouting`, per il solo pulsante Scouting) e la rotta `/convocazioni/:id` in `core/router.js` non
+# ha `roles`. La separazione reale stava nelle card di Scelta.vue e nel menu di App.vue, cioe' nella
+# visibilita', non nel permesso. Il gate vero e' quindi solo quello del backend.
 
 
-# Chi puo' CONVOCARE. Non e' il gate delle scritture di convocazioni del weekend, che oggi e' aperto a
-# chiunque abbia un token (vedi il commento su get_gestore_convocazioni): questo governa le convocazioni
-# delle gare di TORNEO, nate con "Convocazioni Tornei", e la pagina da cui si fanno e' in sola lettura
-# per i non-admin. Il mister convoca, l'admin puo' tutto; dirigente, scouting e infermeria leggono.
-# E' la stessa scelta gia' presa per le Liste Tornei (RUOLI_GESTIONE_LISTA): chi mette i giocatori in un
-# documento che esce dall'app e' uno staff preciso, non un ruolo qualsiasi.
+# Chi puo' CONVOCARE. Unica fonte, letta sia dal percorso TORNEO sia da quello WEEKEND: due elenchi
+# separati divergono il giorno che si aggiunge un ruolo, e qui la conseguenza e' che un ruolo scrive le
+# convocazioni del sabato ma non quelle del torneo. Il mister convoca, l'admin puo' tutto; dirigente,
+# scouting e infermeria leggono. `segreteria` NON c'e' (nelle Liste Tornei invece si'): vedi l'apertura
+# nota in cima al file.
 RUOLI_GESTIONE_CONVOCAZIONI = ("mister",)
 
 
 def _esigi_gestore_convocazioni(current_user: Utente):
-    """Versione funzione, non dependency: il percorso torneo la invoca dentro il ramo, perche' lo stesso
-    endpoint serve anche il weekend e il gate del weekend non si tocca (vedi il BUCO NOTO in cima al
-    file: e' noto e accettato in attesa di una decisione, non una distrazione)."""
+    """Versione funzione, non dependency: la invocano entrambi i percorsi, e il percorso torneo parte
+    dentro un ramo di `crea`/`aggiorna` che serve anche il weekend. Il messaggio non dice "torneo" perche'
+    lo stesso controllo vale per il foglio di campionato."""
     if current_user.is_admin or current_user.is_super_admin:
         return current_user
     if current_user.ruolo in RUOLI_GESTIONE_CONVOCAZIONI:
         return current_user
     raise HTTPException(
         status_code=403,
-        detail="Solo il mister della categoria o un amministratore possono convocare per una gara di torneo")
+        detail="Solo il mister della categoria o un amministratore possono modificare le convocazioni")
 
 
 def get_gestore_convocazioni(current_user: Utente = Depends(get_current_user)):
@@ -446,6 +459,13 @@ def crea(data: ConvocazioneIn, db: Session = Depends(get_db), current_user: Uten
         _esigi_gestore_convocazioni(current_user)
         return _crea_convocazione_torneo(data, db, current_user)
 
+    # Il percorso WEEKEND ha lo STESSO gate del torneo. Prima era `get_current_user` e basta: chiunque
+    # avesse un token valido — dirigente, scouting, infermeria, che nel resto dell'app leggono e non
+    # scrivono — poteva creare, riscrivere o cancellare una convocazione di campionato. E' la stessa
+    # classe di buco chiuso nel 2026-11 su Liste Tornei, dove bastava un token per riscrivere il foglio
+    # consegnato all'organizzatore.
+    _esigi_gestore_convocazioni(current_user)
+
     from ..models import Categoria
     from sqlalchemy import text
     cat = db.query(Categoria).filter(Categoria.id == data.categoria_id).first()
@@ -617,6 +637,11 @@ def aggiorna(cid: int, data: ConvocazioneIn, db: Session = Depends(get_db), curr
         _esigi_gestore_convocazioni(current_user)
         return _aggiorna_convocazione_torneo(c, data, db, current_user)
 
+    # Idem crea(): anche il percorso weekend exige il gate. Il controllo di societa' e' gia' venuto
+    # sopra, quindi un utente di un'altra societa' riceve il suo 403 "Non autorizzato" senza sapere
+    # niente dei ruoli che possono toccare il foglio.
+    _esigi_gestore_convocazioni(current_user)
+
     weekend_id = data.weekend_id or c.weekend_id
     if not weekend_id and data.data_inizio and c.societa_id:
         w_row = db.execute(text("""
@@ -782,8 +807,10 @@ def elimina(cid: int, db: Session = Depends(get_db), current_user=Depends(get_cu
     # bastasse un DELETE per vanificarlo. Il controllo di societa' viene prima di proposito, cosi' un
     # utente di un'altra societa' riceve il 403 "non autorizzato" e non viene informato sull'esistenza
     # del foglio o sui ruoli che possono toccarlo.
-    if c.tornei_gara_id is not None:
-        _esigi_gestore_convocazioni(current_user)
+    #
+    # Vale per ENTRAMBI i percorsi, non solo il torneo: prima il gate scattava solo su
+    # `c.tornei_gara_id IS NOT NULL`, quindi un dirigente poteva cancellare un foglio di campionato.
+    _esigi_gestore_convocazioni(current_user)
     gare = db.query(ConvocazioneGara).filter(ConvocazioneGara.convocazione_id == cid).all()
     for g in gare:
         db.query(ConvocazioneGiocatore).filter(ConvocazioneGiocatore.gara_id == g.id).delete()

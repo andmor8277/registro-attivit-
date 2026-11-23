@@ -162,13 +162,19 @@ q "INSERT INTO utenti (username,password_hash,societa_id,is_admin,is_super_admin
      ('${U}_mister',    '$HASH', $SOC,      0, 0,'mister',    'Mario', '${P}MISTER'),
      ('${U}_dirigente', '$HASH', $SOC,      0, 0,'dirigente', 'Luigi', '${P}DIRIG'),
      ('${U}_scouting',  '$HASH', $SOC,      0, 0,'scouting',  'Anna',  '${P}SCOUT'),
+     ('${U}_admin',     '$HASH', $SOC,      1, 0,'admin',     'Carlo', '${P}AMMIN'),
      ('${U}_altri',     '$HASH', $SOC_ALTRA,0, 0,'mister',    'Paolo', '${P}ALTRI');" >/dev/null
 q "INSERT INTO utente_categorie (utente_id, categoria_id, ruolo)
    SELECT id, $CA, 'mister' FROM utenti WHERE username='${U}_mister';" >/dev/null
 
 T_MISTER=$(tok "${U}_mister" "$PW"); T_DIR=$(tok "${U}_dirigente" "$PW")
 T_SCOUT=$(tok "${U}_scouting" "$PW"); T_ALTRI=$(tok "${U}_altri" "$PW")
-for t in T_MISTER T_DIR T_SCOUT T_ALTRI; do
+# Serve un token admin perche' il gate deve stringere sui ruoli di sola lettura, non sul resto del mondo:
+# senza questo, un gate che blocca TUTTI sarebbe verde lo stesso. E serve un token VERO: con $T_ADMIN
+# vuoto il DELETE avrebbe restituito 401 e l'asserzione sarebbe stata rossa per il prerequisito, non per
+# la regola.
+T_ADMIN=$(tok "${U}_admin" "$PW")
+for t in T_MISTER T_DIR T_SCOUT T_ALTRI T_ADMIN; do
   [ -z "${!t}" ] && { echo "  FAIL prerequisito: token $t mancante (429 o credenziali): il test non puo' misurare niente"; echo "  0 passati, 1 falliti (prerequisiti)"; exit 1; }
 done
 echo "  torneo $TID | gare $GA/$GN/$GC | categorie $CA/$CB | ragazzi $G1/$G2/$GB/$GL"
@@ -431,6 +437,39 @@ ck "e compare nella lista del weekend" \
    "$(contiene_id "$D/convocazioni/?categoria_id=$CA" "$T_MISTER" "$CWID")" "si"
 ck "e ha la sua partita agganciata (il flusso vecchio deve continuare a trovarla)" \
    "$(q "SELECT coalesce(partita_id::text,'NULL') FROM convocazione_gare WHERE convocazione_id=$CWID")" "$PID"
+
+echo
+echo "=== 15. il gate vale ANCHE per il weekend (buco chiuso il 23/11/2026) ==="
+# Fino al 23/11 le scritture del percorso weekend avevano solo `get_current_user`: chiunque avesse un
+# token — dirigente, scouting, infermeria, ruoli che nel resto dell'app leggono e basta — poteva creare,
+# riscrivere o CANCELLARE un foglio di campionato. Il gate del torneo c'era, quello del weekend no, e la
+# cosa sembrava a posto perche' la pagina Convocazioni non mostra il pulsante a chi non deve usarlo: ma
+# la visibilita' non e' un permesso. Qui si misura il permesso.
+RC=$(post_cod "$D/convocazioni/" "$WBODY" "$T_DIR")
+ck "il DIRIGENTE non puo' creare una convocazione del weekend" "$RC" "403"
+RC=$(post_cod "$D/convocazioni/" "$WBODY" "$T_SCOUT")
+ck "lo SCOUTING non puo' crearla" "$RC" "403"
+RC=$(post_cod "$D/convocazioni/" "$WBODY" "$T_ALTRI")
+ck "un mister di UN'ALTRA SOCIETA' non puo' crearla" "$RC" "403"
+ck "il DIRIGENTE non puo' riscrivere il foglio del mister" \
+   "$(put_cod "$D/convocazioni/$CWID" "{\"categoria_id\":$CA,\"weekend_id\":$WID2,\"data_inizio\":\"2026-12-27\",\"note\":\"manomessa\",\"gare\":[]}" "$T_DIR")" "403"
+ck "e la sua nota non e' arrivata a terra" \
+   "$(q "SELECT note FROM convocazioni WHERE id=$CWID")" "weekend"
+# E' l'asserzione sul buco vero: prima il DELETE chiedeva il gate SOLO se il foglio era di torneo, quindi
+# un dirigente cancellava un foglio di campionato con un DELETE secco.
+ck "il DIRIGENTE non puo' cancellare un foglio di CAMPIONATO" \
+   "$(del_cod "$D/convocazioni/$CWID" "$T_DIR")" "403"
+ck "lo SCOUTING non puo' cancellarlo" "$(del_cod "$D/convocazioni/$CWID" "$T_SCOUT")" "403"
+ck "e dopo tutti quei tentativi il foglio esiste ancora" \
+   "$(q "SELECT count(*) FROM convocazioni WHERE id=$CWID")" "1"
+ck "con la sua gara e il suo convocato intatti" \
+   "$(q "SELECT count(*) FROM convocazione_giocatori WHERE gara_id=(SELECT id FROM convocazione_gare WHERE convocazione_id=$CWID)")" "1"
+# Il gate non deve stringere troppo: se il mister non potesse piu' salvare il proprio foglio, questa
+# sezione sarebbe rossa e il sabato si fermerebbe.
+ck "il MISTER invece il suo foglio del weekend puo' ancora modificarlo" \
+   "$(put_cod "$D/convocazioni/$CWID" "{\"categoria_id\":$CA,\"weekend_id\":$WID2,\"data_inizio\":\"2026-12-27\",\"note\":\"weekend\",\"gare\":[{\"numero\":1,\"gara\":\"${P}PartitaWeekend\",\"data\":\"2026-12-27\",\"campo\":\"Campo Weekend Test\",\"giocatori\":[{\"persona_id\":$G1,\"posizione\":1}]}]}" "$T_MISTER")" "200"
+ck "e l'admin puo' cancellarlo" "$(del_cod "$D/convocazioni/$CWID" "$T_ADMIN")" "200"
+ck "  cancellato davvero" "$(q "SELECT count(*) FROM convocazioni WHERE id=$CWID")" "0"
 
 echo
 echo "=== pulizia ==="
