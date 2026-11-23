@@ -28,6 +28,7 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 ./scripts/ops/ruota_segreti.sh dev|prod  # Ruota SECRET_KEY + DEFAULT_PASSWORD con prova prima/dopo (vuole il backup del .env gia' fatto)
 ./scripts/ops/cifra_cf.sh dev|prod [--applica]  # Cifra i CF rimasti in chiaro su persone: backup verificato -> dry-run -> (solo con --applica) scrittura -> test. Senz'altro non scrive nulla
 ./scripts/ops/set_scadenza_certificati.sh dev|prod <cat_id> <AAAA-MM-GG> <nome> <anno> [--applica]  # Imposta scadenza_certificato su TUTTE le persone di una categoria (la UI ne modifica una alla volta). Nome e anno sono obbligatori e devono corrispondere: su PROD ci sono TRE "Esordienti". Stesso schema di cifra_cf.sh
+./scripts/ops/verifica_deploy.sh "AAAA-MM-GG HH:MM:SS UTC"  # Verifica POST-DEPLOY su PROD: immagine ricostruita, container ripartiti, 4 worker vivi, stderr pulito, smoke HTTP, DB popolato. Da lanciare SEMPRE dopo ./deploy.sh; senza l'ora del deploy i controlli temporali vengono dichiarati saltati, non verdi
 ./scripts/ops/verifica_worker_riavvio.sh dev [drop] [cicli]  # Riavvia il backend N volte (con drop delle tabelle tornei) e asserisce che nessun worker muore: e' la prova della corsa di create_all
 ./scripts/ops/gen_passphrase.sh     # Passphrase comunicabile per DEFAULT_PASSWORD (5 parole + 3 cifre, ~44 bit)
 ./scripts/ops/confronta_env.sh      # Confronta i segreti DEV<->PROD per hash, senza stamparli
@@ -235,6 +236,27 @@ Vue 3 + Vite (frontend) | FastAPI + SQLAlchemy (backend) | PostgreSQL 16 | Docke
 - Backend port: `0.0.0.0:8000:8000` — must be `0.0.0.0`.
 - Frontend changes require **full rebuild** (`docker compose build --no-cache`).
 - Version Checker automatico attivo (`versionCheck.js` + `version.json` generato da Vite): ricarica automatica al cambio versione senza bisogno di refresh manuale né Service Worker (i vecchi SW vengono deregistrati automaticamente).
+
+### ⚠️ Verifica post-deploy: OBBLIGATORIA a ogni deploy, la eseguo io, senza che nessuno la chieda
+**Si esegue con un comando: `scripts/ops/verifica_deploy.sh "AAAA-MM-GG HH:MM:SS UTC"`** (l'ora vera del deploy come primo argomento). Copre i punti 1-6 qui sotto e riporta i numeri; i punti 7 e 8 restano a me perche' nessuno script puo' sostituirli. **Un deploy non si dichiara riuscito finche' quel comando non dice `0 falliti`.**
+**Il motivo per cui questa verifica esiste: su PROD i file a disco e il codice in esecuzione sono due cose diverse.** Il codice che risponde alle richieste sta nell'**immagine Docker** costruita al deploy; `git log` dice cosa c'è su disco. Un `docker compose up -d` senza `build` rialza i container **dall'immagine vecchia**: uptime freschissimo, `RestartCount=0`, log puliti, sito che risponde 200 — e vecchie righe in produzione. Tutto sano, deploy non avvenuto. E' la classe di difetti "plausibile e falso" contro cui questo progetto si difende, ed è il motivo per cui nessun singolo controllo qui sotto basta da solo.
+
+**Prima di deployare: annotare l'ora** (`date -u` sul server). Senza un momento di riferimento confrontabile, "Up 29 minutes" non prova niente.
+
+Poi, **tutti** questi controlli, e riporto i numeri veri invece di dire "ok":
+
+1. **Cosa c'è su disco**: `cd /opt/registro_presenze && git rev-parse --short HEAD` → deve essere il commit deployato. `git status --porcelain` → vuoto. *Prova solo il disco.*
+2. **L'immagine è stata davvero ricostruita** — il controllo che conta, quello che distingue un deploy vero da un `up -d`: `docker inspect --format '{{.Created}}' <immagine>` deve essere **dopo** l'ora annotata. Se l'immagine è più vecchia del deploy, il codice in esecuzione è quello di prima, a prescindere da cosa dice `git log`.
+3. **I container sono ripartiti DOPO il deploy**: `docker inspect --format '{{.Name}} restart={{.RestartCount}} started={{.State.StartedAt}}'` per i tre container. `StartedAt` dopo l'ora del deploy, `RestartCount=0`. Se `StartedAt` **non** coincide con il deploy, **non dichiarare successo**: scoprire perché (qualcun altro ha riavviato? un OOM? il `restart: always` che ha raccolto un crash?) prima di andare avanti. Visto il 23/11/2026: i container risultavano "su da 29 minuti" a fine lavoro e il deploy era dato per la mattina; `StartedAt` = 09:00:03 contro `date -u` = 09:29:09, coerente con il deploy delle 09:00. Ha retto solo perché ho confrontato i timestamp, non perché ho letto l'uptime.
+4. **I worker sono 4 e nessuno muore** (PROD gira con `--workers 4`): 0 traceback su **stderr** nelle ultime righe di log. *stdout non è una prova*: le `print("Migration: ...")` sono bufferizzate a blocchi senza TTY e possono comparire dopo la finestra che stai leggendo; i traceback invece vanno su stderr e sono affidabili. `verifica_worker_riavvio.sh` infatti asserisce solo su stderr.
+5. **Smoke HTTP** dal server: `GET /` → 200, `GET /api/auth/me` senza token → 401, `GET /api/docs` e `/api/openapi.json` → bloccati.
+6. **Le tre suite PROD**: `test_login_guard_prod.sh` + `test_pii_prod.sh` + `test_post_deploy_prod.sh` = **133 asserzioni**. Portano con sé l'invarianza dei dati (baseline catturata a inizio esecuzione), quindi sono anche la prova che il deploy non ha cancellato niente.
+7. **Se il deploy toccava il frontend, il bundle servito contiene la novità** — ma **il grep sul chunk non basta mai**: dimostra che il testo è distribuito, non che il pulsante sia dipinto. Per le superfici di UI ci sono `verifica_ui_tornei.sh` / `verifica_ui_scelta.sh` / `verifica_ui_weekend.sh`.
+8. **L'APK NON si aggiorna da solo**: carica i propri asset (`assets/public/assets/`), non quelli del server. Aggiornare il sito non aggiorna l'app: serve `./scripts/build_android_apk.sh` + `./scripts/publish_android_apk.sh`.
+
+**Quando i commit non toccano l'app** (solo `scripts/`, documentazione): **non serve ricostruire niente**, e l'azione giusta è allineare il clone (`git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*' && git reset --hard origin/master`) senza toccare i container. In quel caso la verifica 2 **non deve** essere soddisfatta e va detto a chiare lettere: si è allineato il clone, **non** deployato. Dirlo "deployato" quando l'immagine è vecchia è esattamente il falso che questa checklist esiste per impedire. Per capire se serve un build: `git diff --name-only <HEAD_PROD>..origin/master | grep -E '^(backend|frontend)/|docker-compose|Dockerfile|requirements'` — vuoto significa nessun build.
+
+**Prima di un `git reset --hard` su PROD, sempre**: `git status --porcelain` deve essere vuoto. Un reset con modifiche locali le distrugge in silenzio.
 
 ## Conventions
 - Italian language in UI and code.
