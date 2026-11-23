@@ -50,10 +50,18 @@ if [ "$CONTAINER_BIN" = "podman" ]; then
     USERNS_FLAGS="--userns=keep-id"
 fi
 
+# -Djava.net.preferIPv4Stack=true NON e' ornamentale: il container risolve repo.maven.apache.org
+# solo su AAAA (2606:4700::...) e la rete docker non ha rotta IPv6. Gradle prova IPv6 per primo e
+# ottiene "Got socket exception during request. It might be caused by SSL misconfiguration / Network
+# is unreachable" su 13 dipendenze, con un messaggio che punta verso il SSL e non verso l'assenza di
+# rotta. Misurato: curl -4 = 200, curl -6 = 000, stesso container. Senza questo, il build dipende da
+# cosa restituisce il DNS e dal fatto che la rete locale abbia l'IPv6, e fallisce a meta' build.
 $CONTAINER_BIN run --rm $USERNS_FLAGS \
     -v "$ROOT_DIR/frontend:/frontend${VOLUME_FLAGS}" \
     -w /frontend/android \
     -e GRADLE_USER_HOME=/tmp/.gradle \
+    -e JAVA_TOOL_OPTIONS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false" \
+    -e GRADLE_OPTS="-Djava.net.preferIPv4Stack=true" \
     thof-android-builder bash -c "./gradlew assembleDebug -PcustomVersionCode=$VERSION_CODE -PcustomVersionName=$VERSION_NAME --no-daemon"
 
 # Ripristina la proprietà dei file all'utente host (evita conflitti EACCES al prossimo cap sync)
