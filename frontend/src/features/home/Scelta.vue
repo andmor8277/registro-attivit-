@@ -226,6 +226,29 @@
           </div>
         </div>
 
+        <!-- Il foglio giocatori da consegnare all'organizzatore. Prima si raggiungeva solo dal link
+             in fondo a Dati & Matricole, cioe' da una pagina segreteria: un mister che deve stampare
+             la lista non ha un motivo per passare di li'. Guardia identica a Convocazioni e
+             Convocazioni Tornei: le tre cose della stessa giornata stanno insieme e si vedono
+             insieme. Scrivere la lista resta riservato a mister/segreteria/admin nel backend
+             (RUOLI_GESTIONE_LISTA), qui la card serve ad aprirla. -->
+        <div v-if="!isDirigente && !categoria?.is_portieri" class="scelta-card" @click="router.push('/liste-tornei/' + categoria?.id)">
+          <div class="card-icon-wrap liste-tornei">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
+              <path d="M9 6h11M9 12h11M9 18h11"/>
+              <path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>
+              <path d="M3 3h18v18H3z" opacity="0.35"/>
+            </svg>
+          </div>
+          <div class="card-label">Liste Tornei</div>
+          <div class="card-desc">Il foglio giocatori da consegnare</div>
+          <div class="card-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </div>
+        </div>
+
         <div v-if="!categoria?.is_portieri" class="scelta-card" @click="router.push('/dati/' + categoria?.id)">
           <div class="card-icon-wrap dati">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="28" height="28">
@@ -941,6 +964,14 @@ function selezionaCategoria(cat) {
   background: linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(249, 115, 22, 0.08) 100%);
   border-color: rgba(249, 115, 22, 0.3);
   color: #fb923c;
+}
+
+/* Rosa, non arancio come Tornei: le due card stanno vicine e devono restare distinguibili
+   a colpo d'occhio, non sembrare la stessa funzione duplicata. */
+.card-icon-wrap.liste-tornei {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.2) 0%, rgba(236, 72, 153, 0.08) 100%);
+  border-color: rgba(236, 72, 153, 0.3);
+  color: #f472b6;
 }
 
 .card-icon-wrap.allenamenti {

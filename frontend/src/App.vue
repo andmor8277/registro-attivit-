@@ -47,6 +47,19 @@
           <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
           <span>Convocazioni</span>
         </button>
+        <!-- Le due voci del torneo stanno qui, accanto a Convocazioni, perche' sono le tre cose della
+             stessa giornata: chi convoca deve anche aprire il calendario e stampare il foglio da
+             consegnare. Prima "Liste Tornei" si raggiungeva solo dal link in fondo a Dati & Matricole
+             (una pagina di segreteria) e "Convocazioni Tornei" solo dalla griglia di Scelta: chi
+             naviga da sinistra non le ha mai viste. Stessa guardia delle card corrispondenti. -->
+        <button v-if="!isDirigente && !categoriaPortieri" class="side-item" :class="{ active: isActive(['/tornei']) }" @click="vaiPaginaCategoria('tornei')">
+          <svg viewBox="0 0 24 24"><path d="M8 4h8v4a4 4 0 01-8 0z"/><path d="M8 6H5a3 3 0 003 3M16 6h3a3 3 0 01-3 3"/><path d="M12 12v4M9 20h6M10 16h4"/></svg>
+          <span>Convocazioni Tornei</span>
+        </button>
+        <button v-if="!isDirigente && !categoriaPortieri" class="side-item" :class="{ active: isActive(['/liste-tornei']) }" @click="vaiPaginaCategoria('liste-tornei')">
+          <svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>
+          <span>Liste Tornei</span>
+        </button>
         <button v-if="!isAdminSocieta && !isSegreteria" class="side-item" :class="{ active: isActive(['/allenamenti']) }" @click="vaiPaginaCategoria('allenamenti')">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
           <span>Allenamenti</span>
@@ -122,7 +135,7 @@
 
     <div class="main-col">
     <nav v-if="token && !hideTopbar" class="topbar">
-      <button class="hamburger" @click="mobileMenuOpen = true; window.scrollTo(0, 0)" aria-label="Menu">
+      <button class="hamburger" @click="apriMenuMobile" aria-label="Menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="3" y1="6" x2="21" y2="6"/>
           <line x1="3" y1="12" x2="21" y2="12"/>
@@ -269,6 +282,23 @@
               <path d="M4 6h16M4 12h16M4 18h10"/>
             </svg>
             Convocazioni
+          </button>
+          <!-- Le stesse due voci del menu desktop: questo e' il menu che l'APK usa davvero, quindi
+             aggiungerle solo alla sidebar sarebbe una modifica che sul telefono non si vede. -->
+          <button v-if="!isDirigente && !categoriaPortieri" class="mobile-menu-item" :class="{ active: isActive(['/tornei']) }" @click="vaiPaginaCategoria('tornei'); mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 4h8v4a4 4 0 01-8 0z"/>
+              <path d="M8 6H5a3 3 0 003 3M16 6h3a3 3 0 01-3 3"/>
+              <path d="M12 12v4M9 20h6M10 16h4"/>
+            </svg>
+            Convocazioni Tornei
+          </button>
+          <button v-if="!isDirigente && !categoriaPortieri" class="mobile-menu-item" :class="{ active: isActive(['/liste-tornei']) }" @click="vaiPaginaCategoria('liste-tornei'); mobileMenuOpen = false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 6h11M9 12h11M9 18h11"/>
+              <path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>
+            </svg>
+            Liste Tornei
           </button>
           <button v-if="!isAdminSocieta && !isSegreteria" class="mobile-menu-item" :class="{ active: isActive(['/allenamenti']) }" @click="vaiPaginaCategoria('allenamenti'); mobileMenuOpen = false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -565,6 +595,12 @@ const canSegreteria = computed(() => utenteAttivo.value?.ruolo === 'segreteria' 
 const canInfermeria = computed(() => ['infermeria', 'admin', 'super_admin', 'segreteria'].includes(utenteAttivo.value?.ruolo))
 const canCertificati = computed(() => isMister.value || canInfermeria.value || canSegreteria.value)
 const canScouting = computed(() => ['scouting', 'admin', 'super_admin'].includes(utenteAttivo.value?.ruolo) || isAdminUtente.value || isSuperAdmin.value)
+// Guardia delle due voci "Convocazioni Tornei" e "Liste Tornei". E' la STESSA espressione delle due
+// card in Scelta.vue, e deve restare uguale: se le due guardie divergono, il mister si trova la voce
+// di menu senza la card (o il contrario) e sembra un difetto dei dati, non una scelta.
+// isDirigente include segreteria e infermeria perche' e' cosi' in Scelta.vue -- non e' un refuso.
+const isDirigente = computed(() => ['dirigente', 'segreteria', 'infermeria'].includes(utenteAttivo.value?.ruolo))
+const categoriaPortieri = computed(() => !!categoriaAttiva.value?.is_portieri)
 const infortuniCount = ref(0)
 const userCategories = ref([])
 
@@ -644,6 +680,17 @@ function isActive(prefixes) {
 
 function vaiSelezioneSocieta() {
   router.push('/login?selezione=societa')
+}
+
+// Il menu mobile apriva la voce e scrollava in cima con `window.scrollTo(0, 0)` SCRITTO NEL
+// TEMPLATE. Il compilatore inline non lo lascia globale: `window` non e' nella lista dei globali
+// consentiti di Vue, quindi diventa `_ctx.window` (nel bundle di produzione si legge
+// `R.window.scrollTo(0,0)`) e dipende da come il proxy risolve una proprieta' sconosciuta. Un
+// riferimento a `window` in un template e' fragile e il controllo statico lo segnala: messo qui,
+// e' una funzione normale e il template chiama quella.
+function apriMenuMobile() {
+  mobileMenuOpen.value = true
+  window.scrollTo(0, 0)
 }
 
 function modificaSocietaAttiva() {
