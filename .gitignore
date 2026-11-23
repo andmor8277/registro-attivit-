@@ -6,6 +6,11 @@ backend/.venv/
 backend/.env
 backend/uploads/
 *.egg-info/
+# Gli script in scripts/ sono python lanciati dentro il container backend, ma un controllo di sintassi
+# (`python3 -m py_compile scripts/ops/...`) lo si fa dalla postazione e lascia il __pycache__ accanto al
+# file: senza questa regola finisce in git al primo `git add -A`.
+**/__pycache__/
+*.pyc
 
 # Frontend
 frontend/node_modules/
