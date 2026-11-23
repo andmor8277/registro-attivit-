@@ -142,7 +142,15 @@ q "DELETE FROM infortuni WHERE id IN ($IID,$IID_B);
    DELETE FROM categorie WHERE id=$CATP;
    DELETE FROM utenti WHERE id IN ($AID,$BID);" >/dev/null
 ck "nessun residuo di prova" "$(q "SELECT (SELECT count(*) FROM persone WHERE cognome='TestProd')+(SELECT count(*) FROM categorie WHERE nome='__test_fix__')+(SELECT count(*) FROM utenti WHERE username LIKE 'testprod%')+(SELECT count(*) FROM infortuni WHERE id IN ($IID,$IID_B))+(SELECT count(*) FROM partite WHERE note='__test_fix__')")" "0"
-ck "conteggi tornati alla baseline" "$(q "SELECT (SELECT count(*) FROM persone)||'/'||(SELECT count(*) FROM utenti)||'/'||(SELECT count(*) FROM categorie)||'/'||(SELECT count(*) FROM registro)||'/'||(SELECT count(*) FROM infortuni)")" "$PRIMA_PERSONE/$PRIMA_UTENTI/$PRIMA_CAT/$PRIMA_REGISTRO/$PRIMA_INF"
+# registro NON va in questo confronto: lo scrive chiunque faccia un accesso su PROD mentre il test
+# gira. Misurato il 23/11/2026: baseline 3207, il test finisce con 3210 e a fine serata era 3214, con
+# le presenze di ragazzi reali (persone 127-136) scritte durante l'esecuzione. E' la stessa regola gia'
+# applicata a riga 125 e in test_login_guard_prod.sh: la tabella la verifica chi usa il sito, quindi si
+# chiede il verso che conta - che il test non l'abbia VUOTATA. Il "non ha lasciato righe sue" lo dicono
+# l'DELETE qui sopra e l'asserzione sui residui di prova, che e' per pattern e non dipende dal mondo.
+ck "conteggi tornati alla baseline (persone/utenti/categorie/infortuni)" \
+   "$(q "SELECT (SELECT count(*) FROM persone)||'/'||(SELECT count(*) FROM utenti)||'/'||(SELECT count(*) FROM categorie)||'/'||(SELECT count(*) FROM infortuni)")" "$PRIMA_PERSONE/$PRIMA_UTENTI/$PRIMA_CAT/$PRIMA_INF"
+ckmin "registro non ha perso righe (dopo la pulizia, baseline $PRIMA_REGISTRO)" registro "$PRIMA_REGISTRO"
 
 echo
 echo "  $pass passati, $fail falliti"
