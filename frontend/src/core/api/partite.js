@@ -6,6 +6,17 @@ export const createConvocazione = (data) => api.post('/convocazioni/', data)
 export const updateConvocazione = (id, data) => api.put(`/convocazioni/${id}`, data)
 export const deleteConvocazione = (id) => api.delete(`/convocazioni/${id}`)
 
+// ---- Convocazione di una GARA DI TORNEO ----
+// Sono lo stesso aggregato di sopra con un solo campo in piu', `tornei_gara_id`, che pero' cambia
+// completamente il percorso nel backend: con quel campo il router non tocca ne' weekend ne' partite.
+// `creaConvocazioneTorneo` e' idempotente per costruzione (un foglio per gara): riaprire la convocazione
+// due volte non produce un secondo foglio, e la pagina la chiama all'apertura del modal senza doversi
+// ricordare se era gia' stata aperta.
+export const getConvocazioneDiGaraTorneo = (garaId) =>
+  api.get('/convocazioni/?tornei_gara_id=' + garaId)
+export const creaConvocazioneTorneo = (data) => api.post('/convocazioni/', { ...data, gare: [] })
+export const salvaConvocazioneTorneo = (id, data) => api.put(`/convocazioni/${id}`, data)
+
 export const getPartite = (categoriaId, societaId) => {
   const params = new URLSearchParams()
   if (categoriaId) params.append('categoria_id', categoriaId)

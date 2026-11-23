@@ -43,8 +43,16 @@
       </button>
     </div>
 
-    <p v-if="solaLettura" class="nota">
-      I tornei della tua società. Apri la lista per scegliere i giocatori e stampare il file da
+    <!-- Due note, perche' sono due risposte diverse. "Puoi aggiungere gare e convocare" detto a un
+         dirigente sarebbe una promessa falsa: lui quelle cose non le vede nemmeno. Il testo segue cio'
+         che il ruolo puo' davvero fare, non chi ha aperto la pagina -->
+    <p v-if="solaLettura && puoGestireGare" class="nota">
+      I tornei della tua società. Apri il calendario per registrare le gare che ti comunica
+      l'organizzatore e per convocare i giocatori, una gara alla volta. Il "Foglio giocatori" resta il
+      file da consegnare all'organizzatore e si stampa da Liste Tornei.
+    </p>
+    <p v-else-if="solaLettura" class="nota">
+      I tornei della tua società, in sola lettura. Apri la lista per vedere i giocatori e il file da
       consegnare all'organizzatore.
     </p>
 
@@ -185,7 +193,29 @@
               </div>
               <div v-if="g.note" class="gara-note">{{ g.note }}</div>
             </div>
-            <div v-if="!solaLettura" class="gara-azioni">
+            <div v-if="puoGestireGare" class="gara-azioni">
+              <!-- La convocazione si può fare anche da sola lettura? No: e' una scrittura, e il gate e'
+                   lo stesso del backend. Ma non e' legata a solaLettura, che governa il torneo: un mister
+                   convoca la SUA gara senza poter cancellare il torneo -->
+              <button
+                v-if="categoriaDellaGara(t, g)"
+                class="btn-icon"
+                @click="apriConvocazione(t, g, sez)"
+                title="Convoca i giocatori per questa gara">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                </svg>
+              </button>
+              <button v-else class="btn-icon" disabled
+                      :title="'Questa gara non ha una categoria e il torneo ne ha ' + categorieDel(t).length + ': assegnala dal calendario prima di convocare'">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                </svg>
+              </button>
               <button class="btn-icon" @click="apriModalGara(t, g, sez)" title="Modifica gara">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
                   <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
@@ -215,7 +245,29 @@
                   <span v-if="g.campo">{{ g.campo }}</span>
                 </div>
               </div>
-              <div v-if="!solaLettura" class="gara-azioni">
+              <div v-if="puoGestireGare" class="gara-azioni">
+                <!-- Anche qui il pulsante c'e', spento: una gara "senza categoria" che non mostra
+                     nessun invito alla convocazione sembra un difetto dei dati, e il mister va a
+                     cercare altrove. Spento con il motivo e' una risposta, assente ne' e' una -->
+                <button
+                  v-if="categoriaDellaGara(t, g)"
+                  class="btn-icon"
+                  @click="apriConvocazione(t, g, sez)"
+                  title="Convoca i giocatori per questa gara">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                  </svg>
+                </button>
+                <button v-else class="btn-icon" disabled
+                        :title="'Questa gara non ha una categoria e il torneo ne ha ' + categorieDel(t).length + ': assegnala dal calendario prima di convocare'">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                  </svg>
+                </button>
                 <button class="btn-icon" @click="apriModalGara(t, g)" title="Modifica gara">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
                     <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
@@ -234,7 +286,7 @@
               </div>
             </div>
           </template>
-          <button v-if="!solaLettura" class="btn-aggiungi" @click="apriModalGara(t, null, sez)">
+          <button v-if="puoGestireGare" class="btn-aggiungi" @click="apriModalGara(t, null, sez)">
             + Aggiungi gara per {{ sez.titolo }}
           </button>
         </div>
@@ -442,6 +494,90 @@
         </div>
       </div>
     </Teleport>
+    <!-- Modal convocazione di UNA gara di torneo. Stesso pattern dei due modal esistenti (Teleport,
+         overlay che chiude al click fuori, ✕, Annulla, errore in coda al body) per non introdurre una
+         terza forma di dialog nella stessa pagina.
+         Le righe sopra alla griglia NON sono campi da compilare: sono la gara del calendario letta e
+         basta. Renderle modificabili qui avrebbe creato un secondo posto dove correggere l'orario della
+         domenica, con il calendario che dice una cosa e il foglio un'altra -->
+    <Teleport to="body">
+      <div v-if="modalConv" class="modal-overlay" @click.self="modalConv = false">
+        <div class="modal modal-conv">
+          <div class="modal-header">
+            <div>
+              <h3>Convocazione — {{ convGara?.avversario || 'Gara' }}</h3>
+              <p class="conv-sottotitolo">
+                {{ convTorneo?.nome }} · {{ convEtichettaCategoria }}
+              </p>
+            </div>
+            <button class="modal-close" @click="modalConv = false" title="Chiudi">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <div v-if="convCaricamento" class="stato piccolo">Carico i giocatori…</div>
+
+            <template v-else>
+              <p class="conv-logistica">
+                <span v-if="convGara?.data">{{ formatoData(convGara.data) }}</span>
+                <span v-if="convGara?.ora">inizio {{ convGara.ora }}</span>
+                <span v-if="convGara?.ora_appuntamento">appuntamento {{ convGara.ora_appuntamento }}</span>
+                <span v-if="convGara?.campo">{{ convGara.campo }}<template v-if="convGara?.indirizzo"> — {{ convGara.indirizzo }}</template></span>
+              </p>
+
+              <div class="conv-colonna">
+                <h4 class="conv-titolo">Convocati ({{ convConvocati.length }})</h4>
+                <p v-if="!convConvocati.length" class="suggerimento">
+                  Nessuno convocato ancora. Aggiungi i giocatori dalla lista qui sotto.
+                </p>
+                <div v-for="(c, i) in convConvocatiDettaglio" :key="c.persona.id" class="conv-riga"
+                     :class="{ assente: convAssenti.includes(c.persona.id) }">
+                  <span class="conv-pos">{{ c.posizione }}</span>
+                  <span class="conv-nome">{{ c.persona.cognome }} {{ c.persona.nome }}</span>
+                  <span class="conv-ordinamento">
+                    <button class="btn-mini" @click="spostaConvocato(i, -1)" :disabled="i === 0" title="Sposta su">▲</button>
+                    <button class="btn-mini" @click="spostaConvocato(i, 1)" :disabled="i === convConvocatiDettaglio.length - 1" title="Sposta giù">▼</button>
+                  </span>
+                  <button class="btn-mini leva" :class="{ on: convAssenti.includes(c.persona.id) }"
+                          @click="scambiaAssente(c.persona.id)"
+                          title="Segna presente o assente in gara">
+                    {{ convAssenti.includes(c.persona.id) ? 'assente' : 'presente' }}
+                  </button>
+                  <button class="btn-mini pericolo" @click="togliConvocato(c.persona.id)" title="Togli dalla convocazione">✕</button>
+                </div>
+              </div>
+
+              <div class="conv-colonna">
+                <h4 class="conv-titolo">Da convocare ({{ convNonConvocati.length }})</h4>
+                <input v-model="convRicerca" class="conv-ricerca" placeholder="Cerca per cognome o nome…" />
+                <div v-for="p in convNonConvocati" :key="p.id" class="conv-riga">
+                  <span class="conv-nome">{{ p.cognome }} {{ p.nome }}</span>
+                  <button class="btn-mini primario" @click="convoca(p.id)">+ Convoca</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Note del foglio</label>
+                <textarea v-model="convNota" rows="2" placeholder="Es. ritrovo al campo, portare la maglia rossa…"></textarea>
+              </div>
+
+              <p v-if="erroreConv" class="messaggio errore">{{ erroreConv }}</p>
+            </template>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn-secondary" @click="modalConv = false">Annulla</button>
+            <button class="btn-primary" @click="salvaConvocazione"
+                    :disabled="convSalvataggio || convCaricamento">
+              {{ convSalvataggio ? 'Salvataggio…' : 'Salva convocazione' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -452,7 +588,10 @@ import {
   getTornei, getTorneo, creaTorneo, aggiornaTorneo, eliminaTorneo,
   aggiungiGaraTorneo, modificaGaraTorneo, eliminaGaraTorneo, getAllCategorie, isParentCategory,
   iscriviCategoriaTorneo, rimuoviCategoriaTorneo, saveOrSharePdf,
-  getCategoriaResponsabili
+  getCategoriaResponsabili,
+  // La convocazione di UNA gara di torneo: stesso aggregato della pagina Convocazioni, ma il campo
+  // `tornei_gara_id` nel backend cambia completamente percorso e non tocca ne' weekend ne' partite
+  getPersone, getConvocazione, getConvocazioneDiGaraTorneo, creaConvocazioneTorneo, salvaConvocazioneTorneo
 } from '../../api/index.js'
 import { jsPDF } from 'jspdf'
 // Il plugin va importato ANCHE qui, non basta che lo importino Liste Tornei o Programmazione Partite:
@@ -473,6 +612,19 @@ const { utenteAttivo, societaAttiva } = useStore()
 // il ruolo e non la rotta, cosi' un admin che entra dal link dei mister non resta senza pulsanti
 // e un mister non vede controlli che il backend gli rifiuterebbe comunque.
 const solaLettura = computed(() => !(utenteAttivo.value?.is_admin || utenteAttivo.value?.is_super_admin))
+
+// Chi scrive sul CALENDARIO GARE e sulle CONVOCZIONI di un torneo: i mister, oltre agli admin.
+//
+// E' un gate DIVERSO da solaLettura e non lo sostituisce, e la differenza e' il punto. Allentare
+// solaLettura al mister ridarebbe anche "Modifica"/"Elimina" sul torneo e l'iscrizione delle categorie:
+// decisioni che restano del responsabile, perche' cancellare il torneo di una societa' o togliere una
+// categoria iscritta non e' lavoro che si fa "per provare". Qui si apre solo il calendario gare e il
+// foglio dei convocati.
+//
+// Il backend applica lo stesso criterio (get_gestore_gare_torneo e _esigi_gestore_convocazioni): questa
+// e' visibilita', non permesso, e senza il backend sarebbe solo un pulsante nascosto.
+const puoGestireGare = computed(() =>
+  !!(utenteAttivo.value?.is_admin || utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'mister'))
 
 const tornei = ref([])
 const categorie = ref([])
@@ -505,6 +657,26 @@ const garaSezione = ref(null)
 const formGara = ref({})
 // La categoria da iscrivere nel modal di modifica: niente di selezionato finche' non si sceglie
 const nuovaCategoria = ref(null)
+
+// ------------------------------------------------------- convocazione di una gara di torneo
+// Un foglio per OGNI gara del calendario: il backend ne tiene uno per `tornei_gara_id`, riaprire non
+// ne crea un secondo. I dati logistici (avversario, campo, orari) NON si chiedono qui: arrivano dalla
+// gara del torneo, che e' l'unica fonte. Chiederli di nuovo significherebbe avere due copie della
+// stessa informazione, una nel calendario e una nel foglio, destinate a divergere.
+const modalConv = ref(false)
+const convGara = ref(null)            // la riga di tornei_gara
+const convTorneo = ref(null)          // il torneo, per dirlo nell'intestazione
+const convSezione = ref(null)         // per riaprire il calendario dove era, come per le gare
+const convId = ref(null)              // id del foglio (convocazioni.id), null finche' non si crea
+const convNota = ref('')
+const convConvocati = ref([])         // persona_id in ordine: l'ordine a schermo E' l'ordine salvato
+const convAssenti = ref([])           // persona_id marcati "non presente"
+const convRoster = ref([])            // i tesserati della categoria della gara
+const convRicerca = ref('')
+const convCaricamento = ref(false)
+const convSalvataggio = ref(false)
+const erroreConv = ref('')
+const confermaConv = ref('')
 
 // ------------------------------------------------------- mister del torneo
 // Il referente e' UNO per il torneo intero, non uno per categoria: l'organizzatore chiama un numero
@@ -1124,6 +1296,156 @@ async function ricaricaConCalendarioAperto(torneoId, sez = null) {
   if (t && sez) await apriCalendario(t, sez)
 }
 
+// ------------------------------------------------------- convocazione di una gara di torneo
+// Il meccanismo dei convocati non e' importabile da Convocazioni.vue: quella pagina e' una SFC da 3703
+// righe senza nessun export e con 1484 righe di CSS scoped. Qui si riprende la stessa IDEA (chi e'
+// convocato, in che ordine, chi e' segnato assente) in una forma proporzionata a una gara sola.
+//
+// Cio' che NON si rifà qui: i dati logistici. Avversario, campo, indirizzo, appuntamento e inizio gara
+// li scrive il backend copiandoli dalla riga di tornei_gare, quindi il calendario resta l'unica fonte
+// e non esiste un secondo posto dove correggere l'orario della domenica.
+
+function categoriaDellaGara(t, g) {
+  // La stessa regola del backend, anticipata qui solo per non far aprire un modal che verrebbe rifiutato:
+  // con piu' categorie iscritte e la gara senza categoria, scegliere noi significherebbe convocare i
+  // Pulcini per la gara degli Esordienti. Il backend risponde 400 e qui si dice perche' il pulsante e'
+  // spento, invece di lasciarlo premere per niente
+  if (g && g.categoria_id) return Number(g.categoria_id)
+  const iscritte = categorieDel(t)
+  return iscritte.length === 1 ? Number(iscritte[0].id) : null
+}
+
+const convNonConvocati = computed(() => {
+  const q = convRicerca.value.trim().toLowerCase()
+  return convRoster.value
+    .filter(p => !convConvocati.value.includes(p.id))
+    .filter(p => !q || (`${p.cognome} ${p.nome}`).toLowerCase().includes(q))
+    .sort((a, b) => String(a.cognome).localeCompare(String(b.cognome), 'it', { sensitivity: 'base' }))
+})
+
+const convConvocatiDettaglio = computed(() =>
+  convConvocati.value
+    .map((pid, i) => ({ persona: convRoster.value.find(p => p.id === pid), posizione: i + 1 }))
+    .filter(x => x.persona))
+
+// L'etichetta della categoria della gara, cercata nelle categorie caricate dalla pagina. Passare a
+// etichettaCategoria un oggetto costruito a mano con solo l'id darebbe un'intestazione vuota, e il modal
+// della convocazione senza dire PER QUALE categoria si sta scrivendo e' esattamente il tipo di foglio
+// plausibile e falso contro cui questo progetto si difende
+const convEtichettaCategoria = computed(() => {
+  const catId = categoriaDellaGara(convTorneo.value, convGara.value)
+  if (!catId) return 'categoria da assegnare'
+  const c = categorie.value.find(x => String(x.id) === String(catId))
+  return c ? etichettaCategoria(c) : 'categoria ' + catId
+})
+
+async function apriConvocazione(t, g, sez = null) {
+  erroreConv.value = ''
+  confermaConv.value = ''
+  convRicerca.value = ''
+  convGara.value = g
+  convTorneo.value = t
+  convSezione.value = sez || null
+  convId.value = null
+  convNota.value = ''
+  convConvocati.value = []
+  convAssenti.value = []
+  convRoster.value = []
+  modalConv.value = true
+  convCaricamento.value = true
+
+  const catId = categoriaDellaGara(t, g)
+  try {
+    // Il roster della categoria della gara, non quella della sezione: sono la stessa cosa finche' la
+    // gara ha una categoria, e quando non ce l'ha qui si ferma con un messaggio invece di proporre i
+    // ragazzi di una categoria a caso
+    const res = await getPersone(catId)
+    convRoster.value = (res.data || []).slice().sort((a, b) =>
+      String(a.cognome).localeCompare(String(b.cognome), 'it', { sensitivity: 'base' }))
+
+    // Se il foglio esiste gia' si riparte da quello che c'e' in banca dati: aprire la convocazione di
+    // una gara gia' convocata e premere Salva senza toccare niente NON deve azzerare i convocati
+    const esistente = await getConvocazioneDiGaraTorneo(g.id)
+    const foglio = (esistente.data || [])[0]
+    if (foglio) {
+      convId.value = foglio.id
+      convNota.value = foglio.note || ''
+      const det = await getConvocazione(foglio.id)
+      const gara = (det.data.gare || [])[0]
+      const lista = (gara?.giocatori || []).slice().sort((a, b) => a.posizione - b.posizione)
+      convConvocati.value = lista.map(x => x.persona_id)
+      convAssenti.value = lista.filter(x => x.non_presente).map(x => x.persona_id)
+      // Un ragazzo convocato e poi uscito dalla categoria non e' piu' nel roster: tenerlo lo mostrerebbe
+      // come "senza nome" e salvarlo lo riconsegnerebbe al backend come se ci fosse ancora
+      convConvocati.value = convConvocati.value.filter(pid => convRoster.value.some(p => p.id === pid))
+    }
+  } catch (e) {
+    erroreConv.value = e.response?.data?.detail || 'Impossibile caricare la convocazione'
+  } finally {
+    convCaricamento.value = false
+  }
+}
+
+function convoca(personaId) {
+  if (!convConvocati.value.includes(personaId)) convConvocati.value.push(personaId)
+}
+
+function togliConvocato(personaId) {
+  convConvocati.value = convConvocati.value.filter(pid => pid !== personaId)
+  convAssenti.value = convAssenti.value.filter(pid => pid !== personaId)
+}
+
+function scambiaAssente(personaId) {
+  convAssenti.value = convAssenti.value.includes(personaId)
+    ? convAssenti.value.filter(pid => pid !== personaId)
+    : [...convAssenti.value, personaId]
+}
+
+function spostaConvocato(indice, verso) {
+  const j = indice + verso
+  if (j < 0 || j >= convConvocati.value.length) return
+  const arr = convConvocati.value.slice()
+  ;[arr[indice], arr[j]] = [arr[j], arr[indice]]
+  convConvocati.value = arr
+}
+
+async function salvaConvocazione() {
+  erroreConv.value = ''
+  confermaConv.value = ''
+  const t = convTorneo.value
+  const g = convGara.value
+  const catId = categoriaDellaGara(t, g)
+  if (!catId) {
+    erroreConv.value = 'Questa gara non ha una categoria e il torneo ne ha piu\' di una: assegnala dal calendario prima di convocare'
+    return
+  }
+  convSalvataggio.value = true
+  const giocatori = convConvocati.value.map((pid, i) => ({
+    persona_id: pid,
+    // posizione = indice+1, ricalcolata qui come fa la pagina Convocazioni: non e' il numero di maglia,
+    // e' l'ordine del foglio. Il backend la ricalcola comunque, ma mandarla coerente evita che un client
+    // diverso possa lasciare buchi
+    posizione: i + 1,
+    non_presente: convAssenti.value.includes(pid)
+  }))
+  const corpo = { categoria_id: catId, tornei_gara_id: g.id, data_inizio: g.data || t.data_inizio,
+                 note: convNota.value || null, giocatori }
+  try {
+    // Due scritture, perche' POST e' idempotente: se il foglio esiste gia' RESTITUISCE l'id esistente
+    // senza applicare i giocatori (e' cio' che impedisce a un doppio click di creare un secondo foglio).
+    // Il salvataggio vero deve quindi passare dal PUT in ogni caso.
+    const creato = await creaConvocazioneTorneo(corpo)
+    convId.value = creato.data.id
+    await salvaConvocazioneTorneo(convId.value, corpo)
+    modalConv.value = false
+    await ricaricaConCalendarioAperto(t.id, convSezione.value)
+  } catch (e) {
+    erroreConv.value = e.response?.data?.detail || 'Errore nel salvataggio della convocazione'
+  } finally {
+    convSalvataggio.value = false
+  }
+}
+
 // ------------------------------------------------------- esportazione PDF
 // QUATTRO pulsanti, UNA sola funzione: tutti i tornei della societa' (indipendente da cosa c'e' a
 // schermo), la selezione a schermo, questa categoria, questo torneo in questa categoria. Sono lo
@@ -1635,6 +1957,55 @@ onMounted(async () => {
 .aggiungi-categoria { display: flex; gap: 0.5rem; margin-top: 0.5rem; align-items: flex-end; }
 .aggiungi-categoria select { flex: 1; }
 .aggiungi-categoria .btn-secondary { white-space: nowrap; }
+
+/* ---- modal convocazione di una gara di torneo ----
+   Tutti i colori vengono da global.css: l'app ha UN SOLO tema, chiaro, e un componente non eredita
+   nessun CSS (gli stili sono scoped). Scrivere un letterale pensato per un tema scuro non produce nessun
+   errore — la pagina funziona, i dati sono giusti, e a schermo i bottoni sono grigio chiarissimo su
+   bianco. E' successo davvero in questa stessa pagina. */
+.modal-conv { max-width: 620px; }
+.conv-sottotitolo { margin: 0.15rem 0 0; font-size: 0.78rem; color: var(--color-text-secondary); }
+.conv-logistica {
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+  margin: 0 0 0.75rem; padding: 0.5rem 0.625rem;
+  background: var(--color-slate-soft); border-radius: 8px;
+  font-size: 0.8rem; color: var(--color-secondary);
+}
+.conv-colonna { margin-bottom: 0.9rem; }
+.conv-titolo { margin: 0 0 0.4rem; font-size: 0.85rem; color: var(--color-secondary); }
+.conv-riga {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.3rem 0.4rem; border: 1px solid var(--color-border);
+  border-radius: 8px; margin-bottom: 0.25rem; background: var(--color-surface);
+}
+/* Il ragazzo segnato assente resta nel foglio (e' convocato, non partecipa): il segno e' il nome
+   cancellato, come nella pagina Convocazioni. Togliere la riga sarebbe un'altra cosa — sarebbe non
+   convocarlo affatto */
+.conv-riga.assente .conv-nome { text-decoration: line-through; color: var(--color-text-secondary); }
+.conv-pos {
+  min-width: 1.4rem; text-align: center; font-size: 0.72rem; font-weight: 600;
+  color: var(--color-primary); background: var(--color-primary-soft); border-radius: 999px;
+}
+.conv-nome { flex: 1; font-size: 0.85rem; }
+.conv-ordinamento { display: flex; gap: 0.1rem; }
+.btn-mini {
+  border: 1px solid var(--color-border); background: var(--color-surface);
+  color: var(--color-secondary); cursor: pointer;
+  font-size: 0.7rem; line-height: 1; padding: 0.25rem 0.4rem; border-radius: 6px;
+}
+.btn-mini:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); }
+.btn-mini:disabled { opacity: 0.4; cursor: default; }
+.btn-mini.primario { color: var(--color-success); border-color: var(--color-success); background: var(--color-success-soft); }
+.btn-mini.pericolo:hover:not(:disabled) { color: var(--color-error); border-color: var(--color-error); }
+/* La leva presente/assente: verde a destra quando e' "assente", come nella pagina Convocazioni, perche'
+   chi guarda il foglio deve vedere a colpo quale nome e' da sostituire */
+.btn-mini.leva { min-width: 4.2rem; text-align: center; }
+.btn-mini.leva.on { color: var(--color-warning); border-color: var(--color-warning); background: var(--color-warning-soft); }
+.conv-ricerca {
+  width: 100%; box-sizing: border-box; margin-bottom: 0.4rem;
+  padding: 0.4rem 0.5rem; border: 1px solid var(--color-border);
+  border-radius: 8px; font-size: 0.85rem; background: var(--color-surface); color: var(--color-secondary);
+}
 
 @media (max-width: 560px) {
   .form-riga { flex-direction: column; gap: 0; }

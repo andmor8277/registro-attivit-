@@ -64,6 +64,32 @@ def get_responsabile_tornei(current_user: Utente = Depends(get_current_user)):
     return current_user
 
 
+def get_gestore_gare_torneo(current_user: Utente = Depends(get_current_user)):
+    """Chi scrive sul CALENDARIO gare di un torneo: i mister, oltre agli admin.
+
+    E' un gate piu' largo di get_responsabile_tornei e volutamente separato. Il responsabile decide QUALE
+    torneo esiste e quali categorie ci giocano; il mister, che e' quello che la gara la gioca, deve poter
+    aggiungere la partita che l'organizzatore gli ha comunicato la sera prima — costringerlo a passare da
+    un admin significa che la gara non viene registrata, che e' il modo in cui in due anni in liste_torneo
+    c'era una lista sola.
+
+    Il filtro di societa' NON sta qui: lo fa _get_torneo, che ogni endpoint delle gare chiama prima di
+    toccare i dati. Metterlo anche qui sarebbe un secondo controllo sullo stesso campo mentre il rischio
+    reale (conoscere l'id di un torneo di un'altra societa') e' gia' coperto li'.
+
+    Non si filtra per utente_categorie: il titolare ha deciso che i mister vedono e usano legittimamente
+    tutte le categorie della propria societa', quindi qui un mister puo' curare il calendario di un torneo
+    a cui e' iscritta anche una categoria che non segue.
+    """
+    if current_user.is_admin or current_user.is_super_admin:
+        return current_user
+    if current_user.ruolo == "mister":
+        return current_user
+    raise HTTPException(
+        status_code=403,
+        detail="Solo il mister o un amministratore possono gestire il calendario gare del torneo")
+
+
 def _get_torneo(torneo_id: int, current_user: Utente, db: Session) -> Torneo:
     """Carica il torneo e verifica che appartenga alla societa' di chi chiede.
 
@@ -592,7 +618,7 @@ def _risolvi_categoria_gara(torneo_id: int, categoria_id, db: Session):
 
 @router.post("/{torneo_id}/gare")
 def aggiungi_gara(torneo_id: int, data: GaraIn, db: Session = Depends(get_db),
-                  current_user: Utente = Depends(get_responsabile_tornei)):
+                  current_user: Utente = Depends(get_gestore_gare_torneo)):
     _get_torneo(torneo_id, current_user, db)
     if not any([(data.avversario or "").strip(), (data.campo or "").strip(),
                 (data.note or "").strip(), data.data]):
@@ -611,7 +637,7 @@ def aggiungi_gara(torneo_id: int, data: GaraIn, db: Session = Depends(get_db),
 
 @router.put("/{torneo_id}/gare/{gara_id}")
 def modifica_gara(torneo_id: int, gara_id: int, data: GaraIn, db: Session = Depends(get_db),
-                  current_user: Utente = Depends(get_responsabile_tornei)):
+                  current_user: Utente = Depends(get_gestore_gare_torneo)):
     _get_torneo(torneo_id, current_user, db)
     # La verifica che la gara sia di QUESTO torneo va fatta perche' l'id della gara arriva
     # dall'URL: senza il doppio vincolo si potrebbe modificare la gara di un altro torneo
@@ -630,7 +656,7 @@ def modifica_gara(torneo_id: int, gara_id: int, data: GaraIn, db: Session = Depe
 
 @router.delete("/{torneo_id}/gare/{gara_id}")
 def elimina_gara(torneo_id: int, gara_id: int, db: Session = Depends(get_db),
-                 current_user: Utente = Depends(get_responsabile_tornei)):
+                 current_user: Utente = Depends(get_gestore_gare_torneo)):
     _get_torneo(torneo_id, current_user, db)
     n = db.execute(text("DELETE FROM tornei_gare WHERE id = :g AND torneo_id = :t"),
                    {"g": gara_id, "t": torneo_id}).rowcount

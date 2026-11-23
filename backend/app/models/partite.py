@@ -9,6 +9,17 @@ class Convocazione(Base):
     societa_id = Column(Integer, ForeignKey("societa.id"), nullable=False)
     categoria_id = Column(Integer, ForeignKey("categorie.id", ondelete="CASCADE"))
     weekend_id = Column(Integer, nullable=True)
+    # Il foglio di convocazione di UNA gara di torneo. E' il discriminatore: o il foglio e' del weekend
+    # (weekend_id valorizzato) o e' di una gara di torneo (tornei_gara_id valorizzato), mai tutti e due
+    # — lo impedisce il check ck_convocazioni_uno_dei_due, non la buona volonta' del router.
+    #
+    # Sta qui e non su convocazione_gare perche' per il torneo il foglio COINCIDE con la gara: un foglio
+    # per ogni gara in programma. Con ON DELETE CASCADE, cancellare la gara dal calendario si porta via
+    # la sua convocazione; metterlo sul figlio avrebbe lasciato un foglio senza gare.
+    #
+    # Non si finge un weekend per il torneo: `crea` esige un weekend programmato, e inventarlo per una
+    # gara di torneo avrebbe significato farla comparire anche nella pagina Convocazioni del campionato.
+    tornei_gara_id = Column(Integer, ForeignKey("tornei_gare.id", ondelete="CASCADE"), nullable=True)
     data_inizio = Column(Date, nullable=False)
     data_fine = Column(Date, nullable=True)
     note = Column(String(1000), nullable=True)

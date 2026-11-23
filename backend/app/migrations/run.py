@@ -1765,6 +1765,59 @@ def run_migrations():
                 print(f"Migration warning (tornei mister): {e}")
                 conn.rollback()
 
+            # ---- la convocazione di una gara di TORNEO ----
+            # "Convocazioni Tornei" deve permettere la convocazione stile Convocazioni per ogni gara
+            # del calendario. Non nasce una tabella nuova: il meccanismo dei convocati (la griglia a
+            # slot, convocazione_giocatori con posizione e non_presente, il foglio PDF) vive gia' qui,
+            # e duplicarlo vorrebbe dire due motori che il giorno dopo non si assomigliano piu' — la
+            # stessa ragione per cui i due calendari PDF sono passati da pdfTHOF.js.
+            #
+            # Il discriminatore sta su `convocazioni` e non su `convocazione_gare` perche' il foglio di
+            # un torneo e' UN foglio per UNA gara: il foglio coincide con la gara. Mettendolo sul
+            # figlio, cancellando la gara restava il foglio padre senza nessuna gara dentro (l'analogo
+            # del "foglio orfano" che per liste_torneo e' stato gestito esplicitamente). Con la FK qui
+            # e ON DELETE CASCADE, cancellare la gara di torneo si porta dietro la sua convocazione.
+            #
+            # weekend_id resta NULL e tornei_gara_id viene valorizzato: NON si finge un weekend. Le
+            # righe con weekend_id NULL sono gia' 4 su 14 in produzione, quindi "non avere un weekend"
+            # non e' di per se' uno stato illegale, e la migrazione non deve rompere le righe vecchie.
+            try:
+                conn.execute(text(
+                    "ALTER TABLE convocazioni ADD COLUMN IF NOT EXISTS tornei_gara_id INTEGER "
+                    "REFERENCES tornei_gare(id) ON DELETE CASCADE"))
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_convocazioni_tornei_gara_id "
+                    "ON convocazioni(tornei_gara_id) WHERE tornei_gara_id IS NOT NULL"))
+                conn.commit()
+                print("Migration: Added tornei_gara_id to convocazioni")
+            except Exception as e:
+                print(f"Migration warning (convocazioni.tornei_gara_id): {e}")
+                conn.rollback()
+
+            # Il vincolo che conta: un foglio o e' del weekend o e' di una gara di torneo, non tutti e
+            # due. Senza, lo stesso foglio potrebbe essere letto da entrambe le pagine con dati
+            # incoerenti, e `partita_id` — che su convocazione_gare non ha nessuna FK, quindi il DB non
+            # dice niente — resterebbe libero di puntare a una partita di campionato mentre il foglio e'
+            # di torneo. E' la classe di difetti "plausibile e falso": nessun errore da nessuna parte.
+            #
+            # NON e' un XOR: le righe esistenti con entrambi NULL (4 su 14 su PROD, nate da weekend
+            # cancellati o da codice vecchio) devono restare valide, perche' una migrazione che fallisce
+            # su produzione perche' i dati reali non tornano non e' un vincolo, e' un deploy rotto.
+            # Si vieta solo il "tutti e due", che e' l'unico caso davvero illegale. ADD CONSTRAINT non
+            # ha IF NOT EXISTS: si controlla pg_constraint, come per liste_torneo_torneo_id_fkey.
+            try:
+                ha_check = conn.execute(text(
+                    "SELECT 1 FROM pg_constraint WHERE conname = 'ck_convocazioni_uno_dei_due'")).fetchone()
+                if not ha_check:
+                    conn.execute(text(
+                        "ALTER TABLE convocazioni ADD CONSTRAINT ck_convocazioni_uno_dei_due "
+                        "CHECK (NOT (weekend_id IS NOT NULL AND tornei_gara_id IS NOT NULL))"))
+                    conn.commit()
+                    print("Migration: Check ck_convocazioni_uno_dei_due")
+            except Exception as e:
+                print(f"Migration warning (ck_convocazioni_uno_dei_due): {e}")
+                conn.rollback()
+
         finally:
             if has_lock:
                 try:

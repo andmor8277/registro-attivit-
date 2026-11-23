@@ -2,7 +2,9 @@
 # Tornei: chi li crea, chi li vede, cosa succede alle liste collegate.
 #
 # Copre tre cose che senza test resterebbero solo intenzioni:
-#  1. la scrittura dei tornei e' del responsabile (admin), non di chi convocava;
+#  1. la scrittura dei tornei e' del responsabile (admin), non di chi convocava. **Eccezione voluta**:
+#     il solo calendario GARE e' anche del `mister` (le gare le comunica l'organizzatore a lui), e la
+#     verifica di quel confine sta qui sotto alla sezione 5, lato opposto rispetto ai 403;
 #  2. la Lista Tornei nasce col torneo e ne segue nome e cancellazione (e' il file che viene
 #     consegnato all'organizzatore: se dipende da un passaggio manuale del mister resta senza);
 #  3. dirigente e scouting, che prima potevano aggiungere/rimuovere giocatori e cancellare
@@ -180,7 +182,7 @@ ck "categoria di un'altra societa' -> 403" "$(cod -X POST "$D/tornei/" -H "Conte
 ck "  e nessuna di queste e' stata creata" "$(q "SELECT count(*) FROM tornei")" "$((BASE_TORNEI+1))"
 
 echo
-echo "--- 5. il calendario: il responsabile lo scrive, gli altri lo leggono ---"
+echo "--- 5. il calendario: il responsabile e il mister lo scrivono, gli altri lo leggono ---"
 G1=$(curl -s --max-time 25 -X POST "$D/tornei/$TID/gare" -H "Content-Type: application/json" -H "Authorization: Bearer $TADM" \
       -d '{"avversario":"Rossoblu","data":"2026-12-19","ora":"10:30","ora_appuntamento":"09:45","campo":"Campo 2","indirizzo":"Via Roma 1"}' \
       | python3 -c "import sys,json;print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
@@ -194,7 +196,21 @@ G2=$(curl -s --max-time 25 -X POST "$D/tornei/$TID/gare" -H "Content-Type: appli
 ck "  il numero della seconda gara e' 2" "$(q "SELECT numero FROM tornei_gare WHERE id=$G2")" "2"
 ck "admin modifica una gara" "$(cod -X PUT "$D/tornei/$TID/gare/$G1" -H "Content-Type: application/json" -H "Authorization: Bearer $TADM" -d '{"avversario":"Rossoblu FC","data":"2026-12-19","ora":"11:00","ora_appuntamento":"10:15","campo":"Campo 2","indirizzo":"Via Roma 1"}')" "200"
 ck "  la modifica si vede nel dettaglio" "$(jq1 "$D/tornei/$TID" "$TMIS" gare.0.avversario)" "Rossoblu FC"
-for pair in "mister:$TMIS" "dirigente:$TDIR" "scouting:$TSCO" "segreteria:$TSEG"; do
+# Il calendario gare e' passato a "mister + admin" (23/11/2026): le gare le comunica l'organizzatore al
+# mister, non al responsabile, e fino a qui il mister doveva chiedere all'admin di scriverle. Il confine
+# nuovo sta SUL CALENDARIO e non sul torneo: creare il torneo, modificarlo e iscrivere categorie sono
+# rimasti dell'admin, e lo verifica test_convocazioni_torneo.sh sezione 11. Qui si verifica il lato
+# opposto, cioe' che il mister possa scrivere le gare, perche' se il gate nuovo fosse stato messo troppo
+# in alto (su tutto il router) queste asserzioni diventano rosse e quelle di li' a fianco restano verdi.
+ck "il mister aggiunge una gara" "$(cod -X POST "$D/tornei/$TID/gare" -H "Content-Type: application/json" -H "Authorization: Bearer $TMIS" -d '{"avversario":"GaraDelMister","data":"2026-12-21","ora":"16:00"}')" "200"
+ck "  e la sua gara e' davvero nel calendario" "$(q "SELECT count(*) FROM tornei_gare WHERE torneo_id=$TID AND avversario='GaraDelMister'")" "1"
+GMIS=$(q "SELECT id FROM tornei_gare WHERE torneo_id=$TID AND avversario='GaraDelMister'")
+ck "il mister modifica una gara" "$(cod -X PUT "$D/tornei/$TID/gare/$GMIS" -H "Content-Type: application/json" -H "Authorization: Bearer $TMIS" -d '{"avversario":"GaraDelMister rinominata","data":"2026-12-21","ora":"17:00"}')" "200"
+ck "  la modifica e' arrivata a terra" "$(q "SELECT avversario FROM tornei_gare WHERE id=$GMIS")" "GaraDelMister rinominata"
+ck "il mister elimina una gara" "$(cod -X DELETE "$D/tornei/$TID/gare/$GMIS" -H "Authorization: Bearer $TMIS")" "200"
+ck "  e la gara non c'e' piu'" "$(q "SELECT count(*) FROM tornei_gare WHERE id=$GMIS")" "0"
+# e il gate vecchio non deve essersi allargato a tutti: chi legge il calendario non lo scrive
+for pair in "dirigente:$TDIR" "scouting:$TSCO" "segreteria:$TSEG"; do
   n="${pair%%:*}"; t="${pair##*:}"
   ck "$n aggiunge una gara -> 403" "$(cod -X POST "$D/tornei/$TID/gare" -H "Content-Type: application/json" -H "Authorization: Bearer $t" -d '{"avversario":"Abusiva"}')" "403"
   ck "$n elimina una gara -> 403" "$(cod -X DELETE "$D/tornei/$TID/gare/$G2" -H "Authorization: Bearer $t")" "403"
