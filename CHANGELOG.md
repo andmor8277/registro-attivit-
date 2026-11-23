@@ -404,3 +404,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Liste Tornei e Convocazioni Tornei anche nella barra laterale e nel menu del telefono
+
+## [7.10.0] - 2026-11-23
+
+### Added
+- Foglio PDF di convocazione anche dal modal del torneo; convocazioni e calendario gare dei tornei ai mister
