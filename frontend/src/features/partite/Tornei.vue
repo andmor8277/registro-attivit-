@@ -570,6 +570,17 @@
 
           <div class="modal-footer">
             <button class="btn-secondary" @click="modalConv = false">Annulla</button>
+            <!-- Il foglio esce da QUI, accanto a chi lo ha appena guardato: un pulsante sul calendario
+                 avrebbe esportato un foglio che nessuno aveva aperto. Per questo e' un .btn-esporta e non
+                 un .btn-secondary: quella classe ha la regola :disabled, l'altra no, e un pulsante spento
+                 che sembra acceso e' il difetto gia' visto sulla riga "Senza categoria" -->
+            <button class="btn-esporta" @click="esportaConvocazionePDF"
+                    :disabled="convExport || convCaricamento || convSalvataggio || !convConvocati.length"
+                    :title="!convConvocati.length
+                            ? 'Nessun giocatore convocato: il foglio uscirebbe vuoto'
+                            : 'Scarica il foglio di convocazione in PDF: lo stesso documento della pagina Convocazioni'">
+              {{ convExport ? 'Genero…' : 'Esporta PDF' }}
+            </button>
             <button class="btn-primary" @click="salvaConvocazione"
                     :disabled="convSalvataggio || convCaricamento">
               {{ convSalvataggio ? 'Salvataggio…' : 'Salva convocazione' }}
@@ -601,11 +612,16 @@ import 'jspdf-autotable'
 // Intestazione e stile di tabella condivisi con Programmazione Partite: la forma di riferimento
 // e' la sua, perche' e' il PDF che la societa' gia' conosce e riceve il venerdi'
 import { intestazionePdf, BASE_TABELLA, barra, didParseCellBarra, coloraDomenica, cellData, AMBRA_THOF } from '../../core/utils/pdfTHOF.js'
+// IL FOGLIO DI CONVOCAZIONE, la stessa funzione che usa la pagina Convocazioni il venerdi'. Non se ne
+// scrive una seconda copia qui: due fogli di stile sono due documenti che il giorno dopo non si
+// assomigliano piu', e in chat sembrano di due associazioni diverse
+import { esportaFoglioConvocazione } from '../../core/utils/pdfConvocazione.js'
 import { useStore } from '../../store.js'
 
 const route = useRoute()
 const router = useRouter()
-const { utenteAttivo, societaAttiva } = useStore()
+// stagioneCorrente serve solo al pie' del foglio ("Stagione 2026/2027"), che e' lo stesso del weekend
+const { utenteAttivo, societaAttiva, stagioneCorrente } = useStore()
 
 // Una sola pagina per due ingressi: chi arriva da /responsabili/tornei (admin) modifica, chi
 // arriva da Scelta.vue come "Convocazioni Tornei" legge e basta. Il livello di modifica lo decide
@@ -675,6 +691,7 @@ const convRoster = ref([])            // i tesserati della categoria della gara
 const convRicerca = ref('')
 const convCaricamento = ref(false)
 const convSalvataggio = ref(false)
+const convExport = ref(false)         // mentre il foglio si genera, perche' jsPDF ci mette un secondo
 const erroreConv = ref('')
 const confermaConv = ref('')
 
@@ -1443,6 +1460,70 @@ async function salvaConvocazione() {
     erroreConv.value = e.response?.data?.detail || 'Errore nel salvataggio della convocazione'
   } finally {
     convSalvataggio.value = false
+  }
+}
+
+/**
+ * Il foglio di convocazione di questa gara di torneo, in PDF.
+ *
+ * E' LO STESSO DOCUMENTO della pagina Convocazioni: chiama `esportaFoglioConvocazione`, non una copia
+ * scritta qui. Un torneo ha una gara per foglio, quindi la `gare` e' un array di uno, e i dati logistici
+ * si prendono da `convGara` (la riga di `tornei_gare`) con gli STESSI accoppiamenti che scrive il backend
+ * nel foglio: `appuntamento`<-`ora_appuntamento` e `inizio_gara`<-`ora`. Scambiarli qui darebbe un foglio
+ * con l'ora del ritrovo al posto del calcio d'inizio, e nel PDF dei calendari e' gia' successo.
+ *
+ * Cosa si esporta: QUELLO CHE C'E' A SCHERMO, non una rilettura dal database. Il pulsante sta accanto a
+ * "Salva convocazione" proprio per questo: chi esporta ha davanti la lista che sta per uscire. Se il
+ * documento rileggesse il DB, un mister che aggiunge un ragazzo e stampa senza salvare si ritroverebbe in
+ * chat un foglio diverso da quello che ha visto, cioe' un documento plausibile e falso. La pagina
+ * Convocazioni fa gia' cosi' (esporta `convocazione.value`, non un GET fresco).
+ *
+ * Perche' `etichettaAllenatori` e' vuota: la riga "Allenatore" del weekend legge i responsabili della
+ * partita, e una gara di torneo non li ha (il backend scrive `allenatore = None`). Il referente del
+ * torneo NON viene messo qui per scelta del titolare: il suo posto e' la colonna Mister del calendario
+ * tornei, che esce da un altro documento. Il foglio uscira' quindi con "Allenatore  —".
+ */
+async function esportaConvocazionePDF() {
+  const t = convTorneo.value
+  const g = convGara.value
+  if (!g) return
+  const catId = categoriaDellaGara(t, g)
+  // L'oggetto categoria vero, non uno costruito a mano con solo l'id: il foglio ci scrive
+  // `nome + anno` sotto il titolo, e un'etichetta vuota sarebbe un foglio senza destinatario
+  const categoria = catId ? (categorie.value.find(x => String(x.id) === String(catId)) || null) : null
+  convExport.value = true
+  try {
+    await esportaFoglioConvocazione({
+      convocazione: {
+        // Stessa regola del salvataggio: la data della gara, e se l'organizzatore non l'ha messa quella
+        // del torneo. Il foglio a schermo e il foglio salvato devono avere la stessa data
+        data_inizio: g.data || t?.data_inizio || null,
+        data_fine: null,
+        note: convNota.value || '',
+        // Una gara sola: il foglio di convocazione di una gara di torneo copre quella gara
+        gare: [{
+          numero: 1,
+          // `avversario` e' il titolo del blocco, come `gara` lo e' per il weekend: senza, il foglio non
+          // dice nemmeno contro chi si gioca
+          gara: g.avversario || `Gara ${g.numero || 1}`,
+          data: g.data,
+          campo: g.campo,
+          indirizzo: g.indirizzo,
+          appuntamento: g.ora_appuntamento,
+          inizio_gara: g.ora,
+          // array di persona_id, come lo aspetta `buildRows`; `.slice()` perche' il foglio non tocchi
+          // l'ordine del modal (lo riordina in base ai cognomi, e a schermo deve restare il nostro)
+          giocatori: convConvocati.value.slice()
+        }]
+      },
+      persone: convRoster.value,
+      societa: societaAttiva.value,
+      categoria,
+      stagione: stagioneCorrente.value,
+      etichettaAllenatori: () => ''
+    })
+  } finally {
+    convExport.value = false
   }
 }
 
