@@ -400,6 +400,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Tornei suddivisi per categorie iscritte, con un foglio giocatori per categoria
 
+## [7.8.0] - 2026-11-20
+
+### Fixed
+- Migrazioni: rimossa la `CREATE UNIQUE INDEX ux_liste_torneo_torneo` che un blocco piu' avanti droppava per creare `ux_liste_torneo_torneo_categoria`. Su PROD "WINTER CUP" ha quattro fogli, uno per categoria iscritta, quindi quella CREATE falliva `UniqueViolation` **a ogni avvio**: un warning che sembra un guasto grosso ed e' rumore, e il rumore nei log di migrazione e' il posto dove un guasto vero si nasconde. Provato che sa fallire: rimettendo la CREATE diventano rosse 2 asserzioni di `test_migrazione_liste_torneo.sh`
+
+## [7.8.1] - 2026-11-20
+
+### Changed
+- Il PDF dei tornei esce **solo con il calendario**: mai piu' la lista dei giocatori, che resta in `ListeTornei.vue`. A differenza di quel foglio, i quattro pulsanti di export dei tornei **non hanno alcun gate GDPR**, e un calendario con dentro i nomi dei ragazzi sarebbe la scorciatoia per portarli fuori in un file che finisce in chat agli organizzatori. Richiesta del titolare. Verificato con un'asserzione sull'**assenza** dei cognomi letti da `GET /liste-torneo/{id}/giocatori` (non cognomi scritti a mano), e vista rossa 5 volte rimettendo la stampa del roster
+
 ## [7.9.0] - 2026-11-23
 
 ### Added

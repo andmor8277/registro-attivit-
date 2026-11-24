@@ -91,9 +91,58 @@ Il sistema include una procedura automatizzata di backup remoto cifrato su repos
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v7.4.0**.
+La versione attuale è **v7.12.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
+
+> Le sezioni "Novità" qui sotto le scrive `release.sh` a ogni rilascio, insieme alla riga della
+> versione. Se ne vedi una mancante, quel meccanismo si è rotto: c'è
+> `scripts/test/test_readme_release.sh` che diventa rosso proprio per questo.
+
+### 🎉 Novità v7.12.0 (2026-11-24)
+
+- **Esporta JPEG** accanto a "Esporta PDF" sui documenti che finiscono in chat: foglio di convocazione, calendario tornei, programmazione weekend (5 pulsanti su 3 pagine). È **l'immagine dello stesso PDF**, generata dai byte che jsPDF sta per scrivere: il documento si costruisce una volta sola, quindi l'immagine non può divergere dal PDF
+- **Pagine multiple in un'immagine sola**, impilate, con sfondo bianco obbligatorio (la JPEG non ha l'alpha: senza, lo sfondo esce nero e il foglio in chat è illeggibile)
+- **Mai su Liste Tornei** (roster con codice fiscale) **né su Certificati Medici** (dati sanitari): è un'asserzione sul codice, quindi cade se qualcuno li aggiunge senza che la decisione l'abbia presa il titolare
+- Il test confronta il **quadro** della JPEG con il riquadro d'inchiostro dello stesso PDF reso da poppler (renderer indipendente), non le dimensioni del canvas
+
+### 🎉 Novità v7.11.0 (2026-11-24)
+
+- **Registro presenze in verticale sul telefono**: si apre sui giorni di allenamento della categoria (3 caselle invece del mese intero), senza obbligare a ruotare il dispositivo
+- **La settimana a cavallo la calcola Postgres** con la regola ISO del giovedì: il 30 novembre legge e scrive il 30 novembre, non il 30 dicembre
+- **Il foglio di stampa mantiene le colonne del mese** anche quando lo schermo è in vista settimana
+
+### 🎉 Novità v7.10.0 (2026-11-23)
+
+- **Foglio PDF di convocazione anche dal modal del torneo**, stesso modulo di quello del weekend: chi lo riceve in chat non ha modo di sapere quale dei due ha in mano
+- **Calendario gare e convocazioni dei tornei ai mister**, con un gate separato dalla sola lettura dell'amministratore
+
+### 🎉 Novità v7.9.0 (2026-11-23)
+
+- **Liste Tornei e Convocazioni Tornei anche nella barra laterale e nel menu del telefono**: esistevano solo nelle card della pagina di scelta, e chi non le vedeva pensava non esistessero
+
+### 🎉 Novità v7.8.1 (2026-11-20)
+
+- **Il PDF dei tornei esce solo con il calendario**: la lista giocatori resta in Liste Tornei, dove chi stampa ha verificato il codice fiscale. Quei quattro pulsanti non hanno il lucchetto GDPR, e un calendario con dentro i nomi dei ragazzi sarebbe la scorciatoia per portarli fuori in un file che finisce in chat agli organizzatori
+
+### 🎉 Novità v7.8.0 (2026-11-20)
+
+- **Migrazioni: via la `CREATE` di un indice che un blocco più avanti droppava**, e che su PROD falliva `UniqueViolation` a ogni avvio. Un warning che sembra un guasto grosso ed è rumore, e il rumore nei log di migrazione è il posto dove un guasto vero si nasconde
+
+### 🎉 Novità v7.7.0 (2026-11-20)
+
+- **Un torneo iscrive N categorie e produce un foglio giocatori per categoria**: la verità sta in `tornei_categorie`, non in `tornei.categoria_id`
+- **La gara di torneo deve dichiarare la categoria** quando le iscritte sono più d'una: riceve un 400 invece di vedersene assegnata una a caso, perché finirebbe nel foglio sbagliato
+
+### 🎉 Novità v7.6.0 (2026-11-20)
+
+- **Tornei di stagione**: calendario gare, Lista Tornei che **nasce insieme al torneo** (se dipendesse da un passaggio manuale il file da consegnare non verrebbe prodotto), ruoli sulle liste
+- **Codici fiscali rimasti in chiaro cifrati** e `create_all` spostato dentro `run_migrations()` sotto la advisory lock: con 4 worker, alla prima creazione di una tabella correvano tutti sulla stessa sequenza
+
+### 🎉 Novità v7.5.0 – v7.5.2 (2026-11-16)
+
+- **Avviso di aggiornamento dell'APK dentro l'app**, letto dalle GitHub Releases. Il numero di build passa nel body della release come commento HTML, perché la Release API di GitHub un campo `versionCode` non lo espone: senza di esso una rebuild ripubblicata sotto lo stesso tag non veniva mai proposta
+- Corretti i testi invisibili sui menu a tendina e la comparsa del marcatore interno nelle note dell'avviso
 
 ### 🎉 Novità v7.4.0
 

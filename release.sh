@@ -103,6 +103,55 @@ if ! grep -q "## \[$NEW_VERSION\]" CHANGELOG.md; then
     echo "- $MESSAGE" >> CHANGELOG.md
 fi
 
+# Il README dichiara la versione attuale e ha un proprio blocco "Novita'". Se non lo aggiorniamo qui,
+# invecchia da solo: e' rimasto fermo alla v7.4.0 per 12 release (dal 25/09 al 24/11/2026) perche'
+# questo script scriveva soltanto il CHANGELOG. Il guard-rail che si accorge se questo pezzo si rompe
+# e' scripts/test/test_readme_release.sh, che diventa rosso se il README non dichiara l'ultimo tag.
+if [ -f README.md ]; then
+    python3 - "$NEW_VERSION" "$MESSAGE" "$DATE" <<'PY'
+import re, sys
+
+versione, messaggio, data = sys.argv[1], sys.argv[2], sys.argv[3]
+P = 'README.md'
+t = open(P, encoding='utf-8').read()
+
+# 1) la riga della versione
+t, n = re.subn(r'(?m)^La versione attuale è \*\*v[0-9][0-9.]*\*\*\.$',
+               f'La versione attuale è **v{versione}**.', t)
+if n != 1:
+    sys.exit(f'ERRORE README: la riga "La versione attuale è **vX.Y.Z**." trovata {n} volte '
+             f'(ne serve 1). Non rilascio con la versione vecchia nel README: sistemare il testo, '
+             'non saltare questo passaggio.')
+
+# 2) la sezione delle novita', in cima alle altre (piu' recente per prima). L'ancora e' il marcatore
+#    <!-- RELEASE_INFO -->: definisce l'area che questo script possiede, cosi' chi riordina o commenta
+#    le sezioni delle release vecchie non sposta l'inserimento da un'altra parte. Il marcatore qui e'
+#    davvero usato, non solo dichiarato: il test che lo verifica (test_readme_release.sh) ha senso
+#    perche' senza di esso QUESTO blocco si ferma, non perche' e' decorazione.
+sezione = f'\n### 🎉 Novità v{versione} ({data})\n\n- {messaggio}\n'
+if re.search(r'(?m)^### [^\n]*Novità v' + re.escape(versione) + r'\b', t):
+    print(f'  README: sezione Novità v{versione} gia' + ' presente, non la duplico')
+else:
+    MARCATORE = '<!-- RELEASE_INFO -->'
+    if MARCATORE not in t:
+        sys.exit(f'ERRORE README: marcatore {MARCATORE} assente. E\' l\'ancora dell\'inserimento: '
+                 'rimetterlo nella sezione Release, oppure aggiornare questo script sapendo che il '
+                 'test corrispondente diventera\' rosso.')
+    dopo = t.index(MARCATORE) + len(MARCATORE)
+    m = re.search(r'(?m)^### [^\n]*Novità v[0-9]', t[dopo:])
+    if not m:
+        sys.exit('ERRORE README: sotto il marcatore non c\'e\' nessuna sezione "### ... Novità vX.Y.Z" '
+                 'dove inserire la nuova. Il blocco Release e\' stato riscritto: rimettere il formato '
+                 'o aggiornare questo script, non rilasciare senza novita\' nel README.')
+    i = dopo + m.start()
+    t = t[:i] + sezione + t[i:]
+
+open(P, 'w', encoding='utf-8').write(t)
+print(f'  README aggiornato: versione v{versione} + sezione Novita\'')
+PY
+    git add README.md
+fi
+
 # Copia il CHANGELOG nella release
 cp CHANGELOG.md releases/v$NEW_VERSION/ 2>/dev/null || true
 
