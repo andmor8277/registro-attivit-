@@ -414,3 +414,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Registro presenze: si apre sui giorni di allenamento della settimana, usabile in verticale sul telefono
+
+## [7.12.0] - 2026-11-24
+
+### Added
+- Esporta JPEG dei documenti che finiscono in chat: foglio convocazioni, calendario tornei, programmazione weekend
