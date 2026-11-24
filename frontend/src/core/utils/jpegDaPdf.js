@@ -20,9 +20,11 @@
 //    di questo file diceva che senza `standardFontDataUrl` il testo usciva storto. **Non e' vero per
 //    i nostri documenti**: con l'URL dei font rotto le quattro JPEG del test sono venute fuori
 //    BYTE-IDENTICHE, e nel log di nginx non compariva nemmeno una richiesta a
-//    `pdfjs/standard_fonts/` -- pdf.js 5.4 rende i 14 standard col suo percorso di riserva. L'opzione
-//    resta perche' e' quella giusta da dichiarare se un documento usera' glifi che la riserva non
-//    copre; i 762 KB di `standard_fonts` nel bundle sono, oggi, assicurazione non richiesta.
+//    `pdfjs/standard_fonts/` -- pdf.js 5.4 rende i 14 standard col suo percorso di riserva. Per questo
+//    i 762 KB di `standard_fonts` sono stati **tolte dal bundle** (decisione del titolare, 24/11/2026)
+//    e qui l'opzione `standardFontDataUrl` non c'e' piu': se un documento usera' glifi che la riserva
+//    non copre, vanno rimessi entrambi -- l'opzione qui e i file in `public/pdfjs/standard_fonts/` (vedi la
+//    testa di scripts/copy_pdfjs_assets.mjs, che conserva la misura).
 //    (E' anche il motivo per cui il negative test NON ha una mutazione sui font: non c'e'
 //    asserzione che quel difetto lo veda.)
 //
@@ -127,12 +129,17 @@ export async function jpegDaPdf(doc, { scale = SCALA_DI_DEFAULT, quality = QUALI
 
   const pdf = await pdfjs.getDocument({
     data: dati,
-    // I font Type1 non incorporati: dal bundle, non da un CDN. In APK un CDN non e' un'opzione,
-    // e il path va sotto BASE_URL perche' l'app carica gli asset da https://localhost.
-    // SUI NOSTRI DOCUMENTI QUESTA OPZIONE NON VIENE MAI LETTA (vedi punto 1 in testa al file):
-    // dichiararla comunque costa una stringa, e se un giorno un documento avra' glifi che la
-    // riserva di pdf.js non copre, qui c'e' gia' dove prenderli
-    standardFontDataUrl: `${import.meta.env.BASE_URL}pdfjs/standard_fonts/`,
+    // NIENTE `standardFontDataUrl`, e non e' una dimenticanza. I nostri PDF non incorporano font
+    // (jsPDF usa i 14 Type1 standard: nel file finiscono solo i `/BaseFont`, zero `/FontFile`,
+    // verificato generando un documento con la libreria stessa), e ne sembrava seguire che pdf.js
+    // dovesse per forza prendere glifi e metriche da quella cartella. **Misurato: no.** Con l'URL dei
+    // font rotto le quattro JPEG del test sono venute fuori byte-identiche all'originale, e nel log di
+    // nginx non compare nemmeno una richiesta a `pdfjs/standard_fonts/`: pdf.js 5.4 rende i 14
+    // standard col suo percorso di riserva, senza chiedere niente al server. Rimossa su decisione del
+    // titolare (24/11/2026) insieme ai 762 KB di file nel bundle. Se un giorno un documento avra'
+    // glifi che la riserva non copre, l'opzione va rimessa QUI e i file vanno rimessi in
+    // `public/pdfjs/standard_fonts/`: la storia completa della misura sta in testa a
+    // scripts/copy_pdfjs_assets.mjs
     // pdf.js usa eval per convertire alcuni font: senza, su una CSP restrittiva la conversione
     // fallirebbe in un modo difficile da distinguere da un PDF rotto
     isEvalSupported: false,

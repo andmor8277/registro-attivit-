@@ -1,23 +1,25 @@
-// Copia in `public/pdfjs/` le due cose che pdf.js carica da URL: i font standard e il worker.
+// Copia in `public/pdfjs/` il worker, che pdf.js carica da URL.
 //
-// PERCHE' I FONT (e cosa c'e' da sapere, perche' la prima versione di questo file la diceva sbagliata)
-// I nostri PDF non incorporano i font: jsPDF usa i 14 Type1 standard (Helvetica, Times, Courier &
-// c.) e nel file finiscono solo i `/BaseFont`, zero `/FontFile` -- verificato generando un documento
-// con la libreria stessa. Sembra ne segua che pdf.js DEVE prendere glifi e metriche da
-// `standardFontDataUrl`, e che senza quella cartella il testo esca storto. **Misurato: no.** Con l'URL
-// dei font rotto le quattro JPEG del test sono venute fuori byte-identiche all'originale, e nginx non
-// ha visto nemmeno una richiesta a `pdfjs/standard_fonts/`: pdf.js 5.4 rende i 14 font standard col
-// suo percorso di riserva, senza chiedere niente al server.
-//
-// Quindi i 762 KB qui sotto sono, allo stato, un'assicurazione che oggi nessuno incassa. Si tengono
-// per due motivi: se un documento usera' glifi che la riserva non copre, il posto dove prenderli deve
-// essere gia' li' (in APK un CDN non e' un'opzione), e perche' toglierli non cambierebbe niente su
-// nessun documento che il test copre -- quindi non e' una decisione urgente, e' una decisione di peso
-// dell'APK da prendere sapendo il numero vero. Se si tolgono, togliere anche l'opzione in jpegDaPdf.js.
-//
-// PERCHE' NEL BUNDLE E NON DA UN CDN
-// L'APK carica gli asset da https://localhost e deve funzionare anche senza rete; un CDN in un'app
-// che gira in un WebView e' un pulsante che dipende da cosa risponde internet.
+// QUESTO FILE UNA VOLTA COPIAVA ANCHE I FONT (762 KB, 16 file). Tolti il 24/11/2026 su decisione del
+// titolare, perche' erano peso senza contropartita. La misura, che va raccontata perche' e' il motivo
+// per cui NON vanno rimessi "per sicurezza":
+//   i nostri PDF non incorporano font -- jsPDF usa i 14 Type1 standard (Helvetica, Times, Courier & c.)
+//   e nel file finiscono solo i `/BaseFont`, zero `/FontFile` (verificato generando un documento con la
+//   libreria stessa). Ne sembrava seguire che chi rasterizza il PDF (pdf.js, vedi
+//   src/core/utils/jpegDaPdf.js) dovesse prendere glifi e metriche da `standardFontDataUrl`, e che senza
+//   quella cartella il testo uscisse storto. **Non e' cosi'**: rompendo quell'URL (mutazione del negative
+//   test) le quattro JPEG sono venute fuori byte-identiche all'originale, il testo a schermo era
+//   perfettamente leggibile, e nel log di nginx non compare nemmeno una richiesta a
+//   `pdfjs/standard_fonts/`. pdf.js 5.4 rende i 14 standard col suo percorso di riserva.
+//   Conseguenza sul negative test: non esiste una mutazione sui font, perche' non esiste asserzione che
+//   quel difetto veda (le soglie d'inchiostro sono dominate da righe di tabella e barre, che sono
+//   vettori jsPDF e non dipendono dai font). E' la mutazione tolta, documentata in
+//   scripts/test/negative_export_jpeg.sh.
+//   SE UN GIORNO SERVISSERO davvero (un documento con glifi che la riserva non copre): rimettere
+//   `standardFontDataUrl` in jpegDaPdf.js E copiare qui `node_modules/pdfjs-dist/standard_fonts`. Il
+//   perche' nel bundle e non da un CDN resta valido: l'APK carica gli asset da https://localhost e deve
+//   funzionare anche senza rete, e un CDN in un WebView e' un pulsante che dipende da cosa risponde
+//   internet.
 //
 // PERCHE' IL WORKER VIENE RINOMINATO .js (e non e' un vezzo)
 // pdf.js lo carica con `new Worker(url, {type:"module"})`. Chrome rifiuta di eseguire un modulo il
@@ -30,67 +32,43 @@
 // MIME a decidere, non il suffisso.
 //
 // Il fallimento e' rumoroso di proposito: se manca qualcosa, il build si ferma. Un build che passa e
-// sforna un pulsante JPEG il cui testo esce storto, o che non produce niente senza dire perche', e'
-// la stessa classe di difetto del "container frontend mai creato" di `npm ci`: sembra a posto.
-import { existsSync, mkdirSync, readdirSync, copyFileSync, statSync, rmSync } from 'node:fs'
+// sforna un pulsante JPEG che non produce niente senza dire perche' e' la stessa classe di difetto del
+// "container frontend mai creato" di `npm ci`: sembra a posto.
+import { existsSync, mkdirSync, copyFileSync, statSync, rmSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const QUI = dirname(fileURLToPath(import.meta.url))
 const FRONTEND = resolve(QUI, '..')
 const PKG = join(FRONTEND, 'node_modules', 'pdfjs-dist')
-const FONT_SORGENTE = join(PKG, 'standard_fonts')
 const WORKER_SORGENTE = join(PKG, 'build', 'pdf.worker.min.mjs')
 const DESTINAZIONE = join(FRONTEND, 'public', 'pdfjs')
 
-function copia(src, dst, cosa) {
-  copyFileSync(src, dst)
-  // Copia verificata sulla misura: un file troncato a meta' e' un glifo mancante, o un worker che
-  // non parte, e in entrambi i casi il sintomo arriva lontano dal difetto
-  const prima = statSync(src).size
-  const dopo = statSync(dst).size
-  if (prima !== dopo) {
-    console.error(`ERRORE: copia troncata su ${cosa}: ${prima} byte attesi, ${dopo} scritti (${src}).`)
-    process.exit(1)
-  }
-  return dopo
-}
-
-for (const [percorso, cosa] of [[FONT_SORGENTE, 'cartella standard_fonts di pdf.js'],
-                               [WORKER_SORGENTE, 'worker di pdf.js']]) {
-  if (!existsSync(percorso)) {
-    console.error(
-      `ERRORE: ${cosa} non trovata in ${percorso}\n` +
-      'Senza di essa "Esporta JPEG" non puo' + (percorso === FONT_SORGENTE
-        ? ' rendere i font Helvetica/Times/Courier che i nostri PDF non incorporano, e il testo\n' +
-          '  uscirebbe storto o assente.'
-        : ' creare il worker, e l\'export non partirebbe.') +
-      '\nVerifica che "pdfjs-dist" sia tra le dipendenze e che "npm ci" sia andato a buon fine.'
-    )
-    process.exit(1)
-  }
-}
-
-// Si riparte da zero ogni volta: un font o un worker rimasti da una versione vecchia di pdf.js
-// resterebbero serviti accanto a una libreria nuova, e pdf.js rifiuta worker di versione diversa
-// dicendo solo "The API and Worker versions do not match"
-rmSync(DESTINAZIONE, { recursive: true, force: true })
-mkdirSync(join(DESTINAZIONE, 'standard_fonts'), { recursive: true })
-
-let byteFont = 0
-let nFont = 0
-for (const f of readdirSync(FONT_SORGENTE)) {
-  const src = join(FONT_SORGENTE, f)
-  if (!statSync(src).isFile()) continue
-  byteFont += copia(src, join(DESTINAZIONE, 'standard_fonts', f), `font ${f}`)
-  nFont++
-}
-if (nFont === 0) {
-  console.error(`ERRORE: ${FONT_SORGENTE} esiste ma e' vuota: niente font da copiare.`)
+if (!existsSync(WORKER_SORGENTE)) {
+  console.error(
+    `ERRORE: il worker di pdf.js non trovato in ${WORKER_SORGENTE}\n` +
+    'Senza di esso "Esporta JPEG" non puo' + ' creare il worker, e l\'export non partirebbe.\n' +
+    'Verifica che "pdfjs-dist" sia tra le dipendenze e che "npm ci" sia andato a buon fine.'
+  )
   process.exit(1)
 }
 
-const byteWorker = copia(WORKER_SORGENTE, join(DESTINAZIONE, 'pdf.worker.min.js'), 'worker')
+// Si riparte da zero ogni volta: un worker rimasto da una versione vecchia di pdf.js verrebbe servito
+// accanto a una libreria nuova, e pdf.js rifiuta worker di versione diversa dicendo solo
+// "The API and Worker versions do not match"
+rmSync(DESTINAZIONE, { recursive: true, force: true })
+mkdirSync(DESTINAZIONE, { recursive: true })
 
-console.log(`asset pdf.js -> public/pdfjs/: ${nFont} font (${(byteFont / 1024).toFixed(0)} KB) ` +
-            `+ worker come .js (${(byteWorker / 1024).toFixed(0)} KB)`)
+copyFileSync(WORKER_SORGENTE, join(DESTINAZIONE, 'pdf.worker.min.js'))
+// Copia verificata sulla misura: un worker troncato a meta' e' un export che non parte, e il sintomo
+// arriva lontano dal difetto
+const attesi = statSync(WORKER_SORGENTE).size
+const scritti = statSync(join(DESTINAZIONE, 'pdf.worker.min.js')).size
+if (attesi !== scritti) {
+  console.error(
+    `ERRORE: copia troncata sul worker: ${attesi} byte attesi, ${scritti} scritti (${WORKER_SORGENTE}).`
+  )
+  process.exit(1)
+}
+
+console.log(`asset pdf.js -> public/pdfjs/: worker come .js (${(scritti / 1024).toFixed(0)} KB)`)
