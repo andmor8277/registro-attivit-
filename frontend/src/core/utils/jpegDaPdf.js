@@ -162,26 +162,33 @@ export async function jpegDaPdf(doc, { scale = SCALA_DI_DEFAULT, quality = QUALI
   const latoMax = limiteLatoReale()
   const scalaDaLato = Math.min(latoMax / baseLarghezza, latoMax / baseAltezza)
   const scalaDaPixeli = Math.sqrt(PIXEL_MAX_COMPOSITE / (baseLarghezza * baseAltezza))
-  const scalaEffettiva = Math.max(0.25, Math.min(scale, scalaDaLato, scalaDaPixeli))
+  let scalaEffettiva = Math.max(0.25, Math.min(scale, scalaDaLato, scalaDaPixeli))
 
-  const larghezza = Math.max(1, Math.round(baseLarghezza * scalaEffettiva))
-  const altezza = Math.max(1, Math.round(baseAltezza * scalaEffettiva))
-
-  // `willReadFrequently: true` dice al browser di tenere il canvas in RAM invece che in GPU: e'
-  // esattamente cio' che toglie il vincolo di texture quando il limite e' li', e tanto il canvas
-  // viene solo codificato, mai mostrato
-  const canvas = document.createElement('canvas')
-  canvas.width = larghezza
-  canvas.height = altezza
-  let ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true })
-  if (!ctx) {
-    // Il WebView ha rifiutato il canvas: si riprova dimezzando, per non consegnare niente. Meglio
-    // un'immagine a meta' DPI che un pulsante che non fa nulla
-    canvas.width = Math.max(1, Math.round(larghezza / 2))
-    canvas.height = Math.max(1, Math.round(altezza / 2))
+  // Misure dei singoli fogli alla scala scelta. Il composite e' ESATTAMENTE la loro pila: altezza =
+  // somma delle altezze arrotondate, larghezza = la massima. Calcolarle qui, e non arrotondare a
+  // parte il totale, evita che l'ultima pagina venga tagliata di un pixel
+  let misure = []
+  let canvas = null
+  let ctx = null
+  for (let tentativo = 0; tentativo < 3; tentativo++) {
+    misure = viewport.map(vp => ({
+      w: Math.max(1, Math.round(vp.width * scalaEffettiva)),
+      h: Math.max(1, Math.round(vp.height * scalaEffettiva))
+    }))
+    canvas = document.createElement('canvas')
+    canvas.width = Math.max(...misure.map(m => m.w))
+    canvas.height = misure.reduce((a, m) => a + m.h, 0)
+    // `willReadFrequently: true` dice al browser di tenere il canvas in RAM invece che in GPU: e'
+    // esattamente cio' che toglie il vincolo di texture quando il limite e' li', e tanto il canvas
+    // viene solo codificato, mai mostrato
     ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true })
-    if (!ctx) throw new Error('Il dispositivo non riesce a creare il canvas dell\'immagine')
+    if (ctx) break
+    // Il WebView ha rifiutato il canvas: si dimezza la SCALA e si ricomincia da capo. Dimezzare solo
+    // il canvas -- come faceva la prima versione -- avrebbe ritagliato meta' foglio in silenzio:
+    // meglio un'immagine a meta' DPI che un pulsante che non fa niente, MAI un'immagine monca
+    scalaEffettiva = Math.max(0.25, scalaEffettiva / 2)
   }
+  if (!ctx) throw new Error('Il dispositivo non riesce a creare il canvas dell\'immagine')
 
   // IL bianco dello sfondo. Va fatto qui, sul composite, perche' la JPEG non ha trasparenza:
   // senza questa riga lo sfondo viene nero (trappola n.2 in testa al file)
@@ -191,16 +198,23 @@ export async function jpegDaPdf(doc, { scale = SCALA_DI_DEFAULT, quality = QUALI
   let offsetY = 0
   for (let i = 1; i <= pagine; i++) {
     const pagina = await pdf.getPage(i)
-    const vp = viewport[i - 1]
-    const w = Math.max(1, Math.round(vp.width * scalaEffettiva))
-    const h = Math.max(1, Math.round(vp.height * scalaEffettiva))
+    const m = misure[i - 1]
+    // Il viewport del RENDER porta la scala DENTRO, ed e' un oggetto DIVERSO da quello a scala 1
+    // usato sopra per misurare la geometria. Passare a render() il viewport a scala 1 -- come faceva
+    // la prima versione di questo file -- rende il foglio a 1x dentro un canvas grande 3x: il
+    // contenuto finisce rimpicciolito in alto a sinistra e occupa 1/9 dell'immagine, che a schermo
+    // sembra "una JPEG a bassa risoluzione che se l'ingrandisci sgrana". Il canvas resta delle
+    // dimensioni giuste, quindi qualunque asserzione guardi il canvas e non il contenuto non lo vede
+    // (e infatti le 54 asserzioni del test erano verdi): per questo il test confronta il QUADRO, non
+    // la cornice, con il riquadro d'inchiostro del PDF reso da un renderer indipendente
+    const vp = pagina.getViewport({ scale: scalaEffettiva })
 
     // Una pagina alla volta su un canvas d'appoggio, poi drawImage sul composite: pdf.js puo'
     // cancellare l'area che rende, e sul composite non deve arrivare nessun clear. Costo: un solo
     // canvas-pagina alla volta, rilasciato subito sotto
     const tmp = document.createElement('canvas')
-    tmp.width = w
-    tmp.height = h
+    tmp.width = m.w
+    tmp.height = m.h
     const tctx = tmp.getContext('2d')
     await pagina.render({ canvasContext: tctx, viewport: vp, background: '#ffffff' }).promise
     ctx.drawImage(tmp, 0, offsetY)
@@ -208,7 +222,7 @@ export async function jpegDaPdf(doc, { scale = SCALA_DI_DEFAULT, quality = QUALI
     // Rilascia la memoria della pagina prima della successiva
     tmp.width = 0
     tmp.height = 0
-    offsetY += h
+    offsetY += m.h
   }
 
   const dataUrl = canvas.toDataURL('image/jpeg', quality)

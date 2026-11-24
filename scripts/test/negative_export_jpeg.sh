@@ -57,7 +57,7 @@ VERDI[sfondo-nero]="l'aspect della JPEG e' quello delle|il nome file e' quello d
 # Il tetto dei DPI: deve poter rendere il foglio ILLEGGIBILE e non toccare le pagine. E' l'asserzione
 # della consegna del titolare, e per questo la si mette qui e non solo nel test positivo
 ROSSI[tetto-dei-dpi]="larghezza sopra la soglia di leggibilita'"
-VERDI[tetto-dei-dpi]="l'aspect della JPEG e' quello delle|almeno un documento esportato ha piu' di una pagina|il nome file e' quello del PDF con .jpg"
+VERDI[tetto-dei-dpi]="l'aspect della JPEG e' quello delle|almeno un documento esportato ha piu' di una pagina|il nome file e' quello del PDF con .jpg|occupa lo STESSO spazio del PDF"
 # Geometria senza pagine: il canvas viene alto 1 pixel. Deve cadere l'aspect. La LARGHEZZA resta
 # quella giusta (2526 px) e deve restare verde: e' la prova che a vedere la pagina persa e' l'aspect,
 # non una soglia qualunque sulla dimensione
@@ -68,6 +68,12 @@ VERDI[pagine-perse]="larghezza sopra la soglia di leggibilita'|il nome file e' q
 # dell'inchiostro accanto all'aspect
 ROSSI[pagine-sovrapposte]="ha inchiostro nella sua banda"
 VERDI[pagine-sovrapposte]="l'aspect della JPEG e' quello delle|lo sfondo e' bianco|il nome file e' quello del PDF con .jpg"
+# LA REGRESSIONE SEGNALATA DAL TITOLARE (24/11/2026): contenuto reso a 1/3 dentro un canvas delle
+# misure giuste. Deve diventare rossa SOLO l'asserzione sul quadro. Che l'aspect e l'inchiostro
+# RESTINO verdi non e' un dettaglio: e' la prova scritta che erano loro, le asserzioni che il titolare
+# aveva visto verde mentre il foglio era illeggibile
+ROSSI[scala-render]="occupa lo STESSO spazio del PDF"
+VERDI[scala-render]="l'aspect della JPEG e' quello delle|la pagina 3 del PDF ha inchiostro nella sua banda|il nome file e' quello del PDF con .jpg|almeno un documento esportato ha piu' di una pagina"
 
 # ── il chunk da mutare, preso dal container ─────────────────────────────────────────
 echo "--- individuo il chunk della rasterizzazione su DEV ---"
@@ -124,8 +130,10 @@ ripristina() {
     PRISTINO=0
     return 1
   fi
-  # Non basta l'hash: le tre ancore devono essere di nuovo nei byte che il browser riceve
-  for A in 'fillStyle="#ffffff"' 'background:"#ffffff"' 'standardFontDataUrl:"/pdfjs/standard_fonts/"' 'B=16*1e3*1e3'; do
+  # Non basta l'hash: le ancore devono essere di nuovo nei byte che il browser riceve. Sono forme, non
+  # nomi minificati (il minificatore li cambia a ogni build, e un'ancora morta sarebbe un ripristino
+  # che dice "ok" senza aver verificato niente)
+  for A in 'fillStyle="#ffffff"' 'background:"#ffffff"' 'standardFontDataUrl:"/pdfjs/standard_fonts/"' '16*1e3*1e3' 'getViewport({scale:1})'; do
     if ! curl -s "$URL" | grep -qF "$A"; then
       echo "  !! ATTENZIONE: ripristinato ma l'ancora $A non e' piu' nei byte serviti"
       PRISTINO=0
@@ -156,8 +164,8 @@ for M in "${MUTAZIONI[@]}"; do
   $SSH "docker cp /tmp/jpg-neg/mut-$NOME $CONT:$PERCORSO" >/dev/null 2>&1
   # La prova che il browser riceve il file mutato. Senza questa, un docker cp finito nel posto
   # sbagliato darebbe "nessun rosso" e il giro sembrerebbe onesto
-  MARCATORE=$(python3 "$PY" marcatore "$M")
-  if ! curl -s "$URL" | grep -qF "$MARCATORE"; then
+  MARCATORE=$(python3 "$PY" marcatore "$M" "$LAVORO/$NOME" "$LAVORO/mut/$NOME" 2>/dev/null)
+  if [ -z "$MARCATORE" ] || ! curl -s "$URL" | grep -qF "$MARCATORE"; then
     echo "  FAIL la mutazione non e' nei byte SERVITI (cerco '$MARCATORE' in $URL): il giro non ha testato niente"
     ROTTI=1
     ripristina

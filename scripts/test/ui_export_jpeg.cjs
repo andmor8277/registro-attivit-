@@ -22,7 +22,8 @@
 // Non si lancia a mano: lo invoca scripts/test/verifica_ui_export_jpeg.sh, che crea gli utenti di
 // prova con prepara_demo_tornei.sh e passa le credenziali.
 const fs = require('fs')
-const { spawn } = require('child_process')
+const path = require('path')
+const { spawn, execFileSync } = require('child_process')
 
 const BASE = process.env.THOF_UI_BASE || 'http://192.168.178.133:3000'
 const PW = process.argv[2]
@@ -274,8 +275,11 @@ const ANALIZZA = `async function(b64, nBande) {
         // `jpegs` nel wrapper, e il wrapper ha contato zero JPEG mentre le JPEG c'erano tutte
         const cartella = `${OUT}/${estensione === '.pdf' ? 'pdfs' : 'jpegs'}`
         fs.mkdirSync(cartella, { recursive: true })
-        fs.copyFileSync(percorso, `${cartella}/${etichetta}--${trovati[0]}`)
-        return { nome: trovati[0], percorso, byte: fs.statSync(percorso).size }
+        const copia = `${cartella}/${etichetta}--${trovati[0]}`
+        fs.copyFileSync(percorso, copia)
+        // `copia` e' quella che si usa per misurare: `percorso` sta nella cartella download, che il
+        // giro dopo viene svuotata, e un confronto che legge un file cancellato direbbe "bianca"
+        return { nome: trovati[0], percorso, copia, byte: fs.statSync(percorso).size }
       }
       await sleep(250)
     }
@@ -289,6 +293,55 @@ const ANALIZZA = `async function(b64, nBande) {
   async function analizza(percorso, nBande) {
     const b64 = fs.readFileSync(percorso).toString('base64')
     return await richiama(ANALIZZA, b64, nBande)
+  }
+
+  /**
+   * L'asserzione che conta: la JPEG e' L'IMMAGINE di QUEL PDF, quindi dove sta l'inchiostro nella
+   * JPEG deve coincidere con dove sta l'inchiostro nel PDF reso da un renderer INDIPENDENTE
+   * (poppler). Deforma il confronto de "le due fonti": il browser dice cosa viene dipinto, poppler
+   * dice cosa dovrebbe esserci. Confrontare la JPEG con cio' che pdf.js stesso diceva di aver reso
+   * sarebbe un falso verde -- se la rasterizzazione sbaglia la scala, sbaglia anche la sua versione.
+   *
+   * Perche' non bastava misurare il canvas: con la pagina resa a scala 1 dentro un canvas grande 3x
+   * le dimensioni erano giuste, l'aspect era giusto, c'era inchiostro su ogni pagina e gli angoli
+   * erano bianchi. Erano tutte verdi. Il contenuto stava in 1/9 dell'immagine.
+   */
+  function confrontaQuadro(etichetta, percorsoPdf, percorsoJpg) {
+    let esito
+    try {
+      esito = JSON.parse(execFileSync('python3',
+        [path.join(__dirname, 'confronta_inchiostro.py'), percorsoPdf, percorsoJpg],
+        { encoding: 'utf8', timeout: 120000 }))
+    } catch (e) {
+      ck(`${etichetta}: il confronto del quadro puo' essere eseguito`, false, true)
+      console.log('     perche\' no:', String(e.message || e).slice(0, 300))
+      return null
+    }
+    if (esito.errore) {
+      ck(`${etichetta}: il confronto del quadro puo' essere eseguito`, false, true)
+      console.log('     perche\' no:', esito.errore, esito.dove || '')
+      return null
+    }
+    ck(`${etichetta}: il confronto del quadro puo' essere eseguito`, true, true)
+    console.log(`  quadro: ${esito.pagine} pagine, delta massimo ${(esito.peggio * 100).toFixed(1)}% ` +
+                `(soglia ${(esito.soglia * 100).toFixed(0)}%)`)
+    for (const c of esito.confronti) {
+      if (c.perche) {
+        ck(`${etichetta}: la pagina ${c.pagina} ha un quadro da confrontare`, false, true)
+        console.log('     perche\':', c.perche)
+        continue
+      }
+      console.log(`     pagina ${c.pagina}: PDF x ${c.pdf.x0}\u2192${c.pdf.x1} y ${c.pdf.y0}\u2192${c.pdf.y1}` +
+                  ` | JPEG x ${c.jpg.x0}\u2192${c.jpg.x1} y ${c.jpg.y0}\u2192${c.jpg.y1}` +
+                  ` | delta ${(c.delta_max * 100).toFixed(1)}%`)
+    }
+    ck(`${etichetta}: il contenuto della JPEG occupa lo STESSO spazio del PDF (scala, ritaglio, impaginazione)`,
+       esito.ok, true)
+    if (!esito.ok) {
+      console.log(`     il quadro diverge del ${(esito.peggio * 100).toFixed(1)}%: la JPEG non e' l'immagine` +
+                  ` di quel PDF (scala sbagliata, pagine ritagliate o impilate male)`)
+    }
+    return esito
   }
 
   /**
@@ -322,7 +375,7 @@ const ANALIZZA = `async function(b64, nBande) {
     ck(`${etichetta}: magic bytes FF D8 FF`, esadec(byte.slice(0, 3)), 'FF D8 FF')
     ck(`${etichetta}: marcatore di fine FFD9`, esadec(byte.slice(-2)), 'FF D9')
 
-    const a = await analizza(dJpg.percorso, pdf.pagine)
+    const a = await analizza(dJpg.copia, pdf.pagine)
     ck(`${etichetta}: il browser la decodifica`, a.decodificata, true)
     if (!a.decodificata) { console.log("     perche':", a.perche); return null }
     console.log(`  JPEG: ${a.w}x${a.h} px, aspect ${(a.h / a.w).toFixed(4)}, ` +
@@ -341,7 +394,10 @@ const ANALIZZA = `async function(b64, nBande) {
     ck(`${etichetta}: lo sfondo e' bianco (la JPEG non ha alpha, altrimenti sarebbe nero)`,
        angoliBianchi, true)
     if (!angoliBianchi) console.log('     angoli letti:', JSON.stringify(a.angoli))
-    return { pdf, jpg: a }
+
+    // L'ultima, e la sola che guarda il contenuto e non la cornice
+    const quadro = confrontaQuadro(etichetta, dPdf.copia, dJpg.copia)
+    return { pdf, jpg: a, quadro }
   }
 
   const esiti = {}
@@ -428,6 +484,10 @@ const ANALIZZA = `async function(b64, nBande) {
   for (const [k, e] of multi) {
     ck(`${k}: con ${e.pdf.pagine} pagine la JPEG le ha tutte e ognuna ha il suo inchiostro`,
        e.jpg.bande.length === e.pdf.pagine && e.jpg.bande.every(f => f >= INCHIOSTRO_MINIMO), true)
+    // Il confronto del quadro deve aver coperto OGNI pagina: un confronto che si fermasse alla prima
+    // lascerebbe verdi le pagine successive, che e' esattamente dove l'impilamento sbaglia
+    ck(`${k}: il quadro e' stato confrontato per tutte le ${e.pdf.pagine} pagine`,
+       !!e.quadro && Array.isArray(e.quadro.confronti) && e.quadro.confronti.length === e.pdf.pagine, true)
   }
 
   // La console della pagina deve restare pulita: un errore inghiottito dal try/catch dell'export
