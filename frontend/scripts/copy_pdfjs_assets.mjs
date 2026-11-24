@@ -1,11 +1,19 @@
 // Copia in `public/pdfjs/` le due cose che pdf.js carica da URL: i font standard e il worker.
 //
-// PERCHE' I FONT
-// I nostri PDF non incorporano i font. jsPDF usa i 14 Type1 standard (Helvetica, Times, Courier &
+// PERCHE' I FONT (e cosa c'e' da sapere, perche' la prima versione di questo file la diceva sbagliata)
+// I nostri PDF non incorporano i font: jsPDF usa i 14 Type1 standard (Helvetica, Times, Courier &
 // c.) e nel file finiscono solo i `/BaseFont`, zero `/FontFile` -- verificato generando un documento
-// con la libreria stessa. Chi rasterizza il PDF (pdf.js, vedi src/core/utils/jpegDaPdf.js) deve
-// quindi prendere glifi e metriche da qualche parte: quella parte e' `standardFontDataUrl`, e pdf.js
-// la vuole come **cartella di file**, non come modulo JS.
+// con la libreria stessa. Sembra ne segua che pdf.js DEVE prendere glifi e metriche da
+// `standardFontDataUrl`, e che senza quella cartella il testo esca storto. **Misurato: no.** Con l'URL
+// dei font rotto le quattro JPEG del test sono venute fuori byte-identiche all'originale, e nginx non
+// ha visto nemmeno una richiesta a `pdfjs/standard_fonts/`: pdf.js 5.4 rende i 14 font standard col
+// suo percorso di riserva, senza chiedere niente al server.
+//
+// Quindi i 762 KB qui sotto sono, allo stato, un'assicurazione che oggi nessuno incassa. Si tengono
+// per due motivi: se un documento usera' glifi che la riserva non copre, il posto dove prenderli deve
+// essere gia' li' (in APK un CDN non e' un'opzione), e perche' toglierli non cambierebbe niente su
+// nessun documento che il test copre -- quindi non e' una decisione urgente, e' una decisione di peso
+// dell'APK da prendere sapendo il numero vero. Se si tolgono, togliere anche l'opzione in jpegDaPdf.js.
 //
 // PERCHE' NEL BUNDLE E NON DA UN CDN
 // L'APK carica gli asset da https://localhost e deve funzionare anche senza rete; un CDN in un'app

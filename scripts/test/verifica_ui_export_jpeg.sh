@@ -94,11 +94,82 @@ if [ -z "$PW" ]; then
   exit 1
 fi
 
+export THOF_UI_BASE="${THOF_UI_BASE:-http://192.168.178.133:3000}"
 export THOF_UI_OUT="${THOF_UI_OUT:-/tmp/opencode/ui-export-jpeg}"
 rm -rf "$THOF_UI_OUT"
 
+# ---------------------------------------------------------------- semina multi-pagina
+# `singlePageMax` in pdfConvocazione.js tiene il foglio su UNA pagina finche' le gare sono <=4: e'
+# una forzatura voluta, e infatti su DEV e PROD non esiste nessun foglio a due pagine (max reale:
+# 4 gare con 14 convocati). Ma e' proprio li' che la consegna "quello che c'e' nel PDF deve esserci
+# nella JPEG" ha valore, e il test da solo non lo puo' percorrere. Quindi si semina un weekend con
+# 5 gare: a 5 il layout degrada a 2 colonne per riga e la seconda pagina nasce davvero.
+# Le partite si creano PRIMA del foglio perche' `crea()` di convocazioni.py, se non le trova,
+# INSERTISCE in `partite` e fa upsert su `campi_sportivi`: un foglio di prova che passasse di li'
+# non darebbe un errore, darebbe una partita di campionato inventata
+API="$THOF_UI_BASE/api"
+TOK=$(curl -s --max-time 25 -X POST "$API/auth/token" --data-urlencode "username=demo_tornei" \
+        --data-urlencode "password=$PW" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+RAGAZZI=$(q "SELECT string_agg(id::text, ',') FROM (SELECT id FROM persone WHERE categoria_id=$CAT
+              AND cognome IS NOT NULL ORDER BY id LIMIT 12) t" | tr -d ' ')
+MULTI_OK=0
+MULTI_WID=""
+MULTI_CID=""
+if [ -n "$TOK" ] && [ -n "$RAGAZZI" ]; then
+  echo
+  echo "--- semino un weekend a 5 gare per forzare il foglio su DUE pagine ---"
+  # Lo slash FINALE non e' ornamentale: le rotte sono @router.post("/") sotto prefix="/weekend",
+  # quindi senza slash FastAPI risponde 307 e curl senza -L riceve un corpo VUOTO. Sarebbe sembrato
+  # "il weekend non si crea" quando invece si era solo persa la risposta
+  R_W=$(curl -s --max-time 25 -X POST "$API/weekend/" -H "Authorization: Bearer $TOK" \
+    -H 'Content-Type: application/json' \
+    -d '{"nome":"__demo_multi__","data_inizio":"2026-09-05","data_fine":"2026-09-06"}')
+  MULTI_WID=$(printf '%s' "$R_W" | sed -n 's/.*"id":\([0-9]*\).*/\1/p' | head -1)
+  if [ -z "$MULTI_WID" ]; then
+    echo "  POST /weekend/ non ha restituito un id. Risposta: $(printf '%s' "$R_W" | head -c 200)"
+  fi
+  if [ -n "$MULTI_WID" ]; then
+    for i in 1 2 3 4 5; do
+      curl -s --max-time 25 -X POST "$API/partite/" -H "Authorization: Bearer $TOK" -H 'Content-Type: application/json' \
+        -d "{\"categoria_id\":$CAT,\"weekend_id\":$MULTI_WID,\"data_partite\":\"2026-09-05\",\"ora\":\"09:0${i}\",\"avversario\":\"__Demo Multi ${i}__\",\"campo\":\"Campo Demo\",\"casa_fuori\":\"casa\"}" \
+        >/dev/null
+    done
+    GARE_JSON=$(printf '%s' "$RAGAZZI" | python3 -c "
+import sys, json
+ids = [int(x) for x in sys.stdin.read().strip().split(',') if x.strip()]
+gare = [{'numero': i, 'data': '2026-09-05', 'gara': f'__Demo Multi {i}__',
+         'appuntamento': f'08:3{i}', 'inizio_gara': f'10:0{i}',
+         'giocatori': [{'persona_id': p, 'posizione': k + 1} for k, p in enumerate(ids)]}
+        for i in range(1, 6)]
+print(json.dumps(gare, ensure_ascii=False))
+")
+    R_C=$(curl -s --max-time 30 -X POST "$API/convocazioni/" -H "Authorization: Bearer $TOK" \
+      -H 'Content-Type: application/json' \
+      -d "{\"categoria_id\":$CAT,\"weekend_id\":$MULTI_WID,\"data_inizio\":\"2026-09-05\",\"data_fine\":\"2026-09-06\",\"note\":\"foglio di prova a 5 gare\",\"gare\":$GARE_JSON}")
+    MULTI_CID=$(printf '%s' "$R_C" | sed -n 's/.*"id":\([0-9]*\).*/\1/p' | head -1)
+    if [ -z "$MULTI_CID" ]; then
+      echo "  POST /convocazioni/ non ha restituito un id. Risposta: $(printf '%s' "$R_C" | head -c 300)"
+    fi
+    # Il conteggio si fa solo con un id numerico in mano: passare una stringa vuota a psql produce un
+    # errore che finisce dentro ckmin, che lo stampa come valore e non come fallimento -- verde per il
+    # motivo sbagliato
+    if [ -n "$MULTI_CID" ]; then
+      N_GARE=$(q "SELECT count(*) FROM convocazione_gare WHERE convocazione_id=$MULTI_CID" | tr -dc '0-9')
+      ckmin "il foglio di prova ha 5 gare (sotto le 4, singlePageMax lo terrebbe su una pagina e il multi-pagina non verrebbe percorso)" "${N_GARE:-0}" 5
+      if [ "${N_GARE:-0}" -ge 5 ]; then MULTI_OK=1; THOF_UI_FOGLIO_DATA="05/09/26"; export THOF_UI_FOGLIO_DATA; fi
+    else
+      ck "il foglio di prova a 5 gare e' stato creato" "no" "si"
+    fi
+  else
+    echo "  il weekend di prova non e' stato creato: il multi-pagina non verra' percorso"
+  fi
+else
+  echo "  token o ragazzi mancanti: il multi-pagina non verra' percorso (il test lo dichiarera')"
+fi
+
 # L'export e' una LETTURA. I pulsanti JPEG stanno accanto a "Salva convocazione" e ad "Aggiungi gara":
-# se per errore chiamassero una scrittura, il danno sarebbe un foglio o una gara che nessuno ha creato
+# se per errore chiamassero una scrittura, il danno sarebbe un foglio o una gara che nessuno ha creato.
+# Il conteggio si prende DOPO la semina: la semina scrive, l'export no, e le due cose non vanno confuse
 FOGLI_PRIMA=$(q "SELECT count(*) FROM convocazioni")
 GIOC_PRIMA=$(q "SELECT count(*) FROM convocazione_giocatori")
 GARE_PRIMA=$(q "SELECT count(*) FROM tornei_gare")
@@ -132,6 +203,19 @@ done
 
 echo
 echo "--- ripulisco i dati di prova ---"
+# I figli prima dei padri: convocazione_giocatori -> convocazione_gare -> convocazioni. Cancellare
+# nell'ordine sbagliato lascia orfani in silenzio, e il run dopo trova un foglio che non si spiega
+if [ -n "$MULTI_CID" ]; then
+  q "DELETE FROM convocazione_giocatori WHERE gara_id IN (SELECT id FROM convocazione_gare WHERE convocazione_id=$MULTI_CID);
+     DELETE FROM convocazione_gare WHERE convocazione_id=$MULTI_CID;
+     DELETE FROM convocazioni WHERE id=$MULTI_CID;" >/dev/null
+fi
+if [ -n "$MULTI_WID" ]; then
+  q "DELETE FROM partite WHERE weekend_id=$MULTI_WID;
+     DELETE FROM weekend WHERE id=$MULTI_WID;" >/dev/null
+fi
+RESIDUI=$(q "SELECT count(*) FROM weekend WHERE nome='__demo_multi__'")
+ck "nessun residuo del weekend a 5 gare" "$RESIDUI" "0"
 bash "$DIR/prepara_demo_tornei.sh" --pulisci >/dev/null
 echo "  fatto"
 

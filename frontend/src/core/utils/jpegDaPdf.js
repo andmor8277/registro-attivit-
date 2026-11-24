@@ -14,11 +14,17 @@
 //
 // Le tre cose che sembrano dettagli e sono il motivo per cui questo file esiste:
 //
-// 1) **I font non sono nel PDF.** jsPDF usa i 14 Type1 standard (Helvetica & c.) e NON li incorpora:
-//    verificato sui nostri documenti, zero `/FontFile`. pdf.js deve quindi prendere le metriche e i
-//    glifi dai `standard_fonts` che il build copia in `public/pdfjs/` (vedi
-//    frontend/scripts/copy_pdfjs_fonts.mjs, agganciato a `prebuild`). Senza quell'opzione il testo
-//    esce con larghezze sbagliate o manca, e a schermo sembra solo un PDF un po' storto.
+// 1) **I font non sono nel PDF -- ma a pdf.js non servono lo stesso (misurato).** jsPDF usa i 14
+//    Type1 standard (Helvetica & c.) e NON li incorpora: verificato sui nostri documenti, zero
+//    `/FontFile`, solo `/BaseFont`. Sembra il vincolo che decide tutto, e infatti la prima versione
+//    di questo file diceva che senza `standardFontDataUrl` il testo usciva storto. **Non e' vero per
+//    i nostri documenti**: con l'URL dei font rotto le quattro JPEG del test sono venute fuori
+//    BYTE-IDENTICHE, e nel log di nginx non compariva nemmeno una richiesta a
+//    `pdfjs/standard_fonts/` -- pdf.js 5.4 rende i 14 standard col suo percorso di riserva. L'opzione
+//    resta perche' e' quella giusta da dichiarare se un documento usera' glifi che la riserva non
+//    copre; i 762 KB di `standard_fonts` nel bundle sono, oggi, assicurazione non richiesta.
+//    (E' anche il motivo per cui il negative test NON ha una mutazione sui font: non c'e'
+//    asserzione che quel difetto lo veda.)
 //
 // 2) **La JPEG non ha l'alpha.** pdf.js rende su canvas trasparente: se il composite non viene
 //    riempito di bianco prima, lo sfondo diventa NERO. Il composite qui viene riempito e mai
@@ -30,8 +36,8 @@
 //    peggio che condividere un file lungo. Nessuna pagina viene mai saltata o rifiutata: il tetto
 //    del canvas puo' toccare i DPI, mai cosa c'e' dentro.
 //
-// pdf.js viene importato DINAMICAMENTE, dentro la chiamata: ~475 KB di chunk + il worker + i font
-// pesano solo a chi preme il pulsante, e se un WebView vecchio non regge pdf.js si rompe il solo
+// pdf.js viene importato DINAMICAMENTE, dentro la chiamata: 412 KB di chunk + il worker (1 MB) + i
+// font pesano solo a chi preme il pulsante, e se un WebView vecchio non regge pdf.js si rompe il solo
 // pulsante JPEG, non l'export PDF che oggi funziona.
 
 const SCALA_DI_DEFAULT = 3
@@ -122,7 +128,10 @@ export async function jpegDaPdf(doc, { scale = SCALA_DI_DEFAULT, quality = QUALI
   const pdf = await pdfjs.getDocument({
     data: dati,
     // I font Type1 non incorporati: dal bundle, non da un CDN. In APK un CDN non e' un'opzione,
-    // e il path va sotto BASE_URL perche' l'app carica gli asset da https://localhost
+    // e il path va sotto BASE_URL perche' l'app carica gli asset da https://localhost.
+    // SUI NOSTRI DOCUMENTI QUESTA OPZIONE NON VIENE MAI LETTA (vedi punto 1 in testa al file):
+    // dichiararla comunque costa una stringa, e se un giorno un documento avra' glifi che la
+    // riserva di pdf.js non copre, qui c'e' gia' dove prenderli
     standardFontDataUrl: `${import.meta.env.BASE_URL}pdfjs/standard_fonts/`,
     // pdf.js usa eval per convertire alcuni font: senza, su una CSP restrittiva la conversione
     // fallirebbe in un modo difficile da distinguere da un PDF rotto

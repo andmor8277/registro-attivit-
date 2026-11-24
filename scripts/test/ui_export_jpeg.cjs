@@ -43,6 +43,7 @@ const LARGHEZZA_MINIMA = 900
 const PESO_MINIMO = 8000
 
 let ws, nextId = 1
+let chrome = null   // serve a chiudiTutto(), che sta fuori dall'IIFE: un Chrome orfano tiene vivo il wrapper
 const pending = new Map()
 const erroriConsole = []
 const dialoghi = []   // gli alert dell'app: sono il posto dove l'export scrive PERCHE' ha fallito
@@ -174,7 +175,7 @@ const ANALIZZA = `async function(b64, nBande) {
   }
   fs.rmSync(`${OUT}/profile`, { recursive: true, force: true })
   fs.mkdirSync(OUT, { recursive: true })
-  const chrome = spawn(process.env.CHROME || '/usr/bin/google-chrome-stable', [
+  chrome = spawn(process.env.CHROME || '/usr/bin/google-chrome-stable', [
     '--headless=new', `--remote-debugging-port=${PORT}`, '--no-sandbox', '--disable-gpu',
     '--disable-dev-shm-usage', '--hide-scrollbars', `--user-data-dir=${OUT}/profile`,
     '--window-size=1180,1600',
@@ -269,7 +270,9 @@ const ANALIZZA = `async function(b64, nBande) {
         const percorso = `${DL}/${trovati[0]}`
         for (let k = 0; k < 40 && fs.statSync(percorso).size <= 500; k++) await sleep(250)
         await sleep(400)
-        const cartella = `${OUT}/${estensione.replace('.', '')}s`
+        // Nomi di cartella ESPLICITI: derivarli dall'estensione (`jpg` + 's') ha dato `jpgs` qui e
+        // `jpegs` nel wrapper, e il wrapper ha contato zero JPEG mentre le JPEG c'erano tutte
+        const cartella = `${OUT}/${estensione === '.pdf' ? 'pdfs' : 'jpegs'}`
         fs.mkdirSync(cartella, { recursive: true })
         fs.copyFileSync(percorso, `${cartella}/${etichetta}--${trovati[0]}`)
         return { nome: trovati[0], percorso, byte: fs.statSync(percorso).size }
@@ -389,7 +392,17 @@ const ANALIZZA = `async function(b64, nBande) {
   ck('lo storico dei fogli non e\' vuoto (senza, non c\'e\' niente da esportare)', chip.length > 0, true)
   if (chip.length) {
     console.log('  chip nello storico: ' + JSON.stringify(chip.slice(0, 4)))
-    await clickReale(`document.querySelector('.wk-storico')`)
+    // Quando il wrapper ha seminato un foglio a 5 gare, si apre QUELLO: e' l'unico modo di percorrere
+    // l'impilamento di piu' pagine, e sceglierne uno a caso significherebbe misurare sempre una pagina
+    const dataChiesta = process.env.THOF_UI_FOGLIO_DATA || ''
+    const selettoreChip = dataChiesta
+      ? `[...document.querySelectorAll('.wk-storico')].find(b => b.innerText.includes(${JSON.stringify(dataChiesta)}))`
+      : `document.querySelector('.wk-storico')`
+    if (dataChiesta) {
+      ck(`il foglio a 5 gare seminato dal wrapper compare nello storico (${dataChiesta})`,
+         await evalJS(`!!(${selettoreChip})`), true)
+    }
+    await clickReale(selettoreChip)
     await sleep(900)
     const cPdf = await evalJS(`[...document.querySelectorAll('button')].filter(b => /Esporta PDF/.test(b.innerText)).length`)
     const cJpg = await evalJS(`[...document.querySelectorAll('button')].filter(b => /Esporta JPEG/.test(b.innerText)).length`)
@@ -407,15 +420,14 @@ const ANALIZZA = `async function(b64, nBande) {
   const multi = Object.entries(esiti).filter(([, e]) => e && e.pdf.pagine > 1)
   console.log('\n--- il multi-pagina e\' stato percorso? ---')
   console.log(`  documenti con piu' di una pagina: ${multi.length ? multi.map(([k, e]) => `${k} (${e.pdf.pagine})`).join(', ') : 'NESSUNO'}`)
-  if (multi.length) {
-    for (const [k, e] of multi) {
-      ck(`${k}: con ${e.pdf.pagine} pagine la JPEG le ha tutte e ognuna ha il suo inchiostro`,
-         e.jpg.bande.length === e.pdf.pagine && e.jpg.bande.every(f => f >= INCHIOSTRO_MINIMO), true)
-    }
-  } else {
-    console.log('  NOTA: i dati di prova di oggi stanno tutti su una pagina. Il percorso che impila')
-    console.log('        piu\' pagine non e\' stato esercitato: va forzato (negative_registro style),')
-    console.log('        non dato per buono perche\' il codice c\'e\'.')
+  // Non e' una nota: e' un'asserzione. La consegna "quello che c'e' nel PDF deve esserci nella JPEG"
+  // vale proprio quando le pagine sono piu' di una, e un verde ottenuto senza mai percorrerla sarebbe
+  // il peggior falso verde di questo file -- il codice dell'impilamento non sarebbe stato eseguito
+  ck('almeno un documento esportato ha piu\' di una pagina (senza, il percorso che le impila non e\' stato eseguito)',
+     multi.length >= 1, true)
+  for (const [k, e] of multi) {
+    ck(`${k}: con ${e.pdf.pagine} pagine la JPEG le ha tutte e ognuna ha il suo inchiostro`,
+       e.jpg.bande.length === e.pdf.pagine && e.jpg.bande.every(f => f >= INCHIOSTRO_MINIMO), true)
   }
 
   // La console della pagina deve restare pulita: un errore inghiottito dal try/catch dell'export
@@ -430,9 +442,20 @@ const ANALIZZA = `async function(b64, nBande) {
   const fail = risultati.filter(r => !r.ok).length
   console.log(`\n${pass} passati, ${fail} falliti`)
   console.log(`  (documenti confrontati: ${Object.keys(esiti).filter(k => esiti[k]).length}/${Object.keys(esiti).length})`)
-  process.exitCode = fail ? 1 : 0
-})().catch(e => {
+  // Il processo NON esce da solo: il WebSocket verso Chrome tiene vivo l'event loop, il wrapper resta
+  // appeso e non arriva ne' alla ripulitura dei dati di prova ne' al verdetto. Gia' costato un wrapper
+  // bloccato a meta' in ui_weekend.cjs -- si chiude il browser, poi il socket, poi si esce esplicitamente
+  await chiudiTutto()
+  process.exit(fail ? 1 : 0)
+})().catch(async e => {
   console.error('ERRORE DEL TEST:', e)
   console.log('  0 passati, 1 falliti (eccezione del test)')
-  process.exitCode = 1
+  await chiudiTutto()
+  process.exit(1)
 })
+
+async function chiudiTutto() {
+  try { await Promise.race([send('Browser.close'), sleep(3000)]) } catch (e) {}
+  try { ws && ws.close() } catch (e) {}
+  try { chrome.kill('SIGKILL') } catch (e) {}
+}
