@@ -131,11 +131,12 @@ RELEASE_JSON=$(curl -s -X POST \
     }")
 
 # Estrai ID release
-if command -v jq >/dev/null 2>&1; then
-    RELEASE_ID=$(echo "${RELEASE_JSON}" | jq -r '.id // empty')
-else
-    RELEASE_ID=$(echo "${RELEASE_JSON}" | python3 -c "import sys, json; print(json.load(sys.stdin).get('id', ''))")
-fi
+#
+# Un solo ramo, non due. Il codice faceva `if command -v jq` e poi una copia della stessa lettura in
+# python3: su PROD `jq` NON e' installato (verificato 24/11/2026), quindi il ramo jq non e' mai stato
+# eseguito da nessuno su nessuna macchina. Due implementazioni della stessa regola, una mai provata,
+# e' la classe di divergenza che questo progetto registra gia' per i PDF e per i ruoli.
+RELEASE_ID=$(echo "${RELEASE_JSON}" | python3 -c "import sys, json; print(json.load(sys.stdin).get('id', ''))")
 
 if [ -z "${RELEASE_ID}" ]; then
     echo "❌ [ERRORE] Creazione release fallita su GitHub. Risposta API:"
@@ -165,35 +166,93 @@ fi
 echo "✅ Backup offsite caricato con successo su GitHub!"
 
 # 9. Politica di Retention (cancella release e tag più vecchi di RETENTION_DAYS)
+#
+# Perche' questa parte e' stata riscritta (24/11/2026). Il cron delle 03:00, per circa 60 giorni, ha
+# cancellato ogni notte LA RELEASE CHE AVEVA APPENA CREATO, e il log chiudeva con "🎉 Procedura di
+# Backup Offsite completata con successo". Misurato su andmor8277/thof-backups:
+#     backup-20261124_123319   creata=2026-09-25T07:27:04   pubbl=2026-11-24T12:33:20
+# Il campo confrontato era `created_at`, che su quelle release e' di settembre: "vecchio di 60
+# giorni" -> cancellata ogni notte. In sei mesi la storia offsite e' scesa a UNA release. Nessuna
+# asserzione, nessun avviso, nessun rosso: il log diceva successo.
+#
+# La regola vive in scripts/lib/selezione_retention.py (UN solo ramo: `jq` non e' installato su PROD,
+# quindi il ramo jq del codice vecchio non era mai stato eseguito da nessuno). Qui sopra restano tre
+# cose che lo script deve fare da se':
+#   - non cancellare niente se il selettore non capisce (rc!=0), invece di proseguire con la lista
+#     vuota come se fosse un verdetto;
+#   - dire ad alta voce cosa cancella e cosa conserva, perche' "completato con successo" mentre
+#     cancella tutto e' cio' che ha nascosto il difetto;
+#   - VERIFICARE A FINE GIRO che il backup di stanotte esista ancora. E' l'asserzione che avrebbe
+#     beccato questo difetto in venti secondi sei settimane fa, ed e' l'unica che lo beccherebbe di
+#     nuovo se il campo giusto smettesse di essere giusto per un motivo che oggi non immaginiamo.
 echo "🧹 Verifica retention (conservazione ultimi ${RETENTION_DAYS} giorni)..."
 RELEASES_LIST=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" \
     "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases?per_page=100")
 
 CUTOFF_DATE=$(date -d "${RETENTION_DAYS} days ago" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -v -${RETENTION_DAYS}d +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || true)
 
-if [ -n "${CUTOFF_DATE}" ]; then
-    if command -v jq >/dev/null 2>&1; then
-        OLD_RELEASES=$(echo "${RELEASES_LIST}" | jq -r --arg cutoff "${CUTOFF_DATE}" '.[] | select(.created_at < $cutoff) | "\(.id):\(.tag_name)"')
-    else
-        OLD_RELEASES=$(echo "${RELEASES_LIST}" | python3 -c "
-import sys, json
-cutoff = '${CUTOFF_DATE}'
-for r in json.load(sys.stdin):
-    if r.get('created_at', '') < cutoff:
-        print(f\"{r['id']}:{r['tag_name']}\")
-")
-    fi
-
-    for item in ${OLD_RELEASES}; do
-        OLD_ID=$(echo "${item}" | cut -d: -f1)
-        OLD_TAG=$(echo "${item}" | cut -d: -f2)
-        if [ -n "${OLD_ID}" ]; then
-            echo "   Eliminazione vecchio backup: ${OLD_TAG} (ID: ${OLD_ID})..."
-            curl -s -X DELETE -H "Authorization: token ${GITHUB_TOKEN}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/${OLD_ID}" >/dev/null
-            curl -s -X DELETE -H "Authorization: token ${GITHUB_TOKEN}" "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/refs/tags/${OLD_TAG}" >/dev/null || true
-        fi
-    done
+# Il selettore fallisce in direzione sicura: nessun output = nessun backup cancellato.
+DA_POTARE=""
+POTANDA="${TMP_DIR}/da_potare.tsv"
+if SELEZIONE_ERR=$(python3 "${SCRIPT_DIR}/lib/selezione_retention.py" \
+        --cutoff "${CUTOFF_DATE}" --keep "${RELEASE_ID}" <<< "${RELEASES_LIST}" 2>&1 >"${POTANDA}"); then
+    DA_POTARE=$(cat "${POTANDA}")
+    echo "   $(head -1 <<<"${SELEZIONE_ERR}")"
+else
+    RC_SELEZIONE=$?
+    echo "⚠️  [ATTENZIONE] Retention SALTATA (rc=${RC_SELEZIONE}): nessun backup cancellato."
+    echo "   ${SELEZIONE_ERR}"
+    echo "   E' la direzione voluta: quando il selettore non capisce, i backup restano tutti."
 fi
+
+POTATI=0; POTATI_TAG=""
+if [ -n "${DA_POTARE}" ]; then
+    while IFS=$'\t' read -r OLD_ID OLD_TAG; do
+        [ -n "${OLD_ID}" ] || continue
+        echo "   Eliminazione vecchio backup: ${OLD_TAG} (ID: ${OLD_ID})..."
+        # Il codice vecchio buttava via la risposta: un DELETE che non partiva era invisibile, che e'
+        # la meta' del motivo per cui nessuno si e' accorto di niente per due mesi.
+        # `|| echo ERR-curl` e non basta il curl nudo: lo script e' in `set -euo pipefail`, quindi un
+        # errore di rete qui dentro ucciderebbe il cron A META' retention, con alcuni backup gia'
+        # cancellati e gli altri no. Meglio un numero che grida che un decesso silenzioso a meta'.
+        CODICE=$(curl -s -o /dev/null -w '%{http_code}' -X DELETE \
+            -H "Authorization: token ${GITHUB_TOKEN}" \
+            "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/${OLD_ID}" 2>/dev/null || echo ERR-curl)
+        if [ "${CODICE}" != "204" ] && [ "${CODICE}" != "200" ]; then
+            echo "   ⚠️  release ${OLD_TAG}: DELETE ha risposto ${CODICE} (atteso 204)"
+        fi
+        curl -s -o /dev/null -X DELETE -H "Authorization: token ${GITHUB_TOKEN}" \
+            "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/refs/tags/${OLD_TAG}" || true
+        POTATI=$((POTATI + 1)); POTATI_TAG="${POTATI_TAG} ${OLD_TAG}"
+    done <<< "${DA_POTARE}"
+fi
+echo "   Retention: ${POTATI} release cancellate${POTATI_TAG:+ ->${POTATI_TAG}}"
+
+# 9b. Il backup di stanotte c'e' ancora? Senza questo controllo il cron puo' dichiarare successo
+#     mentre ha appena cancellato l'unica copia offsite del database.
+# Stesso motivo di sopra: `set -euo pipefail` + una pipe. Se il curl di questo controllo fallisce,
+# la pipe esce male e il cron muore DOPO aver gia' caricato il backup: un errore che sembra "il backup
+# non c'e'" quando era la rete. `|| true` lascia correre e parla il controllo sotto, che e' quello
+# che deve essere rosso o verde.
+ESISTE=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" \
+    "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/${RELEASE_ID}" 2>/dev/null \
+    | python3 -c "
+import sys, json
+# l'id arriva in argv, non interpolato nel sorgente: un valore vuoto avrebbe dato SyntaxError, e
+# un SyntaxError qui e' un 'LEGGO-MALE' che sembra un guasto del backup invece che un bug del test
+atteso = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else -1
+try:
+    r = json.load(sys.stdin)
+except Exception:
+    print('LEGGO-MALE'); raise SystemExit
+print('SI' if r.get('id') == atteso and (r.get('assets') or []) else 'NO')" "${RELEASE_ID}" || true)
+if [ "${ESISTE}" != "SI" ]; then
+    echo "❌ [ERRORE] Il backup di stanotte (release ${RELEASE_ID}, tag ${TAG_NAME}) NON risulta su GitHub"
+    echo "   con i suoi asset: il backup offsite NON c'e'. Non e' un avviso: controllare prima di"
+    echo "   fidarsi di questo cron. (E' esattamente il controllo che mancava.)"
+    exit 1
+fi
+echo "   ✅ Verificato: il backup ${TAG_NAME} e' su GitHub con i suoi asset"
 
 # Pulizia locale backups vecchi
 find "${BACKUP_DIR}" -name "thof_*.enc" -type f -mtime +"${RETENTION_DAYS}" -delete 2>/dev/null || true
