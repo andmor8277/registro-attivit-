@@ -429,3 +429,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Esporta JPEG dei documenti che finiscono in chat: foglio convocazioni, calendario tornei, programmazione weekend
+
+## [7.13.0] - 2026-11-24
+
+### Added
+- Etichette dei pulsanti di export allineate: "Ambito (PDF)" / "Ambito (immagine)"; bundle 762 KB piu' leggero (font che pdf.js non chiede mai)

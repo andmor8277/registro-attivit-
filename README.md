@@ -91,7 +91,7 @@ Il sistema include una procedura automatizzata di backup remoto cifrato su repos
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v7.12.0**.
+La versione attuale è **v7.13.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
 
@@ -99,6 +99,10 @@ Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
 > versione. Se ne vedi una mancante, quel meccanismo si è rotto: c'è
 > `scripts/test/test_readme_release.sh` che diventa rosso proprio per questo.
 
+
+### 🎉 Novità v7.13.0 (2026-11-24)
+
+- Etichette dei pulsanti di export allineate: "Ambito (PDF)" / "Ambito (immagine)"; bundle 762 KB piu' leggero (font che pdf.js non chiede mai)
 ### 🎉 Novità v7.12.0 (2026-11-24)
 
 - **Esporta JPEG** accanto a "Esporta PDF" sui documenti che finiscono in chat: foglio di convocazione, calendario tornei, programmazione weekend (5 pulsanti su 3 pagine). È **l'immagine dello stesso PDF**, generata dai byte che jsPDF sta per scrivere: il documento si costruisce una volta sola, quindi l'immagine non può divergere dal PDF
