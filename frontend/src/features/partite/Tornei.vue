@@ -14,48 +14,48 @@
            si ricarica la lista: un documento che si chiama "i tornei della societa'" e ha dentro solo
            i Pulcini perche' qualcuno aveva il filtro su e' plausibile e falso -->
       <button class="btn-esporta" :disabled="esportazione" @click="esportaTutti()"
-              title="Esporta il PDF di TUTTI i tornei della società: solo i calendari, senza farsi condizionare dai filtri. I giocatori si stampano da Liste Tornei">
+              title="Il PDF di TUTTI i tornei della società: solo i calendari, senza farsi condizionare dai filtri. I giocatori si stampano da Liste Tornei">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
           <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
           <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
         </svg>
-        <span>{{ esportazione ? 'Genero…' : 'Esporta tutti i tornei' }}</span>
+        <span>{{ esportazione ? 'Genero…' : 'Tutti i tornei (PDF)' }}</span>
       </button>
       <!-- La JPEG e' L'IMMAGINE dello stesso PDF: parte dai byte del documento, non da una seconda
            impaginazione, quindi ha dentro esattamente le stesse gare. Serve perche' in chat una
            immagine si apre da sola mentre il PDF va scaricato e aperto -->
       <button class="btn-esporta secondario" :disabled="esportazione" @click="esportaTutti('jpeg')"
-              title="Condividi i calendari di TUTTI i tornei come immagine (WhatsApp, messaggi): e' l'immagine del PDF, stesso contenuto">
+              title="Condividi i calendari di TUTTI i tornei come immagine (WhatsApp, messaggi): e' l'immagine del PDF, stesso contenuto. Si salva come .jpg">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
           <rect x="3" y="3" width="18" height="18" rx="2"/>
           <circle cx="8.5" cy="8.5" r="1.5"/>
           <path d="m21 15-5-5L5 21"/>
         </svg>
-        <span>{{ esportazione ? 'Genero…' : 'Immagine tutti i tornei' }}</span>
+        <span>{{ esportazione ? 'Genero…' : 'Tutti i tornei (immagine)' }}</span>
       </button>
       <!-- Compare solo con un filtro attivo: senza filtri "selezione" e "tutti" sono lo stesso
            documento, e due bottoni che fanno la stessa cosa sono due risposte diverse alla stessa
            domanda. Quando c'e', il PDF che produce lo scrive da solo di essere un sottoinsieme -->
       <button v-if="filtriAttivi.length" class="btn-esporta secondario"
               :disabled="!tornei.length || esportazione" @click="esportaSelezione()"
-              :title="'Esporta solo quello che vedi (' + filtriAttivi.join(', ') + '). Il documento lo dichiara, per non scambiarlo per quello completo'">
+              :title="'Solo quello che vedi a schermo (' + filtriAttivi.join(', ') + '). Il documento lo dichiara, per non scambiarlo per quello completo'">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
           <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
           <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
         </svg>
-        <span>Esporta la selezione</span>
+        <span>Selezione (PDF)</span>
       </button>
       <button v-if="filtriAttivi.length" class="btn-esporta secondario"
               :disabled="!tornei.length || esportazione" @click="esportaSelezione('jpeg')"
-              :title="'Condividi come immagine solo quello che vedi (' + filtriAttivi.join(', ') + '). E\' l\'immagine del PDF, e il foglio lo dichiara da solo'">
+              :title="'Condividi come immagine solo quello che vedi a schermo (' + filtriAttivi.join(', ') + '). E\' l\'immagine del PDF, e il foglio lo dichiara da solo'">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
           <rect x="3" y="3" width="18" height="18" rx="2"/>
           <circle cx="8.5" cy="8.5" r="1.5"/>
           <path d="m21 15-5-5L5 21"/>
         </svg>
-        <span>Immagine la selezione</span>
+        <span>Selezione (immagine)</span>
       </button>
       <button v-if="!solaLettura" class="btn-primary" @click="apriModalTorneo()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
@@ -112,22 +112,22 @@
         {{ sez.titolo }}
         <span class="conteggio-sezione">{{ sez.tornei.length }} {{ sez.tornei.length === 1 ? 'torneo' : 'tornei' }}</span>
         <button class="btn-esporta" :disabled="esportazione" @click="esportaPDF(sez)"
-                :title="'Esporta il PDF di ' + sez.titolo + ': solo i calendari dei tornei di questa categoria. I giocatori si stampano da Liste Tornei'">
+                :title="'Il PDF di ' + sez.titolo + ': solo i calendari dei tornei di questa categoria. I giocatori si stampano da Liste Tornei'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
             <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
           </svg>
-          <span>Esporta PDF</span>
+          <span>Calendario categoria (PDF)</span>
         </button>
         <button class="btn-esporta secondario" :disabled="esportazione" @click="esportaPDF(sez, null, { formato: 'jpeg' })"
-                :title="'Condividi i calendari di ' + sez.titolo + ' come immagine (WhatsApp, messaggi): e\' l\'immagine del PDF, stessi tornei e stesse gare'">
+                :title="'Condividi i calendari di ' + sez.titolo + ' come immagine (WhatsApp, messaggi): e\' l\'immagine del PDF, stessi tornei e stesse gare. Si salva come .jpg'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
             <rect x="3" y="3" width="18" height="18" rx="2"/>
             <circle cx="8.5" cy="8.5" r="1.5"/>
             <path d="m21 15-5-5L5 21"/>
           </svg>
-          <span>Immagine</span>
+          <span>Calendario categoria (immagine)</span>
         </button>
       </h2>
 
@@ -198,22 +198,22 @@
                della giornata: un PDF con dentro anche l'altra categoria e' un documento che va
                tagliato a mano prima di essere inviato -->
           <button class="btn-esporta" :disabled="esportazione" @click="esportaPDF(sez, t)"
-                  :title="'Esporta il PDF di ' + t.nome + ' per ' + etichettaCategoria(sez) + ': solo il calendario. I giocatori si stampano da Liste Tornei'">
+                  :title="'Il PDF di ' + t.nome + ' per ' + etichettaCategoria(sez) + ': solo il calendario. I giocatori si stampano da Liste Tornei'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
               <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
             </svg>
-            <span>Esporta PDF</span>
+            <span>Calendario torneo (PDF)</span>
           </button>
           <button class="btn-esporta secondario" :disabled="esportazione" @click="esportaPDF(sez, t, { formato: 'jpeg' })"
-                  :title="'Condividi ' + t.nome + ' per ' + etichettaCategoria(sez) + ' come immagine (WhatsApp, messaggi): e\' l\'immagine del PDF, stesso calendario'">
+                  :title="'Condividi ' + t.nome + ' per ' + etichettaCategoria(sez) + ' come immagine (WhatsApp, messaggi): e\' l\'immagine del PDF, stesso calendario. Si salva come .jpg'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
               <rect x="3" y="3" width="18" height="18" rx="2"/>
               <circle cx="8.5" cy="8.5" r="1.5"/>
               <path d="m21 15-5-5L5 21"/>
             </svg>
-            <span>Immagine</span>
+            <span>Calendario torneo (immagine)</span>
           </button>
         </div>
 
@@ -618,8 +618,8 @@
                     :disabled="convExport || convCaricamento || convSalvataggio || !convConvocati.length"
                     :title="!convConvocati.length
                             ? 'Nessun giocatore convocato: il foglio uscirebbe vuoto'
-                            : 'Scarica il foglio di convocazione in PDF: lo stesso documento della pagina Convocazioni'">
-              {{ convExport ? 'Genero…' : 'Esporta PDF' }}
+                            : 'Il foglio di convocazione in PDF: lo stesso documento della pagina Convocazioni'">
+              {{ convExport ? 'Genero…' : 'Foglio convocazione (PDF)' }}
             </button>
             <!-- Stesso identico foglio, consegnato come immagine: nasce dai byte del PDF, quindi ha
                  dentro gli stessi ragazzi e gli stessi orari. E' quella che i genitori si aprono in
@@ -628,8 +628,8 @@
                     :disabled="convExport || convCaricamento || convSalvataggio || !convConvocati.length"
                     :title="!convConvocati.length
                             ? 'Nessun giocatore convocato: il foglio uscirebbe vuoto'
-                            : 'Condividi il foglio di convocazione come immagine (WhatsApp, messaggi): e\' l\'immagine del PDF'">
-              {{ convExport ? 'Genero…' : 'Esporta JPEG' }}
+                            : 'Condividi il foglio di convocazione come immagine (WhatsApp, messaggi): e\' l\'immagine del PDF. Si salva come .jpg'">
+              {{ convExport ? 'Genero…' : 'Foglio convocazione (immagine)' }}
             </button>
             <button class="btn-primary" @click="salvaConvocazione"
                     :disabled="convSalvataggio || convCaricamento">
@@ -1805,7 +1805,7 @@ async function esportaPDF(sez = null, torneo = null, opts = {}) {
   }
 }
 
-// Il pulsante "Esporta tutti i tornei". Non riusa `tornei.value`: si ricarica la lista SENZA
+// Il pulsante "Tutti i tornei (PDF)". Non riusa `tornei.value`: si ricarica la lista SENZA
 // parametri, perche' il documento che porta il nome della societa' deve contenere la societa' intera
 // anche mentre a schermo c'e' un filtro attivo. Chiedere all'utente di togliere i filtri prima di
 // esportare e' la stessa classe di errore del "ricordati di salvare prima di chiudere": funziona fin
@@ -2046,7 +2046,7 @@ onMounted(async () => {
 }
 .btn-esporta:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-soft); }
 .btn-esporta:disabled { opacity: 0.5; cursor: not-allowed; }
-/* "Esporta la selezione" non e' lo stesso pulsante con un altro nome: produce un sottoinsieme e il
+/* "Selezione (PDF)" non e' lo stesso pulsante con un altro nome: produce un sottoinsieme e il
    PDF lo dichiara. Il bordo tratteggiato e' il linguaggio gia' usato per le altre categorie del
    torneo, cioe' "attenzione, questo non e' quello che sembra a prima vista" */
 .btn-esporta.secondario { border-style: dashed; }

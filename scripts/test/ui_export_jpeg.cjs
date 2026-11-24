@@ -1,4 +1,4 @@
-// Verifica UI reale dell'EXPORT JPEG: il pulsante "Esporta JPEG" deve produrre L'IMMAGINE del PDF,
+// Verifica UI reale dell'EXPORT JPEG: il pulsante "... (immagine)" deve produrre L'IMMAGINE del PDF,
 // non un documento scritto a parte.
 //
 // Perche' esiste: la consegna del titolare e' "come e' previsto che esca il PDF, deve uscire il JPEG".
@@ -349,6 +349,18 @@ const ANALIZZA = `async function(b64, nBande) {
    */
   async function confronta(etichetta, selPdf, selJpeg) {
     console.log(`\n--- ${etichetta}: PDF e JPEG a confronto ---`)
+    // La coppia deve leggersi come una coppia: le due etichette sono LE STESSE parole e cambia solo
+    // il formato in fondo -- "Ambito (PDF)" / "Ambito (immagine)". Convenzione scelta dal titolare
+    // il 24/11/2026 dopo che la stessa azione era etichettata in quattro modi ("Immagine", "Esporta
+    // JPEG", "JPEG", e il non-italiano "Immagine la selezione").
+    // Qui si misura sul bundle SERVITO e non sul sorgente: sul sorgente ci pensa
+    // verifica_etichette_export.py, e un bundle vecchio con aggiornata una meta' sola della coppia e'
+    // il falso verde che il grep sul chunk non vede (gia' successo col build senza --no-cache).
+    const coppia = await evalJS(`(() => {
+      const p = ${selPdf}, j = ${selJpeg}
+      return { pdf: p ? p.innerText.trim() : null, jpg: j ? j.innerText.trim() : null } })()`)
+    ck(`${etichetta}: la coppia si legge come una coppia (stesso testo, cambia solo il formato)`,
+       coppia.pdf && coppia.jpg ? coppia.pdf.replace('(PDF)', '(immagine)') : null, coppia.jpg)
     const dPdf = await scarica(`${etichetta}-pdf`, '.pdf', selPdf)
     if (!dPdf) {
       ck(`${etichetta}: il PDF di partenza si scarica (senza, il confronto non puo' essere fatto)`, false, true)
@@ -416,25 +428,25 @@ const ANALIZZA = `async function(b64, nBande) {
        await evalJS(`document.querySelectorAll('.categoria-section').length`) > 0, true)
     const AZ = '.weekend-actions .btn-secondary-sm'
     esiti.weekend = await confronta('weekend',
-      `[...document.querySelectorAll('${AZ}')].find(b => /^Esporta PDF$/.test(b.innerText.trim()))`,
-      `[...document.querySelectorAll('${AZ}')].find(b => /^JPEG$/.test(b.innerText.trim()))`)
+      `[...document.querySelectorAll('${AZ}')].find(b => /^Calendario weekend \\(PDF\\)$/.test(b.innerText.trim()))`,
+      `[...document.querySelectorAll('${AZ}')].find(b => /^Calendario weekend \\(immagine\\)$/.test(b.innerText.trim()))`)
     esiti.genitori = await confronta('genitori',
-      `[...document.querySelectorAll('${AZ}')].find(b => /PDF Genitori/.test(b.innerText))`,
-      `[...document.querySelectorAll('${AZ}')].find(b => /^JPEG Genitori$/.test(b.innerText.trim()))`)
+      `[...document.querySelectorAll('${AZ}')].find(b => /^Gare genitori \\(PDF\\)$/.test(b.innerText.trim()))`,
+      `[...document.querySelectorAll('${AZ}')].find(b => /^Gare genitori \\(immagine\\)$/.test(b.innerText.trim()))`)
   }
 
   // --- 3. Tornei: il calendario di tutti i tornei ---
   console.log('\n--- Tornei ---')
   await goto(`${BASE}/responsabili/tornei`)
   await sleep(1200)
-  const cTutti = await evalJS(`[...document.querySelectorAll('button')].filter(b => /Esporta tutti i tornei/.test(b.innerText)).length`)
-  const cImgTutti = await evalJS(`[...document.querySelectorAll('button')].filter(b => /Immagine tutti i tornei/.test(b.innerText)).length`)
-  ck('il pulsante "Esporta tutti i tornei" c\'e\'', cTutti > 0, true)
-  ck('il suo gemello "Immagine tutti i tornei" c\'e\' (senza, la consegna non e\' soddisfatta)', cImgTutti > 0, true)
+  const cTutti = await evalJS(`[...document.querySelectorAll('button')].filter(b => /^Tutti i tornei \\(PDF\\)$/.test(b.innerText.trim())).length`)
+  const cImgTutti = await evalJS(`[...document.querySelectorAll('button')].filter(b => /^Tutti i tornei \\(immagine\\)$/.test(b.innerText.trim())).length`)
+  ck('il pulsante "Tutti i tornei (PDF)" c\'e\'', cTutti > 0, true)
+  ck('il suo gemello "Tutti i tornei (immagine)" c\'e\' (senza, la consegna non e\' soddisfatta)', cImgTutti > 0, true)
   if (cTutti && cImgTutti) {
     esiti.tornei = await confronta('tornei-tutti',
-      `[...document.querySelectorAll('button')].find(b => /Esporta tutti i tornei/.test(b.innerText))`,
-      `[...document.querySelectorAll('button')].find(b => /Immagine tutti i tornei/.test(b.innerText))`)
+      `[...document.querySelectorAll('button')].find(b => /^Tutti i tornei \\(PDF\\)$/.test(b.innerText.trim()))`,
+      `[...document.querySelectorAll('button')].find(b => /^Tutti i tornei \\(immagine\\)$/.test(b.innerText.trim()))`)
   }
 
   // --- 4. Foglio di convocazione, dalla pagina Convocazioni ---
@@ -460,14 +472,14 @@ const ANALIZZA = `async function(b64, nBande) {
     }
     await clickReale(selettoreChip)
     await sleep(900)
-    const cPdf = await evalJS(`[...document.querySelectorAll('button')].filter(b => /Esporta PDF/.test(b.innerText)).length`)
-    const cJpg = await evalJS(`[...document.querySelectorAll('button')].filter(b => /Esporta JPEG/.test(b.innerText)).length`)
-    ck('il pulsante "Esporta PDF" del foglio c\'e\'', cPdf > 0, true)
-    ck('il suo gemello "Esporta JPEG" c\'e\'', cJpg > 0, true)
+    const cPdf = await evalJS(`[...document.querySelectorAll('button')].filter(b => /^Foglio convocazione \\(PDF\\)$/.test(b.innerText.trim())).length`)
+    const cJpg = await evalJS(`[...document.querySelectorAll('button')].filter(b => /^Foglio convocazione \\(immagine\\)$/.test(b.innerText.trim())).length`)
+    ck('il pulsante "Foglio convocazione (PDF)" del foglio c\'e\'', cPdf > 0, true)
+    ck('il suo gemello "Foglio convocazione (immagine)" c\'e\'', cJpg > 0, true)
     if (cPdf && cJpg) {
       esiti.foglio = await confronta('foglio-convocazione',
-        `[...document.querySelectorAll('button')].find(b => /Esporta PDF/.test(b.innerText))`,
-        `[...document.querySelectorAll('button')].find(b => /Esporta JPEG/.test(b.innerText))`)
+        `[...document.querySelectorAll('button')].find(b => /^Foglio convocazione \\(PDF\\)$/.test(b.innerText.trim()))`,
+        `[...document.querySelectorAll('button')].find(b => /^Foglio convocazione \\(immagine\\)$/.test(b.innerText.trim()))`)
     }
   }
 

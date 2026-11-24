@@ -173,8 +173,8 @@ const primaRiga = t => String(t == null ? '' : t).split('\n').find(l => l.trim()
   ck('il weekend e\' aperto con le sue partite',
      await evalJS(`document.querySelectorAll('.partita-item, .partita-row, .partite-list > *').length`) > 0, true)
 
-  const btnWeekend = `[...document.querySelectorAll('.weekend-actions .btn-secondary-sm')].find(b => /Esporta PDF$/.test(b.innerText.trim()))`
-  const btnGenitori = `[...document.querySelectorAll('.weekend-actions .btn-secondary-sm')].find(b => /PDF Genitori/.test(b.innerText))`
+  const btnWeekend = `[...document.querySelectorAll('.weekend-actions .btn-secondary-sm')].find(b => /^Calendario weekend \\(PDF\\)$/.test(b.innerText.trim()))`
+  const btnGenitori = `[...document.querySelectorAll('.weekend-actions .btn-secondary-sm')].find(b => /^Gare genitori \\(PDF\\)$/.test(b.innerText.trim()))`
   ck('i due pulsanti di export ci sono',
      (await evalJS(`!!${btnWeekend}`)) + '/' + (await evalJS(`!!${btnGenitori}`)), 'true/true')
 

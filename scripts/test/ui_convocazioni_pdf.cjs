@@ -1,6 +1,6 @@
 // Verifica UI reale del FOGLIO DI CONVOCAZIONE in PDF.
 //
-// Perche' esiste: nessuno, prima di oggi, premeva mai il pulsante "Esporta PDF" della pagina
+// Perche' esiste: nessuno, prima di oggi, premeva mai il pulsante di export della pagina
 // Convocazioni. `verifica_ui_weekend.sh` esporta i CALENDARI (ProgrammazionePartite), non il foglio
 // dei convocati. Il documento che la societa' consegna ogni venerdi' -- e che da oggi produce anche il
 // modal convocazione di Tornei.vue -- non aveva nessuna asserzione sopra. E' la classe di difetto gia'
@@ -238,8 +238,8 @@ async function loginCome(utente) {
   const chip = await evalJS(`document.querySelectorAll('.wk-storico').length`)
   ck('la pagina mostra lo storico dei fogli (altrimenti non c\'e\' nulla da esportare)', chip > 0, true)
 
-  const CLIC_ESPORTA = `[...document.querySelectorAll('.page-head .btn')].find(b => /Esporta PDF/.test(b.innerText))`
-  ck('il pulsante "Esporta PDF" c\'e\'', await evalJS(`Boolean(${CLIC_ESPORTA})`), true)
+  const CLIC_ESPORTA = `[...document.querySelectorAll('.page-head .btn')].find(b => /^Foglio convocazione \\(PDF\\)$/.test(b.innerText.trim()))`
+  ck('il pulsante "Foglio convocazione (PDF)" c\'e\'', await evalJS(`Boolean(${CLIC_ESPORTA})`), true)
 
   // I chip dello storico non hanno un data-id: si scelgono per DATA, che e' l'unica cosa che li
   // distingue a schermo. Selezionarli per indice avrebbe significato leggere le aspettative di un
@@ -443,7 +443,8 @@ async function loginCome(utente) {
       { awaitPromise: true })
     ck('il modal della convocazione si apre', modalAperto, true)
 
-    const LEGGI_PULSANTE = `(() => { const b = document.querySelector('.modal-conv .modal-footer .btn-esporta')
+    const LEGGI_PULSANTE = `(() => { const b = [...document.querySelectorAll('.modal-conv .modal-footer .btn-esporta')]
+        .find(x => /^Foglio convocazione \\(PDF\\)$/.test(x.innerText.trim()))
       return b ? { c: true, spento: !!b.disabled, motivo: b.title || '' } : { c: false } })()`
 
     // Si parte da una lista VUOTA, tolendo chi c'era gia' (un foglio salvato da una run precedente).
@@ -458,7 +459,7 @@ async function loginCome(utente) {
     ck('il foglio del modal ora e\' vuoto', primaDiAggiungere.length, 0)
 
     const b0 = await evalJS(LEGGI_PULSANTE)
-    ck('il pulsante "Esporta PDF" c\'e\' nel footer del modal', b0.c, true)
+    ck('il pulsante "Foglio convocazione (PDF)" c\'e\' nel footer del modal', b0.c, true)
     ck('con zero convocati e\' SPENTO (un foglio vuoto all\'organizzatore e\' plausibile e falso)', b0.spento, true)
     ck('e il motivo e\' scritto nel title: spento senza motivo, a schermo, sembra assente',
        /nessun giocatore|vuoto/i.test(b0.motivo), true)
@@ -476,9 +477,10 @@ async function loginCome(utente) {
       .filter(r => r.querySelector('.conv-pos')).map(r => (r.querySelector('.conv-nome')?.innerText || '').trim())`)
     ck('convocati ' + presiConv.length + ' ragazzi dal modal', convocati.length, presiConv.length)
     const b1 = await evalJS(LEGGI_PULSANTE)
-    ck('con dei convocati il pulsante "Esporta PDF" si accende', b1.spento, false)
+    ck('con dei convocati il pulsante "Foglio convocazione (PDF)" si accende', b1.spento, false)
 
-    const dT = await scarica('torneo', `document.querySelector('.modal-conv .modal-footer .btn-esporta')`)
+    const dT = await scarica('torneo', `[...document.querySelectorAll('.modal-conv .modal-footer .btn-esporta')]
+      .find(x => /^Foglio convocazione \\(PDF\\)$/.test(x.innerText.trim()))`)
     ck('il foglio di convocazione del torneo scarica un PDF', dT !== null, true)
     if (dT) {
       const PT = piatto(dT.testo), RT = righe(dT.testo)

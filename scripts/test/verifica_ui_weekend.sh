@@ -1,6 +1,7 @@
 #!/bin/bash
 # Verifica VISIVA dei PDF di Programmazione Partite (http://192.168.178.133:3000/responsabili/partite)
-# con Chrome headless: apre il weekend, preme "Esporta PDF" e "PDF Genitori", scarica i file e ne legge
+# con Chrome headless: apre il weekend, preme "Calendario weekend (PDF)" e "Gare genitori (PDF)",
+# scarica i file e ne legge
 # il testo, poi esporta anche il documento della pagina Tornei e confronta le due FORME.
 #
 # Perche' esiste: l'intestazione e lo stile di tabella dei due calendari sono passati in

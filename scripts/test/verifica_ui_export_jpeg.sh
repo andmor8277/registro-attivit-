@@ -58,7 +58,13 @@ for VUE in src/features/partite/ListeTornei.vue src/features/infermeria/Certific
   if [ ! -f "$FRONT/$VUE" ]; then
     echo "  FAIL $VUE non esiste: il guard-rail PII non puo' misurare niente"; RC=1; continue
   fi
-  RIF=$(grep -c 'jpegDaPdf\|saveOrShareJpeg\|exportJpeg\|Esporta JPEG' "$FRONT/$VUE")
+  # Marker di CODICE, non di etichetta: fino al 24/11/2026 fra questi c'era anche la stringa
+  # "Esporta JPEG", che pero' e' testo a schermo -- e il giorno che le etichette sono state allineate
+  # alla convenzione "(PDF)"/"(immagine)" quel marker sarebbe diventato invisibile a un pulsante JPEG
+  # aggiunto davvero. Un guard-rail sulla PII che smette di vedere il difetto perche' e' cambiato un
+  # testo e' peggio di non averlo. Si cercano i ganci del codice E, come rete, il suffisso che la
+  # convenzione impone a un pulsante immagine: le due cose insieme non dipendono da come e' scritto.
+  RIF=$(grep -c "jpegDaPdf\|saveOrShareJpeg\|formato: .jpeg\|esportaJPEG\|(immagine)" "$FRONT/$VUE")
   RIF=${RIF:-0}
   ck "$VUE: nessun riferimento all'export JPEG (roster con CF e dati sanitari non escono in chat)" "$RIF" "0"
 done

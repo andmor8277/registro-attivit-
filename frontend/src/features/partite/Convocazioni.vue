@@ -127,15 +127,15 @@
             </button>
             <button class="btn btn-primary" @click="esportaPDF()" :disabled="esportandoJpeg">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V6a6 6 0 0112 0v3"/><rect x="4" y="9" width="16" height="12" rx="2"/><path d="M12 14v3"/></svg>
-              Esporta PDF
+              Foglio convocazione (PDF)
             </button>
             <!-- La JPEG e' L'IMMAGINE dello stesso PDF, non un secondo foglio: parte dai byte del
                  documento costruito per il PDF. Serve perche' in chat una immagine si apre da sola,
                  mentre il PDF va scaricato e aperto. Il PDF resta il file giusto per stampare -->
             <button class="btn btn-ghost" @click="esportaJPEG()" :disabled="esportandoJpeg"
-                    :title="esportandoJpeg ? 'Sto preparando l\'immagine…' : 'Condividi il foglio come immagine (WhatsApp, messaggi): e\' l\'immagine del PDF'">
+                    :title="esportandoJpeg ? 'Sto preparando l\'immagine…' : 'Condividi il foglio come immagine (WhatsApp, messaggi): e\' l\'immagine del PDF. Si salva come .jpg'">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-              {{ esportandoJpeg ? 'Immagine…' : 'Esporta JPEG' }}
+              {{ esportandoJpeg ? 'Genero…' : 'Foglio convocazione (immagine)' }}
             </button>
           </div>
 

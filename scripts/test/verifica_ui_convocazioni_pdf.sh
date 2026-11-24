@@ -2,7 +2,8 @@
 # Verifica VISIVA del FOGLIO DI CONVOCAZIONE in PDF, con Chrome headless su DEV
 # (http://192.168.178.133:3000/convocazioni/19).
 #
-# Perche' esiste: prima di oggi NESSUNO premeva il pulsante "Esporta PDF" della pagina Convocazioni.
+# Perche' esiste: quando e' stato scritto, NESSUNO premeva mai il pulsante di export della pagina
+# Convocazioni (oggi si chiama "Foglio convocazione (PDF)").
 # verifica_ui_weekend.sh esporta i CALENDARI di ProgrammazionePartite, non l'elenco dei convocati: il
 # documento che la societa' consegna ogni venerdi' non aveva nessuna asserzione sopra. Da oggi quello
 # stesso foglio lo produce anche il modal convocazione di Tornei.vue, e un foglio di stile che vive in
@@ -36,7 +37,7 @@ if ! command -v pdftotext >/dev/null 2>&1; then echo "serve pdftotext (poppler-u
 # Due secondi che ne risparmiano mezz'ora: se il template usa un identificatore che <script setup> non
 # espone, la pagina e' BIANCA e il test sotto non troverebbe niente, sembrando un difetto dell'app.
 # ENTRAMBE le pagine che producono il foglio: Convocazioni.vue (il venerdi') e Tornei.vue (il modal, dove
-# oggi il pulsante "Esporta PDF" e' nuovo di zecca -- e un binding sbagliato li' e' pagina bianca)
+# oggi il pulsante di export ("Foglio convocazione (PDF)") e' nuovo di zecca -- e un binding sbagliato li' e' pagina bianca)
 echo "--- controllo statico del template ---"
 for VUE in src/features/partite/Convocazioni.vue src/features/partite/Tornei.vue; do
   (cd "$DIR/../../frontend" && node "$DIR/controllo_template.cjs" "$VUE") || {

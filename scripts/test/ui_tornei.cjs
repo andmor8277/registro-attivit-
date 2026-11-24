@@ -87,7 +87,7 @@ const LEGGI = `(() => {
   const perTitolo = {}
   sec.forEach(s => {
     // Il titolo si legge dal testo della testata ESCLUSO il pulsante di export, che sta dentro
-    // l'h2: leggerlo tutto avrebbe dato "2016 - Pulcini 1 torneo Esporta PDF"
+    // l'h2: leggerlo tutto avrebbe dato "2016 - Pulcini 1 torneo Calendario categoria (PDF)"
     const h = s.querySelector('.categoria-intestazione')
     let t = ''
     if (h) {
@@ -306,7 +306,7 @@ const LEGGI = `(() => {
   // pulsante di export della prima card della pagina esporterebbe la sezione degli Esordienti
   const CARD = `${SEZ_PULC}.querySelector('.torneo-card')`
   const btnSezione = `${SEZ_ESOR}.querySelector('.btn-esporta')`
-  const btnTutti = `document.querySelector('.page-header .btn-esporta')`
+  const btnTutti = `[...document.querySelectorAll('.page-header .btn-esporta')].find(b => /^Tutti i tornei \\(PDF\\)$/.test(b.innerText.trim()))`
   const btnCard = `${CARD}.querySelector('.btn-esporta')`
 
   // ---------------------------------------------------------------- 1) nessun mister assegnato
@@ -687,10 +687,21 @@ const LEGGI = `(() => {
   ck('col filtro su Pulcini la sezione degli Esordienti NON compare piu\'', titoliFiltrati.length, 1)
   ck('e resta quella chiesta', /^2016 - Pulcini/.test(titoliFiltrati[0] || ''), true)
 
-  const btnSelezione = `document.querySelectorAll('.page-header .btn-esporta')[1]`
-  ck('con un filtro attivo compare il secondo pulsante di export', await evalJS(`!!(${btnSelezione})`), true)
-  ck('e si chiama "Esporta la selezione", non un altro "Esporta PDF"',
-     await evalJS(`${btnSelezione} ? ${btnSelezione}.innerText.trim() : null`), 'Esporta la selezione')
+  // Si prende PER ETICHETTA, non per posizione. Finche' i pulsanti di export erano due soli,
+  // `[1]` era "Esporta la selezione"; da quando ogni pulsante PDF ha il suo gemello immagine lo
+  // stesso indice e' un altro pulsante (`[1]` e' diventato "Tutti i tornei (immagine)"), e un
+  // test indicizzato resta verde solo finche' nessuno aggiunge niente. L'etichetta e' un'ancora
+  // piu' stabile di un indice, e adesso che le etichette seguono una convenzione e' anche leggibile
+  const btnSelezione = `[...document.querySelectorAll('.page-header .btn-esporta')].find(b => /^Selezione \\(PDF\\)$/.test(b.innerText.trim()))`
+  ck('con un filtro attivo compare il pulsante "Selezione (PDF)"', await evalJS(`!!(${btnSelezione})`), true)
+  ck('e si chiama "Selezione (PDF)", non un altro "(PDF)" generico',
+     await evalJS(`${btnSelezione} ? ${btnSelezione}.innerText.trim() : null`), 'Selezione (PDF)')
+  // Il gemello immagine della selezione: nessuno lo asseriva, e' esattamente il pulsante che il
+  // titolare ha guardato quando ha detto "non mi piace". Se manca, la consegna in chat non e'
+  // soddisfatta per il documento filtrato -- che e' poi quello che viene inoltrato
+  ck('e il suo gemello "Selezione (immagine)" c\'e\' (la consegna in chat vale anche sul filtrato)',
+     await evalJS(`[...document.querySelectorAll('.page-header .btn-esporta')]
+       .filter(b => /^Selezione \\(immagine\\)$/.test(b.innerText.trim())).length`), 1)
 
   const pdfSelezione = await scarica('tornei_selezione.pdf', btnSelezione)
   ck('il PDF della selezione si scarica', pdfSelezione !== null, true)
@@ -707,7 +718,7 @@ const LEGGI = `(() => {
   // Il punto della richiesta: con lo schermo filtrato, "tutti i tornei" deve restare completo. E'
   // l'asserzione che distingue il documento della societa' da una copia di quello che ho in faccia
   const pdfSocietaFiltrato = await scarica(PDF_SOCIETA, btnTutti)
-  ck('con il filtro attivo, "Esporta tutti i tornei" si scarica lo stesso', pdfSocietaFiltrato !== null, true)
+  ck('con il filtro attivo, "Tutti i tornei (PDF)" si scarica lo stesso', pdfSocietaFiltrato !== null, true)
   if (pdfSocietaFiltrato) {
     ck('e dentro ci sta ANCHE la categoria che a schermo e\' nascosta',
        /2015 - Esordienti/.test(pdfSocietaFiltrato) && /Vecchia Guardia/.test(pdfSocietaFiltrato), true)
@@ -729,8 +740,13 @@ const LEGGI = `(() => {
   await sleep(1800)
   ck('tolto il filtro, le sezioni tornano due',
      await evalJS(`document.querySelectorAll('.categoria-intestazione').length`), 2)
-  ck('e il secondo pulsante non ha piu\' niente da dichiarare, quindi sparisce',
-     await evalJS(`!!document.querySelectorAll('.page-header .btn-esporta')[1]`), false)
+  // Si chiede ai DUE pulsanti "Selezione" di sparire, non a `[1]` di non esistere. `[1]` era giusto
+  // quando i pulsanti di export erano due; da quando ogni PDF ha il suo gemello immagine, in
+  // `.page-header .btn-esporta` c'e' SEMPRE un secondo elemento (il gemello di "Tutti i tornei"),
+  // e l'asserzione era rossa da sola -- verde solo finche' nessuno aggiungeva niente.
+  ck('e tolto il filtro i due pulsanti "Selezione" spariscono (non hanno piu\' niente da dichiarare)',
+     await evalJS(`[...document.querySelectorAll('.page-header .btn-esporta')]
+       .filter(b => /^Selezione \\((?:PDF|immagine)\\)$/.test(b.innerText.trim())).length`), 0)
 
   console.log('--- lo schermo VUOTO non deve fermare il documento della societa\' ---')
   // Questo e' il caso che distingue davvero le due implementazioni. Con un solo torneo demo, il filtro
@@ -751,7 +767,7 @@ const LEGGI = `(() => {
   await sleep(1800)
   ck('col filtro su un periodo senza tornei la pagina non mostra nessuna card',
      await evalJS(`document.querySelectorAll('.torneo-card').length`), 0)
-  ck('ma "Esporta tutti i tornei" resta attivo: non dipende da cosa si vede',
+  ck('ma "Tutti i tornei (PDF)" resta attivo: non dipende da cosa si vede',
      await evalJS(`!document.querySelector('.page-header .btn-esporta').disabled`), true)
   const pdfSchermoVuoto = await scarica(PDF_SOCIETA, btnTutti)
   ck('e il documento completo esce lo stesso', pdfSchermoVuoto !== null, true)
@@ -801,11 +817,31 @@ const LEGGI = `(() => {
   console.log('--- la gara orfana si puo\' eliminare, e il calendario si riapre li\' ---')
   // Il cestino sulla riga orfana non e' decorazione: una gara senza categoria non compare nella
   // lista di nessuna sezione, quindi senza di esso non si potrebbe eliminare da nessuna parte
-  const azioniOrfana = await evalJS(`(() => {
-    const r = document.querySelector('.gara-riga.orfana')
-    return r ? [...r.querySelectorAll('.btn-icon')].length : -1
+  // Non si conta "quanti bottoni ci sono": il conteggio era rimasto fermo a DUE ed era rosso da
+  // quando la riga orfana ha anche il pulsante Convoca (spento con il motivo nel title, regola del
+  // 23/11/2026). Alzare il numero a 3 avrebbe tenuto un'asserzione debole che non dice PERCHE' quei
+  // pulsanti servono. Cio' che deve essere vero sono due cose precise, e sono le due che il
+  // titolare ha chiesto a schermo:
+  //   - il cestino: una gara senza categoria non compare nella lista di NESSUNA sezione, quindi
+  //     senza di esso non si potrebbe eliminare da nessuna parte;
+  //   - Convoca presente ma SPENTO con il motivo: "non c'e' motivo" e "non esiste la funzione" a
+  //     schermo si somigliano, e la seconda fa cercare il pulsante altrove.
+  const orfana = await evalJS(`(() => {
+    const r = document.querySelector('.gara-riga.orfana .gara-azioni')
+    if (!r) return null
+    const b = [...r.querySelectorAll('.btn-icon')]
+    const cestino = b.find(x => x.classList.contains('pericolo'))
+    const convoca = b.find(x => !/^(Modifica|Elimina) gara$/.test((x.title || '').trim()))
+    return { cestino: !!cestino, convocaC_e: !!convoca,
+             convocaSpento: convoca ? !!convoca.disabled : null,
+             motivo: convoca ? (convoca.title || '').trim() : '' }
   })()`)
-  ck('la gara orfana ha i suoi due pulsanti, cestino compreso', azioniOrfana, 2)
+  ck('la riga della gara orfana esiste (senza, le tre asserzioni sotto non misurerebbero niente)',
+     orfana !== null, true)
+  ck('e ha il cestino: senza, una gara senza categoria non si elimina da nessuna parte',
+     orfana && orfana.cestino, true)
+  ck('Convoca sulla riga orfana c\'e\' SPENTO e il motivo e\' nel title (assente e spento-senza-motivo, a schermo, sono la stessa cosa)',
+     orfana && orfana.convocaC_e && orfana.convocaSpento === true && /categoria/.test(orfana.motivo), true)
   await evalJS(`window.confirm = () => true`)
   await evalJS(`document.querySelector('.gara-riga.orfana .btn-icon.pericolo').click(); 'ok'`)
   // Si aspetta la scomparsa della riga, non un tempo fisso: dopo l'eliminazione la pagina ricarica

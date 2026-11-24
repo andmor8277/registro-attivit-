@@ -36,43 +36,43 @@
             </svg>
             Modifica
           </button>
-          <button class="btn-secondary-sm" @click="esportaPDFWeekend()" :disabled="esportandoJpeg" title="Esporta PDF">
+          <button class="btn-secondary-sm" @click="esportaPDFWeekend()" :disabled="esportandoJpeg" title="Il calendario del weekend in PDF">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
               <line x1="12" y1="18" x2="12" y2="12"/>
               <polyline points="9 15 12 18 15 15"/>
             </svg>
-            Esporta PDF
+            Calendario weekend (PDF)
           </button>
           <!-- Le JPEG sono L'IMMAGINE degli stessi PDF (nascono dai byte del documento, non da una
                seconda impaginazione): si aprono da sole in chat, dove il PDF va scaricato e aperto -->
           <button class="btn-secondary-sm" @click="esportaPDFWeekend('jpeg')" :disabled="esportandoJpeg"
-                  :title="esportandoJpeg ? 'Sto preparando l\'immagine…' : 'Condividi il calendario come immagine (WhatsApp, messaggi)'">
+                  :title="esportandoJpeg ? 'Sto preparando l\'immagine…' : 'Condividi il calendario come immagine (WhatsApp, messaggi). Si salva come .jpg'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
               <rect x="3" y="3" width="18" height="18" rx="2"/>
               <circle cx="8.5" cy="8.5" r="1.5"/>
               <path d="m21 15-5-5L5 21"/>
             </svg>
-            {{ esportandoJpeg ? 'Immagine…' : 'JPEG' }}
+            {{ esportandoJpeg ? 'Genero…' : 'Calendario weekend (immagine)' }}
           </button>
-          <button class="btn-secondary-sm" @click="esportaPDFGenitori()" :disabled="esportandoJpeg" title="Esporta PDF per genitori">
+          <button class="btn-secondary-sm" @click="esportaPDFGenitori()" :disabled="esportandoJpeg" title="Le gare del weekend per i genitori, in PDF">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
               <line x1="12" y1="18" x2="12" y2="12"/>
               <polyline points="9 15 12 18 15 15"/>
             </svg>
-            PDF Genitori
+            Gare genitori (PDF)
           </button>
           <button class="btn-secondary-sm" @click="esportaPDFGenitori(null, 'jpeg')" :disabled="esportandoJpeg"
-                  :title="esportandoJpeg ? 'Sto preparando l\'immagine…' : 'Condividi le gare per i genitori come immagine (WhatsApp, messaggi)'">
+                  :title="esportandoJpeg ? 'Sto preparando l\'immagine…' : 'Condividi le gare per i genitori come immagine (WhatsApp, messaggi). Si salva come .jpg'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
               <rect x="3" y="3" width="18" height="18" rx="2"/>
               <circle cx="8.5" cy="8.5" r="1.5"/>
               <path d="m21 15-5-5L5 21"/>
             </svg>
-            {{ esportandoJpeg ? 'Immagine…' : 'JPEG Genitori' }}
+            {{ esportandoJpeg ? 'Genero…' : 'Gare genitori (immagine)' }}
           </button>
           <button class="btn-add-sm" @click="apriModal(null, null, weekendSelezionato.id)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
@@ -87,23 +87,23 @@
         <div v-for="group in weekendPartiteGrouped" :key="group.cat.id" class="categoria-section">
           <div class="categoria-section-header">
             <h2 class="categoria-title">{{ group.cat.anno }} - {{ group.cat.nome }}</h2>
-            <button class="btn-secondary-sm" @click="esportaPDFGenitori(group)" :disabled="esportandoJpeg" title="Esporta PDF per genitori">
+            <button class="btn-secondary-sm" @click="esportaPDFGenitori(group)" :disabled="esportandoJpeg" title="Le gare di questa categoria per i genitori, in PDF">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
                 <line x1="12" y1="18" x2="12" y2="12"/>
                 <polyline points="9 15 12 18 15 15"/>
               </svg>
-              Esporta PDF per genitori
+              Gare genitori (PDF)
             </button>
             <button class="btn-secondary-sm" @click="esportaPDFGenitori(group, 'jpeg')" :disabled="esportandoJpeg"
-                    :title="esportandoJpeg ? 'Sto preparando l\'immagine…' : 'Condividi le gare di questa categoria come immagine (WhatsApp, messaggi)'">
+                    :title="esportandoJpeg ? 'Sto preparando l\'immagine…' : 'Condividi le gare di questa categoria come immagine (WhatsApp, messaggi). Si salva come .jpg'">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                 <rect x="3" y="3" width="18" height="18" rx="2"/>
                 <circle cx="8.5" cy="8.5" r="1.5"/>
                 <path d="m21 15-5-5L5 21"/>
               </svg>
-              {{ esportandoJpeg ? 'Immagine…' : 'JPEG per genitori' }}
+              {{ esportandoJpeg ? 'Genero…' : 'Gare genitori (immagine)' }}
             </button>
           </div>
           <div class="partite-list">
