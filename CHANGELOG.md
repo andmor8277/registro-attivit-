@@ -409,3 +409,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Foglio PDF di convocazione anche dal modal del torneo; convocazioni e calendario gare dei tornei ai mister
+
+## [7.11.0] - 2026-11-24
+
+### Added
+- Registro presenze: si apre sui giorni di allenamento della settimana, usabile in verticale sul telefono
