@@ -23,7 +23,7 @@ import 'jspdf-autotable'
 // dal barrel per due funzioni significherebbe importare tutta la superficie API in ogni chunk che
 // importa il foglio. Sono gli STESSI file da cui il barrel le riesporta
 import { getUploadUrl } from '../api/client.js'
-import { exportPdf } from './export.js'
+import { exportPdf, exportJpeg } from './export.js'
 
 export async function esportaFoglioConvocazione({
   convocazione,
@@ -34,6 +34,10 @@ export async function esportaFoglioConvocazione({
   etichettaAllenatori = () => '',
   nomeFile = null,
   titoloDownload = null,
+  // 'pdf' | 'jpeg'. NON cambia una riga dell'impaginazione: il documento si costruisce comunque
+  // qui sotto, e il formato sceglie solo come viene consegnato. E' il motivo per cui la JPEG e'
+  // davvero il PDF -- stessi byte, non una seconda versione del foglio
+  formato = 'pdf',
 } = {}) {
   if (!convocazione) return
   try {
@@ -490,11 +494,19 @@ export async function esportaFoglioConvocazione({
     const dataFine = convocazione.data_fine || ''
     const dataFormattata = dataInizio ? dataInizio.split('-').reverse().join('-') : 'data'
     const dataFinale = dataFine ? dataFormattata + '_' + dataFine.split('-').reverse().join('-') : dataFormattata
-    await exportPdf(doc,
-                    nomeFile || `Convocazioni_${categoriaNome}_${dataFinale}.pdf`,
-                    titoloDownload || `Convocazioni ${categoria?.nome || ''}`.trim())
+    const nome = nomeFile || `Convocazioni_${categoriaNome}_${dataFinale}.pdf`
+    const titolo = titoloDownload || `Convocazioni ${categoria?.nome || ''}`.trim()
+    // Il bivio e' qui e soltanto qui: `doc` e' lo stesso oggetto, quindi l'immagine esce dai byte
+    // stessi del PDF. Spostare questo if piu' in su significherebbe avere due modi di costruire il
+    // foglio, e due fogli che il giorno dopo non si assomigliano piu'
+    if (formato === 'jpeg') {
+      await exportJpeg(doc, nome, titolo)
+    } else {
+      await exportPdf(doc, nome, titolo)
+    }
   } catch (e) {
-    console.error('Errore PDF:', e)
-    alert('Errore nella generazione del PDF: ' + (e?.message || e))
+    const cosa = formato === 'jpeg' ? 'JPEG' : 'PDF'
+    console.error(`Errore ${cosa}:`, e)
+    alert(`Errore nella generazione del ${cosa}: ` + (e?.message || e))
   }
 }

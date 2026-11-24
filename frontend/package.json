@@ -2,7 +2,9 @@
   "name": "registro-presenze",
   "version": "1.0.0",
   "scripts": {
+    "predev": "node scripts/copy_pdfjs_assets.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/copy_pdfjs_assets.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "cap:sync": "npm run build && npx cap sync android",
@@ -22,6 +24,7 @@
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
     "konva": "^10.3.0",
+    "pdfjs-dist": "5.4.149",
     "vue": "^3.4.0",
     "vue-router": "^4.3.0"
   },

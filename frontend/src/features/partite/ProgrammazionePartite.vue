@@ -36,7 +36,7 @@
             </svg>
             Modifica
           </button>
-          <button class="btn-secondary-sm" @click="esportaPDFWeekend" title="Esporta PDF">
+          <button class="btn-secondary-sm" @click="esportaPDFWeekend()" :disabled="esportandoJpeg" title="Esporta PDF">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
@@ -45,7 +45,18 @@
             </svg>
             Esporta PDF
           </button>
-          <button class="btn-secondary-sm" @click="esportaPDFGenitori()" title="Esporta PDF per genitori">
+          <!-- Le JPEG sono L'IMMAGINE degli stessi PDF (nascono dai byte del documento, non da una
+               seconda impaginazione): si aprono da sole in chat, dove il PDF va scaricato e aperto -->
+          <button class="btn-secondary-sm" @click="esportaPDFWeekend('jpeg')" :disabled="esportandoJpeg"
+                  :title="esportandoJpeg ? 'Sto preparando l\'immagine…' : 'Condividi il calendario come immagine (WhatsApp, messaggi)'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <path d="m21 15-5-5L5 21"/>
+            </svg>
+            {{ esportandoJpeg ? 'Immagine…' : 'JPEG' }}
+          </button>
+          <button class="btn-secondary-sm" @click="esportaPDFGenitori()" :disabled="esportandoJpeg" title="Esporta PDF per genitori">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
@@ -53,6 +64,15 @@
               <polyline points="9 15 12 18 15 15"/>
             </svg>
             PDF Genitori
+          </button>
+          <button class="btn-secondary-sm" @click="esportaPDFGenitori(null, 'jpeg')" :disabled="esportandoJpeg"
+                  :title="esportandoJpeg ? 'Sto preparando l\'immagine…' : 'Condividi le gare per i genitori come immagine (WhatsApp, messaggi)'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <path d="m21 15-5-5L5 21"/>
+            </svg>
+            {{ esportandoJpeg ? 'Immagine…' : 'JPEG Genitori' }}
           </button>
           <button class="btn-add-sm" @click="apriModal(null, null, weekendSelezionato.id)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
@@ -67,7 +87,7 @@
         <div v-for="group in weekendPartiteGrouped" :key="group.cat.id" class="categoria-section">
           <div class="categoria-section-header">
             <h2 class="categoria-title">{{ group.cat.anno }} - {{ group.cat.nome }}</h2>
-            <button class="btn-secondary-sm" @click="esportaPDFGenitori(group)" title="Esporta PDF per genitori">
+            <button class="btn-secondary-sm" @click="esportaPDFGenitori(group)" :disabled="esportandoJpeg" title="Esporta PDF per genitori">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
@@ -75,6 +95,15 @@
                 <polyline points="9 15 12 18 15 15"/>
               </svg>
               Esporta PDF per genitori
+            </button>
+            <button class="btn-secondary-sm" @click="esportaPDFGenitori(group, 'jpeg')" :disabled="esportandoJpeg"
+                    :title="esportandoJpeg ? 'Sto preparando l\'immagine…' : 'Condividi le gare di questa categoria come immagine (WhatsApp, messaggi)'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="m21 15-5-5L5 21"/>
+              </svg>
+              {{ esportandoJpeg ? 'Immagine…' : 'JPEG per genitori' }}
             </button>
           </div>
           <div class="partite-list">
@@ -383,7 +412,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue"
 import { useRouter } from "vue-router"
-import { getAllCategorie, getCategoriaResponsabili, getCampiSportivi, creaPartita, aggiornaPartita, eliminaPartita as eliminaPartitaApi, getWeekend, getWeekendPartite, creaWeekend, aggiornaWeekend, eliminaWeekend as eliminaWeekendApi, exportPdf, isParentCategory } from "../../api/index.js"
+import { getAllCategorie, getCategoriaResponsabili, getCampiSportivi, creaPartita, aggiornaPartita, eliminaPartita as eliminaPartitaApi, getWeekend, getWeekendPartite, creaWeekend, aggiornaWeekend, eliminaWeekend as eliminaWeekendApi, exportPdf, exportJpeg, isParentCategory } from "../../api/index.js"
 import { useStore } from "../../store.js"
 import { jsPDF } from "jspdf"
 import "jspdf-autotable"
@@ -563,6 +592,9 @@ function getMisterPerCategoria(catId) {
 // perche' altrimenti cambiare l'orario gara schiaccerebbe la scelta fatta dal Responsabile.
 const MINUTI_PRESENTAZIONE = { casa: 45, fuori: 60 }
 const presentazioneModificata = ref(false)
+// La rasterizzazione di un calendario a 3x non e' istantanea: senza questa guardia un doppio tap
+// condividerebbe due volte lo stesso foglio
+const esportandoJpeg = ref(false)
 
 function calcolaPresentazione(ora, casaFuori) {
   const m = String(ora || '').match(/^(\d{1,2}):(\d{2})/)
@@ -927,7 +959,26 @@ function drawCasaTrasfertaCell(data) {
   }
 }
 
-async function esportaPDFWeekend() {
+/**
+ * Consegna il documento gia' costruito. Il `formato` sceglie solo **come** viene consegnato, non cosa
+ * c'e' dentro: `doc` e' lo stesso oggetto jsPDF, quindi la JPEG esce dai byte stessi del PDF e non da
+ * una seconda impaginazione. E' l'unico punto in cui i due percorsi si separano.
+ */
+async function consegna(doc, filename, titolo, formato) {
+  if (formato !== 'jpeg') {
+    await exportPdf(doc, filename, titolo)
+    return
+  }
+  if (esportandoJpeg.value) return
+  esportandoJpeg.value = true
+  try {
+    await exportJpeg(doc, filename, titolo)
+  } finally {
+    esportandoJpeg.value = false
+  }
+}
+
+async function esportaPDFWeekend(formato = 'pdf') {
   if (!weekendSelezionato.value) return
   const doc = new jsPDF({ orientation: 'landscape' })
   const nome = societaNome.value
@@ -986,10 +1037,10 @@ async function esportaPDFWeekend() {
     }
   })
   const filename = `${weekendSelezionato.value.nome.replace(/\s+/g, '_').toLowerCase()}_${nome.replace(/\s+/g, '_').toLowerCase()}.pdf`
-  await exportPdf(doc, filename, `Partite ${weekendSelezionato.value.nome}`)
+  await consegna(doc, filename, `Partite ${weekendSelezionato.value.nome}`, formato)
 }
 
-async function esportaPDFGenitori(group = null) {
+async function esportaPDFGenitori(group = null, formato = 'pdf') {
   if (!weekendSelezionato.value) return
   const doc = new jsPDF({ orientation: 'landscape' })
   const nome = societaNome.value
@@ -1056,7 +1107,7 @@ async function esportaPDFGenitori(group = null) {
   const title = group
     ? `Gare ${group.cat.anno} - ${group.cat.nome} - Genitori`
     : `Partite ${weekendSelezionato.value.nome} - Genitori`
-  await exportPdf(doc, filename, title)
+  await consegna(doc, filename, title, formato)
 }
 
 onMounted(() => {

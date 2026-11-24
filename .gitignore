@@ -17,6 +17,10 @@ frontend/node_modules/
 frontend/dist/
 frontend/.env
 frontend/.env.local
+# Rigenerato da `prebuild` (frontend/scripts/copy_pdfjs_fonts.mjs) copiandolo da
+# node_modules/pdfjs-dist: tracciarlo significherebbe avere una versione dei font diversa da quella
+# che pdf.js si aspetta dal pacchetto installato, e il testo rasterizzato uscirebbe storto
+frontend/public/pdfjs/
 
 # Docker
 # NOTA: .dockerignore va versionato (serve in PROD dove il codice arriva da git),

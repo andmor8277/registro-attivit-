@@ -22,6 +22,18 @@
         </svg>
         <span>{{ esportazione ? 'Genero…' : 'Esporta tutti i tornei' }}</span>
       </button>
+      <!-- La JPEG e' L'IMMAGINE dello stesso PDF: parte dai byte del documento, non da una seconda
+           impaginazione, quindi ha dentro esattamente le stesse gare. Serve perche' in chat una
+           immagine si apre da sola mentre il PDF va scaricato e aperto -->
+      <button class="btn-esporta secondario" :disabled="esportazione" @click="esportaTutti('jpeg')"
+              title="Condividi i calendari di TUTTI i tornei come immagine (WhatsApp, messaggi): e' l'immagine del PDF, stesso contenuto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <path d="m21 15-5-5L5 21"/>
+        </svg>
+        <span>{{ esportazione ? 'Genero…' : 'Immagine tutti i tornei' }}</span>
+      </button>
       <!-- Compare solo con un filtro attivo: senza filtri "selezione" e "tutti" sono lo stesso
            documento, e due bottoni che fanno la stessa cosa sono due risposte diverse alla stessa
            domanda. Quando c'e', il PDF che produce lo scrive da solo di essere un sottoinsieme -->
@@ -34,6 +46,16 @@
           <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
         </svg>
         <span>Esporta la selezione</span>
+      </button>
+      <button v-if="filtriAttivi.length" class="btn-esporta secondario"
+              :disabled="!tornei.length || esportazione" @click="esportaSelezione('jpeg')"
+              :title="'Condividi come immagine solo quello che vedi (' + filtriAttivi.join(', ') + '). E\' l\'immagine del PDF, e il foglio lo dichiara da solo'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <path d="m21 15-5-5L5 21"/>
+        </svg>
+        <span>Immagine la selezione</span>
       </button>
       <button v-if="!solaLettura" class="btn-primary" @click="apriModalTorneo()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
@@ -97,6 +119,15 @@
             <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
           </svg>
           <span>Esporta PDF</span>
+        </button>
+        <button class="btn-esporta secondario" :disabled="esportazione" @click="esportaPDF(sez, null, { formato: 'jpeg' })"
+                :title="'Condividi i calendari di ' + sez.titolo + ' come immagine (WhatsApp, messaggi): e\' l\'immagine del PDF, stessi tornei e stesse gare'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <path d="m21 15-5-5L5 21"/>
+          </svg>
+          <span>Immagine</span>
         </button>
       </h2>
 
@@ -174,6 +205,15 @@
               <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/>
             </svg>
             <span>Esporta PDF</span>
+          </button>
+          <button class="btn-esporta secondario" :disabled="esportazione" @click="esportaPDF(sez, t, { formato: 'jpeg' })"
+                  :title="'Condividi ' + t.nome + ' per ' + etichettaCategoria(sez) + ' come immagine (WhatsApp, messaggi): e\' l\'immagine del PDF, stesso calendario'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <path d="m21 15-5-5L5 21"/>
+            </svg>
+            <span>Immagine</span>
           </button>
         </div>
 
@@ -574,12 +614,22 @@
                  avrebbe esportato un foglio che nessuno aveva aperto. Per questo e' un .btn-esporta e non
                  un .btn-secondary: quella classe ha la regola :disabled, l'altra no, e un pulsante spento
                  che sembra acceso e' il difetto gia' visto sulla riga "Senza categoria" -->
-            <button class="btn-esporta" @click="esportaConvocazionePDF"
+            <button class="btn-esporta" @click="esportaConvocazionePDF()"
                     :disabled="convExport || convCaricamento || convSalvataggio || !convConvocati.length"
                     :title="!convConvocati.length
                             ? 'Nessun giocatore convocato: il foglio uscirebbe vuoto'
                             : 'Scarica il foglio di convocazione in PDF: lo stesso documento della pagina Convocazioni'">
               {{ convExport ? 'Genero…' : 'Esporta PDF' }}
+            </button>
+            <!-- Stesso identico foglio, consegnato come immagine: nasce dai byte del PDF, quindi ha
+                 dentro gli stessi ragazzi e gli stessi orari. E' quella che i genitori si aprono in
+                 chat senza dover scaricare un PDF -->
+            <button class="btn-esporta" @click="esportaConvocazionePDF('jpeg')"
+                    :disabled="convExport || convCaricamento || convSalvataggio || !convConvocati.length"
+                    :title="!convConvocati.length
+                            ? 'Nessun giocatore convocato: il foglio uscirebbe vuoto'
+                            : 'Condividi il foglio di convocazione come immagine (WhatsApp, messaggi): e\' l\'immagine del PDF'">
+              {{ convExport ? 'Genero…' : 'Esporta JPEG' }}
             </button>
             <button class="btn-primary" @click="salvaConvocazione"
                     :disabled="convSalvataggio || convCaricamento">
@@ -598,7 +648,7 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   getTornei, getTorneo, creaTorneo, aggiornaTorneo, eliminaTorneo,
   aggiungiGaraTorneo, modificaGaraTorneo, eliminaGaraTorneo, getAllCategorie, isParentCategory,
-  iscriviCategoriaTorneo, rimuoviCategoriaTorneo, saveOrSharePdf,
+  iscriviCategoriaTorneo, rimuoviCategoriaTorneo, saveOrSharePdf, saveOrShareJpeg,
   getCategoriaResponsabili,
   // La convocazione di UNA gara di torneo: stesso aggregato della pagina Convocazioni, ma il campo
   // `tornei_gara_id` nel backend cambia completamente percorso e non tocca ne' weekend ne' partite
@@ -1483,7 +1533,7 @@ async function salvaConvocazione() {
  * torneo NON viene messo qui per scelta del titolare: il suo posto e' la colonna Mister del calendario
  * tornei, che esce da un altro documento. Il foglio uscira' quindi con "Allenatore  —".
  */
-async function esportaConvocazionePDF() {
+async function esportaConvocazionePDF(formato = 'pdf') {
   const t = convTorneo.value
   const g = convGara.value
   if (!g) return
@@ -1520,7 +1570,10 @@ async function esportaConvocazionePDF() {
       societa: societaAttiva.value,
       categoria,
       stagione: stagioneCorrente.value,
-      etichettaAllenatori: () => ''
+      etichettaAllenatori: () => '',
+      // Il formato non tocca il foglio: il modal esporta cio' che c'e' a schermo, e la JPEG esce dai
+      // byte dello stesso identico documento che uscirebbe in PDF
+      formato
     })
   } finally {
     convExport.value = false
@@ -1586,6 +1639,9 @@ async function esportaPDF(sez = null, torneo = null, opts = {}) {
       ? `ATTENZIONE: solo la selezione a schermo (${filtriAttivi.value.join(' · ')}), non tutti i tornei della societa'`
       : null))
   const oggi = new Date().toLocaleDateString('it-IT')
+  // 'pdf' | 'jpeg'. Non cambia una riga del documento: `doc` viene costruito comunque qui sotto e il
+  // formato decide solo come viene consegnato, quindi l'immagine esce dai byte stessi del PDF
+  const jpeg = opts.formato === 'jpeg'
   esportazione.value = true
   errore.value = ''
   try {
@@ -1730,13 +1786,20 @@ async function esportaPDF(sez = null, torneo = null, opts = {}) {
       ? `tornei_${pulito(torneo.nome)}_${pulito(`${sez.anno || ''} ${sez.nome || ''}`)}${suffissoSocieta}.pdf`
       : sez ? `tornei_${pulito(`${sez.anno || ''} ${sez.nome || ''}`)}${suffissoSocieta}.pdf`
             : `tornei_tutte_categorie${suffissoSocieta}.pdf`)
-    await saveOrSharePdf(doc, nomeFile, titolo)
-    conferma.value = 'PDF generato'
+    // Il bivio e' qui e soltanto qui: `doc` e' lo stesso oggetto, quindi l'immagine esce dai byte
+    // stessi del PDF. Spostare questo if piu' in su significherebbe avere due modi di costruire il
+    // calendario, e due calendari che il giorno dopo non si assomigliano piu'
+    if (jpeg) {
+      await saveOrShareJpeg(doc, nomeFile, titolo)
+    } else {
+      await saveOrSharePdf(doc, nomeFile, titolo)
+    }
+    conferma.value = jpeg ? 'Immagine generata' : 'PDF generato'
   } catch (e) {
     // console.error perche' dall'esterno un'eccezione inghiottita qui sarebbe invisibile: la pagina
     // mostrerebbe solo "Errore nella generazione del PDF" e il test non avrebbe modo di capire perche'
     console.error('Export PDF tornei fallito:', e)
-    errore.value = 'Errore nella generazione del PDF'
+    errore.value = jpeg ? 'Errore nella generazione dell\'immagine' : 'Errore nella generazione del PDF'
   } finally {
     esportazione.value = false
   }
@@ -1747,7 +1810,7 @@ async function esportaPDF(sez = null, torneo = null, opts = {}) {
 // anche mentre a schermo c'e' un filtro attivo. Chiedere all'utente di togliere i filtri prima di
 // esportare e' la stessa classe di errore del "ricordati di salvare prima di chiudere": funziona fin
 // che nessuno si dimentica
-async function esportaTutti() {
+async function esportaTutti(formato = 'pdf') {
   if (esportazione.value) return
   errore.value = ''
   let lista
@@ -1765,6 +1828,7 @@ async function esportaTutti() {
   await esportaPDF(null, null, {
     sezioni: costruisciSezioni(lista),
     senzaFiltri: true,
+    formato,
     titoloBase: 'Tutti i tornei della società',
     nomeFile: soc ? `tornei_societa_${String(soc).replace(/[^\w]+/g, '_').toLowerCase()}.pdf`
                   : 'tornei_societa.pdf',
@@ -1776,9 +1840,10 @@ async function esportaTutti() {
 // Il pulsante che compare solo con un filtro attivo: esporta esattamente il perimetro che si sta
 // guardando. Serve a chi vuole "solo il weekend di Natale", ma il foglio deve dichiararlo da solo,
 // perche' il file parte in chat e chi lo riceve non ha visto lo schermo di chi l'ha generato
-async function esportaSelezione() {
+async function esportaSelezione(formato = 'pdf') {
   await esportaPDF(null, null, {
     sezioni: sezioniPerCategoria.value,
+    formato,
     titoloBase: 'Tornei (selezione a schermo)',
     nomeFile: 'tornei_selezione.pdf'
   })
