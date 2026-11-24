@@ -21,7 +21,7 @@
         <tr>
           <th class="col-num">#</th>
           <th class="col-nome">Cognome Nome</th>
-          <th v-for="g in giorni" :key="g.num" class="col-day">
+          <th v-for="g in giorni" :key="g.data" class="col-day">
             <span>{{ g.num }}</span>
             <small>{{ g.gg }}</small>
           </th>
@@ -35,8 +35,8 @@
             {{ persona.cognome }} {{ persona.nome }}
             <span v-if="isPortieri && persona.categoria_nome" class="cat-tag">{{ persona.categoria_nome }}</span>
           </td>
-          <td v-for="g in giorni" :key="g.num" class="col-day cell">
-            <span v-if="tipo === 'corrente'">{{ getCodice(persona.id, g.num) }}</span>
+          <td v-for="g in giorni" :key="g.data" class="col-day cell">
+            <span v-if="tipo === 'corrente'">{{ getCodice(persona.id, g) }}</span>
           </td>
           <td class="col-tot">
             <span v-if="tipo === 'corrente'">{{ totalePresenze(persona.id) }}</span>
@@ -45,7 +45,7 @@
         <tr v-for="n in 6" :key="`riga-vuota-${n}`" class="row-extra">
           <td class="col-num"></td>
           <td class="col-nome"></td>
-          <td v-for="g in giorni" :key="g.num" class="col-day cell"></td>
+          <td v-for="g in giorni" :key="g.data" class="col-day cell"></td>
           <td class="col-tot"></td>
         </tr>
       </tbody>
@@ -53,7 +53,7 @@
         <tr>
           <td></td>
           <td class="col-nome">Presenti</td>
-          <td v-for="g in giorni" :key="g.num">{{ totaliGiorno[g.num]?.pres || '' }}</td>
+          <td v-for="g in giorni" :key="g.data">{{ totaliGiorno[g.data]?.pres || '' }}</td>
           <td></td>
         </tr>
       </tfoot>
