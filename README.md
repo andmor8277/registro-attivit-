@@ -91,7 +91,7 @@ Il sistema include una procedura automatizzata di backup remoto cifrato su repos
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v7.13.0**.
+La versione attuale è **v7.14.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
 
@@ -100,6 +100,10 @@ Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
 > `scripts/test/test_readme_release.sh` che diventa rosso proprio per questo.
 
 
+
+### 🎉 Novità v7.14.0 (2026-11-25)
+
+- Il calendario gare di un torneo ora lo scrive chi quel torneo lo vede: il mister delle categorie iscritte, non qualunque mister. Orari senza secondi anche in home page, e tornei.categoria_id diventa davvero nullable come il modello dichiarava
 ### 🎉 Novità v7.13.0 (2026-11-24)
 
 - Etichette dei pulsanti di export allineate: "Ambito (PDF)" / "Ambito (immagine)"; bundle 762 KB piu' leggero (font che pdf.js non chiede mai)
