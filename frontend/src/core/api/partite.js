@@ -117,6 +117,17 @@ export const getTornei = (params = {}) => {
   if (params.societa_id) qs.append('societa_id', params.societa_id)
   if (params.da) qs.append('da', params.da)
   if (params.a) qs.append('a', params.a)
+  // `scope` va elencato qui, NON e' un parametro che passa da solo: questa e' una whitelist, e una
+  // whitelist che non nomina una chiave la butta via **in silenzio**, senza errori e senza log. E'
+  // successo davvero il 25/11/2026 con lo scope: la pagina lo passava, `getTornei` lo scartava, e
+  // sembrava funzionare perche' il default del server (`mie_categorie`) coincide con quello che la
+  // pagina chiede -- quindi il filtro per categoria si vedeva a schermo. Cio' che non funzionava era
+  // l'interruttore "Tutte le categorie della societa'", che lasciava la lista identica a se stessa: un
+  // controllo visibile che non fa niente e' peggio di un controllo assente, perche' chi l'ha premuto
+  // crede di stare vedendo tutto. L'asserzione che lo ha trovato e' in `ui_tornei.cjs` ("la pagina
+  // chiede i tornei con scope=mie_categorie"), e non e' duplicabile lato API: li' il parametro viene
+  // sempre passato a mano, quindi il buco non si vede mai
+  if (params.scope) qs.append('scope', params.scope)
   const q = qs.toString()
   return api.get('/tornei/' + (q ? `?${q}` : ''))
 }

@@ -77,6 +77,79 @@ echo "--- apro la pagina con Chrome headless ---"
 # L'export e' una LETTURA. Il pulsante nuovo sta DENTRO il modal, accanto a "Salva convocazione": se per
 # errore chiamasse una scrittura, il risultato sarebbe un foglio salvato che nessuno ha salvato. Si misura
 # prima e dopo perche' e' l'unico modo di vederselo comparire
+# --- semina: un appuntamento CON i secondi, perche' su DEV quel caso non esiste -----------------
+# Misurato il 25/11/2026: `convocazione_gare` ha 7 appuntamenti non vuoti su DEV e **nessuno** con i
+# secondi; su PROD invece ce ne sono TRE, tutti del foglio 17 del 21/11 -- `08:00:00`, `14:15:00`,
+# `17:00:00` -- e sono esattamente la cosa che il titolare ha segnalato. Li ha scritti il codice vecchio,
+# che popolava l'appuntamento da `partite.ora_presentazione` (colonna `time without time zone`, quindi
+# `HH:MM:SS`) e lo rimandava indietro identico nel payload di salvataggio.
+# Senza semina, le asserzioni del .cjs sui secondi NON GIREREBBERO: il PDF non avrebbe secondi da
+# mostrare e il giro sarebbe verde senza misurare niente. E' la stessa ragione per cui il multi-pagina
+# del JPEG va seminato, non aspettato.
+#
+# Si semina con l'UPDATE diretto e NON passando dalla UI: la UI ormai normalizza (e' cio' che si vuole
+# verificare), quindi non potrebbe riprodurre il dato sporco che il vecchio codice ha lasciato in giro.
+SPORCO_FOGLIO=$(q "SELECT c.id FROM convocazioni c
+                   JOIN convocazione_gare g ON g.convocazione_id = c.id
+                   WHERE c.categoria_id = $CAT
+                     AND coalesce(g.appuntamento, '') <> ''
+                     AND c.data_fine IS NOT NULL AND c.data_fine <= CURRENT_DATE
+                     AND EXISTS (SELECT 1 FROM convocazione_giocatori j WHERE j.gara_id = g.id)
+                   ORDER BY c.data_inizio DESC NULLS LAST, c.id LIMIT 1")
+SPORCO_GARA=""
+SPORCO_ORIGINE=""
+if [ -n "$SPORCO_FOGLIO" ]; then
+  # La gara con il numero piu' basso: e' la prima tab, cosi' il .cjs non deve inseguire il tab attivo
+  SPORCO_GARA=$(q "SELECT id FROM convocazione_gare WHERE convocazione_id = $SPORCO_FOGLIO
+                   ORDER BY coalesce(numero, 999), id LIMIT 1")
+fi
+if [ -n "$SPORCO_GARA" ]; then
+  SPORCO_ORIGINE=$(q "SELECT coalesce(appuntamento, '<NULL>') FROM convocazione_gare WHERE id = $SPORCO_GARA")
+  # Dollar-quoted: l'appuntamento e' testo libero (VARCHAR(50), puo' avere un'annotazione) e un apice
+  # dentro il valore originario romperebbe l'UPDATE del ripristino, nel momento in cui serve di piu'
+  q "UPDATE convocazione_gare SET appuntamento = \$\$14:15:00\$\$ WHERE id = $SPORCO_GARA;" >/dev/null
+  APPOSTA=$(q "SELECT appuntamento FROM convocazione_gare WHERE id = $SPORCO_GARA")
+  if [ "$APPOSTA" != "14:15:00" ]; then
+    echo "  FAIL la semina non e' partita:gara $SPORCO_GARA dice '$APPOSTA', atteso '14:15:00'"
+    SPORCO_GARA=""
+  fi
+fi
+if [ -z "$SPORCO_GARA" ]; then
+  echo "  NOTA ROSSA: nessun foglio della categoria $CAT, selezionabile dallo storico, ha un appuntamento"
+  echo "  da sporcare: le asserzioni sui secondi non potranno misurare niente. Il .cjs lo dira' come FAIL."
+fi
+export THOF_UI_SPORCO_GARA="$SPORCO_GARA"
+export THOF_UI_SPORCO_FOGLIO="$SPORCO_FOGLIO"
+export THOF_UI_SPORCO_VALORE="14:15:00"
+
+ripristina_sporco() {
+  [ -n "$SPORCO_GARA" ] || return 0
+  local ad
+  ad=$(q "SELECT coalesce(appuntamento, '<NULL>') FROM convocazione_gare WHERE id = $SPORCO_GARA")
+  # Se a questo punto il valore NON e' quello seminato, il .cjs lo ha toccato: e' una scrittura che
+  # nessuno ha chiesto, e va detta prima di sovrascriverla
+  if [ "$ad" != "14:15:00" ]; then
+    echo "  FAIL a ripulitura la gara $SPORCO_GARA dice '$ad', non il valore seminato '14:15:00':"
+    echo "       qualcosa ha scritto su quel campo durante il test"
+  fi
+  if [ "$SPORCO_ORIGINE" = "<NULL>" ]; then
+    q "UPDATE convocazione_gare SET appuntamento = NULL WHERE id = $SPORCO_GARA;" >/dev/null
+  else
+    q "UPDATE convocazione_gare SET appuntamento = \$\$${SPORCO_ORIGINE}\$\$ WHERE id = $SPORCO_GARA;" >/dev/null
+  fi
+  ad=$(q "SELECT coalesce(appuntamento, '<NULL>') FROM convocazione_gare WHERE id = $SPORCO_GARA")
+  # "ho eseguito l'UPDATE" non e' il ripristino: lo e' il valore che c'e' dopo
+  if [ "$ad" = "$SPORCO_ORIGINE" ]; then
+    echo "  ok   ripulitura: gara $SPORCO_GARA di nuovo a '$ad'"
+  else
+    echo "  FAIL ripristino non riuscito: gara $SPORCO_GARA dice '$ad', doveva essere '$SPORCO_ORIGINE'"
+    RC=${RC:-1}
+  fi
+}
+# Nel trap, non solo in fondo: un Chrome che esplode a meta' run non deve lasciare un appuntamento
+# inventato sul foglio di venerdi' di una squadra vera
+trap 'ripristina_sporco' EXIT
+
 FOGLI_PRIMA=$(q "SELECT count(*) FROM convocazioni")
 GIOC_PRIMA=$(q "SELECT count(*) FROM convocazione_giocatori")
 node "$DIR/ui_convocazioni_pdf.cjs" "$PW" "demo_tornei_mister1" "$CAT"

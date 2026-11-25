@@ -50,6 +50,39 @@ def get_categorie(
     ids = {r.categoria_id for r in assegnate}
     return [c for c in tutte if c.id in ids]
 
+
+@router.get("/mie")
+def get_mie_categorie(
+    db: Session = Depends(get_db),
+    current_user: Utente = Depends(get_current_user)
+):
+    """Le categorie assegnate a **chi chiede**, sempre e solo quelle: lista nuda di id (interi).
+
+    Perche' esiste, quando GET /categorie/ gia' filtra per `utente_categorie`: quel filtro ha
+    un'eccezione di ruolo -- super admin, admin e segreteria ricevono TUTTE le categorie della societa'
+    (riga sopra, ed e' una convenzione che esiste da prima della pagina Tornei). Per dipingere le sezioni
+    del calendario dei tornei mi serve invece l'elenco **proprio di chiunque**, admin compreso: usare
+    GET /categorie/ vorrebbe dire che per l'admin la whitelist delle sezioni sarebbe "tutte", e un torneo
+    iscritto a quattro categorie -- di cui una sola mia -- ricomparirebbe nelle altre tre. E' lo stesso
+    errore di `costruisciSezioni(lista)` chiamato senza secondo argomento, che mostrava la sezione
+    "2015 - Esordienti" anche con i Pulcini selezionati.
+
+    Nessun'eccezione di ruolo, di proposito: qui "le mie categorie" significa le mie per tutti. Il fatto
+    che admin e segreteria poi *vedano* tutti i tornei e' deciso altrove, in
+    `tornei.py::_vede_tutti_i_tornei`, e le due cose non devono mai finire nello stesso if.
+
+    Id, non oggetti: il chiamante deve solo confrontare identicatori, e una lista di interi non puo'
+    essere scambiata per la lista di categorie di GET /categorie/.
+
+    Scritto con l'ORM e non con db.execute(text(...)): `text` NON e' importato in questo file (solo
+    `func`), e un NameError dentro un endpoint non lo vede nessuno -- ne' `py_compile`, che e' gia'
+    stato ingannato due volte qui dentro su difetti di questo tipo.
+    """
+    righe = db.query(UtenteCategoria.categoria_id).filter(
+        UtenteCategoria.utente_id == current_user.id
+    ).distinct().order_by(UtenteCategoria.categoria_id).all()
+    return [r[0] for r in righe]
+
 @router.get("/all")
 def get_all_categorie(
     db: Session = Depends(get_db), 

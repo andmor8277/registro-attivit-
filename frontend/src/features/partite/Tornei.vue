@@ -14,7 +14,7 @@
            si ricarica la lista: un documento che si chiama "i tornei della societa'" e ha dentro solo
            i Pulcini perche' qualcuno aveva il filtro su e' plausibile e falso -->
       <button class="btn-esporta" :disabled="esportazione" @click="esportaTutti()"
-              title="Il PDF di TUTTI i tornei della società: solo i calendari, senza farsi condizionare dai filtri. I giocatori si stampano da Liste Tornei">
+              :title="titoloExportTutti">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
           <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
@@ -26,7 +26,7 @@
            impaginazione, quindi ha dentro esattamente le stesse gare. Serve perche' in chat una
            immagine si apre da sola mentre il PDF va scaricato e aperto -->
       <button class="btn-esporta secondario" :disabled="esportazione" @click="esportaTutti('jpeg')"
-              title="Condividi i calendari di TUTTI i tornei come immagine (WhatsApp, messaggi): e' l'immagine del PDF, stesso contenuto. Si salva come .jpg">
+              :title="titoloExportTutti + ' Si salva come .jpg'">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
           <rect x="3" y="3" width="18" height="18" rx="2"/>
           <circle cx="8.5" cy="8.5" r="1.5"/>
@@ -91,15 +91,48 @@
         <span>A</span>
         <input type="date" v-model="aFiltro" @change="carica" />
       </label>
+      <!-- Solo a chi puo' davvero vederli tutti (responsabili e segreteria). Un mister non lo vede e non
+           puo' ottenerlo nemmeno chiamando l'API a mano: `scope=tutte_categorie` gli viene ignorato dal
+           server. E' un filtro, non un permesso: il permesso e' in GET /tornei/ -->
+      <label v-if="puoVedereTutte" class="filtro-check" :title="vediTutte
+            ? 'Stai vedendo tutti i tornei della società'
+            : 'Stai vedendo solo i tornei iscritti alle tue categorie'">
+        <input type="checkbox" v-model="vediTutte" @change="carica" />
+        <span>Tutte le categorie della società</span>
+      </label>
     </div>
+
+    <!-- Cosa si sta guardando, detto da chi lo sa. Non e' pignoleria: un mister che vede 5 tornei su 10
+         e non ha nessun indizio pensa che ne esistano 5, e il sabato chiama l'organizzatore per una gara
+         che non sapeva di avere -->
+    <p v-if="!caricamento && categorieInVista" class="nota">
+      Stai vedendo <strong>solo i tornei delle tue categorie</strong><template
+        v-if="etichetteCategorieInVista.length"> ({{ etichetteCategorieInVista.join(', ') }})</template>.
+      Se ti serve il calendario di un'altra categoria, chiedi all'amministratore.
+    </p>
+    <p v-if="erroreCategorie" class="messaggio errore">{{ erroreCategorie }}</p>
 
     <p v-if="errore" class="messaggio errore">{{ errore }}</p>
     <p v-if="conferma" class="messaggio successo">{{ conferma }}</p>
     <div v-if="caricamento" class="stato">Caricamento…</div>
     <div v-else-if="!tornei.length" class="stato">
-      {{ solaLettura
-          ? 'Nessun torneo inserito per ora.'
-          : 'Nessun torneo. Con "Nuovo torneo" si crea anche la Lista Tornei collegata.' }}
+      <!-- Tre risposte, perche' sono tre situazioni diverse e a schermo si somigliano tutte e tre:
+           "non ho ancora creato niente", "non c'e' niente per le tue categorie", "il tuo account non ha
+           categorie". La terza, detta come la seconda, manda un mister a cercare tornei che non esistono
+           invece di far notare che nessuno gli ha mai assegnato una squadra -->
+      <template v-if="!solaLettura">
+        Nessun torneo. Con "Nuovo torneo" si crea anche la Lista Tornei collegata.
+      </template>
+      <template v-else-if="!puoVedereTutte && !mieCategorie.length">
+        Il tuo account non ha nessuna categoria assegnata, e i tornei si vedono solo per le categorie in
+        cui sei responsabile. Se devi registrare gare o convocare, chiedi a un amministratore di
+        assegnarti una categoria.
+      </template>
+      <template v-else-if="categorieInVista">
+        Nessun torneo tra quelli delle tue categorie
+        <template v-if="filtriAttivi.length"> con i filtri attivi ({{ filtriAttivi.join(', ') }})</template>.
+      </template>
+      <template v-else>Nessun torneo inserito per ora.</template>
     </div>
 
     <!-- Prima le categorie, come fa la programmazione partite del weekend: la sezione "2016 - Pulcini"
@@ -648,6 +681,7 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   getTornei, getTorneo, creaTorneo, aggiornaTorneo, eliminaTorneo,
   aggiungiGaraTorneo, modificaGaraTorneo, eliminaGaraTorneo, getAllCategorie, isParentCategory,
+  getMieCategorie,
   iscriviCategoriaTorneo, rimuoviCategoriaTorneo, saveOrSharePdf, saveOrShareJpeg,
   getCategoriaResponsabili,
   // La convocazione di UNA gara di torneo: stesso aggregato della pagina Convocazioni, ma il campo
@@ -666,6 +700,7 @@ import { intestazionePdf, BASE_TABELLA, barra, didParseCellBarra, coloraDomenica
 // scrive una seconda copia qui: due fogli di stile sono due documenti che il giorno dopo non si
 // assomigliano piu', e in chat sembrano di due associazioni diverse
 import { esportaFoglioConvocazione } from '../../core/utils/pdfConvocazione.js'
+import { senzaSecondi } from '../../core/utils/date.js'
 import { useStore } from '../../store.js'
 
 const route = useRoute()
@@ -678,6 +713,88 @@ const { utenteAttivo, societaAttiva, stagioneCorrente } = useStore()
 // il ruolo e non la rotta, cosi' un admin che entra dal link dei mister non resta senza pulsanti
 // e un mister non vede controlli che il backend gli rifiuterebbe comunque.
 const solaLettura = computed(() => !(utenteAttivo.value?.is_admin || utenteAttivo.value?.is_super_admin))
+
+// ---------------------------------------------------------------------------
+// CHI VEDE QUALI TORNEI (scelta del titolare, 25/11/2026)
+// «in Convocazioni Tornei i Mister devono vedere solo i tornei della propria categoria, non di tutte»,
+// con l'eccezione aggiunta subito dopo: «anche il profilo segreteria puo' vedere come l'admin».
+// Il 2026-11-16 la decisione era OPPOSTA ed era scritta nel backend; non la si replica qui, perche' il
+// permesso sta in `GET /tornei/?scope=`. Questa pagina fa due cose sole: dire al server cosa chiedere,
+// e non dipingere piu' di quanto il server le ha dato.
+// ---------------------------------------------------------------------------
+
+// Fanno eco a `RUOLI_VEDONO_TUTTI_I_TORNEI` + responsabili di `tornei.py`. Sono **due elenchi in due
+// linguaggi**, e la cosa va saputa: se un giorno si aggiunge un ruolo, vanno mossi insieme -- e' la
+// stessa lezione di RUOLI_GESTIONE_LISTA e dei due PDF duplicati. Non si importa dal backend perche'
+// non c'e' un endpoint che lo esponga, e inventarlo per tre parole sarebbe un terzo posto dove la
+// regola puo' divergere.
+//
+// **NON e' un permesso di scrittura.** `solaLettura` e `puoGestireGare` restano quello che sono: dare
+// alla segreteria la VISTA dell'admin non le da' "Nuovo torneo"/"Modifica"/"Elimina", che sono di
+// `get_responsabile_tornei`. Fondere questi gate e' la regressione che `ui_convocazioni_torneo.cjs`
+// esiste per beccare (misurato: fondendo solaLettura e puoGestireGare diventano rosse 5 asserzioni).
+const puoVedereTutte = computed(() =>
+  !!(utenteAttivo.value?.is_admin || utenteAttivo.value?.is_super_admin || utenteAttivo.value?.ruolo === 'segreteria'))
+
+// L'interruttore a schermo, mostrato solo a chi `puoVedereTutte`. Il valore di partenza e' FILTRATO:
+// "tutte le categorie" dev'essere una scelta esplicita di chi guarda, non la condizione in cui si trova
+// chi apre la pagina senza aver chiesto niente
+const vediTutte = ref(false)
+
+const scopeUsato = computed(() => (puoVedereTutte.value && vediTutte.value) ? 'tutte_categorie' : 'mie_categorie')
+
+// Le categorie di CHI GUARDA, per limitare le sezioni. Vengono da GET /categorie/mie e NON da
+// getCategorie(), che per admin e segreteria restituisce tutte le categorie della societa' (eccezione
+// di ruolo che esiste da prima di questa pagina): con quell'elenco la whitelist per un admin sarebbe
+// "tutte", e un torneo iscritto a quattro categorie -- di cui una sola sua -- ricomparirebbe nelle
+// altre tre. E' lo stesso errore di `costruisciSezioni(lista)` senza secondo argomento.
+const mieCategorie = ref([])
+
+// Non si mette in `errore`, che e' quello del caricamento tornei e ha un ciclo suo: qui il colpo e'
+// parziale (i tornei ci sono, mancano le categorie di chi guarda) e la pagina deve dirlo senza
+// cancellare l'elenco che ha gia' in mano
+const erroreCategorie = ref('')
+
+// null = non limitare le sezioni. I due casi sono diversi da "lista vuota":
+//  - scope=tutte_categorie: chi guarda ha chiesto (e ottenuto) tutto, le sezioni sono tutte;
+//  - nessuna categoria assegnata: per chi "vede tutti" il backend NON ha filtrato, quindi limitare a []
+//    nasconderebbe tutto proprio a chi abbiamo deciso di non far restare a secco (il titolare e la
+//    segreteria, misurati senza assegnazioni su PROD).
+// Un mister senza categorie riceve dal backend la lista vuota, quindi qui non si dipinge comunque
+// niente: il perche' lo dice lo stato vuoto in fondo alla pagina, non il filtro delle sezioni.
+const categorieInVista = computed(() => {
+  if (scopeUsato.value === 'tutte_categorie') return null
+  if (!mieCategorie.value.length) return null
+  return mieCategorie.value.map(String)
+})
+
+// Le etichette delle categorie in vista, per scriverle in giro (la nota a schermo e l'avviso del PDF).
+// Si costruiscono da `categorie` (che ha anno e nome) e non dagli id: "categorie 19, 26" in un documento
+// che legge un organizzatore esterno non e' un avviso, e' un rebus. Se una categoria non compare in
+// `categorie` (archiviata) esce dall'elenco invece di diventare un "undefined" stampato a schermo.
+const etichetteCategorieInVista = computed(() => {
+  if (!categorieInVista.value) return []
+  return categorie.value
+    .filter(c => categorieInVista.value.includes(String(c.id)))
+    .map(c => etichettaCategoria(c))
+})
+
+// Il `title` dei due pulsanti "Tutti i tornei". Dice cosa contengono DAVVERO, perche' l'etichetta del
+// pulsante non puo' cambiare (e' una delle 9 coppie della convenzione `Ambito (PDF)` / `Ambito
+// (immagine)`, verificata da verifica_etichette_export.py e usata come selettore da cinque file UI), ma
+// il mouse-over si': un mister che preme "Tutti i tornei" e si ritrova in chat solo i Pulcini deve poter
+// capire perche' prima di premere, non dopo che l'organizzatore gli ha telefonato
+const titoloExportTutti = computed(() => {
+  const base = 'I giocatori si stampano da Liste Tornei.'
+  if (!categorieInVista.value) {
+    return 'Il PDF di TUTTI i tornei della società: solo i calendari, senza farsi condizionare dai '
+      + 'filtri. ' + base
+  }
+  const quali = etichetteCategorieInVista.value.length
+    ? ` (${etichetteCategorieInVista.value.join(', ')})` : ''
+  return 'Il PDF dei tornei delle TUE categorie' + quali + ', non di tutta la società: è quello che '
+    + 'vedi a schermo, e il documento lo scrive dentro. ' + base
+})
 
 // Chi scrive sul CALENDARIO GARE e sulle CONVOCZIONI di un torneo: i mister, oltre agli admin.
 //
@@ -927,13 +1044,21 @@ function listeDel(t) {
 // il torneo condiviso, cioe' il filtro sembrava non funzionare. Il torneo condiviso lo dice gia' la
 // card, con "anche 2015 - Esordienti": la sezione in piu' era rumore, e rendeva falso l'avviso
 // "solo la selezione a schermo" del PDF
-function costruisciSezioni(lista, soloCategoria = null) {
+function costruisciSezioni(lista, soloCategoria = null, soloQueste = null) {
   const sezioni = []
   const piazzati = new Set()
   const filtro = soloCategoria ? String(soloCategoria) : null
+  // Le categorie di chi guarda (null = tutte). Serve OLTRE al filtro del backend, perche' il server
+  // esclude i TORNEI che non riguardano le mie categorie ma un torneo rimasto dentro puo' averne altre
+  // tre di iscritte: senza questo, la pagina dipingerebbe la sezione "2015 - Esordienti" piena di gare
+  // al mister dei Pulcini -- il "plausibile e falso" gia' visto quando costruisciSezioni veniva chiamato
+  // senza secondo argomento e la sezione mostrava anche le categorie non cercate
+  const consentite = soloQueste && soloQueste.length ? soloQueste.map(String) : null
+  const okSezione = (id) => !consentite || consentite.includes(String(id))
   categorieOperative.value.forEach(cat => {
     const id = String(cat.id)
     if (filtro && id !== filtro) return
+    if (!okSezione(id)) return
     const dentro = lista.filter(t => categorieDel(t).some(c => String(c.id) === id))
     if (!dentro.length) return
     dentro.forEach(t => piazzati.add(t.id))
@@ -952,6 +1077,11 @@ function costruisciSezioni(lista, soloCategoria = null) {
   lista.filter(t => !piazzati.has(t.id)).forEach(t => {
     const cats = categorieDel(t)
     if (filtro && !cats.some(c => String(c.id) === filtro)) return
+    // Con il filtro sulle categorie di chi guarda, un torneo che non ne ha nessuna delle mie non ha una
+    // sezione dove stare -- incluso quello senza categoria alcuna: il backend non lo darebbe a un mister
+    // filtrato (nessuna iscrizione che lo riguardi), quindi farlo comparire qui vorrebbe dire rimettere
+    // dentro cio' che il server ha appena escluso
+    if (consentite && !cats.some(c => consentite.includes(String(c.id)))) return
     const chiavi = cats.length ? cats : [null]
     chiavi.forEach(c => {
       const k = c ? 'cat-' + c.id : 'cat-nessuna'
@@ -969,7 +1099,8 @@ function costruisciSezioni(lista, soloCategoria = null) {
   return sezioni
 }
 
-const sezioniPerCategoria = computed(() => costruisciSezioni(tornei.value, categoriaFiltro.value || null))
+const sezioniPerCategoria = computed(() =>
+  costruisciSezioni(tornei.value, categoriaFiltro.value || null, categorieInVista.value))
 
 function chiaveCalendario(t, sez) {
   // Non basta t.id: lo stesso torneo sta in due sezioni, e aprire il calendario nei Pulcini non
@@ -1034,6 +1165,11 @@ async function carica() {
   errore.value = ''
   try {
     const params = {}
+    // Il permesso lo decide il server: qui si dice solo COSA si chiede. `mie_categorie` e' il default
+    // anche del backend, ma scriverlo sempre evita il caso "il client vecchio non manda il parametro e
+    // si ritrova con cio' che decide il server", che dopo questa modifica e' la stessa cosa -- pero'
+    // leggibile nella richiesta, negli access log e in ui_tornei.cjs
+    params.scope = scopeUsato.value
     if (categoriaFiltro.value) params.categoria_id = categoriaFiltro.value
     if (daFiltro.value) params.da = daFiltro.value
     if (aFiltro.value) params.a = aFiltro.value
@@ -1051,15 +1187,32 @@ async function carica() {
 
 async function caricaCategorie() {
   try {
-    // getAllCategorie e non getCategorie: quest'ultima, per un mister, restituisce solo le
-    // categorie assegnate in utente_categorie. I tornei invece si vedono di tutta la societa'
-    // (decisone del titolare), quindi con /categorie/ il torneo di una categoria non assegnata
-    // sarebbe arrivato senza etichetta e senza voce nel filtro
+    // getAllCategorie e non getCategorie: quest'ultima, per un mister, restituisce solo le categorie
+    // assegnate in utente_categorie, e qui le categorie servono anche per le ETICHETTE e per il menu del
+    // filtro -- un torneo di una categoria che non segue va comunque nominato correttamente se compare
+    // (compare, quando e' iscritto anche a una delle sue).
+    // La nota che stava qui diceva "i tornei invece si vedono di tutta la societa' (decisone del
+    // titolare)": non e' piu' vera dal 25/11/2026, i tornei sono filtrati sulle categorie di chi guarda.
+    // L'etichetta pero' serve comunque da /all, perche' il torneo condiviso con un'altra categoria la
+    // nomina lo stesso ("anche 2015 - Esordienti") e senza etichetta sarebbe un id a schermo.
     const res = await getAllCategorie(societaAttiva.value?.id)
     categorie.value = res.data || []
   } catch (e) {
     // senza categorie non si puo' creare un torneo, ma l'elenco dei tornei si vede comunque
     categorie.value = []
+  }
+  // Le categorie di CHI GUARDA, per limitare le sezioni. Un errore qui non e' neutro: se la lista resta
+  // vuota, `categorieInVista` diventa null e la pagina dipinge tutte le sezioni che il server le ha
+  // dato -- che per un mister e' comunque un sottoinsieme, quindi non e' una fuga di dati, ma non e'
+  // nemmeno cio' che abbiamo chiesto. Si dice, invece di lasciar correre in silenzio.
+  try {
+    const r = await getMieCategorie()
+    mieCategorie.value = Array.isArray(r.data) ? r.data : []
+  } catch (e) {
+    mieCategorie.value = []
+    erroreCategorie.value = 'Non sono riuscito a leggere le tue categorie: l\'elenco dei tornei e'
+      + ' quello che il server mi ha dato, ma le categorie a schermo potrebbero essere piu'
+      + ' del dovuto.'
   }
 }
 
@@ -1559,8 +1712,12 @@ async function esportaConvocazionePDF(formato = 'pdf') {
           data: g.data,
           campo: g.campo,
           indirizzo: g.indirizzo,
-          appuntamento: g.ora_appuntamento,
-          inizio_gara: g.ora,
+          // Orari senza secondi su ENTRAMBI i campi del foglio: qui il 25/11/2026 il titolare ha visto
+          // "13:45:00" nell'appuntamento, e il difetto era esattamente una riga di questa coppia che
+          // normalizzava e l'altra no (in Convocazioni.vue). La stessa regola va applicata alle due
+          // meta', altrimenti la prossima che diverge non la vede nessuno.
+          appuntamento: senzaSecondi(g.ora_appuntamento),
+          inizio_gara: senzaSecondi(g.ora),
           // array di persona_id, come lo aspetta `buildRows`; `.slice()` perche' il foglio non tocchi
           // l'ordine del modal (lo riordina in base ai cognomi, e a schermo deve restare il nostro)
           giocatori: convConvocati.value.slice()
@@ -1805,17 +1962,26 @@ async function esportaPDF(sez = null, torneo = null, opts = {}) {
   }
 }
 
-// Il pulsante "Tutti i tornei (PDF)". Non riusa `tornei.value`: si ricarica la lista SENZA
-// parametri, perche' il documento che porta il nome della societa' deve contenere la societa' intera
-// anche mentre a schermo c'e' un filtro attivo. Chiedere all'utente di togliere i filtri prima di
-// esportare e' la stessa classe di errore del "ricordati di salvare prima di chiudere": funziona fin
-// che nessuno si dimentica
+// Il pulsante "Tutti i tornei (PDF)". Non riusa `tornei.value`: si ricarica la lista, perche' il
+// documento che porta il nome della societa' deve contenere la societa' intera anche mentre a schermo
+// c'e' un filtro attivo. Chiedere all'utente di togliere i filtri prima di esportare e' la stessa classe
+// di errore del "ricordati di salvare prima di chiudere": funziona fin che nessuno si dimentica.
+//
+// **Dal 25/11/2025 "la societa' intera" ha un nuovo significato per chi non vede tutti i tornei.** Il
+// titolare ha scelto che per un mister questo pulsante esporti solo i tornei delle sue categorie: la
+// richiesta era "vedano solo i tornei della propria categoria", e un pulsante che a quel punto consegna
+// in chat i calendari di tutte le altre sarebbe il modo piu' elegante di disfare la richiesta con un
+// click. Chiesto e ottenuto: la pagina ne mostra 5 e il PDF ne ha 5.
+//
+// Il documento pero' **lo scrive**, come fa gia' il livello "selezione a schermo": un PDF che arriva
+// all'organizzatore intitolato "Tutti i tornei della societa'" e con dentro solo i Pulcini e' plausibile
+// e falso, e chi lo riceve non ha visto lo schermo di chi l'ha generato.
 async function esportaTutti(formato = 'pdf') {
   if (esportazione.value) return
   errore.value = ''
   let lista
   try {
-    lista = (await getTornei({})).data || []
+    lista = (await getTornei({ scope: scopeUsato.value })).data || []
   } catch (e) {
     console.error('Export "tutti i tornei": lettura lista fallita:', e)
     // Meglio nessun PDF che un PDF a meta': chi lo riceve non ha modo di accorgersi che mancano
@@ -1825,11 +1991,23 @@ async function esportaTutti(formato = 'pdf') {
   }
   if (!lista.length) { errore.value = 'Nessun torneo da esportare'; return }
   const soc = societaAttiva.value?.nome
+  const limitato = !!categorieInVista.value
+  // Le etichette delle categorie in vista, per scriverle nell'avviso. Si prendono da categorieOperative
+  // (che ha anno e nome) e non dagli id: "solo le categorie 19, 26" in un documento che legge un
+  // organizzatore esterno non e' un avviso, e' un rebus
+  const etichette = limitato
+    ? categorieOperative.value.filter(c => categorieInVista.value.includes(String(c.id))).map(etichettaCategoria)
+    : []
   await esportaPDF(null, null, {
-    sezioni: costruisciSezioni(lista),
+    sezioni: costruisciSezioni(lista, null, categorieInVista.value),
     senzaFiltri: true,
     formato,
-    titoloBase: 'Tutti i tornei della società',
+    titoloBase: limitato ? 'Calendari tornei' : 'Tutti i tornei della società',
+    ...(limitato ? {
+      avviso: 'ATTENZIONE: solo i tornei delle categorie di chi ha generato il file'
+        + (etichette.length ? ` (${etichette.join(' · ')})` : '')
+        + ', non tutti i tornei della società.'
+    } : {}),
     nomeFile: soc ? `tornei_societa_${String(soc).replace(/[^\w]+/g, '_').toLowerCase()}.pdf`
                   : 'tornei_societa.pdf',
     sottotitolo: `${lista.length} ${lista.length === 1 ? 'torneo' : 'tornei'} di tutta la societa'`
@@ -1875,6 +2053,10 @@ onMounted(async () => {
   background: var(--color-surface); color: var(--color-text); font-size: 0.8125rem;
 }
 .filtro-data { display: flex; align-items: center; gap: 0.375rem; color: var(--color-text-secondary); font-size: 0.75rem; }
+/* Come .filtro-data, e con i colori dalle variabili di global.css (vedi la nota sotto): una classe non
+   definita non da' nessun errore, il checkbox si dipinge con lo stile del browser e sembra a posto */
+.filtro-check { display: flex; align-items: center; gap: 0.375rem; color: var(--color-text-secondary); font-size: 0.75rem; cursor: pointer; }
+.filtro-check input { accent-color: var(--color-primary, #dc2626); width: 0.95rem; height: 0.95rem; }
 
 .stato { padding: 2rem; text-align: center; color: var(--color-text-muted); font-size: 0.875rem; }
 .stato.piccolo { padding: 0.75rem; font-size: 0.8125rem; }

@@ -197,6 +197,11 @@ async function loginCome(utente) {
     for (const f of (Array.isArray(lista) ? lista : [])) {
       const det = await (await fetch('/api/convocazioni/' + f.id, H)).json()
       const gare = (det.gare || []).map(g => ({
+        // L'id serve al giro dei secondi (trovare la tab della gara seminata). Aggiunto qui e non con una
+        // fetch a parte perche' questa e' GIA' la fonte che usa la pagina: un secondo modo di leggere la
+        // stessa cosa e' il punto dove i due divergono. (Niente backtick in questo commento: siamo dentro
+        // un template literal, e il parser non sa che un commento lo e' -- li' chiude il template.)
+        id: g.id,
         titolo: g.gara || '', data: g.data || '', campo: g.campo || '', indirizzo: g.indirizzo || '',
         appuntamento: g.appuntamento || '', inizio_gara: g.inizio_gara || '',
         cognomi: (g.giocatori || []).filter(x => x && x.cognome).map(x => String(x.cognome).trim())
@@ -260,7 +265,12 @@ async function loginCome(utente) {
     await send('Browser.close').catch(() => {}); chrome.kill('SIGKILL'); return
   }
 
-  const presi = selezionabili.slice(0, MAX_FOGLI)
+  // Il foglio seminato (sotto, nel giro dei secondi) va TENUTO FUORI dal giro principale: li' le
+  // asserzioni confrontano il PDF con il valore letto dall'API, e quel valore e' adesso volutamente
+  // sporco ("14:15:00"). Lasciarlo qui dentro avrebbe reso rosso un documento GIUSTO, che nel foglio
+  // dice "14:15" -- un rosso sul test, non sull'app
+  const SPORCO_ID = Number(process.env.THOF_UI_SPORCO_FOGLIO || '0')
+  const presi = selezionabili.filter(f => f.id !== SPORCO_ID).slice(0, MAX_FOGLI)
   // Il termine di paragone per il confronto di forma col foglio di torneo: un foglio del weekend a GARA
   // UNICA, perche' e' lo stesso ramo di codice (singleGara) che percorre il foglio di torneo. Un
   // multi-gara avrebbe un layout diverso per progetto, e il confronto direbbe una falsita'
@@ -370,6 +380,83 @@ async function loginCome(utente) {
     ck(`  ${f.id}: la logistica della gara 1 era completa (altrimenti l'asserzione corrispondente ` +
        `non ha girato)`, attesiMancanti.join(','), '')
     if (f.gare.length === 1) testoWeekendSingolo = d.testo
+  }
+
+  // ============ L'ORARIO CON I SECONDI: campo a schermo e documento ============
+  // Il titolare il 25/11/2026: «nelle Convocazioni in Orario Appuntamento fa vedere anche i secondi,
+  // bastano ore e minuti». Su PROD quel valore esiste davvero, scritto nel DB: tre righe del foglio 17
+  // del 21/11 con `08:00:00`, `14:15:00`, `17:00:00` (misurato). Le ha scritte il codice che popolava
+  // l'appuntamento da `partite.ora_presentazione` -- colonna `time without time zone`, che l'API rende
+  // sempre `HH:MM:SS` -- e lo rimandava indietro identico nel payload di salvataggio.
+  //
+  // Perche' un giro DEDICATO e non basta l'asserzione sull'appuntamento della gara 1 qui sopra: quella
+  // confronta il PDF con il valore letto dall'API, quindi se l'API consegna `14:15:00` si aspetta di
+  // vedere `14:15:00` nel documento. E' una asserzione di FEDELTÀ (il documento dice cosa dice il DB),
+  // non di FORMA (il documento non deve avere i secondi). Le due cose si contraddicono proprio sul caso
+  // segnalato, e infatti il foglio era verde mentre il titolare guardava i secondi.
+  //
+  // Perche' SEMINATO (il wrapper mette `14:15:00` su una gara, e lo ripristina nel trap): su DEV nessuna
+  // riga ha i secondi, quindi senza semina questo giro sarebbe verde senza misurare niente. Vale la
+  // regola gia' scritta per il multi-pagina del JPEG: il caso che non esiste va creato, non aspettato.
+  //
+  // Le attese sono COSTANTI ("14:15", nessuna corrispondenza con /\d{1,2}:\d{2}:\d{2}/) e NON il
+  // risultato di senzaSecondi(): chiamare la funzione sotto test per costruirsi l'attesa e' il falso
+  // verde di sempre, li' il test sarebbe verde insieme al difetto.
+  console.log('--- l\'appuntamento con i secondi: campo a schermo e documento ---')
+  const SPORCO_GARA = Number(process.env.THOF_UI_SPORCO_GARA || '0')
+  const SPORCO_VAL = process.env.THOF_UI_SPORCO_VALORE || '14:15:00'
+  const foglioSporco = selezionabili.find(f => f.id === SPORCO_ID)
+  if (!SPORCO_GARA || !foglioSporco) {
+    // NON si dichiarano verdi: un guard-rail che salta in silenzio assomiglia a un guard-rail che passa,
+    // ed e' esattamente cio' che ha permesso a questo difetto di vivere su un foglio vero per quattro giorni
+    console.log('  FAIL prerequisito: nessun appuntamento seminato con i secondi (o il foglio non e\'')
+    console.log('       selezionabile dallo storico). Il giro sotto non misurerebbe niente.')
+    ck('la semina di un appuntamento con i secondi c\'e\' (senza, questo giro non misura niente)', false, true)
+  } else {
+    const garaSporca = foglioSporco.gare.find(g => g.id === SPORCO_GARA)
+    // PREMESSA ASSERITA, letta dall'API (la stessa fonte della pagina, non il DB): se qui non arriva
+    // `14:15:00`, la pagina non ha mai ricevuto i secondi e ogni asserzione "non ci sono" sarebbe vera
+    // per il motivo sbagliato
+    ck(`  premessa: l'API consegna l'appuntamento di gara ${SPORCO_GARA} come ${JSON.stringify(SPORCO_VAL)}`,
+       garaSporca ? garaSporca.appuntamento : 'GARA-NON-TROVATA', SPORCO_VAL)
+
+    const dsS = dataShort(foglioSporco.data_inizio)
+    await clickReale(`[...document.querySelectorAll('.wk-storico')].find(b => b.innerText.includes(${JSON.stringify(dsS)}))`)
+    const tabVisteS = await evalJS(`new Promise(res => { let n=0; const t=setInterval(() => {
+      const k = document.querySelectorAll('.gtab').length
+      if (k === ${foglioSporco.gare.length} || ++n > 40) { clearInterval(t); res(k) } }, 150) })`,
+      { awaitPromise: true })
+    ck(`  il foglio seminato ${foglioSporco.id} si apre con le sue ${foglioSporco.gare.length} gare`,
+       tabVisteS, foglioSporco.gare.length)
+
+    const idxTab = foglioSporco.gare.findIndex(g => g.id === SPORCO_GARA)
+    ck(`  la gara seminata e' una tab raggiungibile (indice ${idxTab})`, idxTab >= 0, true)
+    if (idxTab >= 0) {
+      await clickReale(`document.querySelectorAll('.gtab')[${idxTab}]`)
+      await sleep(400)
+      // Il VALUE dell'input, non l'innerText: `Orario Appuntamento` e' un <input v-model>, e leggere il
+      // testo di un input darebbe '' qualunque cosa ci sia dentro -- un verde (o un rosso) senza valore
+      const lettura = await evalJS(`(() => {
+        const lis = [...document.querySelectorAll('li')].filter(l =>
+          (l.querySelector('.k')?.innerText || '').trim() === 'Orario Appuntamento')
+        return { n: lis.length, v: lis.length ? (lis[0].querySelector('input')?.value ?? null) : null }
+      })()`)
+      ck('  una sola riga "Orario Appuntamento" a schermo (con due, non sapremmo quale abbiamo letto)',
+         lettura.n, 1)
+      ck(`  il campo a schermo dice "14:15", non "${SPORCO_VAL}"`, lettura.v, '14:15')
+      ck('  e non contiene nessun HH:MM:SS', /\d{1,2}:\d{2}:\d{2}/.test(lettura.v || ''), false)
+
+      const dS = await scarica('secondi', CLIC_ESPORTA)
+      ck('il foglio seminato scarica un PDF', dS !== null, true)
+      if (dS) {
+        const PS = piatto(dS.testo)
+        ck(`  il documento NON contiene "${SPORCO_VAL}"`, PS.includes(SPORCO_VAL), false)
+        ck('  e contiene "14:15" (non e\' sparito insieme ai secondi)', /\b14:15\b/.test(PS), true)
+        const conSecondi = PS.match(/\b\d{1,2}:\d{2}:\d{2}\b/g) || []
+        ck('  nessun orario con i secondi in tutto il documento' +
+           (conSecondi.length ? ` (trovati: ${conSecondi.slice(0, 4).join(', ')})` : ''), conSecondi.length, 0)
+      }
+    }
   }
 
   // ============================ IL FOGLIO DI UNA GARA DI TORNEO ============================

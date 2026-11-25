@@ -110,6 +110,14 @@ q "INSERT INTO utenti (username,password_hash,societa_id,is_admin,is_super_admin
           ('testtornei_infer','$HASH',1,0,0,'infermeria'),
           ('testtornei_segr','$HASH',1,0,0,'segreteria'),
           ('testtornei_soc2','$HASH',2,1,0,NULL);" >/dev/null
+# Il mister di prova DEVE avere una categoria assegnata, e non e' una rifinitura: dal 2026-11-25
+# `GET /tornei/` filtra per `utente_categorie` (scelta del titolare, ribaltamento della nota AGENTS.md
+# del 16/11). Senza questa riga le due asserzioni "GET /tornei/ come mister: il torneo c'e'" sono
+# rosse non per un difetto, ma perche' il mister di prova non segue nessuna categoria -- che e'
+# esattamente il caso in cui la lista DEVE essere vuota. L'assegnazione va qui, prima dei login, perche'
+# il filtro legge il DB e non il token
+q "INSERT INTO utente_categorie (utente_id,categoria_id)
+   SELECT id, $CAT1 FROM utenti WHERE username='testtornei_mister';" >/dev/null
 # tok vuole DUE argomenti (username e password): chiamarla con uno solo legge $2 vuoto,
 # ogni login risponde 401 e il test diventa rosso per un motivo che non c'entra col torneo
 TADM=$(tok testtornei_admin "$PW"); TMIS=$(tok testtornei_mister "$PW"); TDIR=$(tok testtornei_dir "$PW")
@@ -170,6 +178,12 @@ ck "  un solo torneo = una sola lista" "$(q "SELECT count(*) FROM liste_torneo W
 ck "GET /tornei/{id} come mister: vede il torneo" "$(jq1 "$D/tornei/$TID" "$TMIS" nome)" "$P-Natale"
 ck "GET /tornei/{id} come dirigente: lo vede lo stesso (e' informazione di squadra)" "$(jq1 "$D/tornei/$TID" "$TDIR" nome)" "$P-Natale"
 ck "GET /tornei/ come mister: il torneo c'e'" "$(jq1 "$D/tornei/?categoria_id=$CAT1" "$TMIS" nome)" "$P-Natale"
+# Il rovescio, messo ACCANTO e non solo in test_tornei_scope.sh: chi non segue nessuna categoria non lo
+# deve vedere. Sono due asserzioni e non una perche' il modo in cui questa regola si rompera' e'
+# allargare di nuovo la vista a tutti -- e con una sola asserzione quel cambiamento sarebbe verde
+ck "  e il dirigente senza categorie NON lo vede (regola del 25/11/2026)" \
+   "$(curl -s --max-time 25 "$D/tornei/?categoria_id=$CAT1" -H "Authorization: Bearer $TDIR" | python3 -c "import sys,json
+print(sum(1 for t in json.load(sys.stdin) if t.get('nome','').startswith('$P')))" 2>/dev/null)" "0"
 ck "  il dettaglio riporta la lista collegata" "$(jq1 "$D/tornei/$TID" "$TMIS" lista.id)" "$LID"
 ck "  la lista parte vuota (0 giocatori)" "$(jq1 "$D/tornei/$TID" "$TMIS" lista.giocatori)" "0"
 

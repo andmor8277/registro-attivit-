@@ -324,27 +324,147 @@ def _crea_lista_del_torneo(torneo: Torneo, cat: dict, db: Session) -> int:
     return lista.id
 
 
+def _mie_categorie(utente: Utente, db: Session) -> list:
+    """Le categorie assegnate all'utente (`utente_categorie`), come elenco ordinato di id.
+
+    E' la fonte del filtro di GET /tornei/. Si calcola QUI e non nella pagina perche' il filtro e' un
+    PERMESSO: se lo calcolasse il client basterebbe chiamare l'API a mano per vedersi tutti i tornei
+    della societa', ed e' esattamente la lezione gia' pagata sulle scritture delle convocazioni -- li'
+    la guardia "c'era" nella visibilita' (le card di Scelta.vue) e non nel permesso, e dirigente/
+    scouting/infermeria potevano cancellare un foglio di campionato.
+    """
+    return [r[0] for r in db.execute(text(
+        "SELECT DISTINCT categoria_id FROM utente_categorie WHERE utente_id = :u ORDER BY categoria_id"
+    ), {"u": utente.id}).fetchall()]
+
+
+def _e_responsabile(utente: Utente) -> bool:
+    """True se l'utente e' un responsabile dei tornei: `is_admin` O `is_super_admin`.
+
+    Stesso criterio di `get_responsabile_tornei`, da cui il nome prende il senso, e per la stessa
+    ragione scritta li': non usare `ruolo == "admin"` ne' `get_admin` di core.security,che guarda solo
+    `is_admin` -- un super_admin con `is_admin = 0` resterebbe fuori da una funzione che per definizione
+    gli spetta. Misurato su PROD il 25/11/2026: l'account del titolare ha `ruolo='admin'` ma le due
+    cose sono colonne distinte, e confonderle vorrebbe dire negargli l'interruttore "tutte le categorie"
+    sulla pagina che gli serve per creare i tornei.
+    """
+    return bool(utente.is_admin or utente.is_super_admin)
+
+
+RUOLI_VEDONO_TUTTI_I_TORNEI = ("segreteria",)
+"""Ruoli che, OLTRE ai responsabili, vedono di default tutti i tornei della societa' e hanno
+l'interruttore "tutte le categorie" (scelta del titolare, 2026-11-25: «anche il profilo segreteria puo'
+vedere come l'admin»).
+
+**E' un elenco di LETTURA, non di scrittura.** Non confonderlo con `RUOLI_GESTIONE_LISTA`
+(`liste_tornei.py`, che include gia' `segreteria`) ne' con `get_responsabile_tornei` (che e' chi crea,
+modifica ed elimina i tornei): la segreteria guarda i calendari per preparare le liste e le convocazioni,
+non decide quali tornei esistono. Se un giorno qualcuno aggiunge `segreteria` a un gate di scrittura
+"perche' tanto vede gia' tutto", quella e' la regressione da rifiutare -- e' la stessa distinzione per cui
+`get_gestore_gare_torneo` e' separato da `get_responsabile_tornei`.
+"""
+
+
+def _vede_tutti_i_tornei(utente: Utente) -> bool:
+    """Chi vede tutti i tornei della societa' di default, e puo' quindi chiedere `scope=tutte_categorie`.
+
+    Responsabili + i ruoli di `RUOLI_VEDONO_TUTTI_I_TORNEI`. Misurato su PROD il 25/11/2026, il caso che
+    rende necessaria la seconda meta': `stefaniafiorini8@gmail.com` ha `ruolo='segreteria'` e **zero**
+    categorie in `utente_categorie`; con il solo filtro per assegnazione si sarebbe trovata una pagina
+    vuota, e la segreteria e' proprio chi quelle liste le prepara.
+    """
+    return _e_responsabile(utente) or (utente.ruolo in RUOLI_VEDONO_TUTTI_I_TORNEI)
+
+
 @router.get("/")
 def lista_tornei(
     categoria_id: Optional[int] = None,
     societa_id: Optional[int] = Query(None),
     da: Optional[date] = None,
     a: Optional[date] = None,
+    scope: Optional[str] = Query(None),
     request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utente = Depends(get_current_user)
 ):
-    """I tornei della societa' di chi chiede.
+    """I tornei di chi chiede, **per default solo quelli delle sue categorie**.
 
-    Nessun filtro per utente_categorie: il 2026-11-16 il titolare ha deciso che i mister vedono
-    e usano legittimamente tutte le categorie della propria societa' (la lista in Scelta.vue viene
-    da GET /categorie/by-stagione, che filtra solo per societa'), avendo in media una sola riga di
-    assegnazione. Filtrare qui per assegnazione li terrebbe fuori dai tornei della loro societa'.
+    **RIBALTAMENTO di una decisione precedente, registrato perche' era una scelta e non una svista.**
+    Il 2026-11-16 il titolare aveva deciso il contrario: «i mister vedono e usano legittimamente tutte
+    le categorie della propria societa' (in media hanno una sola riga di assegnazione). Filtrare qui per
+    assegnazione li terrebbe fuori». Il 2026-11-25 la richiesta e' opposta: «in Convocazioni Tornei i
+    Mister devono vedere solo i tornei della propria categoria, non di tutte», con l'eccezione subito
+    aggiunta: «anche il profilo segreteria puo' vedere come l'admin».
+
+    La premessa di allora oggi non regge piu' nei dati, misurata su PROD il 25/11/2026: **tutti e 8 i
+    mister hanno almeno una categoria in `utente_categorie`** (nessuno a zero, quindi nessuno resta
+    fuori), e **tutti e 10 i tornei hanno almeno una categoria iscritta** in `tornei_categorie` (quindi
+    nessun calendario sparisce perche' orfano). Con il filtro ogni mister passa da 10 tornei a 3-5.
+
+    Perche' nel backend e non nella pagina: vedi `_mie_categorie`. Il filtro deve essere un permesso.
+
+    `scope`:
+      - assente o `"mie_categorie"` -> solo i tornei iscritti a una delle categorie di chi chiede;
+      - `"tutte_categorie"` -> tutti i tornei della societa', **ma solo per chi e' coperto da
+        `_vede_tutti_i_tornei`** (responsabili e `segreteria`). Un mister che lo manda riceve comunque la
+        lista filtrata: e' l'unico modo perche' l'interruttore "tutte le categorie" della pagina non
+        diventi una scorciatoia utilizzabile da chiunque conosca l'URL.
+      - un valore sconosciuto da' **400**, non un silenzio: uno `scope=tutte` scritto male che passasse
+        come "filtrato" sarebbe un comportamento plausibile e falso, e il contrario sarebbe una
+        escalation silenziosa.
+
+    Il caso "nessuna categoria assegnata" ha due risposte **diverse di proposito**, perche' le due
+    persone hanno due bisogni opposti:
+      - chi **vede tutti i tornei** (`_vede_tutti_i_tornei`) e non ha assegnazioni -- misurato:
+        `gresamor8277@gmail.com` (l'account del titolare, `ruolo='admin'`), `admin`, e
+        `stefaniafiorini8@gmail.com` (`segreteria`) -- vede **tutti** i tornei. Lasciarlo con la pagina
+        vuota vorrebbe dire bloccare chi i tornei li crea, li iscrive o ci prepara le liste: sembrerebbe
+        che li abbia cancellati qualcuno.
+      - **un mister** senza categorie vede **lista vuota**. Qui il silenzio sarebbe la direzione
+        sbagliata: la pagina lo deve dire, perche' una lista vuota senza motivo assomiglia a "i tornei
+        sono stati cancellati". Un mister senza categorie non ha una squadra da portare al torneo.
+
+    La lista resta una **lista nuda**, non un oggetto `{tornei, meta}`: decine di asserzioni fra
+    `test_tornei.sh`, `test_tornei_categorie.sh`, `test_tornei_sezioni.sh` e `ui_tornei.cjs` la leggono
+    come tale, e `gare_per_categoria`/`gare_orfane` sono campi di QUEGLI elementi. Il "perche' sto
+    vedendo questo" lo costruisce la pagina con dati suoi legittimi (e` presentazione); qui sta solo il
+    permesso.
     """
     sid = get_societa_filter(current_user, societa_id, request)
     query = db.query(Torneo)
     if sid:
         query = query.filter(Torneo.societa_id == sid)
+
+    # --- il filtro per le categorie di chi chiede ---
+    scope_norm = (scope or "mie_categorie").strip().lower()
+    if scope_norm not in ("mie_categorie", "tutte_categorie"):
+        raise HTTPException(
+            status_code=400,
+            detail="scope ammessi: 'mie_categorie' (default) o 'tutte_categorie' (solo responsabili e segreteria)")
+    vede_tutti = _vede_tutti_i_tornei(current_user)
+    mie = _mie_categorie(current_user, db)
+    if scope_norm == "tutte_categorie" and vede_tutti:
+        passa_tutte = True
+    elif not mie:
+        # chi vede tutto non resta fuori perche' non ha assegnazioni; un mister senza categorie si'
+        passa_tutte = vede_tutti
+    else:
+        passa_tutte = False
+    if not passa_tutte:
+        if not mie:
+            # Non e' un errore e non e' "tutti": e' "non hai categorie, non hai tornei". La pagina deve
+            # dirlo, perche' una lista vuota senza motivo assomiglia a "i tornei sono stati cancellati"
+            return []
+        # OR di parametri legati, non `IN :lista` e non `= ANY(:lista)`: la seconda dipende da come
+        # psycopg2 adatta una lista, e una lista adattata male diventa una stringa dentro l'SQL -- un
+        # errore che si vede solo alla prima categoria con la virgola dentro. Le categorie di un utente
+        # sono poche, quindi il numero di rami e' limitato dai dati, non da un input
+        rami = " OR ".join(f"tc.categoria_id = :mc{i}" for i in range(len(mie)))
+        params = {f"mc{i}": c for i, c in enumerate(mie)}
+        query = query.filter(text(
+            f"EXISTS (SELECT 1 FROM tornei_categorie tc WHERE tc.torneo_id = tornei.id AND ({rami}))"
+        ).bindparams(**params))
+
     if categoria_id:
         # Il filtro guarda le ISCRIZIONI, non tornei.categoria_id: un torneo con tre categorie ha
         # in quella colonna solo la prima, e filtrando su quella i tornei sparirebbero dalla vista

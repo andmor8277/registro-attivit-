@@ -159,6 +159,26 @@ const LEGGI = `(() => {
     }
   }
   await send('Runtime.enable'); await send('Log.enable'); await send('Page.enable')
+  // Registro delle richieste della pagina. Serve perche' nessun altro test vede QUESTA cosa: la pagina
+  // deve chiedere `scope=mie_categorie`. Il backend filtra comunque (quello e' il default), quindi un
+  // client che il parametro non lo manda affatto resta verde in test_tornei_scope.sh -- e invece e'
+  // proprio il parametro che l'interruttore "tutte le categorie" deve muovere, e un interruttore che non
+  // cambia niente a chi lo preme e' il difetto che nessuno prova perche' "tanto filtra il server".
+  // axios parla con XHR, il login qui sopra parla con fetch: registrati entrambi. Va installato PRIMA
+  // della navigazione, perche' addScriptToEvaluateOnNewDocument agisce sulle pagine successive
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: `
+    window.__req = []
+    const apri = XMLHttpRequest.prototype.open
+    XMLHttpRequest.prototype.open = function (m, u) {
+      try { window.__req.push(String(u)) } catch (e) {}
+      return apri.apply(this, arguments)
+    }
+    const fetchOriginale = window.fetch
+    window.fetch = function (u, o) {
+      try { window.__req.push(typeof u === 'string' ? u : ((u && u.url) || String(u))) } catch (e) {}
+      return fetchOriginale.apply(this, arguments)
+    }
+  ` })
 
   console.log('--- accesso come responsabile ---')
   await goto(`${BASE}/login`)
@@ -901,6 +921,58 @@ const LEGGI = `(() => {
      rotto.perTitolo['2015 -'].vuoti.includes('foglio assente'), false)
   ck('CONTROLLO NEGATIVO: la card senza "anche ..." sarebbe stata rossa',
      rotto.perTitolo['2016 -'].altrui.length > 0, false)
+
+  console.log('\n--- chi vede quali tornei (il parametro scope) ---')
+  // Le asserzioni qui sotto non riguardano cosa RESTITUISCE il server (quelle sono
+  // test_tornei_scope.sh, 69 asserzioni): riguardano cosa CHIEDE la pagina. Sono due difetti diversi,
+  // e questo e' l'unico posto dove il secondo si puo' vedere
+  const scopePrima = await evalJS(`(() => {
+    const rq = (window.__req || []).filter(u => /\\/api\\/tornei\\/\\?/.test(u)).map(u => u.split('?')[1])
+    const cb = document.querySelector('.filtro-check input[type=checkbox]')
+    const note = Array.from(document.querySelectorAll('p.nota')).map(p => p.innerText.replace(/\\s+/g, ' ').trim())
+    return {
+      query: rq,
+      haCheckbox: !!cb,
+      etichetta: cb && cb.closest('label') ? cb.closest('label').innerText.replace(/\\s+/g, ' ').trim() : '',
+      notaSoloMie: note.filter(t => t.indexOf('solo i tornei delle tue categorie') >= 0).length,
+      card: document.querySelectorAll('.torneo-card').length
+    }
+  })()`)
+  // Le richieste catturate si stampano SEMPRE, non solo quando qualcosa e' rosso: un'asserzione su
+  // "cosa e' partito davvero" che fallisce senza mostrare gli URL catturati costa un ciclo di debug per
+  // capire se la colpa e' della pagina o del registratore. E' successo il 25/11/2026, e la risposta era
+  // "della pagina": `getTornei` ha una whitelist di parametri e scartava `scope` in silenzio
+  console.log('  richieste /api/tornei/ catturate:', JSON.stringify(scopePrima.query))
+  ck('la pagina chiede i tornei con scope=mie_categorie',
+     scopePrima.query.some(q => /scope=mie_categorie/.test(q)), true)
+  ck('e non chiede scope=tutte_categorie di sua iniziativa',
+     scopePrima.query.some(q => /scope=tutte_categorie/.test(q)), false)
+  ck("a un responsabile l'interruttore \"tutte le categorie\" compare (a un mister no: lo vede ui_convocazioni_torneo)",
+     scopePrima.haCheckbox, true)
+  ck("l'interruttore si chiama \"Tutte le categorie della società\"",
+     /Tutte le categorie della società/.test(scopePrima.etichetta), true)
+  // Il responsabile di prova non ha categorie assegnate (misurato): per lui il server NON filtra, e la
+  // nota "solo i tornei delle tue categorie" sarebbe una bugia scritta a schermo
+  ck("a chi non è filtrato la nota \"solo i tornei delle tue categorie\" NON compare",
+     scopePrima.notaSoloMie, 0)
+  ck("e le card ci sono comunque (la pagina non è rimasta vuota per il filtro nuovo)",
+     scopePrima.card > 0, true)
+
+  // Spunta vera, non `v-model` cambiato a mano: deve essere il click a innescare `carica()`, perche' e'
+  // il click quello che il mister fa
+  const cliccato = await evalJS(`(() => { const c = document.querySelector('.filtro-check input[type=checkbox]'); if (!c) return false; c.click(); return true })()`)
+  ck("l'interruttore è cliccabile", cliccato, true)
+  await sleep(1800)
+  const scopeDopo = await evalJS(`(() => ({
+    query: (window.__req || []).filter(u => /\\/api\\/tornei\\/\\?/.test(u)).map(u => u.split('?')[1]),
+    card: document.querySelectorAll('.torneo-card').length
+  }))()`)
+  ck("spuntandolo la pagina chiede scope=tutte_categorie",
+     scopeDopo.query.some(q => /scope=tutte_categorie/.test(q)), true)
+  // Se il server ignorava la richiesta per un errore di forma, la lista resterebbe quella di prima e
+  // nessuno se ne accorgerebbe: qui si asserisce che il documento è ancora dipinto dopo il cambio
+  ck("e dopo il cambio i calendari restano dipinti (nessuna pagina bianca)",
+     scopeDopo.card > 0, true)
 
   console.log('\n--- console della pagina ---')
   const reali = erroriConsole.filter(e => !/favicon|DevTools|Download the Vue|Failed to load resource: the server responded with a status of 40/i.test(e))

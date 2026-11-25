@@ -8,6 +8,17 @@ export const getAllCategorie = (societaId) => {
   const params = societaId ? `?societa_id=${societaId}` : ''
   return api.get('/categorie/all' + params)
 }
+/**
+ * Le categorie assegnate a **chi chiede**, sempre e solo quelle: lista di id.
+ *
+ * Non e' `getCategorie`, che per admin e segreteria restituisce TUTTE le categorie della societa'
+ * (eccezione di ruolo che esiste da prima). Serve a Tornei.vue per limitare le SEZIONI del calendario
+ * dei tornei alle categorie di chi guarda: con `getCategorie` la whitelist per un admin sarebbe "tutte",
+ * e un torneo iscritto a quattro categorie - di cui una sola sua - ricomparirebbe nelle altre tre.
+ * Il permesso vero sta nel backend (`GET /tornei/?scope=`); questo e' cio' che la pagina usa per non
+ * dipingere piu' di quanto il server le ha dato.
+ */
+export const getMieCategorie = () => api.get('/categorie/mie')
 export const createCategoria = (data) => api.post('/categorie/', data)
 export const updateCategoria = (id, data) => api.put(`/categorie/${id}`, data)
 export const deleteCategoria = (id) => api.delete('/categorie/' + id)

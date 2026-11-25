@@ -561,6 +561,7 @@ import {
   deleteConvocazione
 } from '../../api/index.js'
 import { esportaFoglioConvocazione } from '../../core/utils/pdfConvocazione.js'
+import { senzaSecondi } from '../../core/utils/date.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -1290,7 +1291,7 @@ async function popolaConvocazione(dataInizio, dataFine, weekendId = null) {
       data: p.data_partite,
       campo: p.campo || '',
       indirizzo: p.indirizzo || '',
-      appuntamento: p.ora_presentazione || '',
+      appuntamento: senzaSecondi(p.ora_presentazione),
       inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
       allenatore: misterManuale || misterCognome,
       mister_manuale: misterManuale,
@@ -1351,7 +1352,7 @@ async function allineaConProgrammaGare(manualAlert = false) {
         if (p.campo && (!targetGara.campo || manualAlert)) targetGara.campo = p.campo
         if (p.indirizzo && (!targetGara.indirizzo || manualAlert)) targetGara.indirizzo = p.indirizzo
         if (p.avversario && (!targetGara.gara || manualAlert)) targetGara.gara = title
-        if (p.ora_presentazione && !targetGara.appuntamento) targetGara.appuntamento = p.ora_presentazione
+        if (p.ora_presentazione && !targetGara.appuntamento) targetGara.appuntamento = senzaSecondi(p.ora_presentazione)
         if (p.mister_id && (!targetGara.allenatori || !targetGara.allenatori.length || manualAlert)) {
           targetGara.allenatori = [p.mister_id]
           targetGara.allenatore = getMisterCognome(p.mister_id)
@@ -1371,7 +1372,7 @@ async function allineaConProgrammaGare(manualAlert = false) {
           data: p.data_partite,
           campo: p.campo || '',
           indirizzo: p.indirizzo || '',
-          appuntamento: p.ora_presentazione || '',
+          appuntamento: senzaSecondi(p.ora_presentazione),
           inizio_gara: oraP,
           allenatore: misterManuale || misterCognome,
           mister_manuale: misterManuale,
@@ -1422,6 +1423,18 @@ async function caricaConvocazione(id) {
       numero: g.numero || idx + 1,
       data: g.data || '',
       livello: g.livello || '',
+      // Orari normalizzati ANCHE qui, e non e' ridondanza con i cinque punti di popolaConvocazione.
+      // Questo e' IL percorso che il titolare guarda: riaprire un foglio gia' salvato. `...g` sopra
+      // porterebbe via il valore com'e' nel DB, e nel DB i secondi ci sono davvero -- misurato su
+      // PROD il 25/11/2026, convocazione_gare: gara 713 `08:00:00`, 714 `14:15:00`, 715 `17:00:00`
+      // (tutte del foglio 17 del 21/11), contro 47 righe pulite in forma HH:MM. Quelle tre righe le
+      // ha scritte il vecchio codice, che popolava l'appuntamento da `partite.ora_presentazione`
+      // (colonna TIME) e lo rimandava indietro identico nel payload di salvataggio.
+      // Si sistema in LETTURA e non con un UPDATE sul DB: la colonna e' VARCHAR(50) di proposito
+      // (registra l'orario come l'organizzatore lo comunica, e puo' contenere un'annotazione), quindi
+      // un taglio a 5 caratteri sui dati avrebbe mangiato testo. `senzaSecondi` toglie solo `:SS`.
+      appuntamento: senzaSecondi(g.appuntamento),
+      inizio_gara: senzaSecondi(g.inizio_gara),
       allenatore: g.allenatore || '',
       mister_manuale: misterManuale,
       allenatori: ids,
@@ -1504,7 +1517,7 @@ async function creaConvocazioneDaWeekend(weekend) {
       data: p.data_partite,
       campo: p.campo || '',
       indirizzo: p.indirizzo || '',
-      appuntamento: p.ora_presentazione || '',
+      appuntamento: senzaSecondi(p.ora_presentazione),
       inizio_gara: p.ora ? p.ora.slice(0, 5) : '',
       allenatore: misterManuale || misterCognome,
       mister_manuale: misterManuale,

@@ -24,6 +24,7 @@ import 'jspdf-autotable'
 // importa il foglio. Sono gli STESSI file da cui il barrel le riesporta
 import { getUploadUrl } from '../api/client.js'
 import { exportPdf, exportJpeg } from './export.js'
+import { senzaSecondi } from './date.js'
 
 export async function esportaFoglioConvocazione({
   convocazione,
@@ -94,6 +95,13 @@ export async function esportaFoglioConvocazione({
     persone.forEach(p => personeMap.set(p.id, p))
     const getPersona = (id) => personeMap.get(id) || persone.find(p => p.id === id || p.id === Number(id))
     const formatD = (d) => d ? d.split('-').reverse().join('/') : '—'
+    // L'orario del foglio esce SENZA secondi, sempre. Le colonne `ora` / `ora_presentazione` sono
+    // `time without time zone` e l'API le restituisce `HH:MM:SS`; il campo e' pero' anche testo libero
+    // ("13:45 · spogliatoi"), quindi la regola -- non un .slice(0,5) che taglierebbe l'annotazione --
+    // vive in senzaSecondi() e qui la si chiama. Si applica a ENTRAMBI gli orari del foglio: il
+    // difetto segnalato dal titolare il 25/11/2026 era nato proprio da una riga che normalizzava
+    // `inizio_gara` e dalla vicina che non normalizzava `appuntamento`.
+    const formatOra = (v) => senzaSecondi(v) || '—'
     const stagioneTxt = stagione ? `${stagione}/${Number(stagione) + 1}` : ''
 
     async function loadImageData(url) {
@@ -188,10 +196,10 @@ export async function esportaFoglioConvocazione({
           margin: { left: x, right: pageWidth - (x + width), bottom: bottomMargin },
           tableWidth: width,
           body: [
-            ['Data / Inizio', `${formatD(gara.data)}${gara.inizio_gara ? ' · ' + gara.inizio_gara : ''}`],
+            ['Data / Inizio', `${formatD(gara.data)}${gara.inizio_gara ? ' · ' + senzaSecondi(gara.inizio_gara) : ''}`],
             ['Campo', gara.campo || '—'],
             ['Indirizzo', gara.indirizzo || '—'],
-            ['Appuntamento', gara.appuntamento || '—'],
+            ['Appuntamento', formatOra(gara.appuntamento)],
             ['Allenatore', etichettaAllenatori(gara) || '—']
           ],
           theme: 'grid',
@@ -210,8 +218,8 @@ export async function esportaFoglioConvocazione({
         tableWidth: width,
         body: [
           ['Data', formatD(gara.data), 'Campo', gara.campo || '—'],
-          ['Indirizzo', gara.indirizzo || '—', 'Appuntamento', gara.appuntamento || '—'],
-          ['Inizio gara', gara.inizio_gara || '—', 'Allenatore', etichettaAllenatori(gara) || '—']
+          ['Indirizzo', gara.indirizzo || '—', 'Appuntamento', formatOra(gara.appuntamento)],
+          ['Inizio gara', formatOra(gara.inizio_gara), 'Allenatore', etichettaAllenatori(gara) || '—']
         ],
         theme: 'grid',
         styles: { font: 'helvetica', fontSize: 8, cellPadding: 1.5, lineColor: line, lineWidth: 0.15, textColor: dark },
@@ -366,8 +374,8 @@ export async function esportaFoglioConvocazione({
           ['Data', formatD(gara.data)],
           ['Campo', gara.campo || '—'],
           ['Indirizzo', gara.indirizzo || '—'],
-          ['Appuntamento', gara.appuntamento || '—'],
-          ['Inizio gara', gara.inizio_gara || '—'],
+          ['Appuntamento', formatOra(gara.appuntamento)],
+          ['Inizio gara', formatOra(gara.inizio_gara)],
           ['Allenatore', etichettaAllenatori(gara) || '—']
         ]
         const startY = y
