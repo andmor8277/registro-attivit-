@@ -3,13 +3,13 @@
 
 Perche' esiste. Un negative che non cambia l'output non ha testato niente: la misura della lavagna dice
 "0 buchi" e se nessuno la guasta mai quella frase e' solo un'opinione. Qui i sorgenti della lavagna
-vengono rotti in otto modi che DEVONO essere visti, piu' il pristino che deve restare verde.
+vengono rotti in undici modi che DEVONO essere visti, piu' il pristino che deve restare verde.
 
 Ogni mutazione e' verificata all'atto: se il pattern non trova nulla l'asserzione esplode invece di
 contare un verde bugiardo (e' il modo in cui due giri di questa prova erano passati verdi per colpa
 dell'arness, non della lavagna).
 
-Le otto mutazioni, e perche' proprio queste:
+Le undici mutazioni, e perche' proprio queste:
   a  strumento nuovo in palette, nessun ramo scritto da nessuna parte
   b  un tipo tolto da TUTTI i rami di getElements (una sola occorrenza non basta: ce n'e' un'altra)
   c  un campo tolto dalla lista bianca del payload
@@ -20,6 +20,10 @@ Le otto mutazioni, e perche' proprio queste:
   f  il ramo line della miniatura
   g  lo sbaglio realistico: un sesto strumento linea in palette e sulla lavagna, dimenticato in miniatura
   h  un campo nuovo sull'elemento, dimenticato nella lista bianca del payload
+  i  la mappa `legacyTipi` diverge fra i due file: una chiave tolta dalla SOLA miniatura (un tipo
+     che si dipinge in campo e non nel PDF, senza nessun errore -- sono 132 elementi su PROD)
+  l  la mappa diverge per VALORE nella sola lavagna: il tipo viene disegnato, ma come un altro oggetto
+  m  la mappa cancellata del tutto dalla miniatura: i cinque tipi tornano invisibili in miniatura/PDF
 
   python3 scripts/test/prova_misura_serializzazioni_lavagna.py
 """
@@ -131,6 +135,25 @@ assert m, 'mutazione h: var el={...} non trovato in getElements'
 h2 = html0[:i] + blocco[:m.start(1)] + m.group(1) + ',spin:0' + blocco[m.end(1):] + html0[j:]
 MUTAZIONI['h campo nuovo dimenticato nel payload'] = (h2, vue0)
 
+# i) la mappa legacy diverge fra i due file: chiave tolta dalla SOLA miniatura. E' il difetto reale di
+#    questi 132 elementi -- un player-red che si dipinge in campo e non in miniatura (ne' nel PDF), e
+#    nessun errore da nessuna parte perche' sono due copie della stessa regola in due file che non si
+#    possono importare fra loro
+v = sostituisci(vue0, "'disk-orange': 'disc',", "", 'i', 1)
+MUTAZIONI['i chiave legacy tolta dalla miniatura'] = (html0, v)
+
+# l) la mappa diverge per VALORE, non per chiave: nella sola lavagna disk-orange diventa cone. Il tipo
+#    esiste, viene disegnato, ma e' un altro oggetto: la misura deve nominare la coppia
+h = sostituisci(html0, "'disk-orange':'disc'", "'disk-orange':'cone'", 'l', 1)
+MUTAZIONI['l valore legacy cambiato nella lavagna'] = (h, vue0)
+
+# m) la mappa cancellata del tutto dalla miniatura (const + il suo ramo): i cinque tipi tornano invisibili
+v = sostituisci(vue0, "  const legacyTipi = { 'player-red': 'player', 'player-blue': 'player', "
+                      "'player-yellow': 'player', 'disk-orange': 'disc', 'disk-yellow': 'disc' }\n", "", 'm1', 1)
+v = sostituisci(v, "    else if (Object.prototype.hasOwnProperty.call(legacyTipi, tipo)) tipo = legacyTipi[tipo]\n",
+                "", 'm2', 1)
+MUTAZIONI['m mappa legacy cancellata dalla miniatura'] = (html0, v)
+
 print('=== il file vero, come controllo di partenza (deve restare verde) ===')
 rosso, _ = lancia(html0, vue0, 'pristino')
 assert not rosso, 'LA MISURA DA BUCHI SUL FILE VERO: non e\' una misura, e\' rumore'
@@ -145,7 +168,8 @@ for k, (h_, v_) in MUTAZIONI.items():
     if not rosso:
         mancanti.append(k)
     for riga in output.splitlines():
-        if 'senza ramo' in riga or 'NON diramate' in riga or 'NON nel payload' in riga:
+        if ('senza ramo' in riga or 'NON diramate' in riga or 'NON nel payload' in riga
+                or 'legacyTipi' in riga or 'chiavi diverse' in riga or '(atteso ' in riga):
             print(f'            {riga.strip()}')
 
 print()

@@ -730,6 +730,13 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
   const toX = (xp) => rect.fx + (xp / 100) * rect.fw
   const toY = (yp) => rect.fy + (yp / 100) * rect.fh
   const legacyColors = { 'player-home': '#3b82f6', 'player-away': '#ef4444', 'player-gk': '#f59e0b' }
+  // I 5 tipi di una versione vecchia della lavagna, ancora negli esercizi salvati (misurato su PROD
+  // 25/11/2026: player-red 51, disk-orange 25, player-blue 19, player-yellow 19, disk-yellow 18 = 132
+  // elementi). Senza questa mappa non si dipingevano ne' qui ne' nel PDF: nessun ramo li nominava.
+  // DEVE coincidere con `legacyTipi` di frontend/public/lavagna-20250702.html: i due file non possono
+  // importarsi (iframe IIFE vs SFC), quindi la coincidenza e' ASSERTA da
+  // scripts/test/misura_serializzazioni_lavagna.py, non fidata.
+  const legacyTipi = { 'player-red': 'player', 'player-blue': 'player', 'player-yellow': 'player', 'disk-orange': 'disc', 'disk-yellow': 'disc' }
   ;(elementi || []).forEach(el => {
     // Normalizza tipi legacy (vecchia lavagna)
     let tipo = el.tipo
@@ -738,6 +745,9 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
     else if (tipo === 'player-gk') tipo = 'gk'
     else if (tipo === 'arrow' || tipo === 'arrow-curve') tipo = 'pass'
     else if (tipo === 'arrow-dash' || tipo === 'arrow-curve-dash') tipo = 'dribble'
+    // hasOwnProperty, non `legacyTipi[tipo]`: con un tipo tipo 'constructor' si leggerebbe la funzione
+    // ereditata da Object.prototype e si dipingerebbe un oggetto inesistente
+    else if (Object.prototype.hasOwnProperty.call(legacyTipi, tipo)) tipo = legacyTipi[tipo]
 
     const ex_ = toX(el.x || 0)
     const ey = toY(el.y || 0)

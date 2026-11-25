@@ -145,6 +145,46 @@ if vestigiali:
     # e' codice che finge di trasportare qualcosa (wavy: l'ondulazione viaggia gia' in `points`)
     print(f'    {"":34s} nel payload ma mai prodotti dalla lavagna (vestigiali): {", ".join(vestigiali)}')
 
+# 4. le due copie della mappa legacy devono essere LA STESSA mappa. I 5 tipi di una versione vecchia
+# della lavagna vivono in DUE file che non possono importarsi fra loro (iframe IIFE vs SFC): se una
+# chiave sparisce da una sola delle due, l'elemento si dipinge in campo e non in miniatura (o il
+# contrario) senza nessun errore. Sono 132 elementi su PROD, e la classe di difetto e' la stessa delle
+# quattro serializzazioni -- solo che qui la "catena" e' una mappa.
+LEGACY_ATTESI = {'player-red': 'player', 'player-blue': 'player', 'player-yellow': 'player',
+                 'disk-orange': 'disc', 'disk-yellow': 'disc'}
+
+
+def mappa_legacy(testo):
+    m = re.search(r'(?:var|const)\s+legacyTipi\s*=\s*\{([^}]*)\}', testo)
+    if not m:
+        return None
+    return dict(re.findall(r"'([^']+)'\s*:\s*'([^']+)'", m.group(1)))
+
+
+ml_h, ml_v = mappa_legacy(html), mappa_legacy(vue)
+print()
+print(f'  mappa legacy: lavagna={len(ml_h) if ml_h is not None else "ASSENTE"} '
+      f'miniatura={len(ml_v) if ml_v is not None else "ASSENTE"} (attesi {len(LEGACY_ATTESI)})')
+for nome, mappa in (('lavagna', ml_h), ('miniatura', ml_v)):
+    if mappa is None:
+        print(f'    {"":34s} legacyTipi non trovato in {nome}: quei tipi non si dipingono piu\'; '
+              f'nessun ramo li nomina e nessun errore lo dice')
+        buchi += 1
+        continue
+    if mappa == LEGACY_ATTESI:
+        continue
+    # nominare la differenza, non dire solo "sbagliata": chi legge deve capire se manca una chiave
+    # (un tipo che torna invisibile) o se e' cambiato un valore (un tipo dipinto come un altro)
+    if set(mappa) != set(LEGACY_ATTESI):
+        print(f'    {"":34s} {nome}: chiavi diverse dagli attesi -- in meno '
+              f'{", ".join(sorted(set(LEGACY_ATTESI) - set(mappa))) or "nessuna"}, in piu'
+              f' {", ".join(sorted(set(mappa) - set(LEGACY_ATTESI))) or "nessuna"}')
+    for k in sorted(set(mappa) & set(LEGACY_ATTESI)):
+        if mappa[k] != LEGACY_ATTESI[k]:
+            print(f'    {"":34s} {nome}: {k} -> {mappa[k]} (atteso {LEGACY_ATTESI[k]})')
+    buchi += len(set(mappa) ^ set(LEGACY_ATTESI)) + sum(
+        1 for k in set(mappa) & set(LEGACY_ATTESI) if mappa[k] != LEGACY_ATTESI[k])
+
 print()
 print(f'  {"0 buchi: le quattro serializzazioni sono allineate alla palette" if not buchi else str(buchi) + " BUCHI da chiudere"}')
 sys.exit(1 if buchi else 0)

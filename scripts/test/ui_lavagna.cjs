@@ -720,6 +720,58 @@ function analizzaStatica() {
   ck('un tipo sconosciuto non si aggiunge', (conGuasto || []).filter(e => e.tipo === 'tipo-che-non-esiste').length, 0)
   ck('un tipo sconosciuto non si porta via gli elementi buoni', (conGuasto || []).length, 3)
 
+  // 3b) IL VERSO OPPOSTO, ed e' quello che serve ai 132 elementi salvati con i tipi di una versione
+  //     vecchia della lavagna (misurato su PROD 25/11/2026: player-red 51, disk-orange 25, player-blue 19,
+  //     player-yellow 19, disk-yellow 18). Sopra si asserisce che un tipo SCOMOSCIUTO cada; qui si asserisce
+  //     che un tipo CONOSCIUTO dalla mappa `legacyTipi` NON cada: prima di quella mappa questi due oggetti
+  //     sparivano in silenzio (doLoadElements fa `if(newEl) add(newEl)`, console.error solo sulle eccezioni),
+  //     ne' in campo ne' in miniatura ne' nel PDF. Si misura anche la FORMA del nodo, perche' "esiste" non
+  //     basta: player-red deve diventare il Cerchio di un giocatore e disk-orange l'Ellipse di un disco,
+  //     non un contorno a caso. Ultima cosa, la piu' costosa se sbagliata: il tipo serializzato resta
+  //     QUELLO SALVATO, cosi' nessun salvataggio riscrive il DB al primo apertura della pagina
+  const canarini = (conGuasto || []).slice(0, 3)
+  ckVero('c\'e\' ancora un canarino buono su cui misurare i legacy', canarini.length === 3, `${canarini.length}`)
+  const LEG = [
+    { tipo: 'player-red', x: 20, y: 30, rotazione: 0, colore: '#ef4444', size: 44, scaleX: 1, scaleY: 1 },
+    { tipo: 'disk-orange', x: 60, y: 70, rotazione: 0, colore: '#f97316', size: 36, scaleX: 1, scaleY: 1 },
+  ]
+  const conLegacy = await caricaEridividi(canarini.concat(LEG))
+  ck('i due tipi legacy NON spariscono (erano 132 invisibili su PROD)',
+    Array.isArray(conLegacy) ? conLegacy.length : -1, 5)
+  for (const L of LEG) {
+    const n = (conLegacy || []).find(e => e.tipo === L.tipo)
+    ckVero(`${L.tipo}: arriva a getElements`, !!n, 'il nodo e\' stato buttato via in silenzio')
+    if (n) ck(`${L.tipo}: il colore sopravvive`, n.colore, L.colore)
+    ck(`${L.tipo}: il tipo serializzato resta quello SALVATO (il DB non viene migrato aprendo la pagina)`,
+      (conLegacy || []).filter(e => e.tipo === L.tipo).length, 1)
+  }
+  const nodiLegacy = await inIframe(`
+    const K = w.Konva;
+    if (!K || !K.stages || !K.stages.length) return {__nokonva: true};
+    const out = {};
+    K.stages[0].find('Group').forEach(function (g) {
+      const t = g.getAttr && g.getAttr('dataElement');
+      if (t !== 'player-red' && t !== 'disk-orange') return;
+      const figli = (g.getChildren ? g.getChildren() : []).map(function (c) { return c.getClassName && c.getClassName() });
+      out[t] = {figli: figli.join(','), n: figli.length};
+    });
+    return out;`)
+  ckVero('i nodi legacy si leggono dal Konva', nodiLegacy && !nodiLegacy.__nokonva, 'Konva.stages non esposto')
+  // il nodo si ricorda il nome SALVATO (loadElement lo rimette dopo createPlayer/createDisc): e' cio' che
+  // impedisce la migrazione silenziosa, e senza di esso qui sotto non si troverebbe nulla da confrontare
+  ckVero('il nodo Konva di player-red esiste (dataElement conservato)', !!(nodiLegacy && nodiLegacy['player-red']), 'nessun nodo')
+  ckVero('il nodo Konva di disk-orange esiste (dataElement conservato)', !!(nodiLegacy && nodiLegacy['disk-orange']), 'nessun nodo')
+  // Un giocatore e' un Cerchio + il Text del numero; un disco e' un'Ellipse (+ la cupoletta). Il Text
+  // NON e' un dettaglio: `createBall` usa Konva.Circle ESATTAMENTE come createPlayer, quindi chiedere
+  // solo "e' un Cerchio" resta verde anche se player-red viene mappato su un pallone -- l'ho misurato,
+  // il giro legacy-forma diceva 0 rossi con l'asserzione sul solo Cerchio
+  ck('player-red si disegna come un giocatore (Cerchio + il Text del numero)',
+    nodiLegacy && nodiLegacy['player-red']
+      ? (/Circle/.test(nodiLegacy['player-red'].figli) && /Text/.test(nodiLegacy['player-red'].figli)) : false, true)
+  ck('disk-orange si disegna come un disco (Ellipse, non il Cerchio di un pallone)',
+    nodiLegacy && nodiLegacy['disk-orange']
+      ? (/Ellipse/.test(nodiLegacy['disk-orange'].figli) && !/Circle/.test(nodiLegacy['disk-orange'].figli)) : false, true)
+
   // 4) IL GUARDIANO (riga 640): con modifiche locali pendenti la lavagna DEVE rifiutare il carico.
   //    E' cio' che impedisce al wrapper di cancellare quello che il mister ha appena disegnato; se
   //    qualcuno lo toglie "perche' non serve", qui si vede.

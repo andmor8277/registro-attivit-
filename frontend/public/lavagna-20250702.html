@@ -117,6 +117,20 @@
   var canvasModifiedAt=ts;
   var canvasLoadedAt=ts;
   var playerCounters={player:0,'player-bib':0,'player-jolly':0,gk:0};
+  // ── i 5 tipi di una versione vecchia della lavagna, ancora negli esercizi salvati ──
+  // Misurato sul JSONB allenamenti.esercizi di PROD il 25/11/2026: player-red 51, disk-orange 25,
+  // player-blue 19, player-yellow 19, disk-yellow 18 = 132 elementi. Prima di questa mappa NON si
+  // dipingevano: loadElement non aveva il ramo, e doLoadElements fa `if(newEl) add(newEl)` con il
+  // console.error solo sulle eccezioni -> oggetti spariti IN SILENZIO, in campo e in miniatura.
+  // Nessuno ha w/h e tutti hanno gia' il colore; createPlayer e createDisc usano misure loro, quindi
+  // il tipo normale si disegna senza dipendere da campi che qui non ci sono.
+  // La stessa mappa vive in Allenamenti.vue (drawElementsCanvas): i due file non possono importarsi
+  // (iframe IIFE vs SFC), quindi la loro coincidenza e' ASSERTA da misura_serializzazioni_lavagna.py.
+  // Si normalizza SOLO per disegnare: il tipo serializzato resta quello salvato (vedi tipoSalvato),
+  // perche' la mappa e' leggibile e correggibile. Riscrivere i nomi nel DB sarebbe una migrazione
+  // innescata dal semplice aprire una pagina, e il nome originale e' l'unica prova di cosa era.
+  var legacyTipi={'player-red':'player','player-blue':'player','player-yellow':'player','disk-orange':'disc','disk-yellow':'disc'};
+  function tipoDisegno(t){return Object.prototype.hasOwnProperty.call(legacyTipi,t)?legacyTipi[t]:t}
   var colors=['#3b82f6','#ef4444','#22c55e','#f59e0b','#f97316','#ffffff','#a78bfa','#ec4899','#06b6d4','#6b7280'];
   var lineTools=['pass','dribble','wallpass','shot','movement','line'];
 
@@ -359,7 +373,11 @@
     for(var i=0;i<elementLayer.children.length;i++){
       var child=elementLayer.children[i];
       if(child!==transformer){
-        var tipo=child.getAttr?child.getAttr('dataElement'):undefined;
+        // tipoSalvato e' cio' che va nel payload (anche un nome di legacyTipi: il DB non si tocca, vedi
+        // la nota li'); `tipo` e' il tipo NORMALE usato dalle due catene qui sotto, perche' un
+        // 'player-red' non trova nessun ramo e l'oggetto nascerebbe senza colore ne' misura
+        var tipoSalvato=child.getAttr?child.getAttr('dataElement'):undefined;
+        var tipo=tipoDisegno(tipoSalvato);
         var elColor = '#3b82f6';
         if(tipo==='player'||tipo==='player-bib'||tipo==='player-jolly'||tipo==='gk'){
           var foundColor=false;
@@ -389,7 +407,7 @@
         }
         var fieldX=child.getAttr('fieldX'),fieldY=child.getAttr('fieldY');
         if(fieldX==null||fieldY==null){var fp=toField(child.x(),child.y());fieldX=fp.x;fieldY=fp.y}
-        var el={tipo:tipo||'unknown',x:fieldX,y:fieldY,rotazione:child.rotation()||0,colore:elColor,scaleX:child.scaleX(),scaleY:child.scaleY()};
+        var el={tipo:tipoSalvato||'unknown',x:fieldX,y:fieldY,rotazione:child.rotation()||0,colore:elColor,scaleX:child.scaleX(),scaleY:child.scaleY()};
         if(tipo==='player'||tipo==='player-bib'||tipo==='player-jolly'||tipo==='gk'){
           el.size=44;
           child.children.forEach(function(ch){
@@ -486,6 +504,13 @@
     var newEl=null;
     var col=el.colore||'#3b82f6';
     var sX=el.scaleX||1,sY=el.scaleY||1;
+    // I 5 nomi di legacyTipi si disegnano col loro tipo normale. Si lavora su una COPIA: l'oggetto del
+    // chiamante non va toccato (doLoadElements lo riusa nel catch), e sotto il nodo si rimette il nome
+    // SALVATO, cosi' getElements lo serializza identico e il DB resta quello che era
+    var tipoSalvato=el.tipo,elDisegno={},kk;
+    for(kk in el){if(Object.prototype.hasOwnProperty.call(el,kk))elDisegno[kk]=el[kk]}
+    elDisegno.tipo=tipoDisegno(tipoSalvato);
+    el=elDisegno;
     if(el.tipo==='player'||el.tipo==='player-bib'||el.tipo==='player-jolly'||el.tipo==='gk'){
       var c=toCanvas(el.x||0,el.y||0);
       newEl=createPlayer(el.tipo,c.x,c.y,el.numero,col);
@@ -607,6 +632,9 @@
     if(newEl && el.rotazione && el.tipo!=='line' && ['pass','dribble','wallpass','shot','movement'].indexOf(el.tipo)<0){
       newEl.rotation(el.rotazione);
     }
+    // il nodo si ricorda il tipo COM'E' SALVATO, non quello disegnato: e' l'unico modo per non riscrivere
+    // i 132 nomi legacy nel DB al primo salvataggio (createPlayer/createDisc impostano il tipo normale)
+    if(newEl&&tipoSalvato)newEl.setAttr('dataElement',tipoSalvato);
     return newEl;
   }
 

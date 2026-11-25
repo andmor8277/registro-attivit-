@@ -127,7 +127,7 @@ case "${1:-stato}" in
     # restava sul disco, il browser eseguiva il pristino e tutti e tre i giri hanno detto "MANCATO ROSSO"
     # (misurato 25/11/2026). Il contratto degli altri e' `mutare <modo> <tipo> [--dev]`
     if [ "${TIPO#--}" != "$TIPO" ]; then DEV="$TIPO"; TIPO="ring"; fi
-    case "$MODO" in loadelement|getelements|pdf|etichetta|whitelist|jolly-vuoto|rombo|jolly-numero) ;; *) echo "modi: loadelement|getelements|pdf|etichetta|whitelist|jolly-vuoto|rombo|jolly-numero"; exit 2 ;; esac
+    case "$MODO" in loadelement|getelements|pdf|etichetta|whitelist|jolly-vuoto|rombo|jolly-numero|legacy-identita|legacy-forma) ;; *) echo "modi: loadelement|getelements|pdf|etichetta|whitelist|jolly-vuoto|rombo|jolly-numero|legacy-identita|legacy-forma"; exit 2 ;; esac
     fa_backup
     ORIG=$(h "$F"); ORIG_A=$(h "$A")
     MODO="$MODO" TIPO="$TIPO" F="$F" A="$A" python3 <<'PY'
@@ -237,6 +237,26 @@ elif modo == 'jolly-numero':
     if s.count(vecchio) != 1: print(f"  BLOCCATO: {s.count(vecchio)} occorrenze della lettera (atteso 1)"); sys.exit(3)
     scrivi(f, s.replace(vecchio, "text:isGK?'P':String(num)"))
     print("  mutata lettera: il Jolly ridipinge il numero progressivo al posto della J")
+
+elif modo == 'legacy-identita':
+    # la mappa legacy resta intatta (quindi la misura STATICA continua a dire 0 buchi) ma la funzione che
+    # la consulta diventa l'identita': i 132 elementi tornano invisibili IN SILENZIO. E' il giro che
+    # dimostra che le asserzioni 3b del browser vedono una cosa che nessun controllo sul sorgente vede
+    s = open(f, encoding='utf-8').read()
+    vecchio = "function tipoDisegno(t){return Object.prototype.hasOwnProperty.call(legacyTipi,t)?legacyTipi[t]:t}"
+    if s.count(vecchio) != 1: print(f"  BLOCCATO: {s.count(vecchio)} occorrenze di tipoDisegno (atteso 1)"); sys.exit(3)
+    scrivi(f, s.replace(vecchio, "function tipoDisegno(t){return t}"))
+    print("  mutata normalizzazione: tipoDisegno e' l'identita', i tipi legacy non trovano piu' nessun ramo")
+
+elif modo == 'legacy-forma':
+    # la mappa c'e' e l'elemento si dipinge, ma come un OGGETTO DIVERSO (player-red diventa un pallone):
+    # "non spariscono" resta verde, rossa solo l'asserzione sulla forma. E' il discriminatorio che serve
+    # a non accettare un verde dato dal semplice conteggio
+    s = open(f, encoding='utf-8').read()
+    vecchio = "'player-red':'player'"
+    if s.count(vecchio) != 1: print(f"  BLOCCATO: {s.count(vecchio)} occorrenze della mappa (atteso 1)"); sys.exit(3)
+    scrivi(f, s.replace(vecchio, "'player-red':'ball'"))
+    print("  mutata la mappa: player-red viene disegnato come un pallone invece che come un giocatore")
 PY
     [ $? -ne 0 ] && exit 3
     [ "$(h "$F")" != "$ORIG" ] || [ "$(h "$A")" != "$ORIG_A" ] || {
