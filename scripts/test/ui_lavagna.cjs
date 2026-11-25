@@ -148,7 +148,10 @@ function analizzaStatica() {
 
   console.log('--- A. le tre catene dello stesso tipo, a confronto (dal solo sorgente) ---')
   ckVero('la palette della lavagna e\' stata trovata', palette.length >= 20, `${palette.length} strumenti`)
-  ck('la palette ha gli strumenti attesi', palette.length, 23)
+  // 22 dal 25/11/2026: tolto il pulsante "Giocatore" su richiesta del titolare («sostituisci Giocatore con
+  // Fratinato, Fratinato lo puo anche togliere»). Il TIPO `player` resta nelle quattro serializzazioni --
+  // sono gli strumenti della palette a essere 22, non i tipi disegnabili
+  ck('la palette ha gli strumenti attesi', palette.length, 22)
   for (const [nome, k] of Object.entries(S)) {
     ckVero(`righe di codice diramato per tipo in ${nome}`, k.size > 15, `${k.size} tipi`)
   }
@@ -518,6 +521,60 @@ function analizzaStatica() {
   const tAttesi = perTipo(raccolti)
   ck('gli elementi piazzati sono uno per strumento', (raccolti || []).length, nTot)
 
+  // ───────────────────────── PARTE C2 ─────────────────────────
+  // Jolly e Portiere: l'interno DEVE essere colorato e la lettera DEVE esserci (titolare 25/11/2026:
+  // «deve avere il colore anche all'interno, adesso e' vuoto», «deve avere la P ma deve essere colorato
+  // l'interno, altrimenti non si vedono bene»). `getElements` non dice niente del riempimento -- serializza
+  // tipo, coordinate e numero -- quindi qui si legge il nodo Konva reale: `fill() == 'transparent'` E' il
+  // difetto, non un dettaglio. Si misura anche la forma del Jolly perche' campo e miniatura non erano lo
+  // stesso oggetto: `RegularPolygon({sides:4, rotation:45})` e' un QUADRATO, mentre l'icona della palette e
+  // la miniatura del catalogo lo disegnano a rombo
+  console.log('\n--- C2. Jolly e Portiere: interno colorato, lettera, forma ---')
+  const nodi = await inIframe(`
+    const K = w.Konva;
+    if (!K || !K.stages || !K.stages.length) return {__nokonva: true};
+    const out = [];
+    K.stages[0].find('Group').forEach(function (g) {
+      const tipo = g.getAttr && g.getAttr('dataElement');
+      if (!tipo) return;
+      let shape = null, txt = null;
+      (g.getChildren ? g.getChildren() : []).forEach(function (c) {
+        const cn = c.getClassName && c.getClassName();
+        if (cn === 'Text') { if (!txt) txt = c } else if (c.fill && !shape) shape = c
+      });
+      out.push({tipo: tipo,
+        forma: shape ? shape.getClassName() : null,
+        fill: shape ? String(shape.fill()) : null,
+        stroke: shape ? String(shape.stroke()) : null,
+        rot_shape: shape ? (shape.rotation() || 0) : null,
+        testo: txt ? txt.text() : null,
+        testo_fill: txt ? String(txt.fill()) : null,
+        testo_fisso: txt ? !!txt.getAttr('fixedFill') : null});
+    });
+    return out;`)
+  ckVero('i nodi Konva della lavagna sono leggibili', Array.isArray(nodi),
+    nodi && nodi.__nokonva ? 'Konva.stages non esposto: la misura non puo\' partire' : 'risposta non attesa')
+  const nodoDi = t => (Array.isArray(nodi) ? nodi : []).find(n => n.tipo === t)
+  for (const [tipo, lettera] of [['player-jolly', 'J'], ['gk', 'P'], ['player-bib', null]]) {
+    const n = nodoDi(tipo)
+    ckVero(`${tipo}: il nodo e' stato trovato`, !!n, 'nessun nodo con questo dataElement')
+    if (!n) continue
+    // il cuore della richiesta: riempimento presente e del colore del bordo. 'transparent' = vuoto
+    ckVero(`${tipo}: l'interno e' colorato (fill non trasparente)`,
+      !!n.fill && n.fill !== 'transparent' && n.fill !== 'null', `fill=${n.fill}`)
+    ck(`${tipo}: il riempimento e' dello stesso colore del bordo`, n.fill, n.stroke)
+    if (lettera) {
+      ck(`${tipo}: la lettera e' '${lettera}', non il numero progressivo`, n.testo, lettera)
+      // bianca perche' sta sopra il riempimento colorato; e fissa, altrimenti il selettore colore la
+      // ridipingerebbe del colore dell'elemento e sparirebbe sul suo stesso riempimento
+      ck(`${tipo}: la lettera e' bianca su fondo colorato`, n.testo_fill, '#ffffff')
+      ck(`${tipo}: la lettera e' protetta dal ri-coloramento (fixedFill)`, n.testo_fisso, true)
+    }
+  }
+  const nj = nodoDi('player-jolly')
+  ck('il Jolly e un ROMBO come la sua icona e come la miniatura (RegularPolygon, rotazione 0)',
+    nj ? `${nj.forma}/${nj.rot_shape}` : 'nodo mancante', 'RegularPolygon/0')
+
   // ───────────────────────── PARTE D ─────────────────────────
   // Il salvataggio automatico: addEsercizio/updateElementi fanno markDirty + debouncedSave (800 ms),
   // quindi il disegno deve arrivare a `allenamenti.esercizi` SENZA premere niente. Si rilegge con la
@@ -637,13 +694,16 @@ function analizzaStatica() {
   // 1) CARICAMENTO DIMOSTRATIVO. Se il conteggio non diventa ESATTAMENTE questo, il loadElements non e'
   //    partito e ogni confronto sotto sarebbe verde per inerzia (e' esattamente il falso verde che
   //    questo test ha gia' avuto: la riga 640 rifiutava i caricamenti e 23==23 era "ok")
-  const dimostrativo = (raccolti || []).filter(e => e.tipo === 'player').slice(0, 3)
-  ckVero('il set dimostrativo ha elementi da caricare', dimostrativo.length > 0, 'nessun player raccolto: il confronto non misurerebbe niente')
+  // `player-bib` e non `player`: dal 25/11/2026 il tipo `player` non ha piu' il pulsante in palette, quindi
+  // il giro C non lo piazza piu' e il filtro sarebbe rimasto vuoto -- un `ckVero` che ferma il test per
+  // colpa del test. Serve un tipo che il mister puo' ancora mettere a mano
+  const dimostrativo = (raccolti || []).filter(e => e.tipo === 'player-bib').slice(0, 3)
+  ckVero('il set dimostrativo ha elementi da caricare', dimostrativo.length > 0, 'nessun Fratinato raccolto: il confronto non misurerebbe niente')
   const caricati = await caricaEridividi(dimostrativo)
   ck('il caricamento avviene DAVVERO (il conteggio diventa quello che ho mandato io)',
     Array.isArray(caricati) ? caricati.length : -1, dimostrativo.length)
 
-  // 2) GIRO COMPLETO dei 23 su una lavagna che non li ha mai avuti
+  // 2) GIRO COMPLETO di tutti gli strumenti della palette, su una lavagna che non li ha mai avuti
   const ricaricati = await caricaEridividi(JSON.parse(JSON.stringify(raccolti || [])))
   ck('dopo il caricamento gli elementi sono tanti quanti inviati',
     Array.isArray(ricaricati) ? ricaricati.length : -1, nTot)

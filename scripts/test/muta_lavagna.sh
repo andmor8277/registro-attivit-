@@ -122,7 +122,12 @@ case "${1:-stato}" in
 
   mutare)
     MODO="${2:-}"; TIPO="${3:-ring}"; DEV="${4:-}"
-    case "$MODO" in loadelement|getelements|pdf|etichetta|whitelist) ;; *) echo "modi: loadelement|getelements|pdf|etichetta|whitelist"; exit 2 ;; esac
+    # I tre modi sul vetro (jolly-vuoto, rombo, jolly-numero) non hanno un TIPO da colpire. Senza questo
+    # spostamento, `mutare rombo --dev` metteva `--dev` in TIPO e lasciava DEV **vuoto**: la mutazione
+    # restava sul disco, il browser eseguiva il pristino e tutti e tre i giri hanno detto "MANCATO ROSSO"
+    # (misurato 25/11/2026). Il contratto degli altri e' `mutare <modo> <tipo> [--dev]`
+    if [ "${TIPO#--}" != "$TIPO" ]; then DEV="$TIPO"; TIPO="ring"; fi
+    case "$MODO" in loadelement|getelements|pdf|etichetta|whitelist|jolly-vuoto|rombo|jolly-numero) ;; *) echo "modi: loadelement|getelements|pdf|etichetta|whitelist|jolly-vuoto|rombo|jolly-numero"; exit 2 ;; esac
     fa_backup
     ORIG=$(h "$F"); ORIG_A=$(h "$A")
     MODO="$MODO" TIPO="$TIPO" F="$F" A="$A" python3 <<'PY'
@@ -201,6 +206,37 @@ elif modo == 'etichetta':
     if s.count(vecchio) != 1: print(f"  BLOCCATO: pattern etichetta per '{tipo}' non univoco"); sys.exit(3)
     scrivi(f, s.replace(vecchio, "{type:'" + tipo + "',label:'XX"))
     print(f"  mutata etichetta: '{tipo}' ora ha un titolo che a schermo non esiste")
+
+elif modo == 'jolly-vuoto':
+    # IL DIFETTO SEGNALATO DAL TITOLARE (25/11/2026): «deve avere il colore anche all'interno, adesso e'
+    # vuoto». Riporta Jolly e Portiere a NON essere riempiti -- lo stato di prima. Se le asserzioni nuove
+    # della PARTE C2 non diventano rosse QUI, non stavano misurando niente
+    s = open(f, encoding='utf-8').read()
+    vecchio = "isFilled=type==='player-bib'||type==='player-jolly'||type==='gk'"
+    if s.count(vecchio) != 1: print(f"  BLOCCATO: {s.count(vecchio)} occorrenze del criterio di riempimento (atteso 1)"); sys.exit(3)
+    nuovo = "isFilled=type==='player-bib'||type==='__MUTATO_player-jolly__'||type==='__MUTATO_gk__'"
+    if nuovo == s: print("  BLOCCATO: la sostituzione non e' avvenuta"); sys.exit(3)
+    scrivi(f, s.replace(vecchio, nuovo))
+    print("  mutato riempimento: Jolly e Portiere tornano VUOTI dentro (come stavano prima)")
+
+elif modo == 'rombo':
+    # il Jolly torna QUADRATO: `rotation:45` su un RegularPolygon a 4 lati, che in Konva ha gia' un
+    # vertice in alto. E' il caso in cui campo e miniatura raccontano due oggetti diversi (l'icona della
+    # palette e la miniatura lo disegnano a rombo)
+    s = open(f, encoding='utf-8').read()
+    vecchio = "if(isDiamond){g.add(new Konva.RegularPolygon({sides:4,radius:r,stroke:currentColor"
+    if s.count(vecchio) != 1: print(f"  BLOCCATO: {s.count(vecchio)} occorrenze del rombo (atteso 1)"); sys.exit(3)
+    scrivi(f, s.replace(vecchio, vecchio.replace("radius:r,stroke", "radius:r,rotation:45,stroke")))
+    print("  mutata forma: il Jolly torna un quadrato (rotation:45 rimesso)")
+
+elif modo == 'jolly-numero':
+    # il Jolly torna a mostrare il NUMERO progressivo invece della lettera J: e' quello che il titolare
+    # non vuole («invece dei numeri solo la scritta J, uguale per tutti i Jolly che metto»)
+    s = open(f, encoding='utf-8').read()
+    vecchio = "text:isGK?'P':'J'"
+    if s.count(vecchio) != 1: print(f"  BLOCCATO: {s.count(vecchio)} occorrenze della lettera (atteso 1)"); sys.exit(3)
+    scrivi(f, s.replace(vecchio, "text:isGK?'P':String(num)"))
+    print("  mutata lettera: il Jolly ridipinge il numero progressivo al posto della J")
 PY
     [ $? -ne 0 ] && exit 3
     [ "$(h "$F")" != "$ORIG" ] || [ "$(h "$A")" != "$ORIG_A" ] || {
@@ -211,7 +247,13 @@ PY
       local_c=$(cont); [ -n "$local_c" ] || { echo "  BLOCCATO: nessun container frontend su DEV"; exit 1; }
       cat "$F" | $SSH "cat > /tmp/_lavagna_mutato.html"
       $SSH "docker cp /tmp/_lavagna_mutato.html $local_c:$DST"
-      echo "  container   : $(hash_container)  (deve essere il nuovo $(h "$F"))"
+      # Non basta stamparla, la coincidenza: va ASSERTA. Il 25/11/2026 i tre giri sul vetro sono rimasti
+      # verdi 162/0 perche' la mutazione non era mai arrivata nel container -- e questo riga la stampava e
+      # basta, dicendo "deve essere il nuovo X" senza confrontare. Un verde del browser su un file che il
+      # browser non ha mai eseguito non e' un verdetto
+      NUOVA=$(h "$F"); DENTRO=$(hash_container)
+      [ "$DENTRO" = "$NUOVA" ] || { echo "  BLOCCATO: la mutazione non e' nel file SERVITO (container=$DENTRO, file=$NUOVA): il browser eseguirebbe il pristino"; exit 3; }
+      echo "  container   : $DENTRO  = il nuovo $NUOVA  (verificato nei byte del container)"
       if [ "$MODO" = "whitelist" ]; then
         # Qui sta la ragione di tutto il ramo: mutare Allenamenti.vue sul disco cambia cio' che legge
         # la PARTE A (quel file la' lo apre da disco) ma NON cio' che esegue il browser, che scarica

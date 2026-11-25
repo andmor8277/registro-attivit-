@@ -13,13 +13,23 @@
 #   etichetta    -> etichetta palette cambiata     : il pulsante a schermo non corrisponde al sorgente
 #   whitelist    -> campo tolto dalla lista bianca : arriva a terra monco, e il conteggio non lo dice
 #
+# In piu' i tre giri sulla richiesta del titolare del 25/11/2026 (Jolly e Portiere pieni, lettera J/P,
+# rombo). Sono un'altra classe, e per questo stanno accanto e non in mezzo ai cinque: non toccano nessuna
+# serializzazione, toccano cio' che il nodo Konva E' a schermo. `getElements` non serializza il riempimento,
+# quindi la statica non li puo' vedere -- e infatti fra le asserzioni che DEVONO restare verdi c'e' proprio
+# "esiste in getElements"/"esiste in pdf". Un difetto che esiste solo sul vetro ha bisogno di un test che
+# guardi il vetro:
+#   jolly-vuoto  -> Jolly e Portiere rimessi VUOTI dentro  : era esattamente il difetto segnalato
+#   rombo        -> rotation:45 sul RegularPolygon          : il Jolly torna quadrato, la miniatura rombo
+#   jolly-numero -> il Jolly ridipinge il numero            : la lettera J non c'e' piu'
+#
 # Due meta' diverse, e la differenza e' il punto:
 #   la PARTE A legge il SORGENTE LOCALE   -> basta mutare il file qui
 #   le PARTI B..F girano contro DEV        -> serve la mutazione dentro il container (--dev)
 # Il caso `pdf` e' la prova regina: la mutazione e' visibile SOLO alla statica, il browser resta
 # verde. E' la classe di difetto che nessuno vede perche' nessuno guarda il PDF dal test.
 #
-# Uso: bash scripts/test/negative_lavagna.sh            # tutti e cinque i casi
+# Uso: bash scripts/test/negative_lavagna.sh            # tutti gli otto giri
 #        bash scripts/test/negative_lavagna.sh whitelist # uno solo
 set -u
 # REPO derivato dalla posizione dello script (non il path della mia postazione): un arnese dei
@@ -42,6 +52,12 @@ cases() {
     pdf)          echo "mutare pdf zone" ;;
     etichetta)    echo "mutare etichetta ring" ;;
     whitelist)    echo "mutare whitelist size --dev" ;;
+    # i tre giri sulla richiesta del titolare del 25/11/2026 (Jolly e Portiere pieni, lettera J/P, rombo).
+    # Tutti e tre servono `--dev`: sono asserzioni sul nodo Konva reso dal BROWSER, la sola Parte A non le
+    # vede -- e infatti la statica deve restare verde, ed e' quello che asseriamo qui sotto
+    jolly-vuoto)  echo "mutare jolly-vuoto --dev" ;;
+    rombo)        echo "mutare rombo --dev" ;;
+    jolly-numero) echo "mutare jolly-numero --dev" ;;
     *) return 1 ;;
   esac
 }
@@ -60,6 +76,12 @@ expected_rossi() {
     # che lo dichiara e rossa la confronto campo-per-campo; il CONTEGGIO degli elementi resta giusto
     # ed e' esattamente per questo che le asserzioni "nessun tipo si perde" non bastavano
     whitelist)    printf '%s\n' "il campo size sopravvive al payload" "arriva a terra identico" ;;
+    # Jolly e Portiere tornano VUOTI: devono diventare rosse le tre asserzioni che guardano il nodo Konva
+    # (riempimento, colore della lettera, fixedFill). Che la statica resti verde e' parte della prova:
+    # un riempimento non e' un campo serializzato, nessun controllo sul sorgente lo puo' vedere
+    jolly-vuoto)  printf '%s\n' "l'interno e' colorato" "la lettera e' bianca su fondo colorato" "la lettera e' protetta" ;;
+    rombo)        printf '%s\n' "il Jolly e un ROMBO" ;;
+    jolly-numero) printf '%s\n' "la lettera e' 'J', non il numero" ;;
   esac
 }
 expected_verdi() {
@@ -72,11 +94,19 @@ expected_verdi() {
     etichetta)    printf '%s\n' "esiste in getElements" "esiste in loadElement" "esiste in pdf" "si perde alla riapertura" ;;
     whitelist)    printf '%s\n' "si perde nel salvataggio" "si perde alla riapertura" "esiste in getElements" \
                             "esiste in loadElement" "esiste in pdf" "il campo tipo sopravvive al payload" ;;
+    # la lettera C'E' ancora, cambia solo il colore: se queste diventassero rosse, la mutazione starebbe
+    # accendendo mezzo test e non sarebbe discriminatoria
+    jolly-vuoto)  printf '%s\n' "la lettera e' 'J', non il numero" "la lettera e' 'P', non il numero" \
+                            "il Jolly e un ROMBO" "esiste in getElements" "esiste in pdf" "nasce un elemento del suo tipo" ;;
+    rombo)        printf '%s\n' "l'interno e' colorato" "la lettera e' 'J', non il numero" \
+                            "la lettera e' bianca su fondo colorato" "esiste in pdf" ;;
+    jolly-numero) printf '%s\n' "l'interno e' colorato" "la lettera e' bianca su fondo colorato" \
+                            "la lettera e' protetta" "il Jolly e un ROMBO" "la lettera e' 'P', non il numero" ;;
   esac
 }
 
 UNO="${1:-}"
-LISTA="loadelement getelements pdf etichetta whitelist"
+LISTA="loadelement getelements pdf etichetta whitelist jolly-vuoto rombo jolly-numero"
 [ -n "$UNO" ] && LISTA="$UNO"
 ESITO=0
 

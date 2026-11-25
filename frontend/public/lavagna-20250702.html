@@ -125,7 +125,6 @@
       {type:'select',label:'Seleziona',icon:'⊹'}
     ]},
     {title:'Giocatori',tools:[
-      {type:'player',label:'Giocatore',icon:'○'},
       {type:'player-bib',label:'Fratinato',icon:'●'},
       {type:'player-jolly',label:'Jolly',icon:'◆'},
       {type:'gk',label:'Portiere',icon:'P'}
@@ -394,7 +393,9 @@
         if(tipo==='player'||tipo==='player-bib'||tipo==='player-jolly'||tipo==='gk'){
           el.size=44;
           child.children.forEach(function(ch){
-            if(ch.getClassName&&ch.getClassName()==='Text'&&tipo!=='gk'){var n=parseInt(ch.text());if(n)el.numero=n}
+            // il numero si legge solo dove c'e' UN NUMERO: gk porta 'P' e jolly porta 'J', e parseInt di
+            // una lettera darebbe NaN (inertizzato dall'`if(n)`, ma qui l'esclusione e' voluta e letta)
+            if(ch.getClassName&&ch.getClassName()==='Text'&&tipo!=='gk'&&tipo!=='player-jolly'){var n=parseInt(ch.text());if(n)el.numero=n}
           });
         }else if(tipo==='ball'){
           el.size=28;
@@ -715,14 +716,33 @@
   }
 
   function createPlayer(type,x,y,num,counterColor){
-    var g=new Konva.Group({x:x,y:y,draggable:true}),r=22,isFilled=type==='player-bib',isDiamond=type==='player-jolly',isGK=type==='gk';
+    // 'player' non ha piu' il pulsante in palette (25/11/2026: «sostituisci Giocatore con Fratinato,
+    // Fratinato lo puo anche togliere»), ma resta QUI e nelle altre tre serializzazioni: gli esercizi gia'
+    // salvati del mister sono pieni di elementi di tipo 'player', e devono continuare a dipingersi come
+    // oggi (cerchio vuoto, numero del colore). Elencato, non `type!=='player'`: un tipo nuovo di domani
+    // non deve diventare pieno per inerzia.
+    var g=new Konva.Group({x:x,y:y,draggable:true}),r=22,
+        isFilled=type==='player-bib'||type==='player-jolly'||type==='gk',
+        isDiamond=type==='player-jolly',isGK=type==='gk';
     g.setAttr('dataElement',type);
     var ck=type+'_'+(counterColor||currentColor);
     if(num==null){playerCounters[ck]=(playerCounters[ck]||0)+1;num=playerCounters[ck]}
     else{playerCounters[ck]=Math.max(playerCounters[ck]||0,num)}
-    if(isDiamond){g.add(new Konva.RegularPolygon({sides:4,radius:r,rotation:45,stroke:currentColor,strokeWidth:2.5}))}
+    // sides:4 in Konva ha gia' un vertice in alto: SENZA `rotation:45` e' il ROMBO che l'icona della
+    // palette promette (◆) e che la miniatura del catalogo disegnava da sola. Con i 45 gradi era un
+    // quadrato: campo e miniatura non erano lo stesso oggetto (misurato col browser il 25/11/2026).
+    if(isDiamond){g.add(new Konva.RegularPolygon({sides:4,radius:r,stroke:currentColor,strokeWidth:2.5,fill:isFilled?currentColor:'transparent'}))}
     else{g.add(new Konva.Circle({radius:r,stroke:currentColor,strokeWidth:2.5,fill:isFilled?currentColor:'transparent'}))}
-    if(isGK){g.add(new Konva.Text({text:'P',width:r*2,height:r*2,fontFamily:'Arial',fontSize:22,fontWeight:'bold',fill:currentColor,x:-r,y:-r,align:'center',verticalAlign:'middle',listening:false}))}
+    if(isGK||isDiamond){
+      // Jolly e Portiere: UNA LETTERA, non il numero progressivo (scelta del titolare 25/11/2026: «invece
+      // dei numeri solo la scritta J, uguale per tutti i Jolly che metto»). Bianca perche' l'interno ora e'
+      // colorato: col colore dell'elemento sarebbe invisibile sul suo stesso riempimento.
+      var lbl=new Konva.Text({text:isGK?'P':'J',width:r*2,height:r*2,fontFamily:'Arial',fontSize:22,fontWeight:'bold',fill:isFilled?'#ffffff':currentColor,x:-r,y:-r,align:'center',verticalAlign:'middle',listening:false});
+      // fixedFill dice a loadElement e al selettore colore di NON ritoccare questa scritta: senza,
+      // cambiare colore all'elemento ridipingerebbe la lettera del colore del riempimento
+      if(isFilled)lbl.setAttr('fixedFill',true);
+      g.add(lbl);
+    }
     else{
       var txt=new Konva.Text({text:String(num),width:r*2,height:r*2,fontFamily:'Arial',fontSize:18,fontWeight:'bold',fill:isFilled?'#ffffff':currentColor,x:-r,y:-r,align:'center',verticalAlign:'middle',listening:false});
       if(isFilled)txt.setAttr('fixedFill',true);
@@ -1072,7 +1092,9 @@ function createBall(x,y){
               if(stroke&&stroke!=='transparent'&&!(typeof stroke==='string'&&stroke.indexOf('rgba')!==-1))shape.stroke(c);
               if(fill&&fill!=='transparent'&&typeof fill==='string'&&fill.indexOf('rgba')===-1)shape.fill(c);
             });
-            if(tipo==='player'||tipo==='player-bib'||tipo==='player-jolly'){
+            // Jolly e Portiere NON si rinumerano: portano una lettera fissa (J / P). Senza questa
+            // esclusione, cambiare colore a un Jolly gli riscriveva dentro il numero progressivo
+            if(tipo==='player'||tipo==='player-bib'){
               var ck=tipo+'_'+c;
               var nextNum=(playerCounters[ck]||0)+1;
               playerCounters[ck]=nextNum;

@@ -758,13 +758,16 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
       ctx.scale(sX, sY)
       const r = 22
       if (tipo === 'player-jolly') {
-        // Diamante
+        // Diamante PIENO, come sul campo (titolare 25/11/2026: «deve avere il colore anche all'interno,
+        // adesso e' vuoto»). Vuoto, in miniatura, era un contorno da 2.5px su un campo di 400px
         ctx.beginPath()
         ctx.moveTo(0, -r)
         ctx.lineTo(r, 0)
         ctx.lineTo(0, r)
         ctx.lineTo(-r, 0)
         ctx.closePath()
+        ctx.fillStyle = color
+        ctx.fill()
         ctx.strokeStyle = color
         ctx.lineWidth = 2.5
         ctx.stroke()
@@ -775,26 +778,29 @@ function drawElementsCanvas(ctx, elementi, rect, baseScale, sizeBoost = 1) {
         ctx.strokeStyle = color
         ctx.lineWidth = 2.5
         ctx.stroke()
-        if (tipo === 'player-bib') {
+        // Fratinato e Portiere pieni. `player` resta VUOTO: non ha piu' il pulsante ma gli esercizi gia'
+        // salvati del mister sono pieni di cerchi vuoti, e qui devono restare come li ha lasciati
+        if (tipo === 'player-bib' || tipo === 'gk') {
           ctx.fillStyle = color
           ctx.fill()
         }
       }
-      // Numero progressivo giocatore
-      if (el.numero && tipo !== 'gk' && fontVisible) {
+      // Numero progressivo giocatore. Jolly e Portiere NO: portano una lettera fissa
+      if (el.numero && tipo !== 'gk' && tipo !== 'player-jolly' && fontVisible) {
         ctx.fillStyle = tipo === 'player-bib' ? '#ffffff' : color
         ctx.font = 'bold 18px sans-serif'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(String(el.numero), 0, 1)
       }
-      // Portiere: lettera P
-      if (tipo === 'gk' && fontVisible) {
-        ctx.fillStyle = color
-        ctx.font = 'bold 16px sans-serif'
+      // Jolly: lettera J, Portiere: lettera P. Bianche perche' l'interno ora e' colorato, e a 22px come
+      // le dipinge la lavagna (era 16: qui e nel PDF la lettera usciva piu' piccola che a schermo)
+      if ((tipo === 'gk' || tipo === 'player-jolly') && fontVisible) {
+        ctx.fillStyle = '#ffffff'
+        ctx.font = 'bold 22px sans-serif'
           ctx.textAlign = 'center'
           ctx.textBaseline = 'middle'
-          ctx.fillText('P', 0, 1)
+          ctx.fillText(tipo === 'gk' ? 'P' : 'J', 0, 1)
       }
       ctx.restore()
     } else if (tipo === 'ball') {

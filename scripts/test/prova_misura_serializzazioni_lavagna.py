@@ -73,8 +73,8 @@ MUTAZIONI = {}
 
 # a) uno strumento nuovo in palette, senza nessun ramo scritto da nessuna parte
 MUTAZIONI['a strumento nuovo in palette'] = (
-    sostituisci(html0, "{type:'player',label:'Giocatore',icon:",
-                "{type:'paletta',label:'Paletta',icon:'X'},\n      {type:'player',label:'Giocatore',icon:",
+    sostituisci(html0, "{type:'player-bib',label:'Fratinato',icon:",
+                "{type:'paletta',label:'Paletta',icon:'X'},\n      {type:'player-bib',label:'Fratinato',icon:",
                 'a', 1), vue0)
 
 # b) tipo ball tolto da TUTTI i rami di getElements
