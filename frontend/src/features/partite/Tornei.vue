@@ -79,7 +79,13 @@
     </p>
 
     <div class="filtri">
-      <select v-model="categoriaFiltro" class="select-filtro" @change="carica">
+      <!-- Il menu a tendina delle categorie si offre **solo a chi le vede tutte** (responsabili e segreteria).
+           A un mister che segue una categoria elencare "2019 - Primi Calci" e' gia' di per se' una promessa che
+           la pagina non puo' mantenere: selezionandola finiva per dipingere le sezioni delle altre squadre (vedi
+           `filtroCategoria` e il ramo `extra` di costruisciSezioni). Decisione del titolare il 25/11/2026, su
+           segnalazione del mister dei 2016: «secondo me non deve proprio avere il menu a tendina». A lui resta
+           la nota qui sotto, che dice cosa sta vedendo e perche'. -->
+      <select v-if="puoVedereTutte" v-model="categoriaFiltro" class="select-filtro" @change="carica">
         <option value="">Tutte le categorie</option>
         <option v-for="c in categorieOperative" :key="c.id" :value="c.id">{{ etichettaCategoria(c) }}</option>
       </select>
@@ -824,6 +830,26 @@ const calendarioAperto = ref(null)
 // i parametri della rotta sono stringhe mentre le option usano c.id numerico: senza la conversione
 // il menu a tendina non mostrerebbe la categoria gia' selezionata all'ingresso del mister
 const categoriaFiltro = ref(route.params.id && !isNaN(Number(route.params.id)) ? Number(route.params.id) : '')
+
+// Il filtro categoria **quando chi guarda puo' davvero usarlo**. Non basta nascondere il menu a tendina
+// (riga 82, `v-if="puoVedereTutte"`): `categoriaFiltro` nasce da `route.params.id`, quindi `/tornei/26`
+// scritto a mano porta dentro un filtro su una categoria che il mister dei 2016 non segue. Ed e' proprio
+// quell'input a far cadere i tornei nel ramo `extra` di `costruisciSezioni`, dove -- misurato il 25/11/2026
+// eseguendo la funzione vera sui dati di PROD dell'utente 8 -- uscivano **6 sezioni e 15 card**, comprese
+// "2018 - Primi Calci" e "2019 - Primi Calci", con l'etichetta "(non operativa)" che per giunta e' falsa:
+// quelle categorie sono operative, sono solo **non sue**.
+// Se la categoria richiesta non e' una sua il filtro si IGNORA, non si trasforma in lista vuota: resta il
+// filtro del server, che e' il permesso, e la pagina continua a mostrare le sue categorie. Una lista vuota
+// senza motivo e' il modo in cui un mister chiama l'organizzatore perche' crede di aver perso i tornei.
+const filtroCategoria = computed(() => {
+  const f = categoriaFiltro.value
+  if (!f) return null
+  if (puoVedereTutte.value) return f
+  const mie = categorieInVista.value
+  if (!mie) return null
+  return mie.includes(String(f)) ? f : null
+})
+
 const daFiltro = ref('')
 const aFiltro = ref('')
 
@@ -1082,13 +1108,24 @@ function costruisciSezioni(lista, soloCategoria = null, soloQueste = null) {
     // filtrato (nessuna iscrizione che lo riguardi), quindi farlo comparire qui vorrebbe dire rimettere
     // dentro cio' che il server ha appena escluso
     if (consentite && !cats.some(c => consentite.includes(String(c.id)))) return
-    const chiavi = cats.length ? cats : [null]
+    // La whitelist si applica ANCHE qui. Prima non succedeva: il ramo principale filtrava con `okSezione`,
+    // questo prendeva `cats` cosi' com'era, e un torneo finito in `extra` veniva **duplicato sotto tutte le
+    // categorie iscritte** -- da li' i "2018 - Primi Calci" e "2019 - Primi Calci" mostrati al mister dei 2016.
+    // Il guard-rail che lo misura, senza browser e senza DEV, e' scripts/test/prova_sezioni_tornei.cjs (caso B).
+    const chiavi = cats.length ? cats.filter(c => okSezione(c.id)) : [null]
+    if (!chiavi.length) return
     chiavi.forEach(c => {
       const k = c ? 'cat-' + c.id : 'cat-nessuna'
       if (!extra[k]) {
+        // Il suffisso "(non operativa)" va GUADAGNATO, non regala la sua riga a tutto cio' che passa di qui.
+        // Finche' era fisso, al mister dei 2016 la sua sezione usciva come "2016 - Pulcini (non operativa)":
+        // categoria operativa eccome, finita in `extra` solo perche' il filtro a tendina su un'altra categoria
+        // aveva impedito al ramo principale di piazzarla. Detto a un allenatore suona "la mia squadra non
+        // esiste piu'", e la risposta giusta non e' aspettare, e' chiamare la segreteria per riattivarla.
+        const eOperativa = c ? categorieOperative.value.some(o => String(o.id) === String(c.id)) : false
         extra[k] = c
           ? { chiave: k, catId: String(c.id), id: c.id, nome: c.nome, anno: c.anno,
-              titolo: etichettaCategoria(c) + ' (non operativa)', tornei: [] }
+              titolo: eOperativa ? etichettaCategoria(c) : etichettaCategoria(c) + ' (non operativa)', tornei: [] }
           : { chiave: k, catId: '__nessuna__', id: null, nome: 'Senza categoria', anno: null,
               titolo: 'Senza categoria', tornei: [] }
       }
@@ -1100,7 +1137,7 @@ function costruisciSezioni(lista, soloCategoria = null, soloQueste = null) {
 }
 
 const sezioniPerCategoria = computed(() =>
-  costruisciSezioni(tornei.value, categoriaFiltro.value || null, categorieInVista.value))
+  costruisciSezioni(tornei.value, filtroCategoria.value, categorieInVista.value))
 
 function chiaveCalendario(t, sez) {
   // Non basta t.id: lo stesso torneo sta in due sezioni, e aprire il calendario nei Pulcini non
@@ -1170,7 +1207,10 @@ async function carica() {
     // si ritrova con cio' che decide il server", che dopo questa modifica e' la stessa cosa -- pero'
     // leggibile nella richiesta, negli access log e in ui_tornei.cjs
     params.scope = scopeUsato.value
-    if (categoriaFiltro.value) params.categoria_id = categoriaFiltro.value
+    // `filtroCategoria` e non `categoriaFiltro`: vedere una categoria che non si segue non da' un permesso,
+    // e mandarla al server significherebbe chiedere una selezione a schermo che la pagina poi non puo'
+    // dipingere (le sue sezioni sono gia' limitate da `categorieInVista`)
+    if (filtroCategoria.value) params.categoria_id = filtroCategoria.value
     if (daFiltro.value) params.da = daFiltro.value
     if (aFiltro.value) params.a = aFiltro.value
     const res = await getTornei(params)
@@ -1748,9 +1788,12 @@ async function esportaConvocazionePDF(formato = 'pdf') {
 // meta' giornata e nessun segno che lo dice e' plausibile e falso
 const filtriAttivi = computed(() => {
   const parti = []
-  if (categoriaFiltro.value) {
-    const c = categorieOperative.value.find(x => String(x.id) === String(categoriaFiltro.value))
-    parti.push('categoria ' + (c ? etichettaCategoria(c) : '#' + categoriaFiltro.value))
+  // `filtroCategoria`: il documento deve dire i filtri **applicati**, non quelli scritti nell'URL. Dire
+  // "solo la selezione a schermo (categoria 2015 - Esordienti)" in un PDF che contiene i tornei di tutte
+  // le sue categorie e' esattamente il plausibile e falso che questa nota esiste per impedire
+  if (filtroCategoria.value) {
+    const c = categorieOperative.value.find(x => String(x.id) === String(filtroCategoria.value))
+    parti.push('categoria ' + (c ? etichettaCategoria(c) : '#' + filtroCategoria.value))
   }
   if (daFiltro.value) parti.push('dal ' + formatoData(daFiltro.value))
   if (aFiltro.value) parti.push('al ' + formatoData(aFiltro.value))

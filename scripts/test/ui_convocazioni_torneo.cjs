@@ -27,6 +27,11 @@ const UTENTE_DIRIGENTE = process.argv[4] || 'demo_tornei_dirigente'
 // Vengono da prepara_demo_tornei.sh: se li cambi li', cambiali anche qui
 const NOME_TORNEO = '__demo_tornei__-WINTER CUP'
 const CAT_PULCINI = '19'
+// La categoria che demo_tornei_mister1 **NON** segue (CATE di prepara_demo_tornei.sh) ma a cui il torneo
+// demo e' iscritto: e' la coppia che rende discriminante aprire /tornei/26 come lui. Con una categoria a cui
+// il torneo non e' iscritto, il server escluderebbe il torneo da solo e l'asserzione sulle sezioni sarebbe
+// verde perche' non c'e' niente da mostrare
+const CAT_NON_MIA = '26'
 const GARA_CON_CATEGORIA = 'Real Junior'
 const GARA_ORFANA = 'Amichevole fuori calendario'
 const OUT = process.env.THOF_UI_OUT || '/tmp/opencode/ui-conv'
@@ -79,6 +84,14 @@ function ck(nome, reale, atteso) {
   risultati.push({ ok, nome, reale, atteso })
   console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${nome}${ok ? '' : ` -> '${reale}' (atteso '${atteso}')`}`)
 }
+// Un booleano da solo non racconta cosa c'era davvero: le asserzioni di forma (giustezza di un elenco)
+// passano di qui, che stampa il reale anche quando e' vuoto -- "l'elenco era vuoto" e "l'elenco andava
+// bene" a schermo sono la stessa riga, e sono due verdetti diversi
+function ckVero(nome, cond, reale) {
+  const ok = !!cond
+  risultati.push({ ok, nome, reale, atteso: true })
+  console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${nome}${ok ? '' : ` -> ${JSON.stringify(reale)}`}`)
+}
 
 // Cosa la pagina dice di se' stessa: senza questo, un salvataggio che fallisce dentro un try/catch e'
 // completamente invisibile dall'esterno
@@ -102,6 +115,19 @@ const LEGGI_PAGINA = `(() => {
   return {
     titoloPagina: document.querySelector('.page-header h2')?.innerText.trim() || '',
     nota: (document.querySelector('.nota')?.innerText || '').replace(/\\s+/g, ' ').trim(),
+    // Tutte le .nota: la pagina ne ha piu' d'una (quella del ruolo e quella "solo i tornei delle tue
+    // categorie"), e leggerne una sola faceva passare un assente come un verde
+    tutteNote: [...document.querySelectorAll('.nota')].map(n => n.innerText.replace(/\\s+/g, ' ').trim()),
+    // Il menu a tendina delle categorie e l'interruttore "tutte le categorie": un mister che segue una
+    // categoria non deve vedere nessuno dei due (titolare, 25/11/2026: «non deve proprio avere il menu
+    // a tendina»). Sono DUE controlli diversi e possono divergere, quindi si misurano separatamente.
+    selectFiltro: !!document.querySelector('.filtri .select-filtro'),
+    checkboxTutte: !!document.querySelector('.filtri .filtro-check input'),
+    // Il titolo della sezione e' il primo nodo testo di h2.categoria-intestazione: dentro l'h2 ci sono anche
+    // il conteggio "5 tornei" e il pulsante di export, e leggere innerText tutto quanto renderebbe il
+    // confronto un'uguaglianza contro una stringa che nessuno scrive cosi' com'e'
+    titoliSezioni: [...document.querySelectorAll('.categoria-sezione .categoria-intestazione')]
+      .map(h => (h.firstChild ? h.firstChild.textContent : h.innerText).replace(/\\s+/g, ' ').trim()),
     nuovoTorneo: [...document.querySelectorAll('.btn-primary')].some(b => /Nuovo torneo/.test(b.innerText)),
     aggiungiGara: [...document.querySelectorAll('.btn-aggiungi')].map(b => b.innerText.trim()),
     azioniTorneo: [...document.querySelectorAll('.torneo-azioni .btn-azione')].map(b => b.innerText.trim()),
@@ -225,10 +251,37 @@ function clicConvocaRiga(nome) {
     } else if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') {
       erroriConsole.push(m.params.args.map(a => a.value ?? a.description ?? a.type).join(' '))
     } else if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error') {
-      erroriConsole.push(m.params.entry.text)
+      // L'indirizzo DEVE esserci: `Failed to load resource: net::ERR_ADDRESS_UNREACHABLE` da solo non dice
+      // QUALE risorsa e quindi non distingue "il DEV e' caduto per meta' giro" (tutte le asserzioni verdi
+      // perche' non c'era niente da misurare) da un favicon mancato. E' il "2 senza dove" gia' registrato
+      // per i residui del test infortuni
+      const e = m.params.entry
+      erroriConsole.push([e.text, e.url, e.source && e.source !== 'other' ? e.source : '']
+        .filter(Boolean).join(' | '))
     }
   }
   await send('Runtime.enable'); await send('Log.enable'); await send('Page.enable')
+
+  // Registratore delle richieste, installato PRIMA della prima navigazione (addScriptToEvaluateOnNewDocument
+  // agisce sulle pagine successive, non su quella gia' caricata). Serve perche' "la pagina non mostra le
+  // sezioni altrui" non distingue due cause: la pagina che non chiede la categoria, e la pagina che la
+  // chiede e poi la nasconde. La seconda e' ancora un difetto (il filtro parte, il server risponde un
+  // sottoinsieme, e la prossima modifica del template lo rimette in vista) e dall'HTML non si vede.
+  // axios parla con XHR, il login qui sopra parla con fetch: registrati entrambi -- stesso registratore e
+  // stessa ragione di ui_tornei.cjs, dove e' nato il 25/11/2026 per il parametro `scope` scartato in silenzio
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: `
+    window.__req = []
+    const apri = XMLHttpRequest.prototype.open
+    XMLHttpRequest.prototype.open = function (m, u) {
+      try { window.__req.push(String(u)) } catch (e) {}
+      return apri.apply(this, arguments)
+    }
+    const fetchOriginale = window.fetch
+    window.fetch = function (u, o) {
+      try { window.__req.push(typeof u === 'string' ? u : ((u && u.url) || String(u))) } catch (e) {}
+      return fetchOriginale.apply(this, arguments)
+    }
+  ` })
 
   // =============================================================== IL MISTER
   console.log('--- il mister, dalla card "Convocazioni Tornei" ---')
@@ -245,6 +298,39 @@ function clicConvocaRiga(nome) {
   ck('il mister NON vede "Nuovo torneo"', p.nuovoTorneo, false)
   ck('il mister NON vede "Modifica" sul torneo', p.azioniTorneo.includes('Modifica'), false)
   ck('il mister NON vede "Elimina" sul torneo', p.azioniTorneo.includes('Elimina'), false)
+
+  // ---------------------------------------------------------------- i filtri che un mister non deve avere
+  // Segnalazione del titolare il 25/11/2026, dal mister dei 2016: «vedo i tornei 2016 ma poi posso aprire
+  // il menu a tendina e vedere tutto il resto dei tornei, che secondo me non devo vedere da mister dei
+  // 2016»; alla domanda su cosa dovesse poter fare, «secondo me non deve proprio avere il menu a tendina».
+  // Il backend rispondeva gia' giusto (5 tornei su 10, misurato eseguendo lista_tornei nel container con
+  // l'Utente reale): i 5 tornei legittimi sono iscritti a 6 categorie, e con il tendino su una categoria
+  // non sua la pagina li dipingeva in 6 sezioni e 15 card, "2018 - Primi Calci" compreso. La riga difettosa
+  // era il ramo `extra` di costruisciSezioni, che non consultava la whitelist; la misura deterministica sta
+  // in prova_sezioni_tornei.cjs. Queste sono le stesse cose viste a schermo, perche' il tendino e' un altro
+  // pezzo della correzione e nessun test API poteva vederlo.
+  ck('il mister NON ha il menu a tendina delle categorie', p.selectFiltro, false)
+  ck('il mister NON ha l\'interruttore "tutte le categorie della società"', p.checkboxTutte, false)
+  ck('e la pagina gli dice cosa sta vedendo e perche\'',
+     p.tutteNote.some(n => /solo i tornei delle tue categorie/.test(n)), true)
+  const sue = await evalJS(`(async () => {
+    const h = { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    const mie = await (await fetch('/api/categorie/mie', { headers: h })).json()
+    const all = await (await fetch('/api/categorie/all', { headers: h })).json()
+    const et = id => { const c = (all || []).find(c => String(c.id) === String(id))
+                       return c ? (c.anno ? c.anno + ' - ' + c.nome : c.nome) : '#' + id }
+    return (Array.isArray(mie) ? mie : []).map(et)
+  })()`, { awaitPromise: true })
+  ckVero('il mister ha almeno una categoria (senza di che le due asserzioni sopra non misurerebbero niente)',
+         Array.isArray(sue) && sue.length > 0, `categorie lette da /categorie/mie: ${JSON.stringify(sue)}`)
+  // L'asserzione che conta: ogni sezione dipinta deve essere una delle SUE. Non "una sezione sola", che
+  // sarebbe giusto solo per chi ha una categoria, e non un conteggio, che invecchia coi dati di DEV.
+  const fuori = (p.titoliSezioni || []).filter(t => !sue.some(s => t.startsWith(s)))
+  ck('nessuna sezione di categorie che non segue', fuori.join(' | '), '')
+  ck('e le sue sezioni ci sono tutte', (p.titoliSezioni || []).length, sue.length)
+  ckVero('nessuna sezione etichettata "(non operativa)" -- le sue categorie operative lo sono davvero',
+         !(p.titoliSezioni || []).some(t => /non operativa/.test(t)),
+         (p.titoliSezioni || []).join(' | '))
   // "+ Aggiungi gara" sta DENTRO il calendario, che e' v-if: leggerlo a calendario chiuso darebbe zero
   // per chiunque, anche per l'admin. Era il falso verde di questa versione del test — il dirigente
   // risultava "corretto" per la ragione sbagliata. Si asserisce solo DOPO aver aperto il calendario
@@ -351,6 +437,62 @@ function clicConvocaRiga(nome) {
      (p.gare.find(g => g.avversario === nuovaGara) || {}).convoca, true)
   await shot('05-gara-del-mister')
 
+  // ==================================================== L'URL DI UNA CATEGORIA CHE NON È LA SUA
+  // Il tendino ora il mister non ce l'ha, ma `categoriaFiltro` nasce anche da `route.params.id`: scrivere
+  // /tornei/26 a mano e' la stessa porta rimasta aperta, ed e' l'unica strada che gli resta per arrivare al
+  // ramo `extra` di costruisciSezioni da cui il 25/11/2026 uscivano le sezioni degli altri. "Il menu non
+  // c'e'" non dimostra che il filtro non entri da un'altra parte -- e' la stessa distinzione per cui
+  // ui_scelta_cardine controlla tre superfici di navigazione e non una.
+  console.log(`--- il mister apre l'URL di una categoria che NON segue (/tornei/${CAT_NON_MIA}) ---`)
+  await goto(`${BASE}/tornei/${CAT_NON_MIA}`)
+  await attendiCard()
+  const x = await evalJS(LEGGI_PAGINA)
+  ck('nemmeno da li\' ha il menu a tendina delle categorie', x.selectFiltro, false)
+  ck('e nemmeno l\'interruttore "tutte le categorie"', x.checkboxTutte, false)
+  const fuoriX = (x.titoliSezioni || []).filter(t => !sue.some(s => t.startsWith(s)))
+  ck('e non gli compare nessuna sezione di categorie che non segue', fuoriX.join(' | '), '')
+  ck('le sue sezioni restano tutte e sole', (x.titoliSezioni || []).length, sue.length)
+  ckVero('nessuna delle sue sezioni e\' etichettata "(non operativa)"',
+         !(x.titoliSezioni || []).some(t => /non operativa/.test(t)), (x.titoliSezioni || []).join(' | '))
+  // Cosa e' partito DAVVERO, non cosa la pagina dichiara. E' l'asserzione che rende le cinque sopra non
+  // vacue: senza il clamp di `filtroCategoria` la richiesta parte con categoria_id=26, e le sezioni possono
+  // restare giuste solo perche' la whitelist le filtra -- due difese diverse, e questa e' l'unica che vede
+  // la prima. Il registratore c'e' da sopra: senza di esso `__req` sarebbe undefined e `.some()` direbbe
+  // falso, cioe' verde per assenza -- il falso verde che questa riga esiste per impedire
+  const reqX = await evalJS(`(window.__req || []).filter(u => /\\/api\\/tornei/.test(u)).map(u => (u.split('?')[1] || ''))`)
+  console.log('  richieste /api/tornei/ catturate in questa navigazione:', JSON.stringify(reqX))
+  ckVero('il registratore ha visto la richiesta dei tornei (senza di che l\'asserzione qui sotto sarebbe verde per assenza)',
+         Array.isArray(reqX) && reqX.length > 0, `catturate: ${JSON.stringify(reqX)}`)
+  ck('e al server non chiede una categoria che non segue',
+     (reqX || []).some(q => /categoria_id=(?!19\b)\d+/.test(q)), false)
+  await shot('05b-url-altra-categoria')
+
+  // ==================================================== L'URL SENZA FILTRO (id non numerico)
+  // Terza porta, e per il mister e' l'unica dove la whitelist delle sezioni e' l'UNICA guardia. Con
+  // /tornei/19 o /tornei/26 il filtro stesso limita il ramo principale di costruisciSezioni a una categoria
+  // sola (`if (filtro && id !== filtro) return`), quindi togliere la whitelist non cambia niente -- misurato,
+  // 55 passati 0 falliti, e non e' un falso verde dell'arnese: e' il filtro che lavora. Qui invece il filtro
+  // non c'e' (Number('senza-filtro') e' NaN, `categoriaFiltro` resta '') e il ramo principale itera TUTTE le
+  // categorie operative della societa', che GET /categorie/all restituisce intere a chiunque abbia un login
+  // (nessun filtro per utente, a differenza di GET /categorie/): senza `okSezione` il mister dei Pulcini si
+  // ritrova le sezioni di Esordienti e Primi Calci. Raggiungibile perche' /tornei/:id accetta qualsiasi id,
+  // e `tornaIndietro` e' l'unico punto che legge il parametro fuori dal filtro (su un click, non al carico)
+  console.log('--- il mister apre la pagina SENZA filtro (/tornei/senza-filtro, id non numerico) ---')
+  await goto(`${BASE}/tornei/senza-filtro`)
+  await attendiCard()
+  const n = await evalJS(LEGGI_PAGINA)
+  ck('anche senza filtro il menu a tendina non c\'e\'', n.selectFiltro, false)
+  const fuoriN = (n.titoliSezioni || []).filter(t => !sue.some(s => t.startsWith(s)))
+  ck('e la whitelist delle sezioni lo tiene dentro le sue categorie', fuoriN.join(' | '), '')
+  ck('con tutte le sue sezioni e nessuna in piu\'', (n.titoliSezioni || []).length, sue.length)
+  const reqN = await evalJS(`(window.__req || []).filter(u => /\\/api\\/tornei/.test(u)).map(u => (u.split('?')[1] || ''))`)
+  console.log('  richieste /api/tornei/ catturate in questa navigazione:', JSON.stringify(reqN))
+  ckVero('il registratore ha visto la richiesta dei tornei anche qui',
+         Array.isArray(reqN) && reqN.length > 0, `catturate: ${JSON.stringify(reqN)}`)
+  ck('e non si inventa un filtro categoria che nessuno ha scelto',
+     (reqN || []).some(q => /categoria_id=/.test(q)), false)
+  await shot('05c-senza-filtro')
+
   // =============================================================== IL DIRIGENTE
   console.log('--- il dirigente, sulla stessa pagina ---')
   await loginCome(UTENTE_DIRIGENTE)
@@ -361,6 +503,11 @@ function clicConvocaRiga(nome) {
   ck('la nota del dirigente dice "sola lettura"', /sola lettura/.test(d.nota), true)
   ck('il dirigente NON vede "Nuovo torneo"', d.nuovoTorneo, false)
   ck('il dirigente NON vede "Modifica" sul torneo', d.azioniTorneo.includes('Modifica'), false)
+  // Il tendino se lo prende solo chi `puoVedereTutte`, e il dirigente non c'e': lo si asserisce perche' la
+  // guardia e' una regola sul ruolo, non una lista di ruoli "mister". Se qualcuno la scrivesse
+  // `ruolo !== 'mister'` invece di `puoVedereTutte`, il dirigente si ritroverebbe il menu e qui si vede
+  ck('il dirigente NON ha il menu a tendina delle categorie', d.selectFiltro, false)
+  ck('il dirigente NON ha l\'interruttore "tutte le categorie della società"', d.checkboxTutte, false)
 
   await clickReale(CLIC_CALENDARIO)
   const d2 = await evalJS(LEGGI_PAGINA)
@@ -395,8 +542,27 @@ function clicConvocaRiga(nome) {
      p.gare.some(g => g.convoca), true)
 
   console.log('\n--- console della pagina ---')
-  const reali = erroriConsole.filter(e => !/favicon|DevTools|Download the Vue|Failed to load resource: the server responded with a status of 40/i.test(e))
+  // Un errore di rete verso un host CHE NON E' quello sotto test non e' un difetto dell'app. Il 25/11/2026
+  // tutti e quattro i giri del negative sono usciti con 14 `Failed to load resource` puntati a
+  // fonts.gstatic.com (i font del tema), con ERR_ADDRESS_UNREACHABLE o ERR_NAME_NOT_RESOLVED a seconda di
+  // come stava la rete in quel momento -- e il giro pulito, mezz'ora prima, ne aveva 0. Ma filtrare
+  // "Failed to load resource" IN BLOCCO (come ui_tornei.cjs fa con i 4xx) nasconderebbe anche il caso che
+  // conta: **DEV irraggiungibile a meta' giro**, cioe' tutte le asserzioni "non c'e'" verdi perche' non
+  // c'era niente da vedere. Il discrimine quindi e' l'HOST, non il testo.
+  const hostSottoTest = (() => { try { return new URL(BASE).host } catch (e) { return '' } })()
+  const hostDi = riga => { const u = String(riga).split(' | ')[1]; if (!u) return ''
+    try { return new URL(u).host } catch (e) { return '' } }
+  const esterni = erroriConsole.filter(e => /Failed to load resource/.test(e)
+    && hostDi(e) && hostDi(e) !== hostSottoTest)
+  const reali = erroriConsole.filter(e => !esterni.includes(e))
+    .filter(e => !/favicon|DevTools|Download the Vue|Failed to load resource: the server responded with a status of 40/i.test(e))
   console.log(reali.length ? reali.slice(0, 12).join('\n') : '  nessun errore in console')
+  // Gli scartati RESTANO VISIBILI: un verde ottenuto togliendo del testo deve poter essere contestato
+  // (stessa regola di controllo_template.cjs, che riporta i commenti esclusi dalla ricerca)
+  if (esterni.length) {
+    console.log(`  (${esterni.length} errori di rete NON contati, host esterni al test: `
+      + [...new Set(esterni.map(hostDi))].filter(Boolean).join(', ') + ')')
+  }
 
   const rossi = risultati.filter(r => !r.ok)
   console.log(`\n  ${risultati.length - rossi.length} passati, ${rossi.length} falliti, ${reali.length} errori in console`)

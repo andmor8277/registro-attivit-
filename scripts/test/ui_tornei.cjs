@@ -951,6 +951,18 @@ const LEGGI = `(() => {
      scopePrima.haCheckbox, true)
   ck("l'interruttore si chiama \"Tutte le categorie della società\"",
      /Tutte le categorie della società/.test(scopePrima.etichetta), true)
+   // Il rovescio delle due asserzioni di ui_convocazioni_torneo.cjs (il mister NON ha il tendino): senza
+   // questa, nascondere il menu a tendina a tutti lascerebbe il test verde lo stesso. Le due metà si
+   // coprono a vicenda perche' la guardia e' `puoVedereTutte`, non "sono un mister"
+   ck('a un responsabile il menu a tendina delle categorie compare (a un mister no: lo vede ui_convocazioni_torneo)',
+      await evalJS(`!!document.querySelector('.filtri .select-filtro')`), true)
+   ck('e il tendino offre le categorie della società, gruppi esclusi',
+      await evalJS(`[...document.querySelectorAll('.filtri .select-filtro option')].map(o => o.innerText.trim())
+        .filter(t => t && t !== 'Tutte le categorie').sort().join('|')`),
+      await evalJS(`(async () => { const h = { Authorization: 'Bearer ' + localStorage.getItem('token') }
+        const all = await (await fetch('/api/categorie/all', { headers: h })).json()
+        return (all || []).filter(c => !['agonistica','scuola calcio'].includes((c.nome||'').trim().toLowerCase()))
+          .map(c => (c.anno ? c.anno + ' - ' + c.nome : c.nome)).sort().join('|') })()`, { awaitPromise: true }))
   // Il responsabile di prova non ha categorie assegnate (misurato): per lui il server NON filtra, e la
   // nota "solo i tornei delle tue categorie" sarebbe una bugia scritta a schermo
   ck("a chi non è filtrato la nota \"solo i tornei delle tue categorie\" NON compare",
