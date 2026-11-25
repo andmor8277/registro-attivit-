@@ -1818,6 +1818,40 @@ def run_migrations():
                 print(f"Migration warning (ck_convocazioni_uno_dei_due): {e}")
                 conn.rollback()
 
+            # ---- tornei.categoria_id: rendere VERO cio' che il modello dichiara dal 2026-11-20 ----
+            # `models/partite.py::Torneo.categoria_id` dice `nullable=True` e il commento accanto dice
+            # "Nullable dal 2026-11-20", ma la migrazione corrispondente non era mai stata scritta: misurato
+            # il 2026-11-25 `information_schema.columns.is_nullable` da' **NO su DEV e NO su PROD**. Un
+            # modello che promette una cosa e uno schema che ne applica un'altra e' il modo in cui un
+            # `db.commit()` prende IntegrityError in produzione senza che nessun test lo veda, perche' i test
+            # passano dall'API e l'API scrive sempre `categorie_ids[0]` — il NULL non lo manda nessuno.
+            # E' la stessa classe di "plausibile e falso" di `persone.codice_fiscale`, che il modello dice
+            # String(16) e la colonna e' varchar(255).
+            #
+            # DROP NOT NULL non ha IF NOT EXISTS (ne' esiste IF NULL): si interroga information_schema, come
+            # si fa per pg_constraint qui sopra. Idempotente per costruzione: a colonna gia' nullable il
+            # blocco non esegue nulla **e non stampa nessun warning**, perche' il rumore nei log di
+            # migrazione e' il posto dove un guasto vero si nasconde (nota create_all).
+            #
+            # NON tocca i dati: nessuna riga viene riscritta. Misurato il 2026-11-25 su PROD, 10 tornei su
+            # 10 hanno gia' la loro prima categoria scritta; e `POST /tornei/` continua a rifiutare un
+            # torneo senza categorie con 400 in `_valida`, quindi dall'app un torneo senza categoria non
+            # nasce nemmeno adesso. Questa migrazione non apre una strada nuova: chiude la promessa del
+            # modello, cosi' chi scrive codice legge una cosa sola.
+            try:
+                nullable = conn.execute(text(
+                    "SELECT is_nullable FROM information_schema.columns "
+                    "WHERE table_schema = current_schema() AND table_name = 'tornei' "
+                    "  AND column_name = 'categoria_id'"
+                )).scalar()
+                if nullable == "NO":
+                    conn.execute(text("ALTER TABLE tornei ALTER COLUMN categoria_id DROP NOT NULL"))
+                    conn.commit()
+                    print("Migration: tornei.categoria_id ora nullable (il modello lo dichiarava dal 2026-11-20)")
+            except Exception as e:
+                print(f"Migration warning (tornei.categoria_id nullable): {e}")
+                conn.rollback()
+
         finally:
             if has_lock:
                 try:

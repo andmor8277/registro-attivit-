@@ -21,7 +21,11 @@
 #     deve poter dire, e per dirlo deve avere in mano una risposta DIVERSA da quella dell'admin;
 #  5. `scope` sconosciuto da' **400** col dettaglio che nomina i valori ammessi, e la risposta resta
 #     una **lista nuda** con i suoi campi: decine di asserzioni fra test_tornei.sh,
-#     test_tornei_categorie.sh, test_tornei_sezioni.sh e ui_tornei.cjs la leggono come lista.
+#     test_tornei_categorie.sh, test_tornei_sezioni.sh e ui_tornei.cjs la leggono come lista;
+#  6. **chi scrive il calendario gare e' lo stesso insieme di chi lo legge** (`get_gestore_gare_torneo`,
+#     sezione 8): un mister puo' aggiungere/modificare/eliminare le gare solo dei tornei a cui e' iscritta
+#     una categoria che segue. Fino al 25/11/2026 quel gate guardava solo il ruolo, e dopo il filtro sulla
+#     lettura lasciava un mister a scrivere su un torneo che non vedeva piu'.
 #
 # I dati di prova sono creati via API dove la API c'e' (POST /tornei/ crea anche la Lista Tornei
 # collegata, quindi il fixture passa dallo stesso percorso dell'app) e via SQL dove serve un conto
@@ -178,17 +182,21 @@ ck "admin non ha categorie" "$(q "SELECT count(*) FROM utente_categorie uc JOIN 
 post /tornei/ "$TADM" "{\"nome\":\"$P-solo-a\",\"categorie_id\":[$CA],\"data_inizio\":\"2026-12-20\",\"data_fine\":\"2026-12-22\"}" >/dev/null
 post /tornei/ "$TADM" "{\"nome\":\"$P-solo-b\",\"categorie_id\":[$CB],\"data_inizio\":\"2026-12-21\",\"data_fine\":\"2026-12-23\"}" >/dev/null
 post /tornei/ "$TADM" "{\"nome\":\"$P-a-e-b\",\"categorie_id\":[$CA,$CB],\"data_inizio\":\"2026-12-22\",\"data_fine\":\"2026-12-24\"}" >/dev/null
-# Il quarto -- il torneo SENZA categorie iscritte -- non si puo' fare ne' via API ne' a mani nude:
-#  - l'API lo rifiuta: `POST /tornei/` passa da `_valida`, che risponde 400 "Seleziona almeno una
-#    categoria" (e non e' dato per scontato, c'e' l'asserzione qui sotto);
-#  - il DB pure: `tornei.categoria_id` ha ancora il NOT NULL, su DEV **e** su PROD misurati il
-#    25/11/2026, anche se il modello dichiara `nullable=True` e il commento dice "Nullable dal
-#    2026-11-20" -- la migrazione non esiste (cerca `DROP NOT NULL` in backend/app/migrations/run.py:
-#    c'e' solo per utenti.password_hash). E' un modello che descrive uno schema che il DB non ha, e
-#    oggi non esplode perche' `crea_torneo` scrive sempre `categorie_ids[0]`, mai NULL.
-# Quindi l'orfano reale ha la colonna legacy POPOLATA e zero righe in tornei_categorie: ed e'
-# esattamente il caso che il filtro deve reggere, perche' la fonte di verita' dichiarata sono le
-# iscrizioni, non quella colonna ("Non e' la fonte di verita' (quella e' tornei_categorie)")
+# Il quarto -- il torneo SENZA categorie iscritte -- non puo' nascere dall'API: `POST /tornei/` passa da
+# `_valida`, che risponde 400 "Seleziona almeno una categoria" (e non e' dato per scontato, c'e'
+# l'asserzione qui sotto). Va quindi scritto in SQL.
+#
+# Nota di data: fino al 25/11/2026 l'INSERT diretto **non bastava**, perche' `tornei.categoria_id` aveva
+# il NOT NULL su DEV e su PROD anche se il modello dichiarava `nullable=True` -- la migrazione promessa
+# dal commento "Nullable dal 2026-11-20" non esisteva. Ora esiste (`DROP NOT NULL` in
+# backend/app/migrations/run.py, misurato su `information_schema.columns.is_nullable`), quindi il blocco
+# che resta e' solo quello dell'API.
+#
+# La colonna legacy qui viene comunque lasciata **popolata** (sulla categoria di mister-b), perche' e'
+# cosi' che questo fixture diventa tagliente: il filtro legge `tornei_categorie`, e un torneo che la
+# colonna dice "tuo" mentre le iscrizioni dicono "nessuno" e' l'unico caso che distingue le due fonti.
+# Se qualcuno riportasse il filtro sulla colonna -- costa meno, e il modello la dice nullable -- mister-b
+# si ritroverebbe un torneo a cui la sua squadra non e' iscritta
 q "INSERT INTO tornei (societa_id,categoria_id,nome,data_inizio,data_fine)
    VALUES (1,$CB,'$P-senza-cat','2026-12-23','2026-12-25');" >/dev/null
 ORFANO_DB=$(q "SELECT count(*) FROM tornei WHERE nome='$P-senza-cat'")
@@ -328,8 +336,156 @@ ck "il dettaglio di un torneo resta raggiungibile al mister che lo vede" \
    "$(cod "$D/tornei/$(q "SELECT id FROM tornei WHERE nome='$P-solo-a'")" -H "Authorization: Bearer $TMIA")" "200"
 
 echo
-echo "--- 8. niente residui, niente effetti collaterali ---"
-ck "i tornei in DB sono baseline + i 4 di prova" "$(q "SELECT count(*) FROM tornei")" "$((BASE_TORNEI + 4))"
+echo "--- 8. chi SCRIVE il calendario gare: lo STESSO criterio della lettura ---"
+# Perche' questa sezione sta qui e non in test_tornei.sh: il permesso di scrivere e' stato stretto il
+# 25/11/2025 con lo stesso criterio di `GET /tornei/`, e le due meta' devono essere provate con le stesse
+# fixture. Fino a quel giorno `get_gestore_gare_torneo` guardava solo il ruolo: un mister poteva
+# aggiungere, riscrivere o cancellare le gare di un torneo che, dopo il filtro sulla lettura, non vedeva
+# piu'. Un permesso di scrivere piu' largo del permesso di leggere e' la stessa classe di buco chiuso il
+# 23/11 sulle convocazioni del weekend.
+#
+# Le fixture sono quelle sopra: mister-a segue la categoria a, mister-b la b, il torneo `$P-a-e-b` le ha
+# entrambe, l'orfano `$P-senza-cat` non ne ha nessuna ma ha la colonna legacy sulla b.
+TSOLA=$(q "SELECT id FROM tornei WHERE nome='$SOLA'")
+TSOLOB=$(q "SELECT id FROM tornei WHERE nome='$SOLOB'")
+TAEB=$(q "SELECT id FROM tornei WHERE nome='$AEB'")
+TORF=$(q "SELECT id FROM tornei WHERE nome='$SENZ'")
+for pair in "solo-a:$TSOLA" "solo-b:$TSOLOB" "a-e-b:$TAEB" "senza-cat:$TORF"; do
+  [ -z "${pair##*:}" ] && { echo "  FAIL prerequisito: torneo ${pair%%:*} non trovato (\$$pair)"; \
+                            echo "  0 passati, 1 falliti (prerequisiti)"; exit 1; }
+done
+# Un torneo dell'ALTRA societa', creato via SQL perche' l'API di adm2 non avrebbe una categoria sua da
+# iscrivere. Serve per distinguere i due 403: quello di tenant e quello di categoria sono due risposte
+# diverse, e se il gate le confondesse il messaggio lo dice. **Nasce qui e non in `preparazione`** di
+# proposito: `nfix` conta i tornei di prova per prefisso, e se questo esistesse gia' a sezione 5
+# l'asserzione "admin della societa' 2 non vede i tornei della societa' 1" direbbe 1 invece di 0 -- un
+# rosso che accusa il filtro di societa' per colpa di un fixture
+q "INSERT INTO tornei (societa_id,categoria_id,nome,data_inizio,data_fine)
+   VALUES (2,$CA,'$P-altra-soc','2026-12-26','2026-12-28');" >/dev/null
+TALT=$(q "SELECT id FROM tornei WHERE nome='$P-altra-soc'")
+[ -n "$TALT" ] || { echo "  FAIL prerequisito: il torneo dell'altra societa' non e' stato creato"; \
+                    echo "  0 passati, 1 falliti (prerequisiti)"; exit 1; }
+GARE_PRIMA=$(q "SELECT count(*) FROM tornei_gare tg JOIN tornei t ON t.id=tg.torneo_id WHERE t.nome LIKE '$P%'")
+
+gara_cod() { curl -s -o /dev/null -w '%{http_code}' --max-time 25 -X POST "$D/tornei/$1/gare" \
+               -H "Authorization: Bearer $2" -H 'Content-Type: application/json' -d "$3"; }
+gara_put() { curl -s -o /dev/null -w '%{http_code}' --max-time 25 -X PUT "$D/tornei/$1/gare/$4" \
+               -H "Authorization: Bearer $2" -H 'Content-Type: application/json' -d "$3"; }
+# L'id della gara e' il TERZO argomento, non il quarto come in gara_put (che ha il json in mezzo): un
+# `$4` vuoto qui mandava `.../gare/` e FastAPI rispondeva 307, che non e' nessun verdetto sul gate
+gara_del() { curl -s -o /dev/null -w '%{http_code}' --max-time 25 -X DELETE "$D/tornei/$1/gare/$3" \
+               -H "Authorization: Bearer $2"; }
+gara_det() { curl -s --max-time 25 -X POST "$D/tornei/$1/gare" \
+               -H "Authorization: Bearer $2" -H 'Content-Type: application/json' -d "$3" \
+             | python3 -c "import sys,json
+try: print(json.load(sys.stdin).get('detail',''))
+except Exception: print('')" 2>/dev/null; }
+# Quante gare di prova con un certo avversario esistono in un torneo. Non basta il codice HTTP: un 403
+# che pero' scrive la riga e' il difetto, e il codice da solo non lo vede
+gare_con() { q "SELECT count(*) FROM tornei_gare tg JOIN tornei t ON t.id=tg.torneo_id
+                WHERE t.id=$1 AND tg.avversario='$2'"; }
+
+echo "   (il proprio torneo: si puo')"
+ck "mister-a aggiunge una gara al torneo della sua categoria -> 200" \
+   "$(gara_cod $TSOLA "$TMIA" "{\"avversario\":\"${P}GaraDiA\",\"data\":\"2026-12-20\",\"ora\":\"15:00\"}")" "200"
+ck "  e la riga esiste davvero nel DB" "$(gare_con $TSOLA "${P}GaraDiA")" "1"
+ck "mister-b aggiunge una gara al torneo della sua categoria -> 200" \
+   "$(gara_cod $TSOLOB "$TMIB" "{\"avversario\":\"${P}GaraDiB\",\"data\":\"2026-12-21\",\"ora\":\"15:00\"}")" "200"
+ck "  e la riga esiste davvero nel DB" "$(gare_con $TSOLOB "${P}GaraDiB")" "1"
+# "almeno una delle iscritte", non "tutte": chi segue una delle due categorie di un torneo condiviso quel
+# torneo lo vede e lo cura. Stringere a "tutte" lascerebbe senza calendario i tornei a piu' categorie
+ck "mister-a aggiunge una gara al torneo condiviso (seguendone UNA categoria su due) -> 200" \
+   "$(gara_cod $TAEB "$TMIA" "{\"avversario\":\"${P}GaraAEB\",\"categoria_id\":$CA,\"data\":\"2026-12-22\"}")" "200"
+ck "mister-b puo' farlo sullo stesso torneo -> 200" \
+   "$(gara_cod $TAEB "$TMIB" "{\"avversario\":\"${P}GaraAEBb\",\"categoria_id\":$CB,\"data\":\"2026-12-23\"}")" "200"
+
+echo "   (il torneo di un'altra categoria: no)"
+ck "mister-a aggiunge una gara al torneo di mister-b -> 403" \
+   "$(gara_cod $TSOLOB "$TMIA" "{\"avversario\":\"${P}Abusiva\",\"data\":\"2026-12-21\"}")" "403"
+ck "  e la gara abusiva NON e' nata (un 403 che scrive comunque e' il difetto)" \
+   "$(gare_con $TSOLOB "${P}Abusiva")" "0"
+ck "  e il 403 nomina il motivo (nessuna delle TUE categorie e' iscritta)" \
+   "$(gara_det $TSOLOB "$TMIA" "{\"avversario\":\"${P}Abusiva2\"}" | grep -ci 'non ha nessuna delle tue categorie')" "1"
+ck "mister-b non puo' scrivere sul torneo di mister-a -> 403" \
+   "$(gara_cod $TSOLA "$TMIB" "{\"avversario\":\"${P}AbusivaB\",\"data\":\"2026-12-20\"}")" "403"
+# Modifica ed eliminazione seguono lo stesso gate: sono le due che cancellano il lavoro di un altro
+GARA_B=$(q "SELECT tg.id FROM tornei_gare tg JOIN tornei t ON t.id=tg.torneo_id WHERE t.id=$TSOLOB AND tg.avversario='${P}GaraDiB'")
+[ -z "$GARA_B" ] && { echo "  FAIL prerequisito: la gara di mister-b non c'e' (id vuoto), i due casi sotto non misurerebbero niente"
+                      echo "  0 passati, 1 falliti (prerequisiti)"; exit 1; }
+ck "mister-a non puo' MODIFICARE la gara di mister-b -> 403" \
+   "$(gara_put $TSOLOB "$TMIA" "{\"avversario\":\"${P}Manomessa\",\"data\":\"2026-12-21\"}" $GARA_B)" "403"
+ck "  e l'avversario della gara e' rimasto quello di prima" \
+   "$(q "SELECT avversario FROM tornei_gare WHERE id=$GARA_B")" "${P}GaraDiB"
+ck "mister-a non puo' ELIMINARE la gara di mister-b -> 403" \
+   "$(gara_del $TSOLOB "$TMIA" $GARA_B)" "403"
+ck "  e la gara e' ancora li'" "$(q "SELECT count(*) FROM tornei_gare WHERE id=$GARA_B")" "1"
+
+echo "   (la fonte di verita' sono le iscrizioni, non la colonna legacy)"
+# Gemella, lato scrittura, dell'asserzione sull'orfano di sezione 1. L'orfano ha tornei.categoria_id = b:
+# se il gate leggesse quella colonna, mister-b riuscirebbe a scrivere su un torneo a cui la sua squadra
+# non e' iscritta
+ck "mister-b non puo' scrivere sull'orfano, anche se la colonna legacy dice 'b' -> 403" \
+   "$(gara_cod $TORF "$TMIB" "{\"avversario\":\"${P}Orfana\",\"data\":\"2026-12-24\"}")" "403"
+# E il contrario, che e' meta' della prova: qui la colonna legacy dice 'b' ma l'iscrizione dice 'a'. Senza
+# questo secondo verso, un gate che leggesse la colonna sarebbe verde su meta' dei casi
+q "UPDATE tornei SET categoria_id=$CB WHERE id=$TSOLA;" >/dev/null
+ck "  (precondizione: ora la colonna legacy di solo-a dice 'b', l'iscrizione dice 'a')" \
+   "$(q "SELECT categoria_id FROM tornei WHERE id=$TSOLA")" "$CB"
+ck "mister-a puo' ancora scrivere su solo-a: il gate legge tornei_categorie -> 200" \
+   "$(gara_cod $TSOLA "$TMIA" "{\"avversario\":\"${P}GaraDiA2\",\"data\":\"2026-12-20\",\"ora\":\"16:00\"}")" "200"
+ck "mister-b NO, anche se la colonna legacy ora e' la sua -> 403" \
+   "$(gara_cod $TSOLA "$TMIB" "{\"avversario\":\"${P}AbusivaB2\",\"data\":\"2026-12-20\"}")" "403"
+
+echo "   (i ruoli che non guidano le squadre restano fuori, e i verdetti hanno un ordine)"
+ck "mister-zero (nessuna categoria) -> 403" \
+   "$(gara_cod $TSOLA "$TMZE" "{\"avversario\":\"${P}Zero\",\"data\":\"2026-12-20\"}")" "403"
+# `-i` perche' il testo inizia con la maiuscola ("Non sei assegnato..."): un grep case-sensitive su una
+# frase che inizia minuscola dice 0 e sembra che il messaggio non nomini il motivo, quando e' il grep
+ck "  e il messaggio nomina LE CATEGORIE MANCANTI a lui, non il torneo" \
+   "$(gara_det $TSOLA "$TMZE" "{\"avversario\":\"${P}Zero2\"}" | grep -ci 'non sei assegnato a nessuna categoria')" "1"
+# Le due risposte devono essere DIVERSE, perche' a schermo si somigliano e la seconda ha una soluzione
+# diversa (farsi iscrivere al torneo) dalla prima (farsi assegnare una categoria). Se il gate tornasse un
+# solo messaggio generico, questa e' l'asserzione che lo nota
+ck "  e NON e' lo stesso messaggio di mister-a (due verdetti diversi, non uno generico)" \
+   "$(gara_det $TSOLA "$TMZE" "{\"avversario\":\"${P}Zero3\"}" | grep -ci 'non ha nessuna delle tue categorie')" "0"
+ck "  e nessuna gara di mister-zero e' nata" \
+   "$(gare_con $TSOLA "${P}Zero")" "0"
+ck "dirigente CON la categoria a -> 403 (legge i tornei della sua categoria, non li scrive)" \
+   "$(gara_cod $TSOLA "$TDIR" "{\"avversario\":\"${P}Dir\",\"data\":\"2026-12-20\"}")" "403"
+ck "segreteria -> 403: RUOLI_VEDONO_TUTTI_I_TORNEI e' un elenco di LETTURA" \
+   "$(gara_cod $TSOLA "$TSEGR" "{\"avversario\":\"${P}Segr\",\"data\":\"2026-12-20\"}")" "403"
+ck "  e nessuna gara di dirigente o segreteria e' nata" \
+   "$(gare_con $TSOLA "${P}Dir"),$(gare_con $TSOLA "${P}Segr")" "0,0"
+ck "admin puo' scrivere su entrambi i tornei -> 200,200" \
+   "$(gara_cod $TSOLA "$TADM" "{\"avversario\":\"${P}GaraAdm\",\"data\":\"2026-12-20\"}"),$(gara_cod $TSOLOB "$TADM" "{\"avversario\":\"${P}GaraAdm2\",\"data\":\"2026-12-21\"}")" \
+   "200,200"
+ck "admin della societa' 2 -> 403 (il tenant copre anche la scrittura)" \
+   "$(gara_cod $TSOLA "$TADM2" "{\"avversario\":\"${P}Intrusa\",\"data\":\"2026-12-20\"}")" "403"
+# L'ordine dei verdetti: `get_gestore_gare_torneo` chiama `_get_torneo` PRIMA di guardare le categorie.
+# Se non lo facesse, un mister che indovina un id inesistente riceverebbe un 403 "non e' una delle tue
+# categorie" -- una frase che descrive un torneo che non esiste, e che nasconde il 404 che e' la risposta
+# vera. E' il controllo che rende onesta la docstring del gate
+ck "torneo inesistente come mister -> 404, non 403" \
+   "$(gara_cod 999999 "$TMIA" "{\"avversario\":\"${P}Fantasma\"}")" "404"
+ck "torneo dell'altra societa' come mister -> 403" \
+   "$(gara_cod $TALT "$TMIA" "{\"avversario\":\"${P}Altrove\",\"data\":\"2026-12-27\"}")" "403"
+ck "  e il 403 e' QUELLO DEL TENANT, non quello delle categorie" \
+   "$(gara_det $TALT "$TMIA" "{\"avversario\":\"${P}Altrove2\"}" | grep -ci 'Non autorizzato su questo torneo')" "1"
+ck "  e nessuna gara e' nata sul torneo dell'altra societa'" \
+   "$(gare_con $TALT "${P}Altrove")" "0"
+# Il confine di cio' che e' stato approvato il 25/11: il criterio e' sul TORNEO, non sulla singola gara.
+# Un mister puo' quindi aggiungere una gara all'altra categoria di un torneo condiviso. Non e' una
+# svista da correggere di straforo, e' una scelta non presa -- e questa asserzione esiste perche', se un
+# giorno qualcuno la cambia senza parlarne, il rosso si veda
+ck "apertura nota e voluta: mister-a puo' aggiungere una gara alla categoria B del torneo condiviso -> 200" \
+   "$(gara_cod $TAEB "$TMIA" "{\"avversario\":\"${P}GaraAinB\",\"categoria_id\":$CB,\"data\":\"2026-12-24\"}")" "200"
+GARE_DOPO=$(q "SELECT count(*) FROM tornei_gare tg JOIN tornei t ON t.id=tg.torneo_id WHERE t.nome LIKE '$P%'")
+ck "in tutto le gare di prova sono 8, e sono solo quelle lecite (nessun 403 ha scritto righe)" \
+   "$GARE_DOPO" "$((GARE_PRIMA + 8))"
+
+echo
+echo "--- 9. niente residui, niente effetti collaterali ---"
+ck "i tornei in DB sono baseline + i 5 di prova (4 + quello dell'altra societa')" "$(q "SELECT count(*) FROM tornei")" "$((BASE_TORNEI + 5))"
 ck "utente_categorie e' cresciuto solo delle 3 assegnazioni dei fixture" \
    "$(q "SELECT count(*) FROM utente_categorie")" "$((BASE_UC + 3))"
 pulizia

@@ -110,7 +110,7 @@
                     </span>
                     <span v-if="g.ora" class="meta-item">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-                      {{ g.ora.slice(0, 5) }}
+                      {{ senzaSecondi(g.ora) }}
                     </span>
                     <span v-if="g.campo" class="meta-item">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -149,7 +149,7 @@
                     </span>
                     <span v-if="g.ora" class="meta-item">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-                      {{ g.ora.slice(0, 5) }}
+                      {{ senzaSecondi(g.ora) }}
                     </span>
                     <span v-if="g.campo" class="meta-item">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -267,7 +267,7 @@
 import { ref, computed, watch, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useStore } from "../../store.js"
-import { getSocieta, getCategorie, getAllCategorie, getInfortuni, getPartite, getPersone, getConvocazioni, getConvocazione, getLocalDateStr, getSpogliatoi, getCampi, getAssegnazioniSettimana, getCampiAssegnazioniSettimana, isParentCategory } from "../../api/index.js"
+import { getSocieta, getCategorie, getAllCategorie, getInfortuni, getPartite, getPersone, getConvocazioni, getConvocazione, getLocalDateStr, getSpogliatoi, getCampi, getAssegnazioniSettimana, getCampiAssegnazioniSettimana, isParentCategory, senzaSecondi } from "../../api/index.js"
 import { catAllenaGiorno, oraPerGiorno } from "../../composables/categoriaOrari.js"
 
 const router = useRouter()
@@ -576,6 +576,15 @@ function processMatchesForSubset(filterFn) {
           const avvLower = (p.avversario || '').toLowerCase().trim()
           const gTitLower = (g.gara || '').toLowerCase().trim()
           const opponentMatch = avvLower && gTitLower && (gTitLower.includes(avvLower) || avvLower.includes(gTitLower))
+          // Il taglio qui **resta**, ed e' la ragione per cui questa riga non e' stata messa su
+          // `senzaSecondi()` come le tre di visualizzazione: non mostra niente, e' l'euristica che
+          // accoppia la partita del calendario alla riga del foglio di convocazione. Il confronto
+          // tollera proprio perche' taglia entrambi i lati: `partite.ora` arriva `14:15:00` (TIME) e
+          // `convocazione_gara.inizio_gara` puo' essere `14:15 · spogliatoi` (varchar(50), testo
+          // libero). Con `senzaSecondi()` da una parte e dall'altra si confronterebbero `14:15` e
+          // `14:15 · spogliatoi`, che non sono uguali: l'accoppiamento si romperebbe e la home
+          // mostrerebbe due card separate per la stessa gara. La normalizzazione di visualizzazione
+          // si fa dopo, dove il valore viene dipinto
           const timeMatch = p.ora && g.inizio_gara && p.ora.slice(0, 5) === g.inizio_gara.slice(0, 5)
           const singleGame = gare.length === 1 && partiteFuture.filter(pf => pf.categoria_id === p.categoria_id && pf.data_partite === p.data_partite).length === 1
 
@@ -600,7 +609,11 @@ function processMatchesForSubset(filterFn) {
         ...p,
         ...matchedGara,
         data: p.data_partite,
-        ora: p.ora ? p.ora.slice(0, 5) : (matchedGara.inizio_gara ? matchedGara.inizio_gara.slice(0, 5) : ''),
+        // `p.ora` e' una colonna TIME (Postgres la restituisce sempre HH:MM:SS, e una nota non puo'
+        // esserci): li' il taglio e' giusto. `inizio_gara` invece e' varchar(50) di testo libero, e li'
+        // il taglio a 5 cancellerebbe l'annotazione che l'organizzatore ha scritto insieme all'orario
+        // ("13:45 · spogliatoi") — la stessa classe del difetto segnalato dal titolare il 25/11/2026
+        ora: p.ora ? p.ora.slice(0, 5) : senzaSecondi(matchedGara.inizio_gara),
         avversario: p.avversario,
         casa_fuori: p.casa_fuori || 'casa',
         campo: p.campo || matchedGara.campo || '',
@@ -638,6 +651,12 @@ function processMatchesForSubset(filterFn) {
 
       const dataGara = g.data || c.data_inizio
       if (!dataGara) continue
+      // QUI il taglio a 5 caratteri resta, ed e' voluto: questo valore non viene mostrato, finisce in
+      // `new Date()` e le due righe sotto (`isNaN(d) continue`) **scartano l'evento** se la data non si
+      // forma. Sostituirlo con `senzaSecondi()` sembrerebbe la stessa correzione delle altre e non lo e':
+      // "14:15 · spogliatoi" passerebbe invariato, `new Date('...T14:15 · spogliatoi')` sarebbe Invalid
+      // Date e la gara sparirebbe dalla home invece di mostrare i secondi. Per costruire un Date serve
+      // esattamente HH:MM, e HH:MM e' cio' che esce dal taglio.
       const d = new Date(dataGara + 'T' + (g.inizio_gara ? g.inizio_gara.slice(0, 5) : '00:00'))
       if (isNaN(d)) continue
 
@@ -646,7 +665,10 @@ function processMatchesForSubset(filterFn) {
         categoria_id: c.categoria_id,
         convocazione_id: c.id,
         data: dataGara,
-        ora: g.inizio_gara ? g.inizio_gara.slice(0, 5) : '',
+        // Il valore che viene **dipinto** (template, riga 113 e 152): qui `inizio_gara` e' testo libero
+        // e i secondi li toglie la regola unica, non un taglio. `senzaSecondi` rende '' per null/'' e
+        // quindi sostituisce anche il ternario che c'era
+        ora: senzaSecondi(g.inizio_gara),
         title: g.gara || '',
         has_convocazione: true,
         _dt: d,

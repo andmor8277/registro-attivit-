@@ -64,8 +64,10 @@ def get_responsabile_tornei(current_user: Utente = Depends(get_current_user)):
     return current_user
 
 
-def get_gestore_gare_torneo(current_user: Utente = Depends(get_current_user)):
-    """Chi scrive sul CALENDARIO gare di un torneo: i mister, oltre agli admin.
+def get_gestore_gare_torneo(torneo_id: int, db: Session = Depends(get_db),
+                            current_user: Utente = Depends(get_current_user)):
+    """Chi scrive sul CALENDARIO gare di UN torneo: gli admin, e i mister che seguono almeno una delle
+    categorie iscritte a quel torneo.
 
     E' un gate piu' largo di get_responsabile_tornei e volutamente separato. Il responsabile decide QUALE
     torneo esiste e quali categorie ci giocano; il mister, che e' quello che la gara la gioca, deve poter
@@ -73,18 +75,48 @@ def get_gestore_gare_torneo(current_user: Utente = Depends(get_current_user)):
     un admin significa che la gara non viene registrata, che e' il modo in cui in due anni in liste_torneo
     c'era una lista sola.
 
-    Il filtro di societa' NON sta qui: lo fa _get_torneo, che ogni endpoint delle gare chiama prima di
-    toccare i dati. Metterlo anche qui sarebbe un secondo controllo sullo stesso campo mentre il rischio
-    reale (conoscere l'id di un torneo di un'altra societa') e' gia' coperto li'.
+    **Perche' ora prende anche `torneo_id`**: fino al 2026-11-25 questo gate guardava solo il *ruolo*, e la
+    sua docstring giustificava la cosa citando la decisione del 2026-11-16 ("i mister vedono e usano
+    legittimamente tutte le categorie della propria societa'"). Il titolare ha ribaltato quella decisione il
+    25/11 per la lettura (`GET /tornei/` filtra per `utente_categorie`), lasciando pero' la scrittura com'era:
+    risultato un permesso di **scrivere** piu' largo del permesso di **leggere** — un mister poteva
+    aggiungere, riscrivere o cancellare le gare di un torneo che a schermo non vedeva piu'. Un gate che non
+    sa di quale torneo si sta parlando non puo' essere lo stesso criterio della lettura, quindi `torneo_id`
+    (parametro di percorso, FastAPI lo passa da solo) entra nella firma. Stesso criterio di
+    `lista_tornei`: **una categoria iscritta al torneo che l'utente segue**, letta da `tornei_categorie` x
+    `utente_categorie`, non dalla colonna legacy `tornei.categoria_id`.
 
-    Non si filtra per utente_categorie: il titolare ha deciso che i mister vedono e usano legittimamente
-    tutte le categorie della propria societa', quindi qui un mister puo' curare il calendario di un torneo
-    a cui e' iscritta anche una categoria che non segue.
+    `RUOLI_VEDONO_TUTTI_I_TORNEI` **non** da' accesso a questo gate: e' un elenco di lettura (nota li'), e
+    `segreteria` qui continua a prendere 403 come prendeva prima.
+
+    `_get_torneo` viene invocato **qui dentro**, prima del verdetto sulle categorie, e gli endpoint lo
+    richiamano: costa un SELECT in piu' per scrittura e serve perche' l'ordine dei verdetti e' cio' che i
+    test leggono. Se il gate parlasse con il DB senza verificare prima che il torneo esista e sia della
+    societa' di chi chiede, un mister che indovina l'id di un torneo inesistente o di un'altra societa'
+    riceverebbe un 403 "non e' una delle tue categorie" — un messaggio che racconta una categoria che non
+    esiste e nasconde il 404/403 di tenant che invece e' la risposta vera.
     """
-    if current_user.is_admin or current_user.is_super_admin:
+    _get_torneo(torneo_id, current_user, db)
+    if _e_responsabile(current_user):
         return current_user
     if current_user.ruolo == "mister":
-        return current_user
+        iscritte_seguite = db.execute(text(
+            """SELECT count(*) FROM tornei_categorie tc
+                WHERE tc.torneo_id = :t
+                  AND EXISTS (SELECT 1 FROM utente_categorie uc
+                               WHERE uc.categoria_id = tc.categoria_id AND uc.utente_id = :u)"""
+        ), {"t": torneo_id, "u": current_user.id}).scalar() or 0
+        if iscritte_seguite:
+            return current_user
+        # Due risposte diverse, perche' a schermo si somigliano e la seconda fa cercare altrove: "non
+        # segui nessuna categoria" (da risolvere con il responsabile) non e' "quel torneo non e' tuo"
+        if not _mie_categorie(current_user, db):
+            raise HTTPException(status_code=403, detail=(
+                "Non sei assegnato a nessuna categoria: il calendario gare di un torneo e' dei mister delle "
+                "categorie iscritte. Chiedi al responsabile di assegnarti una categoria."))
+        raise HTTPException(status_code=403, detail=(
+            "Il torneo non ha nessuna delle tue categorie iscritte: non puoi modificarne il calendario. "
+            "Se devi farlo davvero, il responsabile deve iscrivere la tua categoria al torneo."))
     raise HTTPException(
         status_code=403,
         detail="Solo il mister o un amministratore possono gestire il calendario gare del torneo")
