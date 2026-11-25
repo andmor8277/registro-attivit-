@@ -439,3 +439,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Il calendario gare di un torneo ora lo scrive chi quel torneo lo vede: il mister delle categorie iscritte, non qualunque mister. Orari senza secondi anche in home page, e tornei.categoria_id diventa davvero nullable come il modello dichiarava
+
+## [7.15.0] - 2026-11-25
+
+### Added
+- Tornei: il menu a tendina delle categorie non e' di chi non le vede tutte

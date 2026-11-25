@@ -91,7 +91,7 @@ Il sistema include una procedura automatizzata di backup remoto cifrato su repos
 ## 📦 Release
 
 <!-- RELEASE_INFO -->
-La versione attuale è **v7.14.0**.
+La versione attuale è **v7.15.0**.
 
 Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
 
@@ -101,6 +101,10 @@ Leggi il [CHANGELOG](CHANGELOG.md) per tutte le novità delle release.
 
 
 
+
+### 🎉 Novità v7.15.0 (2026-11-25)
+
+- Tornei: il menu a tendina delle categorie non e' di chi non le vede tutte
 ### 🎉 Novità v7.14.0 (2026-11-25)
 
 - Il calendario gare di un torneo ora lo scrive chi quel torneo lo vede: il mister delle categorie iscritte, non qualunque mister. Orari senza secondi anche in home page, e tornei.categoria_id diventa davvero nullable come il modello dichiarava
